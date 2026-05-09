@@ -8,3 +8,9 @@ coverage
 *.log
 data/
 coverage/
+
+# Anchor / Cargo build artifacts (programs/ is source-only in CI)
+target/
+.anchor/
+*.so
+**/Cargo.lock

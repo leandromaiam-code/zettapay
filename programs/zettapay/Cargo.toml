@@ -1,0 +1,21 @@
+[package]
+name = "zettapay"
+version = "0.1.0"
+description = "ZettaPay merchant binding program — immutable on-chain wallet bindings via PDA."
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "zettapay"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+anchor-lang = "0.30.1"
