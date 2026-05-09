@@ -25,11 +25,11 @@ export function openDatabase(databasePath: string): Db {
 
 function applyAddOnColumns(db: Db): void {
   // Idempotent column additions for forward-compat with older databases.
-  const cols = db.prepare("PRAGMA table_info(merchants)").all() as Array<{
+  const merchantCols = db.prepare("PRAGMA table_info(merchants)").all() as Array<{
     name: string;
   }>;
-  const names = new Set(cols.map((c) => c.name));
-  if (!names.has("webhook_secret")) {
+  const merchantNames = new Set(merchantCols.map((c) => c.name));
+  if (!merchantNames.has("webhook_secret")) {
     db.exec("ALTER TABLE merchants ADD COLUMN webhook_secret TEXT");
   }
   if (!names.has("coinflow_enabled")) {
@@ -47,6 +47,16 @@ function applyAddOnColumns(db: Db): void {
   }
   if (!names.has("coinflow_bank_account_id")) {
     db.exec("ALTER TABLE merchants ADD COLUMN coinflow_bank_account_id TEXT");
+  }
+
+  const paymentCols = db.prepare("PRAGMA table_info(payments)").all() as Array<{
+    name: string;
+  }>;
+  const paymentNames = new Set(paymentCols.map((c) => c.name));
+  if (!paymentNames.has("currency")) {
+    db.exec(
+      "ALTER TABLE payments ADD COLUMN currency TEXT NOT NULL DEFAULT 'USDC'",
+    );
   }
 }
 
@@ -82,6 +92,7 @@ function applyMigrations(db: Db): void {
       tx_signature    TEXT,
       error_message   TEXT,
       metadata_json   TEXT,
+      currency        TEXT NOT NULL DEFAULT 'USDC',
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       completed_at    TEXT
     );

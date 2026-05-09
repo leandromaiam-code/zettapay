@@ -30,37 +30,48 @@ function startApp(app: express.Express): Promise<RunningServer> {
 
 function makeFakeSolana(): {
   service: SolanaService;
-  transferUsdc: ReturnType<typeof vi.fn>;
+  transferToken: ReturnType<typeof vi.fn>;
 } {
   const payerKp = Keypair.generate();
-  const transferUsdc = vi.fn(
-    async (params: { recipientOwner: PublicKey; amountUsdc: number }) => ({
-      signature: `sig_${Math.random().toString(36).slice(2, 10)}_${params.amountUsdc}`,
-      payerWallet: payerKp.publicKey.toBase58(),
-      recipientWallet: params.recipientOwner.toBase58(),
-      amountAtomic: BigInt(Math.round(params.amountUsdc * 1_000_000)),
-      decimals: 6,
-    }),
+  const transferToken = vi.fn(
+    async (params: {
+      recipientOwner: PublicKey;
+      amount: number;
+      currency?: "USDC" | "USDT" | "EURC" | "PYUSD";
+    }) => {
+      const currency = params.currency ?? "USDC";
+      return {
+        signature: `sig_${Math.random().toString(36).slice(2, 10)}_${params.amount}`,
+        payerWallet: payerKp.publicKey.toBase58(),
+        recipientWallet: params.recipientOwner.toBase58(),
+        amountAtomic: BigInt(Math.round(params.amount * 1_000_000)),
+        decimals: 6,
+        currency,
+        mintAddress: `mint_${currency}`,
+      };
+    },
   );
   const service = {
     getPayerPublicKey: () => payerKp.publicKey,
+    getCluster: () => "devnet" as const,
+    getMintAddress: () => "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
     getUsdcMintAddress: () => "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-    transferUsdc,
+    transferToken,
   } as unknown as SolanaService;
-  return { service, transferUsdc };
+  return { service, transferToken };
 }
 
 describe("idempotency middleware", () => {
   let db: Db;
   let server: RunningServer;
-  let transferUsdc: ReturnType<typeof vi.fn>;
+  let transferToken: ReturnType<typeof vi.fn>;
   let merchantId: string;
 
   beforeEach(async () => {
     closeDatabase();
     db = openDatabase(":memory:");
     const fake = makeFakeSolana();
-    transferUsdc = fake.transferUsdc;
+    transferToken = fake.transferToken;
     const merchant = registerMerchant(db, {
       name: "Acme Coffee",
       walletAddress: Keypair.generate().publicKey.toBase58(),
@@ -104,7 +115,7 @@ describe("idempotency middleware", () => {
       expect(secondBody.payment.id).toBe(firstBody.payment.id);
       expect(secondBody.payment.txSignature).toBe(firstBody.payment.txSignature);
 
-      expect(transferUsdc).toHaveBeenCalledTimes(1);
+      expect(transferToken).toHaveBeenCalledTimes(1);
     });
 
     it("returns 409 when the same key is reused with a different body", async () => {
@@ -127,7 +138,7 @@ describe("idempotency middleware", () => {
       expect(second.status).toBe(409);
       const body = (await second.json()) as { error: { code: string } };
       expect(body.error.code).toBe("conflict");
-      expect(transferUsdc).toHaveBeenCalledTimes(1);
+      expect(transferToken).toHaveBeenCalledTimes(1);
     });
 
     it("processes both calls when no Idempotency-Key is sent", async () => {
@@ -137,7 +148,7 @@ describe("idempotency middleware", () => {
       expect(first.status).toBe(201);
       const second = await fetch(`${server.url}/pay`, { method: "POST", headers, body });
       expect(second.status).toBe(201);
-      expect(transferUsdc).toHaveBeenCalledTimes(2);
+      expect(transferToken).toHaveBeenCalledTimes(2);
     });
 
     it("rejects malformed Idempotency-Key headers with 400", async () => {
@@ -150,7 +161,7 @@ describe("idempotency middleware", () => {
         body: JSON.stringify({ merchantId, amountUsdc: 1 }),
       });
       expect(res.status).toBe(400);
-      expect(transferUsdc).not.toHaveBeenCalled();
+      expect(transferToken).not.toHaveBeenCalled();
     });
 
     it("does not cache failed (5xx) responses — caller can retry", async () => {

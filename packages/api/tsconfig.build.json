@@ -15,6 +15,7 @@
     "src/db/merchants.ts",
     "src/db/payments.ts",
     "src/db/idempotency.ts",
+    "src/lib/currencies.ts",
     "src/lib/errors.ts",
     "src/lib/id.ts",
     "src/lib/logger.ts",

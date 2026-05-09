@@ -12,26 +12,53 @@ import {
 } from "@solana/web3.js";
 import bs58 from "bs58";
 import { HttpError } from "../lib/errors.js";
+import {
+  DEFAULT_CURRENCY,
+  type Cluster,
+  type Currency,
+  resolveMint,
+} from "../lib/currencies.js";
 
 export interface SolanaConfig {
   rpcUrl: string;
   commitment: Commitment;
-  usdcMintAddress: string;
+  /**
+   * Cluster the SolanaService is bound to. Currency mints are resolved
+   * per-cluster via the registry — devnet → devnet mints, etc.
+   */
+  cluster: Cluster;
+  /**
+   * Legacy override for the USDC mint. Honoured to keep older deployments
+   * working; new currencies use `ZETTAPAY_<SYMBOL>_MINT_<CLUSTER>` envs.
+   */
+  usdcMintAddress?: string | null;
   payerSecretKey: string | null;
 }
 
-export interface TransferUsdcParams {
+export interface TransferTokenParams {
   recipientOwner: PublicKey;
-  amountUsdc: number;
+  amount: number;
+  currency?: Currency;
 }
 
-export interface TransferUsdcResult {
+export interface TransferTokenResult {
   signature: string;
   payerWallet: string;
   recipientWallet: string;
   amountAtomic: bigint;
   decimals: number;
+  currency: Currency;
+  mintAddress: string;
 }
+
+/** @deprecated Use {@link TransferTokenParams} — retained for SDK callers still on USDC-only. */
+export interface TransferUsdcParams {
+  recipientOwner: PublicKey;
+  amountUsdc: number;
+}
+
+/** @deprecated Use {@link TransferTokenResult}. */
+export type TransferUsdcResult = TransferTokenResult;
 
 /**
  * Wraps the Solana RPC connection plus a hot facilitator keypair used to sign
@@ -40,13 +67,17 @@ export interface TransferUsdcResult {
  */
 export class SolanaService {
   private readonly connection: Connection;
-  private readonly usdcMint: PublicKey;
+  private readonly cluster: Cluster;
+  private readonly mintOverrides: Partial<Record<Currency, string>>;
   private readonly payer: Keypair | null;
-  private mintInfo: Mint | null = null;
+  private readonly mintCache = new Map<string, Mint>();
 
   constructor(config: SolanaConfig) {
     this.connection = new Connection(config.rpcUrl, config.commitment);
-    this.usdcMint = new PublicKey(config.usdcMintAddress);
+    this.cluster = config.cluster;
+    this.mintOverrides = config.usdcMintAddress
+      ? { USDC: config.usdcMintAddress }
+      : {};
     this.payer = config.payerSecretKey
       ? loadKeypair(config.payerSecretKey)
       : null;
@@ -56,8 +87,17 @@ export class SolanaService {
     return this.connection;
   }
 
+  getCluster(): Cluster {
+    return this.cluster;
+  }
+
+  getMintAddress(currency: Currency = DEFAULT_CURRENCY): string {
+    return this.resolve(currency).mintAddress;
+  }
+
+  /** @deprecated use {@link getMintAddress}. */
   getUsdcMintAddress(): string {
-    return this.usdcMint.toBase58();
+    return this.getMintAddress("USDC");
   }
 
   getPayerPublicKey(): PublicKey {
@@ -69,37 +109,44 @@ export class SolanaService {
     return this.payer.publicKey;
   }
 
-  async getMintDecimals(): Promise<number> {
-    const info = await this.getMintInfo();
+  async getMintDecimals(currency: Currency = DEFAULT_CURRENCY): Promise<number> {
+    const info = await this.getMintInfo(currency);
     return info.decimals;
   }
 
   /**
-   * Transfer USDC from the configured payer ATA → recipient owner ATA.
-   * Returns the confirmed transaction signature.
+   * Transfer the given currency from the configured payer ATA → recipient
+   * owner ATA. The payer and recipient ATAs are derived per-mint, so each
+   * currency lands in its own SPL token account on the recipient wallet.
    */
-  async transferUsdc(params: TransferUsdcParams): Promise<TransferUsdcResult> {
+  async transferToken(
+    params: TransferTokenParams,
+  ): Promise<TransferTokenResult> {
     if (!this.payer) {
       throw HttpError.config(
         "PAYER_SECRET_KEY is not configured — cannot sign transfers",
       );
     }
-    const mintInfo = await this.getMintInfo();
-    const amountAtomic = toAtomicAmount(params.amountUsdc, mintInfo.decimals);
+    const currency = params.currency ?? DEFAULT_CURRENCY;
+    const resolved = this.resolve(currency);
+    const mintPubkey = new PublicKey(resolved.mintAddress);
+    const mintInfo = await this.getMintInfo(currency);
+    const amountAtomic = toAtomicAmount(params.amount, mintInfo.decimals);
 
     const payerAta = await getOrCreateAssociatedTokenAccount(
       this.connection,
       this.payer,
-      this.usdcMint,
+      mintPubkey,
       this.payer.publicKey,
     );
 
     if (payerAta.amount < amountAtomic) {
       throw HttpError.paymentFailed(
-        "Insufficient USDC balance in payer ATA",
+        `Insufficient ${currency} balance in payer ATA`,
         {
           required: amountAtomic.toString(),
           available: payerAta.amount.toString(),
+          currency,
         },
       );
     }
@@ -107,7 +154,7 @@ export class SolanaService {
     const recipientAta = await getOrCreateAssociatedTokenAccount(
       this.connection,
       this.payer,
-      this.usdcMint,
+      mintPubkey,
       params.recipientOwner,
     );
 
@@ -115,7 +162,7 @@ export class SolanaService {
       this.connection,
       this.payer,
       payerAta.address,
-      this.usdcMint,
+      mintPubkey,
       recipientAta.address,
       this.payer,
       amountAtomic,
@@ -128,14 +175,34 @@ export class SolanaService {
       recipientWallet: params.recipientOwner.toBase58(),
       amountAtomic,
       decimals: mintInfo.decimals,
+      currency,
+      mintAddress: resolved.mintAddress,
     };
   }
 
-  private async getMintInfo(): Promise<Mint> {
-    if (!this.mintInfo) {
-      this.mintInfo = await getMint(this.connection, this.usdcMint);
-    }
-    return this.mintInfo;
+  /** @deprecated USDC-only shim; prefer {@link transferToken}. */
+  async transferUsdc(params: TransferUsdcParams): Promise<TransferUsdcResult> {
+    return this.transferToken({
+      recipientOwner: params.recipientOwner,
+      amount: params.amountUsdc,
+      currency: "USDC",
+    });
+  }
+
+  private resolve(currency: Currency) {
+    return resolveMint(currency, {
+      cluster: this.cluster,
+      overrides: this.mintOverrides,
+    });
+  }
+
+  private async getMintInfo(currency: Currency): Promise<Mint> {
+    const resolved = this.resolve(currency);
+    const cached = this.mintCache.get(resolved.mintAddress);
+    if (cached) return cached;
+    const info = await getMint(this.connection, new PublicKey(resolved.mintAddress));
+    this.mintCache.set(resolved.mintAddress, info);
+    return info;
   }
 }
 
@@ -154,12 +221,12 @@ function loadKeypair(secret: string): Keypair {
 }
 
 /**
- * Converts a decimal USDC amount (e.g. 12.34) to atomic units (10^decimals).
+ * Converts a decimal token amount (e.g. 12.34) to atomic units (10^decimals).
  * Avoids JS float drift by routing through a fixed-precision string.
  */
 export function toAtomicAmount(amount: number, decimals: number): bigint {
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw HttpError.badRequest("amountUsdc must be a positive finite number");
+    throw HttpError.badRequest("amount must be a positive finite number");
   }
   const fixed = amount.toFixed(decimals);
   const [whole, fraction = ""] = fixed.split(".");
@@ -168,7 +235,7 @@ export function toAtomicAmount(amount: number, decimals: number): bigint {
   const value = BigInt(atomicStr === "" ? "0" : atomicStr);
   if (value <= 0n) {
     throw HttpError.badRequest(
-      "amountUsdc resolves to zero atomic units — increase the amount",
+      "amount resolves to zero atomic units — increase the amount",
     );
   }
   return value;

@@ -5,6 +5,7 @@ import {
   type CoinflowEnvironment,
 } from "./coinflow/client.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
+import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
 import { SolanaService } from "./services/solana.js";
@@ -26,11 +27,26 @@ const solana = new SolanaService({
       | "confirmed"
       | "finalized"
       | undefined) ?? "confirmed",
-  usdcMintAddress:
-    process.env.SOLANA_USDC_MINT ?? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+  cluster: parseClusterEnv(process.env.SOLANA_NETWORK ?? process.env.SOLANA_CLUSTER),
+  usdcMintAddress: process.env.SOLANA_USDC_MINT ?? null,
   payerSecretKey:
     process.env.SOLANA_FEE_PAYER_SECRET ?? process.env.PAYER_SECRET_KEY ?? null,
 });
+
+function parseClusterEnv(raw: string | undefined): Cluster {
+  switch ((raw ?? "devnet").toLowerCase()) {
+    case "mainnet":
+    case "mainnet-beta":
+      return "mainnet-beta";
+    case "testnet":
+      return "testnet";
+    case "localnet":
+    case "localhost":
+      return "localnet";
+    default:
+      return "devnet";
+  }
+}
 
 const shutdown = new GracefulShutdown({ shutdownTimeoutMs, logger });
 shutdown.register("database", () => closeDatabase());

@@ -13,6 +13,11 @@ import {
   sendAndConfirmTransaction,
 } from "@solana/web3.js";
 import { getConfig } from "../config.js";
+import {
+  DEFAULT_CURRENCY,
+  type Currency,
+  resolveMint,
+} from "../lib/currencies.js";
 import { UpstreamError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { getConnection, getFeePayer } from "./connection.js";
@@ -21,6 +26,7 @@ import { buildMemoInstruction, encodeMemoPayload, type MemoBindingPayload } from
 export interface RegisterBindingParams {
   ownerWallet: PublicKey;
   merchantId: string;
+  currency?: Currency;
 }
 
 export interface RegisterBindingResult {
@@ -29,12 +35,16 @@ export interface RegisterBindingResult {
   txSignature: string;
   memoPayload: string;
   feePayer: string;
+  currency: Currency;
+  mintAddress: string;
 }
 
 /**
- * Idempotently creates the merchant's USDC ATA and emits a memo program
- * instruction binding the merchant id to the wallet on-chain. Both
- * instructions run inside a single tx so the binding is atomic with rent.
+ * Idempotently creates the merchant's ATA for the requested currency and
+ * emits a memo program instruction binding the merchant id to the wallet
+ * on-chain. Both instructions run inside a single tx so the binding is
+ * atomic with rent. Defaults to USDC for backward compatibility — pass an
+ * explicit `currency` to provision a different SPL ATA.
  */
 export async function registerOnchainBinding(
   params: RegisterBindingParams,
@@ -43,9 +53,18 @@ export async function registerOnchainBinding(
   const connection = getConnection();
   const feePayer: Keypair = getFeePayer();
 
-  const usdcMint = new PublicKey(cfg.solana.usdcMint);
+  const currency = params.currency ?? DEFAULT_CURRENCY;
+  const overrides = cfg.solana.usdcMint
+    ? ({ USDC: cfg.solana.usdcMint } as Partial<Record<Currency, string>>)
+    : undefined;
+  const resolved = resolveMint(currency, {
+    cluster: cfg.solana.cluster,
+    overrides,
+  });
+  const mintPubkey = new PublicKey(resolved.mintAddress);
+
   const ata = getAssociatedTokenAddressSync(
-    usdcMint,
+    mintPubkey,
     params.ownerWallet,
     false,
     TOKEN_PROGRAM_ID,
@@ -70,7 +89,7 @@ export async function registerOnchainBinding(
       feePayer.publicKey,
       ata,
       params.ownerWallet,
-      usdcMint,
+      mintPubkey,
       TOKEN_PROGRAM_ID,
       ASSOCIATED_TOKEN_PROGRAM_ID,
     ),
@@ -91,6 +110,8 @@ export async function registerOnchainBinding(
       wallet: params.ownerWallet.toBase58(),
       ata: ata.toBase58(),
       ataCreated,
+      currency,
+      mint: resolved.mintAddress,
       signature,
     });
     return {
@@ -99,6 +120,8 @@ export async function registerOnchainBinding(
       txSignature: signature,
       memoPayload: encoded,
       feePayer: feePayer.publicKey.toBase58(),
+      currency,
+      mintAddress: resolved.mintAddress,
     };
   } catch (err) {
     throw new UpstreamError("Failed to broadcast merchant binding transaction", {
@@ -106,3 +129,4 @@ export async function registerOnchainBinding(
     });
   }
 }
+
