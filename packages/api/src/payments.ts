@@ -44,6 +44,10 @@ export class PaymentLog {
     return this.entries.slice(offset, offset + limit);
   }
 
+  findById(id: string): PaymentRecord | null {
+    return this.entries.find((entry) => entry.id === id) ?? null;
+  }
+
   count(): number {
     return this.entries.length;
   }

@@ -4,6 +4,7 @@ import { MerchantRepository } from './repository.js';
 import { PaymentLog } from './payments.js';
 import { buildMerchantsRouter } from './routes/merchants.js';
 import { buildPayRouter } from './routes/pay.js';
+import { buildPaymentsRouter } from './routes/payments.js';
 import { buildMcpRouter } from './routes/mcp.js';
 import { HttpError } from './errors.js';
 
@@ -35,6 +36,7 @@ export function buildApp(deps: AppDependencies = {}): AppHandle {
 
   app.use('/merchants', buildMerchantsRouter(repository));
   app.use('/pay', buildPayRouter(payments));
+  app.use('/payments', buildPaymentsRouter(payments));
   app.use('/mcp', buildMcpRouter({ merchants: repository, payments }));
 
   app.use((_req, res) => {
