@@ -3,5 +3,6 @@ node_modules
 !.env.example
 .DS_Store
 dist
+coverage
 *.log
-package-lock.json
+*.tsbuildinfo
