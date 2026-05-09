@@ -2,8 +2,23 @@
 
 Open-source universal payment protocol on Solana for humans and AI agents.
 
+## Live deployment
+
+| Environment | URL |
+| --- | --- |
+| Production (Vercel) | https://zettapay.vercel.app |
+| Custom domain | https://zettapay.fabric.4profitai.com |
+
+Quick checks:
+
+```bash
+curl https://zettapay.vercel.app/healthz
+curl https://zettapay.vercel.app/simulate/test-merchant
+```
+
 ## Tech Stack
-- Node.js + Express + TypeScript
+- Node.js + Express + TypeScript (long-running server)
+- Vercel Serverless Functions (`/api/*`) for the public preview
 - @solana/web3.js + @solana/spl-token
 - Solana devnet (USDC mint: `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`)
 
@@ -42,12 +57,52 @@ Response (201):
 }
 ```
 
+### `GET /simulate/:merchant`
+Hackathon demo simulator. Returns a deterministic synthetic merchant plus
+a fake airdrop and payment, with no on-chain side effects. Available on
+Vercel as a serverless function and on the local Express server.
+
+```bash
+curl https://zettapay.vercel.app/simulate/test-merchant
+```
+
 ## Features
 - Merchant onboarding via Phantom wallet
 - USDC P2P payments
 - MoonPay onramp (card → USDC)
 - x402 header support
 - MCP endpoint for AI agents
+
+## Vercel deployment
+
+The project ships with a thin `/api/*` serverless layer that mirrors the
+public-facing routes of the Express server. It is independent of the
+SQLite-backed long-running runtime, so it runs cleanly on Vercel without
+native modules or persistent storage.
+
+```
+api/
+├── index.ts                # GET /api      → metadata
+├── healthz.ts              # GET /healthz  → liveness
+├── simulate/[merchant].ts  # GET /simulate/:merchant → demo simulator
+└── _lib/                   # shared helpers (base58, …)
+```
+
+Routing:
+
+- `vercel.json#rewrites` exposes `/healthz` and `/simulate/:merchant` at the
+  root, matching the Express route shape.
+- Every function uses 1 GB RAM and a 30 s `maxDuration` budget.
+- The build command is a no-op — Vercel auto-detects the `api/**/*.ts` functions
+  and compiles them with its bundled `@vercel/node` runtime.
+
+Local emulation:
+
+```bash
+npx vercel dev
+curl http://localhost:3000/healthz
+curl http://localhost:3000/simulate/test-merchant
+```
 
 ## Docker
 

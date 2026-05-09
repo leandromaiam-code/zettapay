@@ -12,7 +12,11 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev --workspace @zettapay/api",
+    "vercel-build": "echo 'serverless functions auto-detected from /api'",
     "clean": "rm -rf packages/*/dist"
+  },
+  "devDependencies": {
+    "@vercel/node": "^3.2.24"
   },
   "engines": {
     "node": ">=18.18"
