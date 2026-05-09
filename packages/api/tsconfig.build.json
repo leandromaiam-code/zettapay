@@ -30,6 +30,7 @@
     "src/routes/verify-signature.ts",
     "src/services/merchants.ts",
     "src/services/payments.ts",
+    "src/services/pricing.ts",
     "src/services/solana.ts",
     "src/services/webhook_dispatcher.ts",
     "src/services/webhook_worker.ts",

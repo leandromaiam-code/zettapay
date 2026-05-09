@@ -47,19 +47,13 @@ export function payRouter(
           solana,
           {
             merchantId,
-            amountUsdc,
+            amountUsdc: amount,
             payerWallet,
             metadata,
+            currency,
           },
           deps,
         );
-        const { payment } = await createPayment(db, solana, {
-          merchantId,
-          amountUsdc: amount,
-          payerWallet,
-          metadata,
-          currency,
-        });
 
         res.status(201).json({
           payment: {
