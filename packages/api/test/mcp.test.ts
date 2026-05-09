@@ -104,7 +104,7 @@ describe('GET /mcp', () => {
     expect(res.body.serverInfo).toEqual({ name: 'zettapay-mcp', version: '0.1.0' });
     expect(Array.isArray(res.body.tools)).toBe(true);
     const names = res.body.tools.map((t: { name: string }) => t.name);
-    expect(names).toEqual(['pay', 'get_merchant', 'list_payments']);
+    expect(names).toEqual(['pay', 'get_merchant', 'list_payments', 'create_onramp_url']);
     for (const tool of res.body.tools) {
       expect(typeof tool.description).toBe('string');
       expect(tool.inputSchema.type).toBe('object');
@@ -139,7 +139,12 @@ describe('POST /mcp — JSON-RPC 2.0', () => {
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('a');
     const tools = res.body.result.tools as Array<{ name: string; inputSchema: { required?: string[] } }>;
-    expect(tools.map((t) => t.name)).toEqual(['pay', 'get_merchant', 'list_payments']);
+    expect(tools.map((t) => t.name)).toEqual([
+      'pay',
+      'get_merchant',
+      'list_payments',
+      'create_onramp_url',
+    ]);
     const pay = tools.find((t) => t.name === 'pay');
     expect(pay?.inputSchema.required).toEqual(['payment']);
     const merch = tools.find((t) => t.name === 'get_merchant');
@@ -147,7 +152,12 @@ describe('POST /mcp — JSON-RPC 2.0', () => {
   });
 
   it('exposes the same tool catalog statically', () => {
-    expect(MCP_TOOLS.map((t) => t.name)).toEqual(['pay', 'get_merchant', 'list_payments']);
+    expect(MCP_TOOLS.map((t) => t.name)).toEqual([
+      'pay',
+      'get_merchant',
+      'list_payments',
+      'create_onramp_url',
+    ]);
   });
 
   it('returns method_not_found for unknown methods', async () => {
@@ -329,6 +339,6 @@ describe('POST /mcp — JSON-RPC 2.0', () => {
     expect(Array.isArray(res.body)).toBe(true);
     expect(res.body).toHaveLength(2);
     expect(res.body[0].id).toBe(1);
-    expect(res.body[1].result.tools.length).toBe(3);
+    expect(res.body[1].result.tools.length).toBe(4);
   });
 });

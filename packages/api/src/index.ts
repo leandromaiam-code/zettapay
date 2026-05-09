@@ -1,31 +1,48 @@
-import { loadEnv } from "./config/env.js";
-import { openDatabase } from "./db/index.js";
-import { SolanaService } from "./services/solana.js";
-import { createApp } from "./app.js";
-
-function main(): void {
-  const env = loadEnv();
-  const db = openDatabase(env.databasePath);
-  const solana = new SolanaService({
-    rpcUrl: env.solanaRpcUrl,
-    commitment: env.solanaCommitment,
-    usdcMintAddress: env.usdcMintAddress,
-    payerSecretKey: env.payerSecretKey,
-  });
-
-  const app = createApp({ db, solana });
-  const server = app.listen(env.port, () => {
-    console.log(
-      `[zettapay-api] listening on :${env.port} (rpc=${env.solanaRpcUrl}, commitment=${env.solanaCommitment})`,
-    );
-  });
-
-  const shutdown = (signal: string): void => {
-    console.log(`[zettapay-api] received ${signal}, shutting down`);
-    server.close(() => process.exit(0));
-  };
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGINT", () => shutdown("SIGINT"));
-}
-
-main();
+export { buildApp, type AppHandle, type AppDependencies } from './app.js';
+export { openDb, type DB, type OpenDbOptions } from './db.js';
+export {
+  MerchantRepository,
+  type CreateMerchantInput,
+  type UpdateMerchantInput,
+  type ListOptions,
+} from './repository.js';
+export type { Merchant } from './types.js';
+export { HttpError } from './errors.js';
+export {
+  dispatchWebhook,
+  DEFAULT_RETRY_DELAYS_MS,
+  type DispatchWebhookOptions,
+  type WebhookAttempt,
+  type WebhookDispatchResult,
+} from './webhook.js';
+export {
+  parseX402Payment,
+  x402PaymentMiddleware,
+  X402ValidationError,
+  X402_HEADER,
+  type X402PaymentInfo,
+  type X402ErrorCode,
+  type X402MiddlewareOptions,
+} from './x402.js';
+export {
+  PaymentLog,
+  type PaymentRecord,
+  type ListPaymentsOptions,
+} from './payments.js';
+export {
+  buildMcpRouter,
+  MCP_TOOLS,
+  type McpDependencies,
+  type McpToolDefinition,
+} from './routes/mcp.js';
+export {
+  buildMoonPayUrl,
+  loadMoonPayConfig,
+  moonPayBaseUrl,
+  MoonPayBuildError,
+  MoonPayConfigError,
+  type MoonPayConfig,
+  type MoonPayEnvironment,
+  type MoonPayUrlInput,
+} from './onramp.js';
+export { buildOnrampRouter, type OnrampRouterDeps } from './routes/onramp.js';
