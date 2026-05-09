@@ -21,6 +21,10 @@
     "express": "^4.21.1",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0"
+<<<<<<< HEAD
+=======
+    "ioredis": "^5.4.1",
+>>>>>>> f04ee59 (feat(api): rate limiting per API key + native DDoS guard (Redis sliding window))
     "zod": "^3.23.8"
   },
   "devDependencies": {
