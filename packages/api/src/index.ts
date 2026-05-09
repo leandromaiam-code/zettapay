@@ -6,6 +6,12 @@ export { payRouter } from "./routes/pay.js";
 export { verifySignatureRouter } from "./routes/verify-signature.js";
 export { idempotency } from "./middleware/idempotency.js";
 export {
+  GracefulShutdown,
+  type CloseHook,
+  type GracefulShutdownOptions,
+  type ServerLike,
+} from "./lib/shutdown.js";
+export {
   signWebhookPayload,
   verifyWebhookSignature,
   SIGNATURE_HEADER,
