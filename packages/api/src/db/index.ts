@@ -18,8 +18,20 @@ export function openDatabase(databasePath: string): Db {
   }
   db.pragma("foreign_keys = ON");
   applyMigrations(db);
+  applyAddOnColumns(db);
   dbInstance = db;
   return db;
+}
+
+function applyAddOnColumns(db: Db): void {
+  // Idempotent column additions for forward-compat with older databases.
+  const cols = db.prepare("PRAGMA table_info(merchants)").all() as Array<{
+    name: string;
+  }>;
+  const names = new Set(cols.map((c) => c.name));
+  if (!names.has("webhook_secret")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN webhook_secret TEXT");
+  }
 }
 
 export function closeDatabase(): void {
@@ -38,10 +50,12 @@ function applyMigrations(db: Db): void {
       email           TEXT NOT NULL UNIQUE,
       api_key         TEXT NOT NULL UNIQUE,
       webhook_url     TEXT,
+      webhook_secret  TEXT,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
 
     CREATE INDEX IF NOT EXISTS merchants_email_idx ON merchants(email);
+    CREATE INDEX IF NOT EXISTS merchants_api_key_idx ON merchants(api_key);
 
     CREATE TABLE IF NOT EXISTS payments (
       id              TEXT PRIMARY KEY,

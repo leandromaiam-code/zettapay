@@ -19,10 +19,12 @@
     "src/lib/id.ts",
     "src/lib/logger.ts",
     "src/lib/validate.ts",
+    "src/lib/webhook-signature.ts",
     "src/middleware/error.ts",
     "src/middleware/idempotency.ts",
     "src/routes/merchants.ts",
     "src/routes/pay.ts",
+    "src/routes/verify-signature.ts",
     "src/services/merchants.ts",
     "src/services/payments.ts",
     "src/services/solana.ts"

@@ -31,6 +31,10 @@ export class HttpError extends Error {
     return new HttpError(400, "validation_error", message, details);
   }
 
+  static unauthorized(message: string, details?: unknown): HttpError {
+    return new HttpError(401, "unauthorized", message, details);
+  }
+
   static notFound(message: string): HttpError {
     return new HttpError(404, "not_found", message);
   }
@@ -78,17 +82,4 @@ export class UpstreamError extends HttpError {
     super(502, "upstream_error", message, details);
     this.name = "UpstreamError";
   }
-<<<<<<< HEAD
-=======
-}
-
-export class RateLimitError extends HttpError {
-  readonly retryAfterSec: number;
-
-  constructor(message: string, retryAfterSec: number, details?: unknown) {
-    super(429, "rate_limited", message, details);
-    this.name = "RateLimitError";
-    this.retryAfterSec = retryAfterSec;
-  }
->>>>>>> f04ee59 (feat(api): rate limiting per API key + native DDoS guard (Redis sliding window))
 }
