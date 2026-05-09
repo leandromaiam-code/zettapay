@@ -29,6 +29,10 @@ export function registerMerchant(
     );
   }
 
+  // Webhook signing secret is generated only when a webhook URL is configured;
+  // merchants with no callback URL have no use for it.
+  const webhookSecret = input.webhookUrl ? generateWebhookSecret() : null;
+
   return insertMerchant(db, {
     id: newId("merch"),
     name: input.name,
@@ -36,9 +40,14 @@ export function registerMerchant(
     email: input.email,
     apiKey: generateApiKey(),
     webhookUrl: input.webhookUrl,
+    webhookSecret,
   });
 }
 
 function generateApiKey(): string {
   return `zp_live_${randomBytes(24).toString("hex")}`;
+}
+
+function generateWebhookSecret(): string {
+  return `whsec_${randomBytes(32).toString("hex")}`;
 }
