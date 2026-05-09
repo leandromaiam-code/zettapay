@@ -12,6 +12,9 @@
   },
   "rewrites": [
     { "source": "/healthz", "destination": "/api/healthz" },
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/ready", "destination": "/api/ready" },
+    { "source": "/metrics", "destination": "/api/metrics" },
     { "source": "/simulate/:merchant", "destination": "/api/simulate/:merchant" }
   ],
   "headers": [
