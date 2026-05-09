@@ -6,7 +6,12 @@ const app = createApp();
 
 const server = app.listen(env.port, () => {
   logger.info(
-    { port: env.port, cluster: env.solanaCluster, endpoint: env.solanaRpcUrl },
+    {
+      port: env.port,
+      cluster: env.solanaCluster,
+      endpoint: env.solanaRpcUrl,
+      commitment: env.solanaCommitment,
+    },
     'ZettaPay listening',
   );
 });

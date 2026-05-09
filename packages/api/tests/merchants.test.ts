@@ -36,7 +36,7 @@ function freshWallet(): string {
 describe("POST /merchants/register", () => {
   beforeAll(() => {
     process.env.SOLANA_FEE_PAYER_SECRET = bs58.encode(Keypair.generate().secretKey);
-    process.env.SOLANA_CLUSTER = "devnet";
+    process.env.SOLANA_NETWORK = "devnet";
     resetConfigForTests();
     resetSolanaCache();
   });
