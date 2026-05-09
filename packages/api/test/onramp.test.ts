@@ -166,6 +166,7 @@ describe('processOnrampWebhook', () => {
     const dispatch = vi.fn(
       async (): Promise<WebhookDispatchResult> => ({
         delivered: true,
+        deadLettered: false,
         eventId: 'evt',
         attempts: [{ attempt: 1, status: 200, ok: true, durationMs: 10 }],
       }),
@@ -192,6 +193,7 @@ describe('processOnrampWebhook', () => {
     const dispatch = vi.fn(
       async (): Promise<WebhookDispatchResult> => ({
         delivered: true,
+        deadLettered: false,
         eventId: 'evt',
         attempts: [{ attempt: 1, status: 200, ok: true, durationMs: 1 }],
       }),
@@ -220,6 +222,7 @@ describe('POST /onramp/webhook', () => {
     dispatch = vi.fn(
       async (): Promise<WebhookDispatchResult> => ({
         delivered: true,
+        deadLettered: false,
         eventId: 'evt',
         attempts: [{ attempt: 1, status: 200, ok: true, durationMs: 1 }],
       }),
