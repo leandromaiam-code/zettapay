@@ -41,5 +41,18 @@ export const IdParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
 
+const CURRENCY_CODE = /^[a-zA-Z0-9_]{2,20}$/;
+
+export const CreateOnrampUrlSchema = z.object({
+  merchant_id: z.coerce.number().int().positive(),
+  currency_code: z.string().trim().regex(CURRENCY_CODE).optional(),
+  base_currency_amount: z.coerce.number().positive().finite().optional(),
+  base_currency_code: z.string().trim().regex(CURRENCY_CODE).optional(),
+  redirect_url: z.string().trim().url().optional(),
+  external_customer_id: z.string().trim().min(1).max(120).optional(),
+  external_transaction_id: z.string().trim().min(1).max(120).optional(),
+});
+
 export type CreateMerchantBody = z.infer<typeof CreateMerchantSchema>;
 export type UpdateMerchantBody = z.infer<typeof UpdateMerchantSchema>;
+export type CreateOnrampUrlBody = z.infer<typeof CreateOnrampUrlSchema>;

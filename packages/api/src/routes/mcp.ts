@@ -2,6 +2,11 @@ import { Router, type Request, type Response } from 'express';
 import { parseX402Payment, X402ValidationError } from '../x402.js';
 import type { MerchantRepository } from '../repository.js';
 import type { PaymentLog } from '../payments.js';
+import {
+  buildMoonPayUrl,
+  MoonPayBuildError,
+  type MoonPayConfig,
+} from '../onramp.js';
 
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_NAME = 'zettapay-mcp';
@@ -80,6 +85,48 @@ export const MCP_TOOLS: McpToolDefinition[] = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'create_onramp_url',
+    description:
+      'Build a MoonPay onramp URL for a merchant. The destination wallet is the merchant USDC ATA recorded at onboarding. Honors MOONPAY_ENV (sandbox or production) and MOONPAY_API_KEY at runtime.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        merchantId: {
+          type: 'integer',
+          minimum: 1,
+          description: 'Merchant primary key',
+        },
+        currencyCode: {
+          type: 'string',
+          description: 'Target crypto currency code (default usdc_sol)',
+        },
+        baseCurrencyCode: {
+          type: 'string',
+          description: 'Fiat currency code (e.g. usd, brl)',
+        },
+        baseCurrencyAmount: {
+          type: 'number',
+          exclusiveMinimum: 0,
+          description: 'Fiat amount to prefill',
+        },
+        redirectURL: {
+          type: 'string',
+          description: 'Absolute URL the user is redirected to after purchase',
+        },
+        externalCustomerId: {
+          type: 'string',
+          description: 'Stable identifier for the buyer (passed through to MoonPay)',
+        },
+        externalTransactionId: {
+          type: 'string',
+          description: 'Stable identifier for the merchant-side transaction',
+        },
+      },
+      required: ['merchantId'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 interface JsonRpcRequest {
@@ -148,11 +195,13 @@ function isNonNegativeInteger(value: unknown): value is number {
 export interface McpDependencies {
   merchants: MerchantRepository;
   payments: PaymentLog;
+  moonPay?: MoonPayConfig | null;
 }
 
 interface ToolContext {
   merchants: MerchantRepository;
   payments: PaymentLog;
+  moonPay: MoonPayConfig | null;
 }
 
 function callPay(args: Record<string, unknown>, ctx: ToolContext) {
@@ -203,6 +252,76 @@ function callGetMerchant(args: Record<string, unknown>, ctx: ToolContext) {
   return textContent(merchant);
 }
 
+function callCreateOnrampUrl(args: Record<string, unknown>, ctx: ToolContext) {
+  if (!ctx.moonPay) {
+    return toolError(
+      'MoonPay onramp is not configured (set MOONPAY_API_KEY)',
+      'onramp_disabled',
+    );
+  }
+  const merchantId = args.merchantId;
+  if (!isPositiveInteger(merchantId)) {
+    return toolError('merchantId must be a positive integer', 'invalid_arguments');
+  }
+  const merchant = ctx.merchants.findById(merchantId);
+  if (!merchant) {
+    return toolError(`merchant ${merchantId} not found`, 'not_found');
+  }
+
+  const currencyCode = args.currencyCode;
+  const baseCurrencyCode = args.baseCurrencyCode;
+  const baseCurrencyAmount = args.baseCurrencyAmount;
+  const redirectURL = args.redirectURL;
+  const externalCustomerId = args.externalCustomerId;
+  const externalTransactionId = args.externalTransactionId;
+
+  if (currencyCode !== undefined && typeof currencyCode !== 'string') {
+    return toolError('currencyCode must be a string', 'invalid_arguments');
+  }
+  if (baseCurrencyCode !== undefined && typeof baseCurrencyCode !== 'string') {
+    return toolError('baseCurrencyCode must be a string', 'invalid_arguments');
+  }
+  if (
+    baseCurrencyAmount !== undefined &&
+    (typeof baseCurrencyAmount !== 'number' || !Number.isFinite(baseCurrencyAmount) || baseCurrencyAmount <= 0)
+  ) {
+    return toolError('baseCurrencyAmount must be a positive number', 'invalid_arguments');
+  }
+  if (redirectURL !== undefined && typeof redirectURL !== 'string') {
+    return toolError('redirectURL must be a string', 'invalid_arguments');
+  }
+  if (externalCustomerId !== undefined && typeof externalCustomerId !== 'string') {
+    return toolError('externalCustomerId must be a string', 'invalid_arguments');
+  }
+  if (externalTransactionId !== undefined && typeof externalTransactionId !== 'string') {
+    return toolError('externalTransactionId must be a string', 'invalid_arguments');
+  }
+
+  try {
+    const url = buildMoonPayUrl(ctx.moonPay, {
+      walletAddress: merchant.usdcAta,
+      currencyCode,
+      baseCurrencyCode,
+      baseCurrencyAmount,
+      redirectURL,
+      externalCustomerId,
+      externalTransactionId,
+    });
+    return textContent({
+      url,
+      environment: ctx.moonPay.environment,
+      merchantId: merchant.id,
+      walletAddress: merchant.usdcAta,
+    });
+  } catch (err) {
+    if (err instanceof MoonPayBuildError) {
+      return toolError(err.message, err.code);
+    }
+    const message = err instanceof Error ? err.message : 'failed to build onramp url';
+    return toolError(message, 'onramp_failed');
+  }
+}
+
 function callListPayments(args: Record<string, unknown>, ctx: ToolContext) {
   const limit = args.limit;
   const offset = args.offset;
@@ -231,6 +350,8 @@ function dispatchToolCall(
       return { ok: true, result: callGetMerchant(args, ctx) };
     case 'list_payments':
       return { ok: true, result: callListPayments(args, ctx) };
+    case 'create_onramp_url':
+      return { ok: true, result: callCreateOnrampUrl(args, ctx) };
     default:
       return { ok: false, code: METHOD_NOT_FOUND, message: `unknown tool: ${name}` };
   }
@@ -296,7 +417,11 @@ function handleRpc(req: JsonRpcRequest, ctx: ToolContext): JsonRpcResponse | nul
 
 export function buildMcpRouter(deps: McpDependencies): Router {
   const router = Router();
-  const ctx: ToolContext = { merchants: deps.merchants, payments: deps.payments };
+  const ctx: ToolContext = {
+    merchants: deps.merchants,
+    payments: deps.payments,
+    moonPay: deps.moonPay ?? null,
+  };
 
   router.get('/', (_req: Request, res: Response) => {
     res.json({
