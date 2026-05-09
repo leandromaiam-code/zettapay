@@ -8,15 +8,14 @@
     "rootDir": "src",
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
     "declaration": true,
-    "sourceMap": true
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "test"]
+  "exclude": ["dist", "node_modules"]
 }

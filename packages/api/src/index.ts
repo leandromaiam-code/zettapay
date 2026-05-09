@@ -1,44 +1,32 @@
-export { buildApp, type AppHandle, type AppDependencies } from './app.js';
-export { openDb, type DB, type OpenDbOptions } from './db.js';
-export {
-  MerchantRepository,
-  type CreateMerchantInput,
-  type UpdateMerchantInput,
-  type ListOptions,
-} from './repository.js';
-export type { Merchant } from './types.js';
-export { HttpError } from './errors.js';
-export {
-  dispatchWebhook,
-  DEFAULT_RETRY_DELAYS_MS,
-  type DispatchWebhookOptions,
-  type WebhookAttempt,
-  type WebhookDispatchResult,
-} from './webhook.js';
-export {
-  parseX402Payment,
-  x402PaymentMiddleware,
-  X402ValidationError,
-  X402_HEADER,
-  type X402PaymentInfo,
-  type X402ErrorCode,
-  type X402MiddlewareOptions,
-} from './x402.js';
-export {
-  PaymentLog,
-  type PaymentRecord,
-  type ListPaymentsOptions,
-} from './payments.js';
-export {
-  buildMcpRouter,
-  MCP_TOOLS,
-  type McpDependencies,
-  type McpToolDefinition,
-} from './routes/mcp.js';
-export {
-  buildSimulateRouter,
-  SIMULATE_NETWORK,
-  SIMULATE_USDC_MINT,
-  SIMULATE_DISCLAIMER,
-  type SimulateRouterDeps,
-} from './routes/simulate.js';
+import express from "express";
+import { loadEnv } from "./env.js";
+import { getSolanaService } from "./lib/solana.js";
+import { healthRouter } from "./routes/health.js";
+import { faucetRouter } from "./routes/faucet.js";
+
+export function createApp(env = loadEnv()) {
+  const app = express();
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "32kb" }));
+
+  const solana = getSolanaService(env);
+
+  app.use("/health", healthRouter(solana));
+  app.use("/faucet", faucetRouter(solana, env.faucetMaxAirdropLamports));
+
+  app.use((_req, res) => {
+    res.status(404).json({ error: "not found" });
+  });
+
+  return { app, env, solana };
+}
+
+const isMain = import.meta.url === `file://${process.argv[1]}`;
+if (isMain) {
+  const { app, env, solana } = createApp();
+  app.listen(env.port, () => {
+    console.log(
+      `[zettapay-api] listening on :${env.port} — solana ${solana.network} via ${solana.rpcUrl}`,
+    );
+  });
+}

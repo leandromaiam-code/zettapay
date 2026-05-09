@@ -1,73 +1,42 @@
 # @zettapay/api
 
-Express + SQLite REST service that backs **merchant onboarding** for ZettaPay.
+Express service that owns the ZettaPay backend's Solana connection. Provides:
 
-## Schema
+- A retrying [`SolanaConnectionService`](src/lib/solana.ts) with exponential backoff for transient RPC errors.
+- A [faucet helper](src/lib/faucet.ts) that issues devnet/testnet airdrops and waits for confirmation.
+- HTTP routes for `/health`, `/health/solana`, and `/faucet/airdrop`.
 
-`merchants`
+## Environment
 
-| column          | type    | constraints                          |
-| --------------- | ------- | ------------------------------------ |
-| `id`            | INTEGER | PK, autoincrement                    |
-| `name`          | TEXT    | NOT NULL                             |
-| `wallet_pubkey` | TEXT    | NOT NULL, UNIQUE (Solana base58)     |
-| `usdc_ata`      | TEXT    | NOT NULL, UNIQUE (Solana base58 ATA) |
-| `created_at`    | INTEGER | NOT NULL, epoch millis               |
+Configured entirely via env vars (see root `.env.example`):
 
-## REST endpoints
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `3001` | HTTP port |
+| `SOLANA_NETWORK` | `devnet` | `devnet`, `testnet`, or `mainnet-beta` |
+| `SOLANA_RPC_URL` | `https://api.devnet.solana.com` | Override the RPC endpoint |
+| `RPC_MAX_RETRIES` | `5` | Maximum retries per RPC call |
+| `RPC_INITIAL_BACKOFF_MS` | `250` | Starting backoff delay |
+| `RPC_MAX_BACKOFF_MS` | `4000` | Cap on a single backoff delay |
+| `FAUCET_MAX_AIRDROP_LAMPORTS` | `2000000000` | Hard cap per airdrop (defense in depth) |
 
-| method | path             | body / query                                      | response               |
-| ------ | ---------------- | ------------------------------------------------- | ---------------------- |
-| GET    | `/healthz`       | —                                                 | `{ status, merchants }`|
-| GET    | `/merchants`     | `?limit=1..200&offset=0..`                        | `{ items, count }`     |
-| POST   | `/merchants`     | `{ name, wallet_pubkey, usdc_ata }`               | `201` merchant         |
-| GET    | `/merchants/:id` | —                                                 | merchant or `404`      |
-| PATCH  | `/merchants/:id` | partial `{ name?, wallet_pubkey?, usdc_ata? }`    | merchant or `404`/`409`|
-| DELETE | `/merchants/:id` | —                                                 | `204` or `404`         |
+The faucet route returns `409` when `SOLANA_NETWORK=mainnet-beta`.
 
 ## Scripts
 
 ```bash
-npm run dev        # tsx watch
-npm run build      # tsc
-npm run typecheck  # tsc --noEmit
-npm run test       # vitest
-npm run start      # node dist/server.js
+npm run build     # tsc -> dist/
+npm run typecheck # tsc --noEmit
+npm run dev       # tsx watch
+npm start         # node dist/index.js
 ```
 
-## Env
+## HTTP
 
-| var                | default                  | notes                              |
-| ------------------ | ------------------------ | ---------------------------------- |
-| `PORT`             | `3001`                   | listen port                        |
-| `HOST`             | `0.0.0.0`                | listen host                        |
-| `ZETTAPAY_DB_PATH` | `./data/zettapay.sqlite` | use `:memory:` for ephemeral state |
-
-## Webhook dispatcher
-
-`dispatchWebhook()` POSTs a JSON payload to a merchant callback URL with retry
-**3x exponential backoff** at the canonical schedule **1s · 5s · 15s** (initial
-attempt + up to three retries, four total tries).
-
-```ts
-import { dispatchWebhook } from '@zettapay/api';
-
-const result = await dispatchWebhook({
-  url: merchant.callbackUrl,
-  payload: { event: 'payment.confirmed', amount: '10.00', txSig },
-  secret: process.env.WEBHOOK_SIGNING_SECRET,
-  eventId: paymentId,
-});
+```bash
+curl http://localhost:3001/health
+curl http://localhost:3001/health/solana
+curl -X POST http://localhost:3001/faucet/airdrop \
+  -H 'content-type: application/json' \
+  -d '{"recipient":"<base58 pubkey>","lamports":1000000000}'
 ```
-
-Outgoing requests carry:
-
-| header                   | purpose                                                         |
-| ------------------------ | --------------------------------------------------------------- |
-| `X-ZettaPay-Event-Id`    | stable id reused across retries → consumer-side idempotency     |
-| `X-ZettaPay-Timestamp`   | unix ms, part of the signed string                              |
-| `X-ZettaPay-Signature`   | `sha256=<hex>` HMAC of `${timestamp}.${body}` with shared secret |
-
-Retries fire on transport errors, `5xx`, `408`, `425` and `429`. Other `4xx`
-responses are treated as permanent failures (no retry) since the callback URL
-won't recover by itself.
