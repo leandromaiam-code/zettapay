@@ -32,6 +32,22 @@ function applyAddOnColumns(db: Db): void {
   if (!names.has("webhook_secret")) {
     db.exec("ALTER TABLE merchants ADD COLUMN webhook_secret TEXT");
   }
+  if (!names.has("coinflow_enabled")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN coinflow_enabled INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!names.has("coinflow_auto_settle")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN coinflow_auto_settle INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!names.has("coinflow_merchant_id")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN coinflow_merchant_id TEXT");
+  }
+  if (!names.has("coinflow_bank_account_id")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN coinflow_bank_account_id TEXT");
+  }
 }
 
 export function closeDatabase(): void {
@@ -119,5 +135,28 @@ function applyMigrations(db: Db): void {
       ON webhook_events(status);
     CREATE INDEX IF NOT EXISTS webhook_events_last_attempt_at_idx
       ON webhook_events(last_attempt_at);
+
+    CREATE TABLE IF NOT EXISTS coinflow_settlements (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      amount_usdc     REAL NOT NULL,
+      fee_usdc        REAL NOT NULL,
+      net_usdc        REAL NOT NULL,
+      fee_bps         INTEGER NOT NULL,
+      bank_account_id TEXT NOT NULL,
+      withdrawal_id   TEXT,
+      status          TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
+      error_message   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at    TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS coinflow_settlements_merchant_idx
+      ON coinflow_settlements(merchant_id);
+    CREATE INDEX IF NOT EXISTS coinflow_settlements_status_idx
+      ON coinflow_settlements(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS coinflow_settlements_payment_uidx
+      ON coinflow_settlements(payment_id) WHERE payment_id IS NOT NULL;
   `);
 }

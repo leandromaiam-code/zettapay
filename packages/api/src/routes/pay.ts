@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Database as Db } from "better-sqlite3";
-import { createPayment } from "../services/payments.js";
+import { createPayment, type CreatePaymentDeps } from "../services/payments.js";
 import { idempotency } from "../middleware/idempotency.js";
 import { HttpError } from "../lib/errors.js";
 import {
@@ -13,7 +13,11 @@ import type { SolanaService } from "../services/solana.js";
 
 const MAX_AMOUNT_USDC = 1_000_000;
 
-export function payRouter(db: Db, solana: SolanaService): Router {
+export function payRouter(
+  db: Db,
+  solana: SolanaService,
+  deps: CreatePaymentDeps = {},
+): Router {
   const router = Router();
 
   router.post(
@@ -32,12 +36,17 @@ export function payRouter(db: Db, solana: SolanaService): Router {
         const payerWallet = optionalString(body, "payerWallet", { maxLength: 64 });
         const metadata = optionalRecord(body, "metadata");
 
-        const { payment } = await createPayment(db, solana, {
-          merchantId,
-          amountUsdc,
-          payerWallet,
-          metadata,
-        });
+        const { payment } = await createPayment(
+          db,
+          solana,
+          {
+            merchantId,
+            amountUsdc,
+            payerWallet,
+            metadata,
+          },
+          deps,
+        );
 
         res.status(201).json({
           payment: {

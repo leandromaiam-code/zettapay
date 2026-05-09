@@ -12,6 +12,8 @@ import {
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
 import type { SolanaService } from "./solana.js";
+import type { CoinflowClient } from "../coinflow/client.js";
+import { settlePayment } from "../coinflow/service.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -24,6 +26,15 @@ export interface PaymentResult {
   payment: Payment;
 }
 
+export interface CreatePaymentDeps {
+  /** Optional Coinflow client; when present + merchant has auto-settle enabled,
+   * a settlement is fired-and-forgotten after a successful payment. Errors are
+   * swallowed so settlement failures never roll back a confirmed USDC transfer. */
+  coinflow?: CoinflowClient;
+  /** Hook invoked after auto-settle completes (success or swallow). Test seam. */
+  onAutoSettle?: (paymentId: string, err: Error | null) => void;
+}
+
 /**
  * Creates a payment record, executes the on-chain USDC transfer
  * (payer ATA → merchant ATA), and persists the resulting tx signature.
@@ -33,6 +44,7 @@ export async function createPayment(
   db: Db,
   solana: SolanaService,
   input: CreatePaymentInput,
+  deps: CreatePaymentDeps = {},
 ): Promise<PaymentResult> {
   const merchant = findMerchantById(db, input.merchantId);
   if (!merchant) {
@@ -60,6 +72,23 @@ export async function createPayment(
       amountUsdc: input.amountUsdc,
     });
     markPaymentCompleted(db, paymentId, result.signature);
+
+    if (
+      deps.coinflow &&
+      merchant.coinflow.enabled &&
+      merchant.coinflow.autoSettle
+    ) {
+      void settlePayment(db, deps.coinflow, {
+        merchantId: merchant.id,
+        paymentId,
+      })
+        .then(() => deps.onAutoSettle?.(paymentId, null))
+        .catch((err: unknown) => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          deps.onAutoSettle?.(paymentId, error);
+        });
+    }
+
     return { payment: getPayment(db, paymentId) };
   } catch (err) {
     const message =
