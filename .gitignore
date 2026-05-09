@@ -3,3 +3,9 @@ node_modules
 .DS_Store
 dist
 *.log
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+coverage/
