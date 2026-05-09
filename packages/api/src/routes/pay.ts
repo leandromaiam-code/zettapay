@@ -4,10 +4,17 @@ import { createPayment } from "../services/payments.js";
 import { validate } from "../middleware/validate.js";
 import { createPaymentSchema, type CreatePaymentBody } from "../lib/schemas.js";
 import type { SolanaService } from "../services/solana.js";
+=======
+import { PublicKey } from "@solana/web3.js";
+import { idempotency } from "../middleware/idempotency.js";
+
+const MAX_AMOUNT_USDC = 1_000_000;
+>>>>>>> 8b8227a (feat(api): idempotency keys on POST /pay and /merchants/register)
 
 export function payRouter(db: Db, solana: SolanaService): Router {
   const router = Router();
 
+<<<<<<< HEAD
   router.post(
     "/pay",
     validate({ body: createPaymentSchema }),
@@ -20,6 +27,18 @@ export function payRouter(db: Db, solana: SolanaService): Router {
           payerWallet: body.payerWallet ?? null,
           metadata: (body.metadata as Record<string, unknown> | null) ?? null,
         });
+  router.post("/", idempotency(db, { scope: "POST /pay" }), async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const merchantId = requireString(body, "merchantId", { maxLength: 64 });
+      const amountUsdc = requirePositiveNumber(body, "amountUsdc");
+      if (amountUsdc > MAX_AMOUNT_USDC) {
+        throw HttpError.badRequest(
+          `amountUsdc cannot exceed ${MAX_AMOUNT_USDC}`,
+        );
+      }
+      const payerWallet = optionalSolanaAddress(body, "payerWallet");
+      const metadata = optionalRecord(body, "metadata");
 
         res.status(201).json({
           payment: {

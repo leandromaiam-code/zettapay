@@ -51,7 +51,6 @@ export interface AppHandle {
   db: Db;
   solana: SolanaService;
   env: AppEnv;
-<<<<<<< HEAD
 }
 
 const startedAt = Date.now();
@@ -113,15 +112,30 @@ export async function buildApp(
       usdcMintAddress: env.usdcMintAddress,
       payerSecretKey: env.payerSecretKey,
     });
-=======
+<<<<<<< HEAD
   const rateLimitStore = await resolveRateLimitStore(env, deps.rateLimitStore);
->>>>>>> f04ee59 (feat(api): rate limiting per API key + native DDoS guard (Redis sliding window))
+=======
+import express, { type Express } from "express";
+import type { Database as Db } from "better-sqlite3";
+import { merchantsRouter } from "./routes/merchants.js";
+import { payRouter } from "./routes/pay.js";
+import { errorHandler } from "./middleware/error.js";
+import { HttpError } from "./lib/errors.js";
+import type { SolanaService } from "./services/solana.js";
+
+export interface CreateAppOptions {
+  db: Db;
+  solana: SolanaService;
+}
+
+export function createApp(options: CreateAppOptions): Express {
+  const { db, solana } = options;
+>>>>>>> 5884653 (feat(api): idempotency keys on POST /pay and /merchants/register)
 
   const app = express();
   app.disable('x-powered-by');
   app.use(buildRequestLogger());
   app.disable("x-powered-by");
-<<<<<<< HEAD
   app.set("trust proxy", true);
   app.use(express.json({ limit: "256kb" }));
 
@@ -151,6 +165,7 @@ export async function buildApp(
   });
 
   return { app, db, solana, env };
+<<<<<<< HEAD
   });
 
   app.use(healthRouter());
@@ -200,4 +215,20 @@ export async function buildApp(
   });
 
   return { app, db, solana, env, rateLimitStore };
+  app.use(express.json({ limit: "64kb" }));
+
+  app.get("/healthz", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  app.use("/merchants", merchantsRouter(db));
+  app.use("/pay", payRouter(db, solana));
+
+  app.use((_req, _res, next) => {
+    next(HttpError.notFound("route not found"));
+  });
+
+  app.use(errorHandler);
+
+  return app;
 }
