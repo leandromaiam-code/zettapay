@@ -1,4 +1,9 @@
 import { createApp } from "./app.js";
+import {
+  HttpCoinflowClient,
+  type CoinflowClient,
+  type CoinflowEnvironment,
+} from "./coinflow/client.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
@@ -30,7 +35,9 @@ const solana = new SolanaService({
 const shutdown = new GracefulShutdown({ shutdownTimeoutMs, logger });
 shutdown.register("database", () => closeDatabase());
 
-const app = createApp({ db, solana, shutdown });
+const coinflow = loadCoinflow();
+
+const app = createApp({ db, solana, shutdown, coinflow });
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -40,3 +47,19 @@ server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 
 shutdown.install(server);
+
+function loadCoinflow(): CoinflowClient | undefined {
+  const apiKey = process.env.COINFLOW_API_KEY;
+  if (!apiKey) return undefined;
+  const envValue = (process.env.COINFLOW_ENV ?? "sandbox").toLowerCase();
+  if (envValue !== "sandbox" && envValue !== "production") {
+    logger.error("coinflow.env.invalid", { value: envValue });
+    return undefined;
+  }
+  const baseUrl = process.env.COINFLOW_BASE_URL;
+  return new HttpCoinflowClient({
+    apiKey,
+    environment: envValue as CoinflowEnvironment,
+    ...(baseUrl ? { baseUrl } : {}),
+  });
+}

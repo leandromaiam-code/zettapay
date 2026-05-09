@@ -3,7 +3,29 @@ export { openDatabase, closeDatabase } from "./db/index.js";
 export { HttpError } from "./lib/errors.js";
 export { merchantsRouter } from "./routes/merchants.js";
 export { payRouter } from "./routes/pay.js";
+export { settlementRouter } from "./routes/settlement.js";
 export { verifySignatureRouter } from "./routes/verify-signature.js";
+export {
+  HttpCoinflowClient,
+  CoinflowApiError,
+  type CoinflowClient,
+  type CoinflowConfig,
+  type CoinflowEnvironment,
+  type CoinflowWithdrawalRequest,
+  type CoinflowWithdrawalResponse,
+} from "./coinflow/client.js";
+export {
+  COINFLOW_FEE_BPS,
+  computeSettlementFee,
+  type FeeBreakdown,
+} from "./coinflow/fee.js";
+export {
+  enableCoinflowSettlement,
+  disableCoinflowSettlement,
+  settlePayment,
+  type EnableSettlementInput,
+  type SettlePaymentInput,
+} from "./coinflow/service.js";
 export { idempotency } from "./middleware/idempotency.js";
 export {
   GracefulShutdown,
