@@ -95,5 +95,29 @@ function applyMigrations(db: Db): void {
 
     CREATE INDEX IF NOT EXISTS idempotency_keys_created_at_idx
       ON idempotency_keys(created_at);
+
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      id                 TEXT PRIMARY KEY,
+      event_id           TEXT NOT NULL,
+      url                TEXT NOT NULL,
+      payload_json       TEXT NOT NULL,
+      status             TEXT NOT NULL CHECK (status IN ('pending','sent','failed','dead')),
+      attempt_count      INTEGER NOT NULL DEFAULT 0,
+      max_attempts       INTEGER NOT NULL,
+      last_attempt_at    TEXT,
+      last_status_code   INTEGER,
+      last_error         TEXT,
+      dead_letter_reason TEXT,
+      delivered_at       TEXT,
+      created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS webhook_events_event_id_uidx
+      ON webhook_events(event_id);
+    CREATE INDEX IF NOT EXISTS webhook_events_status_idx
+      ON webhook_events(status);
+    CREATE INDEX IF NOT EXISTS webhook_events_last_attempt_at_idx
+      ON webhook_events(last_attempt_at);
   `);
 }
