@@ -1,32 +1,27 @@
-import express from "express";
-import { loadEnv } from "./env.js";
-import { getSolanaService } from "./lib/solana.js";
-import { healthRouter } from "./routes/health.js";
-import { faucetRouter } from "./routes/faucet.js";
+import { createApp } from "./app.js";
+import { getConfig } from "./config.js";
+import { logger } from "./lib/logger.js";
 
-export function createApp(env = loadEnv()) {
-  const app = express();
-  app.disable("x-powered-by");
-  app.use(express.json({ limit: "32kb" }));
+export { createApp } from "./app.js";
+export { getConfig, loadConfig } from "./config.js";
 
-  const solana = getSolanaService(env);
-
-  app.use("/health", healthRouter(solana));
-  app.use("/faucet", faucetRouter(solana, env.faucetMaxAirdropLamports));
-
-  app.use((_req, res) => {
-    res.status(404).json({ error: "not found" });
-  });
-
-  return { app, env, solana };
-}
-
-const isMain = import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
-  const { app, env, solana } = createApp();
-  app.listen(env.port, () => {
-    console.log(
-      `[zettapay-api] listening on :${env.port} — solana ${solana.network} via ${solana.rpcUrl}`,
-    );
+function start(): void {
+  const cfg = getConfig();
+  const app = createApp();
+  app.listen(cfg.port, () => {
+    logger.info("api_listening", {
+      port: cfg.port,
+      cluster: cfg.solana.cluster,
+      env: cfg.nodeEnv,
+    });
   });
 }
+
+const isDirectRun = (() => {
+  if (typeof process === "undefined") return false;
+  const entry = process.argv[1];
+  if (entry === undefined) return false;
+  return import.meta.url === `file://${entry}` || import.meta.url.endsWith(entry);
+})();
+
+if (isDirectRun) start();
