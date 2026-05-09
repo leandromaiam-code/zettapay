@@ -32,20 +32,20 @@ function applyAddOnColumns(db: Db): void {
   if (!merchantNames.has("webhook_secret")) {
     db.exec("ALTER TABLE merchants ADD COLUMN webhook_secret TEXT");
   }
-  if (!names.has("coinflow_enabled")) {
+  if (!merchantNames.has("coinflow_enabled")) {
     db.exec(
       "ALTER TABLE merchants ADD COLUMN coinflow_enabled INTEGER NOT NULL DEFAULT 0",
     );
   }
-  if (!names.has("coinflow_auto_settle")) {
+  if (!merchantNames.has("coinflow_auto_settle")) {
     db.exec(
       "ALTER TABLE merchants ADD COLUMN coinflow_auto_settle INTEGER NOT NULL DEFAULT 0",
     );
   }
-  if (!names.has("coinflow_merchant_id")) {
+  if (!merchantNames.has("coinflow_merchant_id")) {
     db.exec("ALTER TABLE merchants ADD COLUMN coinflow_merchant_id TEXT");
   }
-  if (!names.has("coinflow_bank_account_id")) {
+  if (!merchantNames.has("coinflow_bank_account_id")) {
     db.exec("ALTER TABLE merchants ADD COLUMN coinflow_bank_account_id TEXT");
   }
 
