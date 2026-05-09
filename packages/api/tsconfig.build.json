@@ -18,6 +18,7 @@
     "src/lib/errors.ts",
     "src/lib/id.ts",
     "src/lib/logger.ts",
+    "src/lib/shutdown.ts",
     "src/lib/validate.ts",
     "src/lib/webhook-signature.ts",
     "src/middleware/error.ts",

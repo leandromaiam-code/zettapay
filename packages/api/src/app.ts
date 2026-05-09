@@ -5,17 +5,19 @@ import { payRouter } from "./routes/pay.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { errorHandler } from "./middleware/error.js";
 import { HttpError } from "./lib/errors.js";
+import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 
 export interface CreateAppOptions {
   db: Db;
   solana: SolanaService;
+  shutdown?: GracefulShutdown;
 }
 
 const startedAt = Date.now();
 
 export function createApp(options: CreateAppOptions): Express {
-  const { db, solana } = options;
+  const { db, solana, shutdown } = options;
 
   const app = express();
   app.disable("x-powered-by");
@@ -32,6 +34,12 @@ export function createApp(options: CreateAppOptions): Express {
   });
 
   app.get("/healthz", (_req: Request, res: Response) => {
+    if (shutdown?.isShuttingDown()) {
+      res
+        .status(503)
+        .json({ status: "draining", inflight: shutdown.inflightCount() });
+      return;
+    }
     res.json({ status: "ok" });
   });
 
