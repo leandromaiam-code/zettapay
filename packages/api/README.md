@@ -42,3 +42,32 @@ npm run start      # node dist/server.js
 | `PORT`             | `3001`                   | listen port                        |
 | `HOST`             | `0.0.0.0`                | listen host                        |
 | `ZETTAPAY_DB_PATH` | `./data/zettapay.sqlite` | use `:memory:` for ephemeral state |
+
+## Webhook dispatcher
+
+`dispatchWebhook()` POSTs a JSON payload to a merchant callback URL with retry
+**3x exponential backoff** at the canonical schedule **1s · 5s · 15s** (initial
+attempt + up to three retries, four total tries).
+
+```ts
+import { dispatchWebhook } from '@zettapay/api';
+
+const result = await dispatchWebhook({
+  url: merchant.callbackUrl,
+  payload: { event: 'payment.confirmed', amount: '10.00', txSig },
+  secret: process.env.WEBHOOK_SIGNING_SECRET,
+  eventId: paymentId,
+});
+```
+
+Outgoing requests carry:
+
+| header                   | purpose                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| `X-ZettaPay-Event-Id`    | stable id reused across retries → consumer-side idempotency     |
+| `X-ZettaPay-Timestamp`   | unix ms, part of the signed string                              |
+| `X-ZettaPay-Signature`   | `sha256=<hex>` HMAC of `${timestamp}.${body}` with shared secret |
+
+Retries fire on transport errors, `5xx`, `408`, `425` and `429`. Other `4xx`
+responses are treated as permanent failures (no retry) since the callback URL
+won't recover by itself.
