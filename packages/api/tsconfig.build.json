@@ -7,6 +7,25 @@
     "sourceMap": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "test/**/*", "**/*.test.ts"]
+  "include": [
+    "src/app.ts",
+    "src/server.ts",
+    "src/index.ts",
+    "src/db/index.ts",
+    "src/db/merchants.ts",
+    "src/db/payments.ts",
+    "src/db/idempotency.ts",
+    "src/lib/errors.ts",
+    "src/lib/id.ts",
+    "src/lib/logger.ts",
+    "src/lib/validate.ts",
+    "src/middleware/error.ts",
+    "src/middleware/idempotency.ts",
+    "src/routes/merchants.ts",
+    "src/routes/pay.ts",
+    "src/services/merchants.ts",
+    "src/services/payments.ts",
+    "src/services/solana.ts"
+  ],
+  "exclude": ["dist", "node_modules", "test/**/*", "tests/**/*", "**/*.test.ts"]
 }

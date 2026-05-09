@@ -67,5 +67,19 @@ function applyMigrations(db: Db): void {
       payload     TEXT,
       created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
+
+    CREATE TABLE IF NOT EXISTS idempotency_keys (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      scope           TEXT NOT NULL,
+      key             TEXT NOT NULL,
+      request_hash    TEXT NOT NULL,
+      response_status INTEGER NOT NULL,
+      response_body   TEXT NOT NULL,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      UNIQUE(scope, key)
+    );
+
+    CREATE INDEX IF NOT EXISTS idempotency_keys_created_at_idx
+      ON idempotency_keys(created_at);
   `);
 }
