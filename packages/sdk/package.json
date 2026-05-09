@@ -1,7 +1,7 @@
 {
   "name": "@zettapay/sdk",
   "version": "0.1.0",
-  "description": "ZettaPay TypeScript SDK — typed axios client for the ZettaPay merchant + X-402 payments API.",
+  "description": "ZettaPay TypeScript SDK — typed axios client for the ZettaPay merchant + X-402 payments API plus on-chain instruction builders for the Anchor program (Z9).",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,6 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.95.4",
     "axios": "^1.7.9"
   },
   "devDependencies": {
