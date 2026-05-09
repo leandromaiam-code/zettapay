@@ -6,6 +6,7 @@ import { buildMerchantsRouter } from './routes/merchants.js';
 import { buildPayRouter } from './routes/pay.js';
 import { buildPaymentsRouter } from './routes/payments.js';
 import { buildMcpRouter } from './routes/mcp.js';
+import { buildSimulateRouter } from './routes/simulate.js';
 import { HttpError } from './errors.js';
 
 export interface AppDependencies {
@@ -38,6 +39,7 @@ export function buildApp(deps: AppDependencies = {}): AppHandle {
   app.use('/pay', buildPayRouter(payments));
   app.use('/payments', buildPaymentsRouter(payments));
   app.use('/mcp', buildMcpRouter({ merchants: repository, payments }));
+  app.use('/simulate', buildSimulateRouter({ merchants: repository, payments }));
 
   app.use((_req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'route not found' } });

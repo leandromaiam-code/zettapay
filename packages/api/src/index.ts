@@ -35,3 +35,10 @@ export {
   type McpDependencies,
   type McpToolDefinition,
 } from './routes/mcp.js';
+export {
+  buildSimulateRouter,
+  SIMULATE_NETWORK,
+  SIMULATE_USDC_MINT,
+  SIMULATE_DISCLAIMER,
+  type SimulateRouterDeps,
+} from './routes/simulate.js';
