@@ -1,0 +1,149 @@
+{
+  "address": "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+  "metadata": {
+    "name": "zettapay",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "ZettaPay merchant binding + payment receipt program (Z9)."
+  },
+  "instructions": [
+    {
+      "name": "register_merchant",
+      "discriminator": [238, 245, 77, 132, 161, 88, 216, 248],
+      "accounts": [
+        {
+          "name": "binding",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "arg", "path": "merchant_handle" },
+              { "kind": "account", "path": "owner" }
+            ]
+          }
+        },
+        { "name": "owner", "signer": true },
+        { "name": "payer", "writable": true, "signer": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "merchant_handle", "type": "string" },
+        { "name": "usdc_token_account", "type": "pubkey" }
+      ]
+    },
+    {
+      "name": "record_payment",
+      "discriminator": [226, 154, 10, 27, 9, 14, 148, 137],
+      "accounts": [
+        { "name": "merchant_binding" },
+        {
+          "name": "payment",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              { "kind": "account", "path": "merchant_binding" },
+              { "kind": "arg", "path": "payment_id" }
+            ]
+          }
+        },
+        { "name": "payer", "writable": true, "signer": true },
+        { "name": "system_program", "address": "11111111111111111111111111111111" }
+      ],
+      "args": [
+        { "name": "payment_id", "type": { "array": ["u8", 32] } },
+        { "name": "amount", "type": "u64" },
+        { "name": "tx_signature", "type": { "array": ["u8", 64] } }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "MerchantBinding",
+      "discriminator": [27, 4, 136, 253, 13, 147, 60, 128]
+    },
+    {
+      "name": "Payment",
+      "discriminator": [227, 231, 51, 26, 244, 88, 4, 148]
+    }
+  ],
+  "events": [
+    {
+      "name": "MerchantRegistered",
+      "discriminator": [202, 61, 140, 95, 139, 239, 17, 83]
+    },
+    {
+      "name": "PaymentRecorded",
+      "discriminator": [214, 3, 212, 116, 135, 35, 104, 98]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "HandleLengthInvalid",
+      "msg": "Merchant handle must be between 3 and 32 bytes inclusive"
+    },
+    {
+      "code": 6001,
+      "name": "HandleCharsInvalid",
+      "msg": "Merchant handle must be lowercase ASCII alphanumerics with - or _, and must start with an alphanumeric"
+    },
+    {
+      "code": 6002,
+      "name": "AmountMustBePositive",
+      "msg": "Payment amount must be strictly greater than zero"
+    }
+  ],
+  "types": [
+    {
+      "name": "MerchantBinding",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "bump", "type": "u8" },
+          { "name": "owner", "type": "pubkey" },
+          { "name": "usdc_token_account", "type": "pubkey" },
+          { "name": "merchant_handle", "type": "string" },
+          { "name": "registered_at", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "Payment",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "bump", "type": "u8" },
+          { "name": "merchant_binding", "type": "pubkey" },
+          { "name": "payment_id", "type": { "array": ["u8", 32] } },
+          { "name": "amount", "type": "u64" },
+          { "name": "tx_signature", "type": { "array": ["u8", 64] } },
+          { "name": "recorded_at", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "MerchantRegistered",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "owner", "type": "pubkey" },
+          { "name": "merchant_handle", "type": "string" },
+          { "name": "usdc_token_account", "type": "pubkey" },
+          { "name": "registered_at", "type": "i64" }
+        ]
+      }
+    },
+    {
+      "name": "PaymentRecorded",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          { "name": "merchant_binding", "type": "pubkey" },
+          { "name": "payment_id", "type": { "array": ["u8", 32] } },
+          { "name": "amount", "type": "u64" },
+          { "name": "tx_signature", "type": { "array": ["u8", 64] } },
+          { "name": "recorded_at", "type": "i64" }
+        ]
+      }
+    }
+  ]
+}
