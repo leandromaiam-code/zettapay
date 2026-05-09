@@ -8,3 +8,10 @@ export {
 } from './repository.js';
 export type { Merchant } from './types.js';
 export { HttpError } from './errors.js';
+export {
+  dispatchWebhook,
+  DEFAULT_RETRY_DELAYS_MS,
+  type DispatchWebhookOptions,
+  type WebhookAttempt,
+  type WebhookDispatchResult,
+} from './webhook.js';
