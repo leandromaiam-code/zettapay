@@ -1,13 +1,18 @@
-import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
-import { env } from '../utils/env.js';
+import { Connection, PublicKey } from '@solana/web3.js';
+import { env, getCluster } from '../utils/env.js';
+
+export { getCluster, isMainnet } from '../utils/env.js';
 
 let connection: Connection | null = null;
 
 export function getConnection(): Connection {
   if (connection !== null) return connection;
-  const endpoint = env.solanaRpcUrl || clusterApiUrl(env.solanaCluster);
-  connection = new Connection(endpoint, 'confirmed');
+  connection = new Connection(env.solanaRpcUrl, env.solanaCommitment);
   return connection;
+}
+
+export function resetConnectionForTests(): void {
+  connection = null;
 }
 
 export function getUsdcMint(): PublicKey {
@@ -17,6 +22,7 @@ export function getUsdcMint(): PublicKey {
 export async function getClusterHealth(): Promise<{
   cluster: string;
   endpoint: string;
+  commitment: string;
   blockHeight: number;
   version: string;
 }> {
@@ -26,8 +32,9 @@ export async function getClusterHealth(): Promise<{
     conn.getVersion(),
   ]);
   return {
-    cluster: env.solanaCluster,
+    cluster: getCluster(),
     endpoint: conn.rpcEndpoint,
+    commitment: env.solanaCommitment,
     blockHeight,
     version: versionInfo['solana-core'],
   };
