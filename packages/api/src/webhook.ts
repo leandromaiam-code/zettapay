@@ -59,6 +59,35 @@ export interface DispatchWebhookOptions {
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
   onDeadLetter?: (event: DeadLetterEvent) => void | Promise<void>;
+  /**
+   * Called once per HTTP attempt (after the response or transport error). Runs
+   * sequentially with the dispatch loop so observers (persistence, metrics)
+   * see each attempt in order. Errors thrown here are swallowed — observability
+   * must not mask the real delivery outcome.
+   */
+  onAttempt?: (event: WebhookAttemptEvent) => void | Promise<void>;
+  /**
+   * Called once before the first attempt with the resolved eventId and the
+   * effective total attempt budget. Useful for upserting a `pending` row in
+   * persistence layers before any HTTP traffic happens.
+   */
+  onStart?: (event: WebhookStartEvent) => void | Promise<void>;
+}
+
+export interface WebhookStartEvent {
+  url: string;
+  eventId: string;
+  payload: unknown;
+  maxAttempts: number;
+}
+
+export interface WebhookAttemptEvent {
+  url: string;
+  eventId: string;
+  payload: unknown;
+  attempt: WebhookAttempt;
+  /** ISO-8601 timestamp captured at attempt start. */
+  attemptedAt: string;
 }
 
 export interface WebhookAttempt {
@@ -105,11 +134,15 @@ export async function dispatchWebhook(options: DispatchWebhookOptions): Promise<
     sleep = defaultSleep,
     now = Date.now,
     onDeadLetter,
+    onAttempt,
+    onStart,
   } = options;
 
   const body = JSON.stringify(payload);
   const totalAttempts = Math.max(1, Math.min(retryDelaysMs.length + 1, maxAttempts));
   const attempts: WebhookAttempt[] = [];
+
+  await emitObserver(onStart, { url, eventId, payload, maxAttempts: totalAttempts });
 
   for (let attempt = 1; attempt <= totalAttempts; attempt++) {
     const timestamp = String(now());
@@ -146,7 +179,21 @@ export async function dispatchWebhook(options: DispatchWebhookOptions): Promise<
       clearTimeout(timeoutId);
     }
 
-    attempts.push({ attempt, status, ok, error, durationMs: now() - startedAt });
+    const attemptRecord: WebhookAttempt = {
+      attempt,
+      status,
+      ok,
+      error,
+      durationMs: now() - startedAt,
+    };
+    attempts.push(attemptRecord);
+    await emitObserver(onAttempt, {
+      url,
+      eventId,
+      payload,
+      attempt: attemptRecord,
+      attemptedAt: new Date(startedAt).toISOString(),
+    });
 
     if (ok) {
       return { delivered: true, deadLettered: false, eventId, attempts };
@@ -180,5 +227,17 @@ async function emitDeadLetter(
     await handler(event);
   } catch {
     // swallow — dead-letter sink failure must not mask the dispatch result.
+  }
+}
+
+async function emitObserver<T>(
+  handler: ((event: T) => void | Promise<void>) | undefined,
+  event: T,
+): Promise<void> {
+  if (!handler) return;
+  try {
+    await handler(event);
+  } catch {
+    // swallow — observer failure must not mask the dispatch result.
   }
 }
