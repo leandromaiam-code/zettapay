@@ -48,3 +48,17 @@ Response (201):
 - MoonPay onramp (card → USDC)
 - x402 header support
 - MCP endpoint for AI agents
+
+## Docker
+
+Multi-stage `node:20-alpine` image. The runtime stage runs as non-root, exposes
+port `3001` and ships a Node-based `HEALTHCHECK` against `/healthz`.
+
+```bash
+cp .env.example .env
+docker compose up --build
+curl http://localhost:3001/healthz
+```
+
+SQLite state is persisted in the named volume `zettapay-data` (mounted at
+`/app/data` inside the container).
