@@ -1,6 +1,29 @@
 import type { ErrorRequestHandler, NextFunction, Request, Response } from "express";
-import { HttpError } from "../lib/errors.js";
+import { ZodError } from "zod";
+import { HttpError, ValidationError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+
+interface ErrorBody {
+  error: {
+    code: string;
+    message: string;
+    details: unknown;
+  };
+}
+
+function serialize(error: HttpError): ErrorBody {
+  return {
+    error: {
+      code: error.code,
+      message: error.message,
+      details: error.details ?? null,
+    },
+  };
+}
+
+function isZodError(err: unknown): err is ZodError {
+  return err instanceof ZodError;
+}
 
 export const errorHandler: ErrorRequestHandler = (
   err: unknown,
@@ -8,6 +31,22 @@ export const errorHandler: ErrorRequestHandler = (
   res: Response,
   _next: NextFunction,
 ): void => {
+  if (isZodError(err)) {
+    const wrapped = new ValidationError("Invalid request payload", {
+      issues: err.issues.map((i) => ({
+        path: i.path.join("."),
+        code: i.code,
+        message: i.message,
+      })),
+    });
+    logger.warn("validation_error", {
+      path: req.path,
+      issues: wrapped.details,
+    });
+    res.status(wrapped.status).json(serialize(wrapped));
+    return;
+  }
+
   if (err instanceof HttpError) {
     if (err.status >= 500) {
       logger.error("http_error", {
@@ -25,13 +64,11 @@ export const errorHandler: ErrorRequestHandler = (
         message: err.message,
       });
     }
-    res.status(err.status).json({
-      error: { code: err.code, message: err.message, details: err.details ?? null },
-    });
+    res.status(err.status).json(serialize(err));
     return;
   }
 
-  const e = err as Error;
+  const e = err instanceof Error ? err : new Error(String(err));
   logger.error("unhandled_error", {
     path: req.path,
     message: e.message,
@@ -41,6 +78,16 @@ export const errorHandler: ErrorRequestHandler = (
     error: {
       code: "internal_error",
       message: "An unexpected error occurred",
+      details: null,
+    },
+  });
+};
+
+export const notFoundHandler = (req: Request, res: Response): void => {
+  res.status(404).json({
+    error: {
+      code: "not_found",
+      message: `Route ${req.method} ${req.path} does not exist`,
       details: null,
     },
   });
