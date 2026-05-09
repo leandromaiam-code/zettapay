@@ -1,30 +1,27 @@
-import express, { type Express, type Request, type Response } from "express";
-import { getConfig } from "./config.js";
-import { errorHandler } from "./middleware/error-handler.js";
-import { createMerchantsRouter } from "./merchants/routes.js";
+import express, { type Express } from "express";
+import type { Database as Db } from "better-sqlite3";
+import { healthRouter } from "./routes/health.js";
+import { merchantsRouter } from "./routes/merchants.js";
+import { payRouter } from "./routes/pay.js";
+import { errorHandler } from "./middleware/error.js";
+import type { SolanaService } from "./services/solana.js";
 
-export function createApp(): Express {
+export interface AppDeps {
+  db: Db;
+  solana: SolanaService;
+}
+
+export function createApp(deps: AppDeps): Express {
   const app = express();
-  const cfg = getConfig();
-
   app.disable("x-powered-by");
-  app.set("trust proxy", true);
-  app.use(express.json({ limit: "64kb" }));
+  app.use(express.json({ limit: "256kb" }));
 
-  app.get("/healthz", (_req: Request, res: Response) => {
-    res.status(200).json({
-      ok: true,
-      cluster: cfg.solana.cluster,
-      usdcMint: cfg.solana.usdcMint,
-    });
-  });
+  app.use(healthRouter());
+  app.use(merchantsRouter(deps.db));
+  app.use(payRouter(deps.db, deps.solana));
 
-  app.use("/merchants", createMerchantsRouter());
-
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({
-      error: { code: "not_found", message: "Route not found", details: null },
-    });
+  app.use((_req, res) => {
+    res.status(404).json({ error: { code: "not_found", message: "route not found" } });
   });
 
   app.use(errorHandler);

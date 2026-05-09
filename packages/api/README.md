@@ -1,42 +1,64 @@
 # @zettapay/api
 
-Express service that owns the ZettaPay backend's Solana connection. Provides:
+HTTP API for ZettaPay — merchant onboarding + USDC P2P payments on Solana.
 
-- A retrying [`SolanaConnectionService`](src/lib/solana.ts) with exponential backoff for transient RPC errors.
-- A [faucet helper](src/lib/faucet.ts) that issues devnet/testnet airdrops and waits for confirmation.
-- HTTP routes for `/health`, `/health/solana`, and `/faucet/airdrop`.
+## Endpoints
 
-## Environment
+| Method | Path                   | Purpose                                    |
+| ------ | ---------------------- | ------------------------------------------ |
+| GET    | `/health`              | Liveness probe                             |
+| POST   | `/merchants/register`  | Create a merchant account + issue API key  |
+| POST   | `/pay`                 | Transfer USDC payer ATA → merchant ATA     |
 
-Configured entirely via env vars (see root `.env.example`):
+## POST /pay
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `PORT` | `3001` | HTTP port |
-| `SOLANA_NETWORK` | `devnet` | `devnet`, `testnet`, or `mainnet-beta` |
-| `SOLANA_RPC_URL` | `https://api.devnet.solana.com` | Override the RPC endpoint |
-| `RPC_MAX_RETRIES` | `5` | Maximum retries per RPC call |
-| `RPC_INITIAL_BACKOFF_MS` | `250` | Starting backoff delay |
-| `RPC_MAX_BACKOFF_MS` | `4000` | Cap on a single backoff delay |
-| `FAUCET_MAX_AIRDROP_LAMPORTS` | `2000000000` | Hard cap per airdrop (defense in depth) |
+Request body:
 
-The faucet route returns `409` when `SOLANA_NETWORK=mainnet-beta`.
-
-## Scripts
-
-```bash
-npm run build     # tsc -> dist/
-npm run typecheck # tsc --noEmit
-npm run dev       # tsx watch
-npm start         # node dist/index.js
+```json
+{
+  "merchantId": "merch_...",
+  "amountUsdc": 12.5,
+  "payerWallet": "<optional base58 — defaults to PAYER_SECRET_KEY pubkey>",
+  "metadata": { "invoice": "INV-1" }
+}
 ```
 
-## HTTP
+Response (201):
+
+```json
+{
+  "payment": {
+    "id": "pay_...",
+    "merchantId": "merch_...",
+    "amountUsdc": 12.5,
+    "payerWallet": "<base58>",
+    "status": "completed",
+    "txSignature": "<base58 sig>",
+    "metadata": { "invoice": "INV-1" },
+    "createdAt": "2026-05-09T12:00:00.000Z",
+    "completedAt": "2026-05-09T12:00:01.234Z"
+  },
+  "txSignature": "<base58 sig>"
+}
+```
+
+The transfer uses `transferChecked` against the configured USDC SPL mint. The
+facilitator keypair (`PAYER_SECRET_KEY`, base58 or JSON array) signs both the
+payer ATA debit and the create-if-missing instruction for the recipient ATA.
+On failure the payment row is left with `status = 'failed'` and the underlying
+error is captured in `error_message`.
+
+## Local dev
 
 ```bash
-curl http://localhost:3001/health
-curl http://localhost:3001/health/solana
-curl -X POST http://localhost:3001/faucet/airdrop \
-  -H 'content-type: application/json' \
-  -d '{"recipient":"<base58 pubkey>","lamports":1000000000}'
+cp .env.example .env
+# fill PAYER_SECRET_KEY with a devnet keypair holding test-USDC
+npm install
+npm run dev --workspace @zettapay/api
+```
+
+## Tests
+
+```bash
+npm run test --workspace @zettapay/api
 ```

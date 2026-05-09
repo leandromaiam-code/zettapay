@@ -1,41 +1,48 @@
+export type HttpErrorCode =
+  | "validation_error"
+  | "not_found"
+  | "conflict"
+  | "unauthorized"
+  | "rate_limited"
+  | "payment_failed"
+  | "config_error"
+  | "internal_error";
+
 export class HttpError extends Error {
   readonly status: number;
-  readonly code: string;
+  readonly code: HttpErrorCode;
   readonly details?: unknown;
 
-  constructor(status: number, code: string, message: string, details?: unknown) {
+  constructor(
+    status: number,
+    code: HttpErrorCode,
+    message: string,
+    details?: unknown,
+  ) {
     super(message);
     this.name = "HttpError";
     this.status = status;
     this.code = code;
     this.details = details;
   }
-}
 
-export class ValidationError extends HttpError {
-  constructor(message: string, details?: unknown) {
-    super(400, "validation_error", message, details);
-    this.name = "ValidationError";
+  static badRequest(message: string, details?: unknown): HttpError {
+    return new HttpError(400, "validation_error", message, details);
   }
-}
 
-export class ConflictError extends HttpError {
-  constructor(message: string, details?: unknown) {
-    super(409, "conflict", message, details);
-    this.name = "ConflictError";
+  static notFound(message: string): HttpError {
+    return new HttpError(404, "not_found", message);
   }
-}
 
-export class ConfigurationError extends HttpError {
-  constructor(message: string, details?: unknown) {
-    super(503, "configuration_error", message, details);
-    this.name = "ConfigurationError";
+  static conflict(message: string): HttpError {
+    return new HttpError(409, "conflict", message);
   }
-}
 
-export class UpstreamError extends HttpError {
-  constructor(message: string, details?: unknown) {
-    super(502, "upstream_error", message, details);
-    this.name = "UpstreamError";
+  static paymentFailed(message: string, details?: unknown): HttpError {
+    return new HttpError(502, "payment_failed", message, details);
+  }
+
+  static config(message: string): HttpError {
+    return new HttpError(500, "config_error", message);
   }
 }

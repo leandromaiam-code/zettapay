@@ -10,7 +10,6 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev --workspace @zettapay/api",
     "clean": "rm -rf packages/*/dist"

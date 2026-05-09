@@ -1,118 +1,44 @@
-import { Router, type Request, type Response, type NextFunction } from 'express';
-import type { MerchantRepository } from '../repository.js';
+import { Router } from "express";
+import type { Database as Db } from "better-sqlite3";
+import { registerMerchant } from "../services/merchants.js";
 import {
-  CreateMerchantSchema,
-  IdParamSchema,
-  ListMerchantsQuerySchema,
-  UpdateMerchantSchema,
-} from '../validation.js';
-import { BadRequest, Conflict, NotFound } from '../errors.js';
+  optionalString,
+  requireSolanaAddress,
+  requireString,
+} from "../lib/validate.js";
+import { HttpError } from "../lib/errors.js";
 
-const UNIQUE_VIOLATION = /UNIQUE constraint failed/i;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const URL_RE = /^https?:\/\//i;
 
-function asyncHandler<T extends (req: Request, res: Response, next: NextFunction) => unknown>(fn: T) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    Promise.resolve(fn(req, res, next)).catch(next);
-  };
-}
-
-export function buildMerchantsRouter(repo: MerchantRepository): Router {
+export function merchantsRouter(db: Db): Router {
   const router = Router();
 
-  router.get(
-    '/',
-    asyncHandler((req, res) => {
-      const query = ListMerchantsQuerySchema.safeParse(req.query);
-      if (!query.success) {
-        throw BadRequest('invalid query', query.error.flatten());
+  router.post("/merchants/register", (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const name = requireString(body, "name", { maxLength: 120 });
+      const walletAddress = requireSolanaAddress(body, "walletAddress");
+      const email = requireString(body, "email", { maxLength: 254 }).toLowerCase();
+      if (!EMAIL_RE.test(email)) {
+        throw HttpError.badRequest("Field \"email\" must be a valid email address");
       }
-      const items = repo.list(query.data);
-      res.json({ items, count: items.length });
-    }),
-  );
+      const webhookUrl = optionalString(body, "webhookUrl", { maxLength: 2048 });
+      if (webhookUrl && !URL_RE.test(webhookUrl)) {
+        throw HttpError.badRequest("Field \"webhookUrl\" must start with http(s)://");
+      }
 
-  router.post(
-    '/',
-    asyncHandler((req, res) => {
-      const parsed = CreateMerchantSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw BadRequest('invalid payload', parsed.error.flatten());
-      }
-      try {
-        const merchant = repo.create({
-          name: parsed.data.name,
-          walletPubkey: parsed.data.wallet_pubkey,
-          usdcAta: parsed.data.usdc_ata,
-        });
-        res.status(201).json(merchant);
-      } catch (err) {
-        if (err instanceof Error && UNIQUE_VIOLATION.test(err.message)) {
-          throw Conflict('wallet_pubkey or usdc_ata already registered');
-        }
-        throw err;
-      }
-    }),
-  );
-
-  router.get(
-    '/:id',
-    asyncHandler((req, res) => {
-      const params = IdParamSchema.safeParse(req.params);
-      if (!params.success) {
-        throw BadRequest('invalid id', params.error.flatten());
-      }
-      const merchant = repo.findById(params.data.id);
-      if (!merchant) {
-        throw NotFound('merchant');
-      }
-      res.json(merchant);
-    }),
-  );
-
-  router.patch(
-    '/:id',
-    asyncHandler((req, res) => {
-      const params = IdParamSchema.safeParse(req.params);
-      if (!params.success) {
-        throw BadRequest('invalid id', params.error.flatten());
-      }
-      const parsed = UpdateMerchantSchema.safeParse(req.body);
-      if (!parsed.success) {
-        throw BadRequest('invalid payload', parsed.error.flatten());
-      }
-      try {
-        const merchant = repo.update(params.data.id, {
-          name: parsed.data.name,
-          walletPubkey: parsed.data.wallet_pubkey,
-          usdcAta: parsed.data.usdc_ata,
-        });
-        if (!merchant) {
-          throw NotFound('merchant');
-        }
-        res.json(merchant);
-      } catch (err) {
-        if (err instanceof Error && UNIQUE_VIOLATION.test(err.message)) {
-          throw Conflict('wallet_pubkey or usdc_ata already registered');
-        }
-        throw err;
-      }
-    }),
-  );
-
-  router.delete(
-    '/:id',
-    asyncHandler((req, res) => {
-      const params = IdParamSchema.safeParse(req.params);
-      if (!params.success) {
-        throw BadRequest('invalid id', params.error.flatten());
-      }
-      const removed = repo.delete(params.data.id);
-      if (!removed) {
-        throw NotFound('merchant');
-      }
-      res.status(204).end();
-    }),
-  );
+      const merchant = registerMerchant(db, {
+        name,
+        walletAddress,
+        email,
+        webhookUrl,
+      });
+      res.status(201).json({ merchant });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   return router;
 }

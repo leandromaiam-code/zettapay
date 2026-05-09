@@ -1,37 +1,75 @@
-import { Router, type Request, type Response } from 'express';
-import { x402PaymentMiddleware } from '../x402.js';
-import type { PaymentLog } from '../payments.js';
+import { Router } from "express";
+import type { Database as Db } from "better-sqlite3";
+import { createPayment } from "../services/payments.js";
+import {
+  optionalRecord,
+  optionalString,
+  requirePositiveNumber,
+  requireSolanaAddress,
+  requireString,
+} from "../lib/validate.js";
+import { HttpError } from "../lib/errors.js";
+import type { SolanaService } from "../services/solana.js";
+import { PublicKey } from "@solana/web3.js";
 
-export function buildPayRouter(payments: PaymentLog): Router {
+const MAX_AMOUNT_USDC = 1_000_000;
+
+export function payRouter(db: Db, solana: SolanaService): Router {
   const router = Router();
 
-  router.post('/', x402PaymentMiddleware(), (req: Request, res: Response) => {
-    const payment = req.x402Payment;
-    if (!payment) {
-      res.status(500).json({ error: { code: 'internal_error', message: 'payment not parsed' } });
-      return;
+  router.post("/pay", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const merchantId = requireString(body, "merchantId", { maxLength: 64 });
+      const amountUsdc = requirePositiveNumber(body, "amountUsdc");
+      if (amountUsdc > MAX_AMOUNT_USDC) {
+        throw HttpError.badRequest(
+          `amountUsdc cannot exceed ${MAX_AMOUNT_USDC}`,
+        );
+      }
+      const payerWallet = optionalSolanaAddress(body, "payerWallet");
+      const metadata = optionalRecord(body, "metadata");
+
+      const { payment } = await createPayment(db, solana, {
+        merchantId,
+        amountUsdc,
+        payerWallet,
+        metadata,
+      });
+
+      res.status(201).json({
+        payment: {
+          id: payment.id,
+          merchantId: payment.merchantId,
+          amountUsdc: payment.amountUsdc,
+          payerWallet: payment.payerWallet,
+          status: payment.status,
+          txSignature: payment.txSignature,
+          metadata: payment.metadata,
+          createdAt: payment.createdAt,
+          completedAt: payment.completedAt,
+        },
+        txSignature: payment.txSignature,
+      });
+    } catch (err) {
+      next(err);
     }
-    const record = payments.record({
-      feePayer: payment.feePayer,
-      signers: payment.signers,
-      signatures: payment.signatures,
-      recentBlockhash: payment.recentBlockhash,
-      isVersioned: payment.isVersioned,
-      version: payment.version,
-      transactionBytes: payment.rawTransaction.length,
-    });
-    res.status(202).json({
-      accepted: true,
-      paymentId: record.id,
-      feePayer: payment.feePayer,
-      signers: payment.signers,
-      signatureCount: payment.signatures.length,
-      recentBlockhash: payment.recentBlockhash,
-      isVersioned: payment.isVersioned,
-      version: payment.version,
-      transactionBytes: payment.rawTransaction.length,
-    });
   });
 
   return router;
+}
+
+function optionalSolanaAddress(
+  body: Record<string, unknown>,
+  field: string,
+): string | null {
+  const raw = optionalString(body, field, { maxLength: 64 });
+  if (!raw) return null;
+  try {
+    return new PublicKey(raw).toBase58();
+  } catch {
+    throw HttpError.badRequest(
+      `Field "${field}" must be a valid base58-encoded Solana public key`,
+    );
+  }
 }
