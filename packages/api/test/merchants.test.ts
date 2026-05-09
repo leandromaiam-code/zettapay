@@ -23,7 +23,7 @@ describe('GET /healthz', () => {
   it('returns ok with merchant count', async () => {
     const res = await request(handle.app).get('/healthz');
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ status: 'ok', merchants: 0 });
+    expect(res.body).toEqual({ status: 'ok', merchants: 0, payments: 0 });
   });
 });
 
