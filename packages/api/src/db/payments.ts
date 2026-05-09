@@ -1,4 +1,5 @@
 import type { Database as Db } from "better-sqlite3";
+import { DEFAULT_CURRENCY, type Currency } from "../lib/currencies.js";
 
 export type PaymentStatus =
   | "pending"
@@ -16,6 +17,7 @@ export interface PaymentRow {
   tx_signature: string | null;
   error_message: string | null;
   metadata_json: string | null;
+  currency: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -29,6 +31,7 @@ export interface Payment {
   txSignature: string | null;
   errorMessage: string | null;
   metadata: Record<string, unknown>;
+  currency: Currency;
   createdAt: string;
   completedAt: string | null;
 }
@@ -39,6 +42,7 @@ export interface CreatePaymentInput {
   amountUsdc: number;
   payerWallet: string;
   metadata: Record<string, unknown> | null;
+  currency?: Currency;
 }
 
 function toPayment(row: PaymentRow): Payment {
@@ -51,15 +55,18 @@ function toPayment(row: PaymentRow): Payment {
     txSignature: row.tx_signature,
     errorMessage: row.error_message,
     metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {},
+    currency: ((row.currency ?? DEFAULT_CURRENCY) as Currency),
     createdAt: row.created_at,
     completedAt: row.completed_at,
   };
 }
 
 export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
-  const stmt = db.prepare<[string, string, number, string, string | null]>(
-    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json)
-     VALUES (?, ?, ?, ?, 'pending', ?)`,
+  const stmt = db.prepare<
+    [string, string, number, string, string | null, string]
+  >(
+    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
   );
   stmt.run(
     input.id,
@@ -67,6 +74,7 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
     input.amountUsdc,
     input.payerWallet,
     input.metadata ? JSON.stringify(input.metadata) : null,
+    input.currency ?? DEFAULT_CURRENCY,
   );
   return getPayment(db, input.id);
 }

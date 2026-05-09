@@ -9,6 +9,7 @@ import {
   getPayment,
   type Payment,
 } from "../db/payments.js";
+import { DEFAULT_CURRENCY, type Currency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
 import type { SolanaService } from "./solana.js";
@@ -20,6 +21,7 @@ export interface CreatePaymentInput {
   amountUsdc: number;
   payerWallet: string | null;
   metadata: Record<string, unknown> | null;
+  currency?: Currency;
 }
 
 export interface PaymentResult {
@@ -36,8 +38,10 @@ export interface CreatePaymentDeps {
 }
 
 /**
- * Creates a payment record, executes the on-chain USDC transfer
- * (payer ATA → merchant ATA), and persists the resulting tx signature.
+ * Creates a payment record, executes the on-chain SPL transfer
+ * (payer ATA → merchant ATA for the chosen currency mint), and persists
+ * the resulting tx signature. Each currency lands in its own SPL token
+ * account on the merchant wallet — the ATA is derived per-mint.
  * On any failure the payment is left in `failed` status with the error message.
  */
 export async function createPayment(
@@ -52,6 +56,7 @@ export async function createPayment(
   }
 
   const merchantPubkey = new PublicKey(merchant.walletAddress);
+  const currency: Currency = input.currency ?? DEFAULT_CURRENCY;
 
   const paymentId = newId("pay");
   const payerWallet = input.payerWallet ?? solana.getPayerPublicKey().toBase58();
@@ -62,14 +67,16 @@ export async function createPayment(
     amountUsdc: input.amountUsdc,
     payerWallet,
     metadata: input.metadata,
+    currency,
   });
 
   markPaymentProcessing(db, paymentId);
 
   try {
-    const result = await solana.transferUsdc({
+    const result = await solana.transferToken({
       recipientOwner: merchantPubkey,
-      amountUsdc: input.amountUsdc,
+      amount: input.amountUsdc,
+      currency,
     });
     markPaymentCompleted(db, paymentId, result.signature);
 
@@ -95,6 +102,6 @@ export async function createPayment(
       err instanceof Error ? err.message : "unknown transfer error";
     markPaymentFailed(db, paymentId, message);
     if (err instanceof HttpError) throw err;
-    throw HttpError.paymentFailed(`USDC transfer failed: ${message}`);
+    throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
   }
 }

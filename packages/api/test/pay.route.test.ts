@@ -32,19 +32,33 @@ function startApp(app: express.Express): Promise<RunningServer> {
 function makeFakeSolana(payerKp: Keypair, opts: { fail?: boolean } = {}): SolanaService {
   const svc = {
     getPayerPublicKey: () => payerKp.publicKey,
+    getCluster: () => "devnet" as const,
+    getMintAddress: (currency = "USDC") =>
+      currency === "USDC"
+        ? "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+        : `mint_${currency}`,
     getUsdcMintAddress: () => "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
-    transferUsdc: vi.fn(async (params: { recipientOwner: PublicKey; amountUsdc: number }) => {
-      if (opts.fail) {
-        throw new Error("simulated rpc failure");
-      }
-      return {
-        signature: `sig_${params.recipientOwner.toBase58().slice(0, 6)}_${params.amountUsdc}`,
-        payerWallet: payerKp.publicKey.toBase58(),
-        recipientWallet: params.recipientOwner.toBase58(),
-        amountAtomic: BigInt(Math.round(params.amountUsdc * 1_000_000)),
-        decimals: 6,
-      };
-    }),
+    transferToken: vi.fn(
+      async (params: {
+        recipientOwner: PublicKey;
+        amount: number;
+        currency?: "USDC" | "USDT" | "EURC" | "PYUSD";
+      }) => {
+        if (opts.fail) {
+          throw new Error("simulated rpc failure");
+        }
+        const currency = params.currency ?? "USDC";
+        return {
+          signature: `sig_${currency}_${params.recipientOwner.toBase58().slice(0, 6)}_${params.amount}`,
+          payerWallet: payerKp.publicKey.toBase58(),
+          recipientWallet: params.recipientOwner.toBase58(),
+          amountAtomic: BigInt(Math.round(params.amount * 1_000_000)),
+          decimals: 6,
+          currency,
+          mintAddress: `mint_${currency}`,
+        };
+      },
+    ),
   } as unknown as SolanaService;
   return svc;
 }
@@ -88,16 +102,20 @@ describe("POST /pay", () => {
         id: string;
         status: string;
         txSignature: string;
+        amount: number;
         amountUsdc: number;
+        currency: string;
         merchantId: string;
         metadata: Record<string, unknown>;
       };
       txSignature: string;
     };
     expect(body.payment.status).toBe("completed");
-    expect(body.payment.txSignature).toMatch(/^sig_/);
+    expect(body.payment.txSignature).toMatch(/^sig_USDC_/);
     expect(body.txSignature).toBe(body.payment.txSignature);
     expect(body.payment.amountUsdc).toBe(12.5);
+    expect(body.payment.amount).toBe(12.5);
+    expect(body.payment.currency).toBe("USDC");
     expect(body.payment.merchantId).toBe(merchantId);
     expect(body.payment.metadata).toEqual({ invoice: "INV-1" });
 
