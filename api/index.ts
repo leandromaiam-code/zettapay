@@ -6,7 +6,10 @@ export default function handler(_req: VercelRequest, res: VercelResponse): void 
     version: '0.1.0',
     description: 'Universal Solana payment protocol for humans and AI agents',
     endpoints: {
-      health: '/healthz',
+      health: '/health',
+      healthz: '/healthz',
+      ready: '/ready',
+      metrics: '/metrics',
       simulate: '/simulate/:merchant',
     },
     network: 'solana-devnet',
