@@ -1,27 +1,31 @@
+import { loadEnv } from "./config/env.js";
+import { openDatabase } from "./db/index.js";
+import { SolanaService } from "./services/solana.js";
 import { createApp } from "./app.js";
-import { getConfig } from "./config.js";
-import { logger } from "./lib/logger.js";
 
-export { createApp } from "./app.js";
-export { getConfig, loadConfig } from "./config.js";
-
-function start(): void {
-  const cfg = getConfig();
-  const app = createApp();
-  app.listen(cfg.port, () => {
-    logger.info("api_listening", {
-      port: cfg.port,
-      cluster: cfg.solana.cluster,
-      env: cfg.nodeEnv,
-    });
+function main(): void {
+  const env = loadEnv();
+  const db = openDatabase(env.databasePath);
+  const solana = new SolanaService({
+    rpcUrl: env.solanaRpcUrl,
+    commitment: env.solanaCommitment,
+    usdcMintAddress: env.usdcMintAddress,
+    payerSecretKey: env.payerSecretKey,
   });
+
+  const app = createApp({ db, solana });
+  const server = app.listen(env.port, () => {
+    console.log(
+      `[zettapay-api] listening on :${env.port} (rpc=${env.solanaRpcUrl}, commitment=${env.solanaCommitment})`,
+    );
+  });
+
+  const shutdown = (signal: string): void => {
+    console.log(`[zettapay-api] received ${signal}, shutting down`);
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
-const isDirectRun = (() => {
-  if (typeof process === "undefined") return false;
-  const entry = process.argv[1];
-  if (entry === undefined) return false;
-  return import.meta.url === `file://${entry}` || import.meta.url.endsWith(entry);
-})();
-
-if (isDirectRun) start();
+main();
