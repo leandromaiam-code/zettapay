@@ -2,6 +2,7 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import { openDb, type DB } from './db.js';
 import { MerchantRepository } from './repository.js';
 import { buildMerchantsRouter } from './routes/merchants.js';
+import { buildPayRouter } from './routes/pay.js';
 import { HttpError } from './errors.js';
 
 export interface AppDependencies {
@@ -28,6 +29,7 @@ export function buildApp(deps: AppDependencies = {}): AppHandle {
   });
 
   app.use('/merchants', buildMerchantsRouter(repository));
+  app.use('/pay', buildPayRouter());
 
   app.use((_req, res) => {
     res.status(404).json({ error: { code: 'not_found', message: 'route not found' } });
