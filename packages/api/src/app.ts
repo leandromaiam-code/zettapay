@@ -7,13 +7,17 @@ import { buildPayRouter } from './routes/pay.js';
 import { buildMcpRouter } from './routes/mcp.js';
 import { buildOnrampRouter } from './routes/onramp.js';
 import { HttpError } from './errors.js';
-import { loadMoonPayConfig, MoonPayConfigError, type MoonPayConfig } from './onramp.js';
+import type { OnrampNotifierOptions } from './onramp.js';
+import type { dispatchWebhook } from './webhook.js';
 
 export interface AppDependencies {
   db?: DB;
   dbPath?: string;
   payments?: PaymentLog;
-  moonPay?: MoonPayConfig | null;
+  onrampWebhookSecret?: string;
+  onrampNotify?: OnrampNotifierOptions;
+  onrampDispatch?: typeof dispatchWebhook;
+  onrampSignatureToleranceMs?: number;
 }
 
 export interface AppHandle {
@@ -41,8 +45,27 @@ export function buildApp(deps: AppDependencies = {}): AppHandle {
   const moonPay = resolveMoonPayConfig(deps);
 
   const app = express();
-  app.disable("x-powered-by");
-  app.use(express.json({ limit: "256kb" }));
+  app.disable('x-powered-by');
+
+  app.use(
+    '/onramp',
+    buildOnrampRouter({
+      payments,
+      webhookSecret: deps.onrampWebhookSecret ?? process.env.MOONPAY_WEBHOOK_SECRET,
+      notify:
+        deps.onrampNotify ??
+        (process.env.MERCHANT_WEBHOOK_URL
+          ? {
+              url: process.env.MERCHANT_WEBHOOK_URL,
+              secret: process.env.MERCHANT_WEBHOOK_SECRET,
+            }
+          : undefined),
+      dispatch: deps.onrampDispatch,
+      signatureToleranceMs: deps.onrampSignatureToleranceMs,
+    }),
+  );
+
+  app.use(express.json({ limit: '64kb' }));
 
   app.get('/healthz', (_req, res) => {
     res.json({ status: 'ok', merchants: repository.count(), payments: payments.count() });

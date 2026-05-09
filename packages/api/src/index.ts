@@ -27,6 +27,9 @@ export {
 export {
   PaymentLog,
   type PaymentRecord,
+  type PaymentSource,
+  type X402PaymentDetails,
+  type OnrampPaymentDetails,
   type ListPaymentsOptions,
 } from './payments.js';
 export {
@@ -36,13 +39,20 @@ export {
   type McpToolDefinition,
 } from './routes/mcp.js';
 export {
-  buildMoonPayUrl,
-  loadMoonPayConfig,
-  moonPayBaseUrl,
-  MoonPayBuildError,
-  MoonPayConfigError,
-  type MoonPayConfig,
-  type MoonPayEnvironment,
-  type MoonPayUrlInput,
+  buildOnrampRouter,
+  type OnrampRouterOptions,
+} from './routes/onramp.js';
+export {
+  verifyMoonpaySignature,
+  processOnrampWebhook,
+  MoonpayWebhookPayloadSchema,
+  OnrampSignatureError,
+  MOONPAY_SIGNATURE_HEADER,
+  PAYMENT_CONFIRMED_EVENT,
+  type MoonpayWebhookPayload,
+  type OnrampNotifierOptions,
+  type OnrampOutcome,
+  type OnrampVerificationCode,
+  type ProcessOnrampWebhookOptions,
+  type VerifyMoonpaySignatureOptions,
 } from './onramp.js';
-export { buildOnrampRouter, type OnrampRouterDeps } from './routes/onramp.js';
