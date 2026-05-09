@@ -1,0 +1,17 @@
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+coverage
+**/coverage
+data
+*.log
+src
+packages
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env
+.env.*
+!.env.example

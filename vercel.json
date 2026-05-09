@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "echo \"serverless functions auto-detected from /api\"",
+  "installCommand": "npm install --include=dev --workspaces=false",
+  "outputDirectory": "public",
+  "functions": {
+    "api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30
+    }
+  },
+  "rewrites": [
+    { "source": "/healthz", "destination": "/api/healthz" },
+    { "source": "/simulate/:merchant", "destination": "/api/simulate/:merchant" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Powered-By", "value": "ZettaPay" }
+      ]
+    }
+  ]
+}
