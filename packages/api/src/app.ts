@@ -9,6 +9,8 @@ import { buildOnrampRouter } from './routes/onramp.js';
 import { HttpError } from './errors.js';
 import type { OnrampNotifierOptions } from './onramp.js';
 import type { dispatchWebhook } from './webhook.js';
+import { buildRequestLogger } from './middleware/request-logger.js';
+import { logger } from './lib/logger.js';
 
 export interface AppDependencies {
   db?: DB;
@@ -46,6 +48,7 @@ export function buildApp(deps: AppDependencies = {}): AppHandle {
 
   const app = express();
   app.disable('x-powered-by');
+  app.use(buildRequestLogger());
 
   app.use(
     '/onramp',
