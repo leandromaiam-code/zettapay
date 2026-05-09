@@ -15,3 +15,12 @@ export {
   type WebhookAttempt,
   type WebhookDispatchResult,
 } from './webhook.js';
+export {
+  parseX402Payment,
+  x402PaymentMiddleware,
+  X402ValidationError,
+  X402_HEADER,
+  type X402PaymentInfo,
+  type X402ErrorCode,
+  type X402MiddlewareOptions,
+} from './x402.js';
