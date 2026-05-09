@@ -1,0 +1,7 @@
+import pino from 'pino';
+import { env } from './env.js';
+
+export const logger = pino({
+  level: env.nodeEnv === 'production' ? 'info' : 'debug',
+  base: { service: 'zettapay' },
+});
