@@ -200,3 +200,128 @@ export async function processOnrampWebhook(
 
   return { kind: 'recorded', record, created: true, dispatch };
 }
+
+export type MoonPayEnvironment = 'sandbox' | 'production';
+
+export interface MoonPayConfig {
+  apiKey: string;
+  environment: MoonPayEnvironment;
+  defaultCurrencyCode?: string;
+}
+
+export type MoonPayBuildErrorCode =
+  | 'invalid_wallet_address'
+  | 'invalid_currency_code'
+  | 'invalid_amount'
+  | 'invalid_redirect_url';
+
+export class MoonPayBuildError extends Error {
+  constructor(public readonly code: MoonPayBuildErrorCode, message: string) {
+    super(message);
+    this.name = 'MoonPayBuildError';
+  }
+}
+
+export interface BuildMoonPayUrlParams {
+  walletAddress: string;
+  currencyCode?: unknown;
+  baseCurrencyCode?: unknown;
+  baseCurrencyAmount?: unknown;
+  redirectURL?: unknown;
+  externalCustomerId?: unknown;
+  externalTransactionId?: unknown;
+}
+
+const CURRENCY_CODE_RE = /^[a-zA-Z0-9_]{2,20}$/;
+
+export function buildMoonPayUrl(
+  config: MoonPayConfig,
+  params: BuildMoonPayUrlParams,
+): string {
+  if (!params.walletAddress || typeof params.walletAddress !== 'string') {
+    throw new MoonPayBuildError('invalid_wallet_address', 'walletAddress is required');
+  }
+
+  const url = new URL(
+    config.environment === 'production'
+      ? 'https://buy.moonpay.com/'
+      : 'https://buy-sandbox.moonpay.com/',
+  );
+  url.searchParams.set('apiKey', config.apiKey);
+  url.searchParams.set('walletAddress', params.walletAddress);
+
+  const currencyCode =
+    typeof params.currencyCode === 'string'
+      ? params.currencyCode
+      : config.defaultCurrencyCode;
+  if (currencyCode !== undefined) {
+    if (!CURRENCY_CODE_RE.test(currencyCode)) {
+      throw new MoonPayBuildError('invalid_currency_code', 'currencyCode is invalid');
+    }
+    url.searchParams.set('currencyCode', currencyCode);
+  }
+
+  if (params.baseCurrencyCode !== undefined) {
+    if (typeof params.baseCurrencyCode !== 'string' || !CURRENCY_CODE_RE.test(params.baseCurrencyCode)) {
+      throw new MoonPayBuildError('invalid_currency_code', 'baseCurrencyCode is invalid');
+    }
+    url.searchParams.set('baseCurrencyCode', params.baseCurrencyCode);
+  }
+
+  if (params.baseCurrencyAmount !== undefined) {
+    if (
+      typeof params.baseCurrencyAmount !== 'number' ||
+      !Number.isFinite(params.baseCurrencyAmount) ||
+      params.baseCurrencyAmount <= 0
+    ) {
+      throw new MoonPayBuildError('invalid_amount', 'baseCurrencyAmount must be positive');
+    }
+    url.searchParams.set('baseCurrencyAmount', String(params.baseCurrencyAmount));
+  }
+
+  if (params.redirectURL !== undefined) {
+    if (typeof params.redirectURL !== 'string') {
+      throw new MoonPayBuildError('invalid_redirect_url', 'redirectURL must be a string');
+    }
+    try {
+      // eslint-disable-next-line no-new
+      new URL(params.redirectURL);
+    } catch {
+      throw new MoonPayBuildError('invalid_redirect_url', 'redirectURL is not a valid URL');
+    }
+    url.searchParams.set('redirectURL', params.redirectURL);
+  }
+
+  if (typeof params.externalCustomerId === 'string' && params.externalCustomerId.length > 0) {
+    url.searchParams.set('externalCustomerId', params.externalCustomerId);
+  }
+  if (typeof params.externalTransactionId === 'string' && params.externalTransactionId.length > 0) {
+    url.searchParams.set('externalTransactionId', params.externalTransactionId);
+  }
+
+  return url.toString();
+}
+
+export class MoonPayConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'MoonPayConfigError';
+  }
+}
+
+export function loadMoonPayConfig(env: NodeJS.ProcessEnv = process.env): MoonPayConfig {
+  const apiKey = env.MOONPAY_API_KEY?.trim();
+  if (!apiKey) {
+    throw new MoonPayConfigError('MOONPAY_API_KEY is not configured');
+  }
+  const envValue = (env.MOONPAY_ENV ?? 'sandbox').trim().toLowerCase();
+  if (envValue !== 'sandbox' && envValue !== 'production') {
+    throw new MoonPayConfigError(`MOONPAY_ENV must be "sandbox" or "production" (got "${envValue}")`);
+  }
+  const defaultCurrencyCode = env.MOONPAY_DEFAULT_CURRENCY?.trim();
+  return {
+    apiKey,
+    environment: envValue,
+    ...(defaultCurrencyCode ? { defaultCurrencyCode } : {}),
+  };
+}

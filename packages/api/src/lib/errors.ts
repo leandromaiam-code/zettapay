@@ -6,6 +6,7 @@ export type HttpErrorCode =
   | "rate_limited"
   | "payment_failed"
   | "config_error"
+  | "upstream_error"
   | "internal_error";
 
 export class HttpError extends Error {
@@ -34,8 +35,8 @@ export class HttpError extends Error {
     return new HttpError(404, "not_found", message);
   }
 
-  static conflict(message: string): HttpError {
-    return new HttpError(409, "conflict", message);
+  static conflict(message: string, details?: unknown): HttpError {
+    return new HttpError(409, "conflict", message, details);
   }
 
   static paymentFailed(message: string, details?: unknown): HttpError {
@@ -44,5 +45,37 @@ export class HttpError extends Error {
 
   static config(message: string): HttpError {
     return new HttpError(500, "config_error", message);
+  }
+
+  static upstream(message: string, details?: unknown): HttpError {
+    return new HttpError(502, "upstream_error", message, details);
+  }
+}
+
+export class ValidationError extends HttpError {
+  constructor(message: string, details?: unknown) {
+    super(400, "validation_error", message, details);
+    this.name = "ValidationError";
+  }
+}
+
+export class ConflictError extends HttpError {
+  constructor(message: string, details?: unknown) {
+    super(409, "conflict", message, details);
+    this.name = "ConflictError";
+  }
+}
+
+export class ConfigurationError extends HttpError {
+  constructor(message: string, details?: unknown) {
+    super(500, "config_error", message, details);
+    this.name = "ConfigurationError";
+  }
+}
+
+export class UpstreamError extends HttpError {
+  constructor(message: string, details?: unknown) {
+    super(502, "upstream_error", message, details);
+    this.name = "UpstreamError";
   }
 }

@@ -11,99 +11,77 @@ import type { OnrampNotifierOptions } from './onramp.js';
 import type { dispatchWebhook } from './webhook.js';
 import { buildRequestLogger } from './middleware/request-logger.js';
 import { logger } from './lib/logger.js';
+import express, { type Express, type Request, type Response } from "express";
+import type { Database as Db } from "better-sqlite3";
+import { openDatabase } from "./db/index.js";
+import { healthRouter } from "./routes/health.js";
+import { merchantsRouter } from "./routes/merchants.js";
+import { payRouter } from "./routes/pay.js";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { SolanaService } from "./services/solana.js";
+import { getServiceInfo } from "./lib/version.js";
+import { logger } from "./lib/logger.js";
+import { loadEnv, type AppEnv } from "./config/env.js";
 
 export interface AppDependencies {
-  db?: DB;
-  dbPath?: string;
-  payments?: PaymentLog;
-  onrampWebhookSecret?: string;
-  onrampNotify?: OnrampNotifierOptions;
-  onrampDispatch?: typeof dispatchWebhook;
-  onrampSignatureToleranceMs?: number;
+  db?: Db;
+  databasePath?: string;
+  solana?: SolanaService;
+  env?: AppEnv;
 }
 
 export interface AppHandle {
   app: Express;
-  db: DB;
-  repository: MerchantRepository;
-  payments: PaymentLog;
-  moonPay: MoonPayConfig | null;
+  db: Db;
+  solana: SolanaService;
+  env: AppEnv;
 }
 
-function resolveMoonPayConfig(deps: AppDependencies): MoonPayConfig | null {
-  if (deps.moonPay !== undefined) return deps.moonPay;
-  try {
-    return loadMoonPayConfig();
-  } catch (err) {
-    if (err instanceof MoonPayConfigError) return null;
-    throw err;
-  }
-}
+const startedAt = Date.now();
 
 export function buildApp(deps: AppDependencies = {}): AppHandle {
-  const db = deps.db ?? openDb({ filename: deps.dbPath });
-  const repository = new MerchantRepository(db);
-  const payments = deps.payments ?? new PaymentLog();
-  const moonPay = resolveMoonPayConfig(deps);
+  const env = deps.env ?? loadEnv();
+  const db =
+    deps.db ?? openDatabase(deps.databasePath ?? env.databasePath);
+  const solana =
+    deps.solana ??
+    new SolanaService({
+      rpcUrl: env.solanaRpcUrl,
+      commitment: env.solanaCommitment,
+      usdcMintAddress: env.usdcMintAddress,
+      payerSecretKey: env.payerSecretKey,
+    });
 
   const app = express();
   app.disable('x-powered-by');
   app.use(buildRequestLogger());
+  app.disable("x-powered-by");
+  app.use(express.json({ limit: "256kb" }));
 
-  app.use(
-    '/onramp',
-    buildOnrampRouter({
-      payments,
-      webhookSecret: deps.onrampWebhookSecret ?? process.env.MOONPAY_WEBHOOK_SECRET,
-      notify:
-        deps.onrampNotify ??
-        (process.env.MERCHANT_WEBHOOK_URL
-          ? {
-              url: process.env.MERCHANT_WEBHOOK_URL,
-              secret: process.env.MERCHANT_WEBHOOK_SECRET,
-            }
-          : undefined),
-      dispatch: deps.onrampDispatch,
-      signatureToleranceMs: deps.onrampSignatureToleranceMs,
-    }),
-  );
+  const info = getServiceInfo();
 
-  app.use(express.json({ limit: '64kb' }));
-
-  app.get('/healthz', (_req, res) => {
-    res.json({ status: 'ok', merchants: repository.count(), payments: payments.count() });
-  });
-
-  app.use('/merchants', buildMerchantsRouter(repository));
-  app.use('/pay', buildPayRouter(payments));
-  app.use('/mcp', buildMcpRouter({ merchants: repository, payments, moonPay }));
-  if (moonPay) {
-    app.use('/onramp', buildOnrampRouter({ merchants: repository, config: moonPay }));
-  } else {
-    app.use('/onramp', (_req, res) => {
-      res.status(503).json({
-        error: {
-          code: 'onramp_disabled',
-          message: 'MoonPay onramp is not configured (set MOONPAY_API_KEY)',
-        },
-      });
+  app.get("/", (_req: Request, res: Response) => {
+    res.json({
+      status: "ok",
+      service: info.name,
+      version: info.version,
+      uptimeSec: Math.round((Date.now() - startedAt) / 1000),
+      now: new Date().toISOString(),
     });
-  }
-
-  app.use((_req, res) => {
-    res.status(404).json({ error: { code: "not_found", message: "route not found" } });
   });
 
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-    if (err instanceof HttpError) {
-      res.status(err.status).json({
-        error: { code: err.code, message: err.message, details: err.details },
-      });
-      return;
-    }
-    const message = err instanceof Error ? err.message : 'internal error';
-    res.status(500).json({ error: { code: 'internal_error', message } });
+  app.use(healthRouter());
+  app.use(merchantsRouter(db));
+  app.use(payRouter(db, solana));
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
+
+  logger.info("app_ready", {
+    service: info.name,
+    version: info.version,
+    nodeEnv: env.nodeEnv,
   });
 
-  return { app, db, repository, payments, moonPay };
+  return { app, db, solana, env };
 }
