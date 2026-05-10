@@ -19,6 +19,7 @@ import type { CoinflowClient } from "../coinflow/client.js";
 import { settlePayment } from "../coinflow/service.js";
 import { enforceVelocityLimits } from "./velocity.js";
 import { enforceAgentSpendingLimits } from "./agent-spending-limits.js";
+import { enforceBlacklist } from "./blacklist.js";
 import { enforceBetaLimits } from "../beta/enforcer.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
 
@@ -85,6 +86,16 @@ export async function createPayment(
       "zettapay.payment.currency": currency,
     },
     async (span) => {
+      // Z13.2 sanctions gate: hard-block payer/merchant wallets on the OFAC
+      // SDN list before any other check so a sanctioned attempt never
+      // consumes a velocity slot, beta cap, or DB row.
+      enforceBlacklist(db, {
+        payerWallet,
+        merchantWallet: merchant.walletAddress,
+        merchantId: merchant.id,
+        paymentId,
+      });
+
       // Z22.1 beta gate: allowlist + $10k cap + window expiry. No-op when disabled.
       // Runs before velocity so an out-of-cohort attempt never consumes a velocity slot.
       enforceBetaLimits(db, betaConfig, {
