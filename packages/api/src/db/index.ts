@@ -247,5 +247,36 @@ function applyMigrations(db: Db): void {
       ON shopify_installations(merchant_id);
     CREATE INDEX IF NOT EXISTS shopify_installations_status_idx
       ON shopify_installations(status);
+
+    CREATE TABLE IF NOT EXISTS registry_tools (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      slug            TEXT NOT NULL UNIQUE,
+      name            TEXT NOT NULL,
+      description     TEXT NOT NULL,
+      category        TEXT NOT NULL,
+      endpoint_url    TEXT NOT NULL,
+      price_usdc      REAL NOT NULL CHECK (price_usdc >= 0),
+      currency        TEXT NOT NULL DEFAULT 'USDC',
+      input_schema_json TEXT NOT NULL,
+      tags_json       TEXT NOT NULL DEFAULT '[]',
+      homepage_url    TEXT,
+      docs_url        TEXT,
+      icon_url        TEXT,
+      status          TEXT NOT NULL CHECK (status IN ('draft','published','suspended')),
+      install_count   INTEGER NOT NULL DEFAULT 0,
+      call_count      INTEGER NOT NULL DEFAULT 0,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS registry_tools_merchant_idx
+      ON registry_tools(merchant_id);
+    CREATE INDEX IF NOT EXISTS registry_tools_status_idx
+      ON registry_tools(status);
+    CREATE INDEX IF NOT EXISTS registry_tools_category_idx
+      ON registry_tools(category);
+    CREATE INDEX IF NOT EXISTS registry_tools_status_category_idx
+      ON registry_tools(status, category);
   `);
 }
