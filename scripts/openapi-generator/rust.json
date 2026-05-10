@@ -1,0 +1,8 @@
+{
+  "packageName": "zettapay-generated",
+  "packageVersion": "0.1.0",
+  "library": "reqwest",
+  "supportAsync": true,
+  "supportMiddleware": false,
+  "useSingleRequestParameter": true
+}

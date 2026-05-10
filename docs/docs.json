@@ -143,6 +143,12 @@
               "sdk/on-chain",
               "sdk/reference"
             ]
+          },
+          {
+            "group": "Other languages",
+            "pages": [
+              "sdk/multi-language"
+            ]
           }
         ]
       }

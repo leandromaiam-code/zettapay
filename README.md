@@ -123,6 +123,30 @@ curl http://localhost:3000/healthz
 curl http://localhost:3000/simulate/test-merchant
 ```
 
+## OpenAPI spec & multi-language SDKs
+
+Every deployment serves a machine-readable spec for codegen:
+
+| Endpoint | Flavor |
+| --- | --- |
+| `GET /openapi.json` | OpenAPI 3.1 (source of truth) |
+| `GET /openapi-3.0.json` | OpenAPI 3.0.3 (openapi-generator-friendly) |
+| `GET /docs` | Swagger UI (Try-it-out enabled) |
+
+Committed snapshots live in [`docs/api-reference/`](./docs/api-reference/) and
+language clients can be regenerated on demand:
+
+```bash
+npm run openapi:export    # refresh both 3.1 and 3.0 snapshots
+npm run sdk:generate      # python + go + rust + php via openapi-generator-cli
+```
+
+The TypeScript SDK in [`packages/sdk`](./packages/sdk) is hand-tuned and
+canonical; the other packages (`sdk-python`, `sdk-go`, `sdk-rust`,
+`sdk-php`) have generated stubs sitting alongside vendored hand-written
+clients. See [`docs/sdk/multi-language.mdx`](./docs/sdk/multi-language.mdx)
+for the full workflow.
+
 ## Documentation site
 
 The public docs at [docs.zettapay.io](https://docs.zettapay.io) live in

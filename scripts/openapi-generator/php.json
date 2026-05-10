@@ -1,0 +1,7 @@
+{
+  "invokerPackage": "ZettaPay\\Generated",
+  "packageName": "zettapay-generated",
+  "composerVendorName": "zettapay",
+  "composerProjectName": "zettapay-generated",
+  "artifactVersion": "0.1.0"
+}
