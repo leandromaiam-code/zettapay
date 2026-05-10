@@ -29,6 +29,7 @@
     { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
     { "source": "/launch", "destination": "/launch.html" },
     { "source": "/mainnet", "destination": "/launch.html" },
+    { "source": "/pricing", "destination": "/pricing.html" },
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" },
     { "source": "/docs/embed", "destination": "/docs/embed.html" },
