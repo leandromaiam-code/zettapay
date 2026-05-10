@@ -126,8 +126,59 @@
     .badge-mint { background: rgba(20, 241, 149, 0.12); border: 1px solid rgba(20, 241, 149, 0.35); color: #14F195; }
     .badge-amber { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; }
     .badge-muted { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: #94A3B8; }
+    .badge-rose { background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.35); color: #fb7185; }
+    .badge-royal { background: rgba(79, 107, 255, 0.12); border: 1px solid rgba(79, 107, 255, 0.4); color: #6B82FF; }
     .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60; max-width: 22rem; }
     @media (max-width: 640px) { .toast { right: 1rem; left: 1rem; max-width: none; } }
+
+    /* Webhook delivery timeline */
+    .timeline { position: relative; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: linear-gradient(180deg, rgba(79, 107, 255, 0.35) 0%, rgba(79, 107, 255, 0.05) 100%);
+    }
+    .timeline-row { position: relative; padding-left: 2rem; }
+    .timeline-dot {
+      position: absolute;
+      left: 4px;
+      top: 0.6rem;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 2px solid #0A0A0A;
+      box-shadow: 0 0 0 2px rgba(79, 107, 255, 0.25);
+    }
+    .timeline-dot.is-sent { background: #14F195; box-shadow: 0 0 0 2px rgba(20, 241, 149, 0.35), 0 0 12px rgba(20, 241, 149, 0.45); }
+    .timeline-dot.is-pending { background: #f59e0b; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35); animation: pulse 2s ease-in-out infinite; }
+    .timeline-dot.is-failed { background: #fb7185; box-shadow: 0 0 0 2px rgba(251, 113, 133, 0.35); }
+    .timeline-dot.is-dead { background: #94A3B8; box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.35); }
+    .code-block {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      line-height: 1.55;
+      white-space: pre;
+      overflow: auto;
+      max-height: 24rem;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      color: #d8e1ff;
+    }
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 70;
+      background: rgba(2, 4, 14, 0.72);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem;
+    }
+    .modal-card { width: 100%; max-width: 44rem; max-height: 90vh; overflow: auto; }
+    @media (max-width: 640px) { .modal-card { max-height: 92vh; } }
   </style>
 </head>
 <body class="grid-bg">
@@ -396,6 +447,40 @@
         <div id="payments-empty" class="hidden-init text-center py-8 text-muted text-sm">No payments yet — share your merchant link or try the simulator.</div>
       </div>
 
+      <!-- Webhook events -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Webhook delivery log</div>
+            <h2 class="text-xl font-bold mt-1">Outbound events</h2>
+            <p class="text-xs text-muted mt-1 max-w-2xl">
+              Stripe-grade retry curve (1s → 24h, max 10 attempts) with HMAC-SHA256 signatures. Click any event to inspect the payload or
+              <span class="text-royal-bright">replay</span> a failed delivery.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="webhooks-source" class="badge badge-muted">demo</span>
+            <select id="webhooks-filter" class="mono text-xs bg-black/40 border border-white/10 focus:border-royal/60 outline-none rounded-full px-3 py-2">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="sent">Delivered</option>
+              <option value="failed">Failed</option>
+              <option value="dead">Dead-lettered</option>
+            </select>
+            <button id="webhooks-refresh" class="btn-ghost px-3 py-2 rounded-full font-semibold text-xs whitespace-nowrap">Refresh</button>
+          </div>
+        </div>
+        <div id="webhooks-url" class="mono text-[11px] text-muted mb-3 truncate"></div>
+        <div id="webhooks-timeline" class="timeline space-y-3 hidden-init"></div>
+        <div id="webhooks-skeleton" class="space-y-3">
+          <div class="skeleton h-16 w-full rounded-xl"></div>
+          <div class="skeleton h-16 w-full rounded-xl"></div>
+        </div>
+        <div id="webhooks-empty" class="hidden-init text-center py-8 text-muted text-sm">
+          No webhook deliveries yet — set a webhook URL on your merchant record and complete a payment to see events stream in here.
+        </div>
+      </div>
+
       <!-- Settlement -->
       <div class="glass rounded-2xl p-5 md:p-6">
         <div class="flex items-center justify-between mb-4">
@@ -439,6 +524,36 @@
 
   <div id="toast" class="toast hidden-init">
     <div class="glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
+  </div>
+
+  <!-- Webhook payload inspector modal -->
+  <div id="webhook-modal" class="modal-backdrop hidden-init" role="dialog" aria-modal="true" aria-labelledby="webhook-modal-title">
+    <div class="glass-strong modal-card rounded-2xl p-5 md:p-6">
+      <div class="flex items-start justify-between gap-3 mb-3">
+        <div class="min-w-0">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Webhook event</div>
+          <h3 id="webhook-modal-title" class="text-lg font-bold truncate">—</h3>
+          <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px]">
+            <span id="webhook-modal-status" class="badge badge-muted">—</span>
+            <span id="webhook-modal-attempts" class="badge badge-royal">—</span>
+            <span id="webhook-modal-when" class="mono text-muted">—</span>
+          </div>
+        </div>
+        <button id="webhook-modal-close" class="btn-ghost rounded-full w-9 h-9 flex items-center justify-center" aria-label="Close">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="webhook-modal-error" class="hidden-init text-rose mono text-xs mb-3"></div>
+      <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Payload</div>
+      <pre id="webhook-modal-payload" class="code-block">—</pre>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+        <div id="webhook-modal-meta" class="mono text-[11px] text-muted truncate"></div>
+        <div class="flex gap-2">
+          <button id="webhook-modal-copy" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Copy payload</button>
+          <button id="webhook-modal-retry" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Retry delivery</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -1148,6 +1263,202 @@
     }
 
     // -----------------------------------------------------------------------
+    // Webhook events — delivery log + retry inspector
+    // -----------------------------------------------------------------------
+
+    let webhookEventsCache = [];
+
+    const STATUS_BADGE = {
+      sent: { label: 'delivered', cls: 'badge badge-mint', dot: 'is-sent' },
+      pending: { label: 'pending', cls: 'badge badge-amber', dot: 'is-pending' },
+      failed: { label: 'failed', cls: 'badge badge-rose', dot: 'is-failed' },
+      dead: { label: 'dead-letter', cls: 'badge badge-muted', dot: 'is-dead' },
+    };
+
+    function statusMeta(status) {
+      return STATUS_BADGE[status] || { label: status || '—', cls: 'badge badge-muted', dot: 'is-dead' };
+    }
+
+    function escapeHtml(s) {
+      if (s === null || s === undefined) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function summarizePayload(payload) {
+      if (payload == null) return '—';
+      if (typeof payload === 'object') {
+        const type = payload.type || payload.event || payload.kind;
+        if (type) return String(type);
+        const keys = Object.keys(payload).slice(0, 3).join(', ');
+        return keys ? '{ ' + keys + ' }' : '{ … }';
+      }
+      const s = String(payload);
+      return s.length > 64 ? s.slice(0, 61) + '…' : s;
+    }
+
+    async function fetchWebhookEventsLive(apiBase, apiKey, status) {
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      params.set('limit', '100');
+      const qs = params.toString();
+      const url = apiBase.replace(/\/+$/, '') + '/webhooks/events' + (qs ? '?' + qs : '');
+      const res = await fetch(url, { headers: { 'x-zettapay-api-key': apiKey } });
+      if (!res.ok) throw new Error('Webhooks ' + res.status);
+      const json = await res.json();
+      return {
+        events: Array.isArray(json.events) ? json.events : [],
+        webhookUrl: json.webhookUrl || null,
+      };
+    }
+
+    function renderWebhookEvents(events) {
+      const list = $('webhooks-timeline');
+      const empty = $('webhooks-empty');
+      const skeleton = $('webhooks-skeleton');
+      skeleton.classList.add('hidden-init');
+      list.innerHTML = '';
+      webhookEventsCache = events.slice();
+      if (!events.length) {
+        list.classList.add('hidden-init');
+        empty.classList.remove('hidden-init');
+        return;
+      }
+      empty.classList.add('hidden-init');
+      list.classList.remove('hidden-init');
+
+      for (const ev of events) {
+        const meta = statusMeta(ev.status);
+        const lastAttempt = ev.lastAttemptAt ? relativeTime(ev.lastAttemptAt) : 'queued';
+        const attemptText = (ev.attemptCount || 0) + '/' + (ev.maxAttempts || 0) + ' attempts';
+        const statusCode = ev.lastStatusCode != null ? 'HTTP ' + ev.lastStatusCode : (ev.lastError ? 'transport error' : 'no response yet');
+        const summary = summarizePayload(ev.payload);
+
+        const node = document.createElement('div');
+        node.className = 'timeline-row';
+        node.dataset.eventId = ev.eventId;
+        node.innerHTML =
+          '<span class="timeline-dot ' + meta.dot + '"></span>' +
+          '<div class="glass rounded-xl px-4 py-3 cursor-pointer hover:border-royal/40 transition" data-action="open">' +
+            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+              '<div class="min-w-0 flex-1">' +
+                '<div class="flex items-center gap-2 flex-wrap">' +
+                  '<span class="' + meta.cls + '">' + escapeHtml(meta.label) + '</span>' +
+                  '<span class="mono text-xs text-muted">' + escapeHtml(ev.eventId) + '</span>' +
+                '</div>' +
+                '<div class="text-sm font-semibold mt-1 truncate">' + escapeHtml(summary) + '</div>' +
+                '<div class="mono text-[11px] text-muted mt-1">' +
+                  escapeHtml(lastAttempt) + ' · ' + escapeHtml(attemptText) + ' · ' + escapeHtml(statusCode) +
+                '</div>' +
+              '</div>' +
+              '<div class="flex items-center gap-2">' +
+                (ev.status === 'failed' || ev.status === 'dead'
+                  ? '<button data-action="retry" class="btn-primary px-3 py-1.5 rounded-full text-xs font-semibold">Retry</button>'
+                  : '<button data-action="open" class="btn-ghost px-3 py-1.5 rounded-full text-xs font-semibold">Inspect</button>') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        list.appendChild(node);
+      }
+    }
+
+    function clearWebhookEvents(message) {
+      const list = $('webhooks-timeline');
+      const empty = $('webhooks-empty');
+      $('webhooks-skeleton').classList.add('hidden-init');
+      list.classList.add('hidden-init');
+      list.innerHTML = '';
+      empty.classList.remove('hidden-init');
+      empty.textContent = message || 'No webhook deliveries yet — set a webhook URL on your merchant record and complete a payment to see events stream in here.';
+      webhookEventsCache = [];
+    }
+
+    async function loadWebhookEvents(prefs) {
+      const status = $('webhooks-filter').value || '';
+      const sourceBadge = $('webhooks-source');
+      const urlEl = $('webhooks-url');
+      if (!prefs.apiBase || !prefs.apiKey) {
+        sourceBadge.textContent = 'demo';
+        sourceBadge.className = 'badge badge-muted';
+        urlEl.textContent = '';
+        clearWebhookEvents('Connect API base + key to load your webhook delivery log.');
+        return;
+      }
+      $('webhooks-skeleton').classList.remove('hidden-init');
+      try {
+        const result = await fetchWebhookEventsLive(prefs.apiBase, prefs.apiKey, status);
+        sourceBadge.textContent = 'live';
+        sourceBadge.className = 'badge badge-mint';
+        urlEl.textContent = result.webhookUrl ? '→ ' + result.webhookUrl : 'No webhook URL configured on this merchant.';
+        renderWebhookEvents(result.events);
+      } catch (err) {
+        sourceBadge.textContent = 'unreachable';
+        sourceBadge.className = 'badge badge-amber';
+        clearWebhookEvents('Live API unreachable: ' + err.message);
+      }
+    }
+
+    async function retryWebhookEvent(eventId) {
+      const prefs = loadPrefs();
+      if (!prefs.apiBase || !prefs.apiKey) {
+        toast('Provide API base + key to retry.', 'error');
+        throw new Error('credentials_missing');
+      }
+      const url = prefs.apiBase.replace(/\/+$/, '') + '/webhooks/events/' + encodeURIComponent(eventId) + '/retry';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'x-zettapay-api-key': prefs.apiKey },
+      });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || ('HTTP ' + res.status));
+      }
+      return res.json();
+    }
+
+    function openWebhookModal(eventId) {
+      const ev = webhookEventsCache.find((e) => e.eventId === eventId);
+      if (!ev) return;
+      const meta = statusMeta(ev.status);
+      $('webhook-modal-title').textContent = ev.eventId;
+      const statusEl = $('webhook-modal-status');
+      statusEl.textContent = meta.label;
+      statusEl.className = meta.cls;
+      $('webhook-modal-attempts').textContent = (ev.attemptCount || 0) + '/' + (ev.maxAttempts || 0) + ' attempts';
+      $('webhook-modal-when').textContent = ev.lastAttemptAt
+        ? 'last try ' + relativeTime(ev.lastAttemptAt)
+        : 'created ' + relativeTime(ev.createdAt);
+      $('webhook-modal-meta').textContent = ev.url || '';
+      $('webhook-modal-payload').textContent = JSON.stringify(ev.payload, null, 2);
+      const errorEl = $('webhook-modal-error');
+      if (ev.lastError) {
+        errorEl.textContent = 'Last error: ' + ev.lastError;
+        errorEl.classList.remove('hidden-init');
+      } else if (ev.lastStatusCode != null) {
+        errorEl.textContent = 'Last response: HTTP ' + ev.lastStatusCode;
+        errorEl.classList.remove('hidden-init');
+      } else {
+        errorEl.textContent = '';
+        errorEl.classList.add('hidden-init');
+      }
+      const retryBtn = $('webhook-modal-retry');
+      const canRetry = ev.status === 'failed' || ev.status === 'dead';
+      retryBtn.disabled = !canRetry;
+      retryBtn.classList.toggle('opacity-50', !canRetry);
+      retryBtn.dataset.eventId = ev.eventId;
+      $('webhook-modal').classList.remove('hidden-init');
+    }
+
+    function closeWebhookModal() {
+      $('webhook-modal').classList.add('hidden-init');
+      $('webhook-modal-retry').dataset.eventId = '';
+    }
+
+    // -----------------------------------------------------------------------
     // Prefs
     // -----------------------------------------------------------------------
 
@@ -1220,6 +1531,7 @@
       await Promise.all([
         loadAnalytics(prefs, session),
         loadSettlement(prefs.apiBase, prefs.apiKey, session.pubkey),
+        loadWebhookEvents(prefs),
       ]);
     }
 
@@ -1282,6 +1594,73 @@
       });
 
       $('cf-save').addEventListener('click', enableSettlement);
+
+      $('webhooks-refresh').addEventListener('click', async () => {
+        await loadWebhookEvents(loadPrefs());
+        toast('Webhook log refreshed', 'ok');
+      });
+
+      $('webhooks-filter').addEventListener('change', () => {
+        loadWebhookEvents(loadPrefs());
+      });
+
+      $('webhooks-timeline').addEventListener('click', async (event) => {
+        const row = event.target.closest('.timeline-row');
+        if (!row) return;
+        const eventId = row.dataset.eventId;
+        if (!eventId) return;
+        const action = event.target.closest('[data-action]')?.dataset.action;
+        if (action === 'retry') {
+          event.stopPropagation();
+          const button = event.target.closest('[data-action="retry"]');
+          if (button) button.disabled = true;
+          try {
+            const result = await retryWebhookEvent(eventId);
+            toast(result.delivered ? 'Webhook delivered ✓' : 'Retry attempted — see log', result.delivered ? 'ok' : 'info');
+            await loadWebhookEvents(loadPrefs());
+          } catch (err) {
+            toast('Retry failed: ' + err.message, 'error');
+            if (button) button.disabled = false;
+          }
+          return;
+        }
+        openWebhookModal(eventId);
+      });
+
+      $('webhook-modal').addEventListener('click', (event) => {
+        if (event.target.id === 'webhook-modal') closeWebhookModal();
+      });
+
+      $('webhook-modal-close').addEventListener('click', closeWebhookModal);
+
+      $('webhook-modal-copy').addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText($('webhook-modal-payload').textContent || '');
+          toast('Payload copied', 'ok');
+        } catch {
+          toast('Copy failed', 'error');
+        }
+      });
+
+      $('webhook-modal-retry').addEventListener('click', async () => {
+        const button = $('webhook-modal-retry');
+        const eventId = button.dataset.eventId;
+        if (!eventId) return;
+        button.disabled = true;
+        try {
+          const result = await retryWebhookEvent(eventId);
+          toast(result.delivered ? 'Webhook delivered ✓' : 'Retry attempted — see log', result.delivered ? 'ok' : 'info');
+          closeWebhookModal();
+          await loadWebhookEvents(loadPrefs());
+        } catch (err) {
+          toast('Retry failed: ' + err.message, 'error');
+          button.disabled = false;
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeWebhookModal();
+      });
     }
 
     document.addEventListener('DOMContentLoaded', () => {

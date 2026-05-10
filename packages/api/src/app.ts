@@ -10,6 +10,7 @@ import { shopifyRouter } from "./routes/shopify.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
+import { webhooksRouter } from "./routes/webhooks.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
@@ -84,6 +85,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
+  app.use(webhooksRouter(db));
   app.use(
     shopifyRouter(db, {
       config: shopify ?? null,
