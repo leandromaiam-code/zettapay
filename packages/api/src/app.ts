@@ -25,6 +25,7 @@ import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { subscriptionManageRouter } from "./routes/subscription-manage.js";
 import { treasuryRouter } from "./routes/treasury.js";
 import { pixRouter, type PixClientResolver } from "./routes/pix.js";
+import { bridgeRouter } from "./routes/bridge.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
 import { webhooksAdminRouter } from "./routes/webhooks-admin.js";
@@ -49,6 +50,7 @@ import type {
 } from "./services/shopify.js";
 import { TreasuryService } from "./services/treasury.js";
 import type { PixProvider } from "./pix/client.js";
+import type { AttestationClient } from "./bridge/attestation.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -101,6 +103,12 @@ export interface CreateAppOptions {
   };
   /** Hook fired after Pix auto-settle finishes (success or swallow). Test seam. */
   onAutoPixSettle?: CreatePaymentDeps["onAutoPixSettle"];
+  /**
+   * Optional attestation client (Circle iris by default). When provided,
+   * `/bridge/*` routes are mounted so merchants can accept USDC on Base /
+   * Polygon and route to Solana via CCTP — see premissa I.1 / Z11.
+   */
+  attestation?: AttestationClient;
 }
 
 const startedAt = Date.now();
@@ -123,6 +131,7 @@ export function createApp(options: CreateAppOptions): Express {
     onAutoPixSettle,
   } = options;
   const betaConfig = options.betaConfig ?? loadBetaConfig();
+  const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
 
   const app = express();
   app.disable("x-powered-by");
@@ -228,6 +237,8 @@ export function createApp(options: CreateAppOptions): Express {
   }
   if (pix && pix.availableProviders.length > 0) {
     app.use(pixRouter(db, pix));
+  if (attestation) {
+    app.use(bridgeRouter(db, { attestation, solana }));
   }
 
   const treasuryService = new TreasuryService(db, {

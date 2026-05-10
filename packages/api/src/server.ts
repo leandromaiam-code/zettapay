@@ -18,6 +18,10 @@ import {
   type PixEnvironment,
   type PixProvider,
 } from "./pix/client.js";
+  HttpAttestationClient,
+  type AttestationClient,
+  type AttestationEnvironment,
+} from "./bridge/attestation.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
@@ -92,6 +96,9 @@ const app = createApp({
   },
   ...(pix ? { pix } : {}),
 });
+const attestation = loadAttestation();
+
+const app = createApp({ db, solana, shutdown, coinflow, attestation });
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -186,4 +193,20 @@ function loadPix(): PixServerConfig | undefined {
     resolveClient: (provider) => clients.get(provider),
     availableProviders: Array.from(clients.keys()),
   };
+function loadAttestation(): AttestationClient | undefined {
+  // Bridge support is opt-in: setting BRIDGE_ATTESTATION_ENV mounts /bridge/*.
+  // Defaults to off so dev environments without a CCTP setup don't expose
+  // an endpoint that always 502s.
+  const raw = process.env.BRIDGE_ATTESTATION_ENV;
+  if (!raw) return undefined;
+  const envValue = raw.toLowerCase();
+  if (envValue !== "sandbox" && envValue !== "production") {
+    logger.error("bridge.attestation.env.invalid", { value: envValue });
+    return undefined;
+  }
+  const baseUrl = process.env.BRIDGE_ATTESTATION_BASE_URL;
+  return new HttpAttestationClient({
+    environment: envValue as AttestationEnvironment,
+    ...(baseUrl ? { baseUrl } : {}),
+  });
 }
