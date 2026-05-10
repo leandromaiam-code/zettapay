@@ -1,0 +1,278 @@
+---
+title: "Incident response runbook"
+description: "Detect, contain, communicate, resolve. The on-call playbook for Solana mainnet payments."
+---
+
+This runbook is the on-call playbook for ZettaPay mainnet payments. It is
+written for the engineer paged at 03:00 — every step is concrete, every
+endpoint is real, and the kill switch is one HTTP request away.
+
+The runbook follows four phases: **detect → contain → communicate →
+resolve**. Each phase has an explicit gate before moving on. Skipping
+phases turns a 20-minute incident into a 6-hour postmortem.
+
+## Severity matrix
+
+| Severity | Symptom | Kill switch eligible | Status page | Pager |
+| --- | --- | --- | --- | --- |
+| **sev1** | Payments unable to settle (RPC outage, signer compromise, treasury drain). | Yes | Major outage | Page on-call + commander |
+| **sev2** | Elevated error rate (>5% over 5 min), latency >2× p95, single component degraded. | No | Degraded | Page on-call |
+| **sev3** | Single merchant impacted, dashboard slow, non-payment subsystem down. | No | Degraded | Acknowledge during business hours |
+
+The kill switch is **only** available for sev1. By policy, no other
+severity may pause global payment traffic.
+
+## 1. Detect
+
+You learn an incident is happening from one of these signals. Treat the
+first signal that crosses threshold as the incident open time, not the
+moment you got paged.
+
+### Automated signals
+
+- **Prometheus** — `up{job="zettapay-api"} == 0` for 60s, or
+  `rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05`.
+  Alerts fire to the on-call pager.
+- **Health probe** — `GET /ready` returning `503` for two consecutive
+  pulls. The probe checks Solana RPC, treasury reserve config, and
+  webhook queue depth.
+- **Webhook dead-letter** — `webhook_events.status='dead'` count
+  doubling over 10 min. Indicates merchant-side failures correlated
+  with our deploys.
+- **Treasury floor breach** — reserve coverage falling below 5% of
+  trailing 24h TPV. Operational, not customer-visible — but page
+  anyway.
+
+### Manual signals
+
+- A merchant reports a payment stuck in `processing` for >2 minutes.
+- A wallet reports x402 challenges failing or signature rejection.
+- Solana mainnet status page reports validator issues.
+
+### Verify before paging the team
+
+Before declaring an incident, hit these endpoints from outside the
+cluster (so a network partition doesn't fool you):
+
+```bash
+curl -fsS https://api.zettapay.io/healthz
+curl -fsS https://api.zettapay.io/ready
+curl -fsS https://api.zettapay.io/status
+```
+
+If `/ready` is 503 and `/healthz` is 200, the process is alive but a
+dependency is unhealthy — usually the right call is to page rather than
+restart.
+
+## 2. Contain
+
+Containment is about stopping the bleed, not fixing the root cause.
+You have **15 minutes** from declared open to containment. If
+containment requires more than 15 minutes, escalate to the commander.
+
+### Engage the kill switch (sev1 only)
+
+The kill switch returns HTTP 503 + `Retry-After: 60` on `POST /pay` so
+SDK clients back off cleanly. Webhook delivery, dashboard, and admin
+APIs remain reachable so you can keep diagnosing.
+
+```bash
+INCIDENT_ID=$(curl -fsS -X POST https://api.zettapay.io/admin/incidents \
+  -H "x-api-key: $ZETTAPAY_TREASURY_ADMIN_KEY" \
+  -H "x-treasury-actor: $YOUR_HANDLE" \
+  -H "content-type: application/json" \
+  -d '{
+    "title": "RPC outage — payments paused",
+    "severity": "sev1",
+    "killSwitch": true,
+    "affectedComponents": ["pay", "settlement"],
+    "initialMessage": "RPC returning 5xx since 03:14Z. Investigating with Helius."
+  }' | jq -r '.incident.id')
+
+echo "Incident opened: $INCIDENT_ID"
+```
+
+The kill switch:
+
+- Blocks new payment creation (`POST /pay` only — reads, dashboards,
+  and webhooks continue).
+- Survives process restarts because the state lives in `audit_journal`
+  (append-only, replay-able).
+- Auto-disengages on resolve.
+
+### Other contain levers
+
+- **Per-merchant freeze** — `POST /merchants/:id/agents/:agentId/freeze`
+  if a single agent is the source of bad traffic. Use this before the
+  global kill switch when scope allows.
+- **Webhook backpressure** — pause the webhook worker
+  (`docker stop zettapay-webhook-worker`) if downstream merchants are
+  flooding.
+- **RPC failover** — set `SOLANA_RPC_URL` to the backup endpoint and
+  redeploy. The container will pick it up on the next health probe.
+
+### Containment gate
+
+Move on only when one of these is true:
+
+- Kill switch is engaged (verified by `GET /status` returning
+  `killSwitch: true`).
+- Bad traffic is blocked at the source (per-merchant freeze, x402
+  challenge rejection).
+- The bleed is bounded (reserve floor holding, no new error 5xx).
+
+## 3. Communicate
+
+The status page is the single source of truth for customers. Update it
+within 5 minutes of opening the incident, and at least every 30 minutes
+thereafter until resolved.
+
+### Public status page
+
+`GET /status` is the public, unauthenticated payload consumed by
+[status.zettapay.io](https://status.zettapay.io). It reports:
+
+```json
+{
+  "status": "major_outage",
+  "killSwitch": true,
+  "incidents": [
+    {
+      "id": "inc_abc...",
+      "title": "RPC outage — payments paused",
+      "severity": "sev1",
+      "status": "investigating",
+      "killSwitch": true,
+      "affectedComponents": ["pay", "settlement"],
+      "openedAt": "2026-05-10T03:14:21.000Z",
+      "latestUpdate": {
+        "at": "2026-05-10T03:14:21.000Z",
+        "status": "investigating",
+        "message": "RPC returning 5xx since 03:14Z. Investigating with Helius.",
+        "actor": "oncall-eng"
+      }
+    }
+  ],
+  "generatedAt": "2026-05-10T03:18:00.000Z"
+}
+```
+
+### Posting an update
+
+Every status transition is recorded as a separate update. Do not edit
+prior updates — the journal is append-only by design (audit premise
+#24).
+
+```bash
+curl -fsS -X POST https://api.zettapay.io/admin/incidents/$INCIDENT_ID/updates \
+  -H "x-api-key: $ZETTAPAY_TREASURY_ADMIN_KEY" \
+  -H "x-treasury-actor: $YOUR_HANDLE" \
+  -H "content-type: application/json" \
+  -d '{
+    "status": "identified",
+    "message": "Helius confirmed validator slot lag. Failing over to backup RPC. ETA 5 min."
+  }'
+```
+
+Status transitions allowed via `/updates`:
+`investigating` → `identified` → `monitoring`. The terminal `resolved`
+state is reached via `/resolve` (separate endpoint).
+
+### Customer comms templates
+
+| Audience | Channel | When |
+| --- | --- | --- |
+| All customers | `/status` page | Within 5 min of open, then every 30 min |
+| Top 10 merchants by TPV | Email + Slack DM | Within 15 min of open |
+| AI agent partners (Anthropic, OpenAI customers) | x402 changelog feed | Within 30 min if x402 affected |
+| Affected merchants only | Webhook event `incident.opened` | Automatic on open |
+
+## 4. Resolve
+
+An incident is resolved when:
+
+1. The triggering signal has cleared for at least 10 minutes.
+2. Error rate is back inside normal SLO.
+3. No customer reports of impact in the last 10 minutes.
+
+When all three hold, close the incident:
+
+```bash
+curl -fsS -X POST https://api.zettapay.io/admin/incidents/$INCIDENT_ID/resolve \
+  -H "x-api-key: $ZETTAPAY_TREASURY_ADMIN_KEY" \
+  -H "x-treasury-actor: $YOUR_HANDLE" \
+  -H "content-type: application/json" \
+  -d '{
+    "message": "RPC failover complete, error rate <0.1% for 12 min. Closing."
+  }'
+```
+
+Resolving auto-disengages the kill switch and flips the status page
+back to `operational` (assuming no other open incidents).
+
+### Postmortem within 48 hours
+
+Every sev1 — and every sev2 lasting longer than 1 hour — gets a
+postmortem document committed to `audit/postmortems/<incident-id>.md`.
+The doc must include:
+
+- Timeline reconstructed from `audit_journal`
+  (`SELECT * FROM audit_journal WHERE entity_id = '$INCIDENT_ID'
+  ORDER BY id`).
+- Root cause, not a symptom.
+- Customer impact (count of affected payments, total USDC value).
+- Contributing factors (what made it worse than it had to be).
+- Action items with owners and due dates.
+
+Postmortems are blameless. They are reviewed in the next sprint
+review and tracked to closure.
+
+## Reference
+
+### API summary
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/status` | Public | Status-page payload (cached 10s). |
+| `GET` | `/admin/incidents` | Admin key | List open incidents. `?includeResolved=1` for history. |
+| `POST` | `/admin/incidents` | Admin key | Open a new incident. `killSwitch:true` requires `severity:sev1`. |
+| `GET` | `/admin/incidents/:id` | Admin key | Full incident detail incl. update timeline. |
+| `POST` | `/admin/incidents/:id/updates` | Admin key | Append a status update. |
+| `POST` | `/admin/incidents/:id/resolve` | Admin key | Close the incident; releases kill switch. |
+
+### Admin auth
+
+The admin key is shared with treasury operations
+(`ZETTAPAY_TREASURY_ADMIN_KEY`, ≥24 chars). Rotate it after every
+incident where the actor list (`audit_journal.actor`) shows an outgoing
+employee. Rotation procedure lives in
+[`audit/SECURITY_ASSUMPTIONS.md`](https://github.com/leandromaiam-code/zettapay/blob/main/audit/SECURITY_ASSUMPTIONS.md).
+
+### Forensics queries
+
+```sql
+-- Full timeline for an incident
+SELECT created_at, actor, event, reason, payload
+FROM audit_journal
+WHERE entity_type = 'incident' AND entity_id = ?
+ORDER BY id ASC;
+
+-- All sev1 incidents in the last 90 days
+SELECT entity_id, created_at, actor, json_extract(payload, '$.title') AS title
+FROM audit_journal
+WHERE event = 'incident.opened'
+  AND json_extract(payload, '$.severity') = 'sev1'
+  AND created_at > datetime('now', '-90 days')
+ORDER BY created_at DESC;
+
+-- Mean time to resolve (MTTR), trailing 30 days
+SELECT
+  o.entity_id,
+  julianday(r.created_at) - julianday(o.created_at) AS days_to_resolve
+FROM audit_journal o
+JOIN audit_journal r
+  ON r.entity_type = 'incident' AND r.entity_id = o.entity_id
+  AND r.event = 'incident.resolved'
+WHERE o.event = 'incident.opened'
+  AND o.created_at > datetime('now', '-30 days');
+```
