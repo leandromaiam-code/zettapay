@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:worker": "tsx watch src/worker.ts",
+    "dev:cron": "tsx watch src/cron-worker.ts",
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "start:worker": "node dist/worker.js",
+    "start:cron": "node dist/cron-worker.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },

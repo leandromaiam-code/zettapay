@@ -102,6 +102,35 @@ function applyAddOnColumns(db: Db): void {
     // Without it, the agent cannot be the payee in /agents/pay.
     db.exec("ALTER TABLE agent_identities ADD COLUMN payout_wallet TEXT");
   }
+
+  const subCols = db
+    .prepare("PRAGMA table_info(subscriptions)")
+    .all() as Array<{ name: string }>;
+  const subNames = new Set(subCols.map((c) => c.name));
+  // Z12.4: permanent authorization signed by the customer wallet. The cron
+  // worker re-verifies this signature on every charge cycle, so any tampering
+  // with amount/interval/merchant invalidates the consent.
+  if (!subNames.has("authorization_signature")) {
+    db.exec(
+      "ALTER TABLE subscriptions ADD COLUMN authorization_signature TEXT",
+    );
+  }
+  if (!subNames.has("authorization_public_key")) {
+    db.exec(
+      "ALTER TABLE subscriptions ADD COLUMN authorization_public_key TEXT",
+    );
+  }
+  if (!subNames.has("authorization_signed_at")) {
+    db.exec("ALTER TABLE subscriptions ADD COLUMN authorization_signed_at TEXT");
+  }
+  if (!subNames.has("failed_charge_count")) {
+    db.exec(
+      "ALTER TABLE subscriptions ADD COLUMN failed_charge_count INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!subNames.has("last_failure_reason")) {
+    db.exec("ALTER TABLE subscriptions ADD COLUMN last_failure_reason TEXT");
+  }
 }
 
 export function closeDatabase(): void {

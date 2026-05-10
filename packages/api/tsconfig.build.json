@@ -72,7 +72,13 @@
     "src/routes/webhooks-admin.ts",
     "src/services/treasury.ts",
     "src/webhook.ts",
-    "src/worker.ts"
+    "src/worker.ts",
+    "src/cron-worker.ts",
+    "src/db/subscriptions.ts",
+    "src/lib/subscription-auth.ts",
+    "src/routes/subscriptions.ts",
+    "src/services/subscription_charger.ts",
+    "src/services/subscription_cron.ts"
   ],
   "exclude": ["dist", "node_modules", "test/**/*", "tests/**/*", "**/*.test.ts"]
 }
