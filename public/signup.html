@@ -670,13 +670,34 @@
         step1Next.disabled = true;
       }
 
+      function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      }
+
+      function openPhantomMobile() {
+        // Universal deep link: opens Phantom app in-browser pointing to /signup
+        // Inside Phantom's webview, window.solana is injected and connect() works normally
+        const target = window.location.origin + '/signup?from=phantom-mobile';
+        const ref = encodeURIComponent(window.location.origin);
+        window.location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(target) + '?ref=' + ref;
+      }
+
       async function connectPhantom() {
         const provider = getPhantom();
+
+        // Mobile fallback: no extension API on mobile browsers — deep link into Phantom app webview
+        if (!provider && isMobile()) {
+          showToast('Opening Phantom app...');
+          openPhantomMobile();
+          return;
+        }
+
         if (!provider) {
           showToast('Phantom not detected — install the extension');
           window.open('https://phantom.app/download', '_blank', 'noopener');
           return;
         }
+
         try {
           walletBtn.disabled = true;
           const resp = await provider.connect();
