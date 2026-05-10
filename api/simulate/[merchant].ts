@@ -1,6 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { base58Encode } from '../_lib/base58.js';
+import { withSentry } from '../_lib/sentry.js';
 
 const SIMULATE_NETWORK = 'solana-devnet';
 const SIMULATE_USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
@@ -49,7 +50,7 @@ function paymentId(): string {
   return `pay_${base58Encode(randomBytes(12))}`;
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
+function handler(req: VercelRequest, res: VercelResponse): void {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET only' } });
@@ -116,3 +117,5 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
     },
   });
 }
+
+export default withSentry(handler);

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { withSentry } from './_lib/sentry.js';
 
-export default function handler(_req: VercelRequest, res: VercelResponse): void {
+function handler(_req: VercelRequest, res: VercelResponse): void {
   res.status(200).json({
     name: 'zettapay',
     version: '0.1.0',
@@ -24,3 +25,5 @@ export default function handler(_req: VercelRequest, res: VercelResponse): void 
     runtime: 'vercel-serverless',
   });
 }
+
+export default withSentry(handler);

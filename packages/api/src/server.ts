@@ -2,6 +2,7 @@
 // patch http/express/fetch as those modules are first required below.
 import { initTracing } from "./lib/tracing.js";
 const tracing = initTracing("zettapay-api");
+import "./instrument.js";
 
 import { createApp } from "./app.js";
 import {
