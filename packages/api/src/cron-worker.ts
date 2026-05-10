@@ -8,6 +8,10 @@ import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
 import { SolanaService } from "./services/solana.js";
 import { startSubscriptionCron } from "./services/subscription_cron.js";
+import {
+  readSyntheticMonitorConfigFromEnv,
+  startSyntheticMonitor,
+} from "./services/synthetic_monitor.js";
 
 /**
  * Standalone subscription cron worker. Drains due subscriptions on a fixed
@@ -82,6 +86,25 @@ async function main(): Promise<void> {
     logger,
   });
   shutdown.register("subscription_cron", () => handle.close());
+
+  const synthetic = readSyntheticMonitorConfigFromEnv();
+  if (synthetic.enabled && synthetic.targetUrl) {
+    const monitor = startSyntheticMonitor({
+      targetUrl: synthetic.targetUrl,
+      intervalMs: synthetic.intervalMs,
+      timeoutMs: synthetic.timeoutMs,
+      latencyThresholdMs: synthetic.latencyThresholdMs,
+      alertAfterFailures: synthetic.alertAfterFailures,
+      usePost: synthetic.usePost,
+      ...(synthetic.postBody ? { postBody: synthetic.postBody } : {}),
+      logger,
+    });
+    shutdown.register("synthetic_monitor", () => monitor.close());
+  } else {
+    logger.info("synthetic_monitor.disabled", {
+      reason: synthetic.targetUrl ? "explicit_disable" : "no_target_url",
+    });
+  }
 
   logger.info("cron_worker.started", { intervalMs, batchSize });
 
