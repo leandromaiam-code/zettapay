@@ -11,41 +11,131 @@
     }
   },
   "rewrites": [
-    { "source": "/healthz", "destination": "/api/healthz" },
-    { "source": "/health", "destination": "/api/health" },
-    { "source": "/ready", "destination": "/api/ready" },
-    { "source": "/metrics", "destination": "/api/metrics" },
-    { "source": "/simulate/:merchant", "destination": "/api/simulate/:merchant" },
-    { "source": "/analytics/:merchant", "destination": "/api/analytics/:merchant" },
-    { "source": "/merchants/register", "destination": "/api/merchants/register" },
-    { "source": "/merchants/onboard", "destination": "/api/merchants/onboard" },
-    { "source": "/pay", "destination": "/api/pay" },
-    { "source": "/mcp", "destination": "/api/mcp" },
-    { "source": "/onramp", "destination": "/api/onramp" },
-    { "source": "/onramp/webhook", "destination": "/api/onramp/webhook" },
-    { "source": "/payments", "destination": "/api/payments" },
-    { "source": "/signup", "destination": "/signup.html" },
-    { "source": "/dashboard", "destination": "/dashboard.html" },
-    { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
-    { "source": "/dashboard/:merchant/payouts", "destination": "/dashboard/payouts.html" },
-    { "source": "/launch", "destination": "/launch.html" },
-    { "source": "/mainnet", "destination": "/launch.html" },
-    { "source": "/pricing", "destination": "/pricing.html" },
-    { "source": "/docs", "destination": "/docs/index.html" },
-    { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" },
-    { "source": "/docs/embed", "destination": "/docs/embed.html" },
-    { "source": "/docs/faucet", "destination": "/docs/faucet.html" },
-    { "source": "/faucet", "destination": "/api/faucet" },
-    { "source": "/checkout/:invoice_id", "destination": "/checkout.html" },
-    { "source": "/status", "destination": "/status.html" },
-    { "source": "/status/feed.rss", "destination": "/api/status/feed.rss" }
+    {
+      "source": "/pay",
+      "destination": "/pay.html"
+    },
+    {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/ready",
+      "destination": "/api/ready"
+    },
+    {
+      "source": "/metrics",
+      "destination": "/api/metrics"
+    },
+    {
+      "source": "/simulate/:merchant",
+      "destination": "/api/simulate/:merchant"
+    },
+    {
+      "source": "/analytics/:merchant",
+      "destination": "/api/analytics/:merchant"
+    },
+    {
+      "source": "/merchants/register",
+      "destination": "/api/merchants/register"
+    },
+    {
+      "source": "/merchants/onboard",
+      "destination": "/api/merchants/onboard"
+    },
+    {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/onramp",
+      "destination": "/api/onramp"
+    },
+    {
+      "source": "/onramp/webhook",
+      "destination": "/api/onramp/webhook"
+    },
+    {
+      "source": "/payments",
+      "destination": "/api/payments"
+    },
+    {
+      "source": "/signup",
+      "destination": "/signup.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
+    },
+    {
+      "source": "/dashboard/:merchant",
+      "destination": "/dashboard/index.html"
+    },
+    {
+      "source": "/dashboard/:merchant/payouts",
+      "destination": "/dashboard/payouts.html"
+    },
+    {
+      "source": "/launch",
+      "destination": "/launch.html"
+    },
+    {
+      "source": "/mainnet",
+      "destination": "/launch.html"
+    },
+    {
+      "source": "/pricing",
+      "destination": "/pricing.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/docs/quickstart",
+      "destination": "/docs/quickstart.html"
+    },
+    {
+      "source": "/docs/embed",
+      "destination": "/docs/embed.html"
+    },
+    {
+      "source": "/docs/faucet",
+      "destination": "/docs/faucet.html"
+    },
+    {
+      "source": "/faucet",
+      "destination": "/api/faucet"
+    },
+    {
+      "source": "/checkout/:invoice_id",
+      "destination": "/checkout.html"
+    },
+    {
+      "source": "/status",
+      "destination": "/status.html"
+    },
+    {
+      "source": "/status/feed.rss",
+      "destination": "/api/status/feed.rss"
+    }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "X-Powered-By", "value": "ZettaPay" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Powered-By",
+          "value": "ZettaPay"
+        }
       ]
     }
   ],
