@@ -3,6 +3,7 @@ import type { Database as Db } from "better-sqlite3";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
 import { settlementRouter } from "./routes/settlement.js";
+import { shopifyRouter } from "./routes/shopify.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { errorHandler } from "./middleware/error.js";
@@ -11,6 +12,10 @@ import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 import type { CreatePaymentDeps } from "./services/payments.js";
 import type { CoinflowClient } from "./coinflow/client.js";
+import type {
+  ShopifyAppConfig,
+  ShopifyTokenExchanger,
+} from "./services/shopify.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -22,12 +27,25 @@ export interface CreateAppOptions {
   coinflow?: CoinflowClient;
   /** Hook fired after auto-settle finishes (success or swallowed error). Test seam. */
   onAutoSettle?: CreatePaymentDeps["onAutoSettle"];
+  /** When provided, /shopify/install + /shopify/callback are mounted with
+   * full OAuth handling. The /shopify/snippet route is always mounted. */
+  shopify?: ShopifyAppConfig | null;
+  /** Test seam — replaces the Shopify token exchange HTTP call. */
+  shopifyTokenExchanger?: ShopifyTokenExchanger;
 }
 
 const startedAt = Date.now();
 
 export function createApp(options: CreateAppOptions): Express {
-  const { db, solana, shutdown, coinflow, onAutoSettle } = options;
+  const {
+    db,
+    solana,
+    shutdown,
+    coinflow,
+    onAutoSettle,
+    shopify,
+    shopifyTokenExchanger,
+  } = options;
 
   const app = express();
   app.disable("x-powered-by");
@@ -57,6 +75,13 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
   app.use(subscriptionsRouter(db));
   app.use(verifySignatureRouter(db));
+  app.use(
+    shopifyRouter(db, {
+      config: shopify ?? null,
+      ...(shopifyTokenExchanger ? { exchangeToken: shopifyTokenExchanger } : {}),
+      ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
+    }),
+  );
   if (coinflow) {
     app.use(settlementRouter(db, coinflow));
   }

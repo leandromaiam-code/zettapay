@@ -28,6 +28,25 @@ export {
 } from "./coinflow/service.js";
 export { idempotency } from "./middleware/idempotency.js";
 export {
+  beginInstall as beginShopifyInstall,
+  completeInstall as completeShopifyInstall,
+  defaultTokenExchanger as defaultShopifyTokenExchanger,
+  type ShopifyAppConfig,
+  type ShopifyTokenExchanger,
+  type TokenExchangeResponse as ShopifyTokenExchangeResponse,
+} from "./services/shopify.js";
+export {
+  isValidShopDomain,
+  normalizeShopDomain,
+  verifyShopifyOAuthHmac,
+  verifyShopifyWebhookHmac,
+  SHOPIFY_HMAC_HEADER,
+  SHOPIFY_SHOP_DOMAIN_HEADER,
+  type ShopifyHmacResult,
+  type ShopifyHmacFailure,
+} from "./lib/shopify.js";
+export { shopifyRouter } from "./routes/shopify.js";
+export {
   GracefulShutdown,
   type CloseHook,
   type GracefulShutdownOptions,
