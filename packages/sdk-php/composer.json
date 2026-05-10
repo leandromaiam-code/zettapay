@@ -1,0 +1,37 @@
+{
+    "name": "zettapay/sdk",
+    "description": "Official PHP SDK for the ZettaPay Solana payment protocol — PSR-7/17/18 native, x402 payments.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["zettapay", "solana", "usdc", "payments", "stablecoin", "x402", "psr-18"],
+    "homepage": "https://github.com/leandromaiam-code/zettapay",
+    "require": {
+        "php": "^8.1",
+        "ext-json": "*",
+        "psr/http-client": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0",
+        "psr/http-factory": "^1.0",
+        "php-http/discovery": "^1.19"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5",
+        "guzzlehttp/psr7": "^2.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "ZettaPay\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "ZettaPay\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true
+        },
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}
