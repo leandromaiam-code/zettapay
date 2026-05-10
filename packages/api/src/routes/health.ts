@@ -5,6 +5,7 @@ import {
   loadBetaConfig,
 } from "../beta/config.js";
 import { betaStatusSnapshot } from "../beta/monitoring.js";
+import { registry as metricsRegistry } from "../lib/metrics.js";
 
 const SERVICE = "zettapay-api";
 const READY_TIMEOUT_MS = 2_500;
@@ -224,7 +225,11 @@ export function buildPrometheusMetrics(ctx: PrometheusContext = {}): string {
     );
   }
 
-  return metrics.map(renderMetric).join("\n") + "\n";
+  const staticBlock = metrics.map(renderMetric).join("\n") + "\n";
+  // Append dynamic counters/histograms collected by metricsMiddleware and the
+  // payment service. Keeping the static infra gauges first preserves the
+  // existing health.route.test fixtures.
+  return staticBlock + metricsRegistry.render();
 }
 
 export interface HealthRouterOptions {
