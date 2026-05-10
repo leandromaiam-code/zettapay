@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="40" viewBox="0 0 64 40" role="img" aria-label="ZettaPay">
+  <rect width="64" height="40" rx="6" fill="#0a1612"/>
+  <path d="M14 12 L42 12 L18 28 L46 28" stroke="#d4a961" stroke-width="3" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+  <circle cx="50" cy="20" r="4" fill="#d4a961"/>
+</svg>
