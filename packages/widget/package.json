@@ -1,0 +1,57 @@
+{
+  "name": "@zettapay/widget",
+  "version": "0.1.0",
+  "description": "ZettaPay drop-in embed widget — single <script> tag renders a Pay X USDC button that opens a modal with QR + Phantom deeplink + checkout flow.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/widget.esm.js",
+  "module": "./dist/widget.esm.js",
+  "browser": "./dist/widget.js",
+  "unpkg": "./dist/widget.js",
+  "jsdelivr": "./dist/widget.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/widget.esm.js",
+      "browser": "./dist/widget.js",
+      "default": "./dist/widget.esm.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs && tsc -p tsconfig.types.json",
+    "typecheck": "tsc -p tsconfig.types.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.0",
+    "happy-dom": "^15.11.7",
+    "qrcode-generator": "^1.4.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "zettapay",
+    "solana",
+    "usdc",
+    "checkout",
+    "embed",
+    "widget",
+    "phantom",
+    "solana-pay",
+    "x402",
+    "stablecoin"
+  ]
+}
