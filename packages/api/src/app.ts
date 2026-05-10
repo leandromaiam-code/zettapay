@@ -20,6 +20,7 @@ import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { treasuryRouter } from "./routes/treasury.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
+import { webhooksAdminRouter } from "./routes/webhooks-admin.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 import { wixRouter } from "./routes/wix.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
@@ -67,6 +68,12 @@ export interface CreateAppOptions {
   /** Z22.1 beta launch protocol config. Defaults to env-driven loadBetaConfig().
    * Test seam: pass an override (e.g. { enabled: false }) to bypass the gate. */
   betaConfig?: BetaLaunchConfig;
+  /** Z10.5 admin dashboard auth — gates the admin webhook events stream.
+   * Same pattern as treasury: when omitted or shorter than 24 chars, the
+   * routes are mounted but reject every call with config_error. */
+  admin?: {
+    adminKey?: string | null;
+  };
 }
 
 const startedAt = Date.now();
@@ -82,6 +89,7 @@ export function createApp(options: CreateAppOptions): Express {
     shopifyTokenExchanger,
     kyc,
     treasury,
+    admin,
   } = options;
   const betaConfig = options.betaConfig ?? loadBetaConfig();
 
@@ -136,6 +144,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
   app.use(webhooksRouter(db));
+  app.use(webhooksAdminRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(
     shopifyRouter(db, {
       config: shopify ?? null,

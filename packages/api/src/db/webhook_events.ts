@@ -213,6 +213,100 @@ export function listWebhookEventsByUrl(
   return rows.map(toEvent);
 }
 
+export interface AdminListWebhookEventsOptions {
+  status?: WebhookStatus;
+  url?: string;
+  eventId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface AdminListWebhookEventsResult {
+  events: WebhookEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/**
+ * Admin-scoped listing across all webhook destinations. Unlike
+ * `listWebhookEventsByUrl`, this accepts arbitrary filters and exposes the
+ * total row count so the dashboard can paginate. Auth is enforced at the
+ * route layer via `adminAuth` — never expose this to merchant API keys.
+ */
+export function listAllWebhookEvents(
+  db: Db,
+  options: AdminListWebhookEventsOptions = {},
+): AdminListWebhookEventsResult {
+  const limit = Math.max(1, Math.min(options.limit ?? 100, 500));
+  const offset = Math.max(0, options.offset ?? 0);
+  const clauses: string[] = [];
+  const params: Array<string | number> = [];
+  if (options.status) {
+    clauses.push("status = ?");
+    params.push(options.status);
+  }
+  if (options.url) {
+    clauses.push("url = ?");
+    params.push(options.url);
+  }
+  if (options.eventId) {
+    clauses.push("event_id = ?");
+    params.push(options.eventId);
+  }
+  const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const totalRow = db
+    .prepare(`SELECT COUNT(*) AS n FROM webhook_events ${where}`)
+    .get(...params) as { n: number | bigint };
+  const rows = db
+    .prepare(
+      `SELECT * FROM webhook_events ${where} ORDER BY datetime(created_at) DESC, id DESC LIMIT ? OFFSET ?`,
+    )
+    .all(...params, limit, offset) as WebhookEventRow[];
+  return {
+    events: rows.map(toEvent),
+    total: Number(totalRow.n),
+    limit,
+    offset,
+  };
+}
+
+export interface WebhookEventCounts {
+  pending: number;
+  sent: number;
+  failed: number;
+  dead: number;
+  total: number;
+}
+
+/**
+ * Admin dashboard summary — counts grouped by `status`. Cheap on SQLite
+ * (single grouped scan) and avoids paging through the full table just to
+ * render the headline tiles.
+ */
+export function countWebhookEventsByStatus(db: Db): WebhookEventCounts {
+  const rows = db
+    .prepare(
+      "SELECT status, COUNT(*) AS n FROM webhook_events GROUP BY status",
+    )
+    .all() as Array<{ status: WebhookStatus; n: number | bigint }>;
+  const counts: WebhookEventCounts = {
+    pending: 0,
+    sent: 0,
+    failed: 0,
+    dead: 0,
+    total: 0,
+  };
+  for (const row of rows) {
+    const n = Number(row.n);
+    counts.total += n;
+    if (row.status in counts) {
+      counts[row.status as keyof Omit<WebhookEventCounts, "total">] = n;
+    }
+  }
+  return counts;
+}
+
 /**
  * Reset a finalized webhook event back to `pending` so the dispatcher can run
  * it again. Used by the manual retry endpoint — the `event_id` and payload

@@ -25,6 +25,7 @@
     "src/lib/agent-identity.ts",
     "src/lib/validate.ts",
     "src/lib/webhook-signature.ts",
+    "src/middleware/admin-auth.ts",
     "src/middleware/agent-identity.ts",
     "src/middleware/error.ts",
     "src/middleware/idempotency.ts",
@@ -68,6 +69,7 @@
     "src/db/treasury_reserves.ts",
     "src/middleware/treasury-auth.ts",
     "src/routes/treasury.ts",
+    "src/routes/webhooks-admin.ts",
     "src/services/treasury.ts",
     "src/webhook.ts",
     "src/worker.ts"
