@@ -1,0 +1,33 @@
+[workspace]
+
+[package]
+name = "zettapay"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT"
+description = "Official Rust SDK for the ZettaPay Solana payment protocol — async tokio client with builder pattern, serde types, typed errors, and exponential-backoff retries."
+repository = "https://github.com/leandromaiam-code/zettapay"
+homepage = "https://github.com/leandromaiam-code/zettapay"
+documentation = "https://docs.rs/zettapay"
+readme = "README.md"
+keywords = ["solana", "payments", "stablecoin", "x402", "sdk"]
+categories = ["api-bindings", "asynchronous", "web-programming::http-client"]
+
+[lib]
+name = "zettapay"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", default-features = false, features = ["time", "rt", "macros"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+url = "2"
+rand = "0.8"
+
+[dev-dependencies]
+tokio = { version = "1", default-features = false, features = ["time", "rt", "rt-multi-thread", "macros"] }
+mockito = "1"
+serde_json = "1"
