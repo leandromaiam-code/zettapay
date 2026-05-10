@@ -8,6 +8,9 @@ export type PaymentStatus =
   | "failed"
   | "refunded";
 
+/** Chain a payment was settled on. `solana` is the historical default. */
+export type PaymentChain = "solana" | "base" | "base-sepolia" | "polygon" | "polygon-amoy";
+
 export interface PaymentRow {
   id: string;
   merchant_id: string;
@@ -19,6 +22,7 @@ export interface PaymentRow {
   metadata_json: string | null;
   currency: string | null;
   agent_identity_id: string | null;
+  chain: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -34,6 +38,7 @@ export interface Payment {
   metadata: Record<string, unknown>;
   currency: Currency;
   agentIdentityId: string | null;
+  chain: PaymentChain;
   createdAt: string;
   completedAt: string | null;
 }
@@ -46,6 +51,7 @@ export interface CreatePaymentInput {
   metadata: Record<string, unknown> | null;
   currency?: Currency;
   agentIdentityId?: string | null;
+  chain?: PaymentChain;
 }
 
 function toPayment(row: PaymentRow): Payment {
@@ -60,6 +66,7 @@ function toPayment(row: PaymentRow): Payment {
     metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {},
     currency: ((row.currency ?? DEFAULT_CURRENCY) as Currency),
     agentIdentityId: row.agent_identity_id,
+    chain: ((row.chain ?? "solana") as PaymentChain),
     createdAt: row.created_at,
     completedAt: row.completed_at,
   };
@@ -70,6 +77,9 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
     [string, string, number, string, string | null, string, string | null]
   >(
     `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id)
+    [string, string, number, string, string | null, string, string]
+  >(
+    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, chain)
      VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
   );
   stmt.run(
@@ -80,6 +90,7 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
     input.metadata ? JSON.stringify(input.metadata) : null,
     input.currency ?? DEFAULT_CURRENCY,
     input.agentIdentityId ?? null,
+    input.chain ?? "solana",
   );
   return getPayment(db, input.id);
 }

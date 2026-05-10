@@ -153,6 +153,11 @@ function applyAddOnColumns(db: Db): void {
   if (!subNames.has("last_failure_reason")) {
     db.exec("ALTER TABLE subscriptions ADD COLUMN last_failure_reason TEXT");
   }
+  if (!paymentNames.has("chain")) {
+    db.exec(
+      "ALTER TABLE payments ADD COLUMN chain TEXT NOT NULL DEFAULT 'solana'",
+    );
+  }
 }
 
 export function closeDatabase(): void {
@@ -190,6 +195,7 @@ function applyMigrations(db: Db): void {
       error_message   TEXT,
       metadata_json   TEXT,
       currency        TEXT NOT NULL DEFAULT 'USDC',
+      chain           TEXT NOT NULL DEFAULT 'solana',
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       completed_at    TEXT
     );

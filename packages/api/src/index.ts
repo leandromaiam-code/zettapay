@@ -9,6 +9,7 @@ export {
   type UnifiedPayment,
 } from "./routes/payment.js";
 export { funnelRouter } from "./routes/funnel.js";
+export { payEvmRouter } from "./routes/pay_evm.js";
 export { settlementRouter } from "./routes/settlement.js";
 export { verifySignatureRouter } from "./routes/verify-signature.js";
 export {
@@ -105,6 +106,35 @@ export {
   type VerifyFailureReason,
 } from "./lib/webhook-signature.js";
 export { SolanaService, type SolanaConfig } from "./services/solana.js";
+export {
+  EvmService,
+  toAtomicEvmAmount,
+  type EvmServiceConfig,
+  type EvmTransferParams,
+  type EvmTransferResult,
+  type EvmChainClients,
+  type ChainClientFactory,
+} from "./services/evm.js";
+export {
+  createEvmPayment,
+  type CreateEvmPaymentInput,
+  type EvmPaymentResult,
+} from "./services/evm_payments.js";
+export {
+  SUPPORTED_EVM_CHAINS,
+  EVM_CHAIN_REGISTRY,
+  DEFAULT_EVM_CURRENCY,
+  isSupportedEvmChain,
+  normalizeEvmChain,
+  resolveEvmToken,
+  resolveRpcUrl,
+  isHexAddress,
+  type EvmChain,
+  type EvmCurrency,
+  type EvmChainDefinition,
+  type EvmTokenDefinition,
+  type ResolvedEvmToken,
+} from "./lib/chains.js";
 export {
   WEBHOOK_QUEUE_NAME,
   WEBHOOK_JOB_NAME,

@@ -18,6 +18,7 @@ import { payRouter } from "./routes/pay.js";
 import { paymentRouter } from "./routes/payment.js";
 import { refundRouter } from "./routes/refund.js";
 import { registryRouter } from "./routes/registry.js";
+import { payEvmRouter } from "./routes/pay_evm.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
 import { statusPageRouter } from "./routes/status-page.js";
@@ -51,6 +52,7 @@ import type {
 import { TreasuryService } from "./services/treasury.js";
 import type { PixProvider } from "./pix/client.js";
 import type { AttestationClient } from "./bridge/attestation.js";
+import type { EvmService } from "./services/evm.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -109,6 +111,9 @@ export interface CreateAppOptions {
    * Polygon and route to Solana via CCTP — see premissa I.1 / Z11.
    */
   attestation?: AttestationClient;
+  /** Optional EVM service. When provided, /pay/evm/:merchantRef routes
+   * (Base + Polygon ERC-20 USDC) are mounted. Disabled by default. */
+  evm?: EvmService;
 }
 
 const startedAt = Date.now();
@@ -132,6 +137,7 @@ export function createApp(options: CreateAppOptions): Express {
   } = options;
   const betaConfig = options.betaConfig ?? loadBetaConfig();
   const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
+  const { db, solana, shutdown, coinflow, onAutoSettle, evm } = options;
 
   const app = express();
   app.disable("x-powered-by");
@@ -193,6 +199,9 @@ export function createApp(options: CreateAppOptions): Express {
       onAutoPixSettle,
     }),
   );
+  if (evm) {
+    app.use(payEvmRouter(db, evm));
+  }
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
