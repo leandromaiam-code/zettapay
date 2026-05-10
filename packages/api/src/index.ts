@@ -3,6 +3,11 @@ export { openDatabase, closeDatabase } from "./db/index.js";
 export { HttpError } from "./lib/errors.js";
 export { merchantsRouter } from "./routes/merchants.js";
 export { payRouter } from "./routes/pay.js";
+export {
+  paymentRouter,
+  mapToUnified as mapPaymentToUnified,
+  type UnifiedPayment,
+} from "./routes/payment.js";
 export { funnelRouter } from "./routes/funnel.js";
 export { settlementRouter } from "./routes/settlement.js";
 export { verifySignatureRouter } from "./routes/verify-signature.js";

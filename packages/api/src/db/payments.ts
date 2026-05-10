@@ -137,6 +137,13 @@ export function findPaymentBySignature(
   return row ? toPayment(row) : null;
 }
 
+export function findPaymentById(db: Db, id: string): Payment | null {
+  const row = db
+    .prepare<[string]>("SELECT * FROM payments WHERE id = ?")
+    .get(id) as PaymentRow | undefined;
+  return row ? toPayment(row) : null;
+}
+
 // Velocity windows count any payment row whose status is not `failed` —
 // pending/processing/completed all consume budget. Failed transfers must NOT
 // shield an attacker from rate caps (they'd retry until success otherwise),
