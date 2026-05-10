@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import type { Database as Db } from "better-sqlite3";
 import { analyticsRouter } from "./routes/analytics.js";
+import { apiDocsRouter } from "./routes/api-docs.js";
 import { funnelRouter } from "./routes/funnel.js";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
@@ -75,6 +76,7 @@ export function createApp(options: CreateAppOptions): Express {
     res.json({ status: "ok" });
   });
 
+  app.use(apiDocsRouter());
   app.use(merchantsRouter(db));
   app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
   app.use(subscriptionsRouter(db));
