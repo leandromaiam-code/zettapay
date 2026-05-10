@@ -27,6 +27,8 @@
     { "source": "/signup", "destination": "/signup.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
+    { "source": "/launch", "destination": "/launch.html" },
+    { "source": "/mainnet", "destination": "/launch.html" },
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" }
   ],

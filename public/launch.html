@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay is live on Solana mainnet. 0.30% fees, sub-2s settlement, x402 + MCP native. Curated 10-merchant beta cohort, $10k cap each, 30-day window." />
+  <meta property="og:title" content="ZettaPay — Live on Solana mainnet" />
+  <meta property="og:description" content="The Solana payment protocol native to AI agents is now live on mainnet. 0.30% fees · sub-2s settlement · x402 + MCP." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <title>ZettaPay — Live on Solana mainnet</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+          animation: {
+            'gradient': 'gradient 8s linear infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'fade-up': 'fadeUp 0.8s ease-out forwards',
+            'glow-pulse': 'glowPulse 4s ease-in-out infinite',
+          },
+          keyframes: {
+            gradient: {
+              '0%, 100%': { 'background-position': '0% 50%' },
+              '50%': { 'background-position': '100% 50%' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(30px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            glowPulse: {
+              '0%, 100%': { opacity: '0.3' },
+              '50%': { opacity: '0.6' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass:hover {
+      background: rgba(79, 107, 255, 0.08);
+      border-color: rgba(79, 107, 255, 0.3);
+      transition: all 0.4s ease;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5);
+    }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(79, 107, 255, 0.1);
+      border-color: rgba(79, 107, 255, 0.6);
+    }
+    .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .stat-counter { font-variant-numeric: tabular-nums; }
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79, 107, 255, 0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 40% at 80% 20%, rgba(20, 241, 149, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+
+    /* Cohort tile */
+    .cohort-tile {
+      background: linear-gradient(180deg, rgba(79, 107, 255, 0.04), rgba(79, 107, 255, 0.01));
+      border: 1px solid rgba(79, 107, 255, 0.12);
+      transition: all 0.3s ease;
+    }
+    .cohort-tile:hover {
+      border-color: rgba(20, 241, 149, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(20, 241, 149, 0.06);
+    }
+    .cohort-id { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+    /* Comparison */
+    .compare-cell { padding: 14px 18px; border-bottom: 1px solid rgba(79, 107, 255, 0.08); }
+    .compare-zp { background: rgba(20, 241, 149, 0.04); }
+    .check { color: #14F195; }
+    .cross { color: #475569; }
+
+    /* Live dot */
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #14F195;
+      box-shadow: 0 0 8px rgba(20, 241, 149, 0.8), 0 0 16px rgba(20, 241, 149, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    /* Cohort grid background ring effect */
+    .cohort-ring {
+      background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(20, 241, 149, 0.04) 0%, transparent 60%);
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <!-- Background orbs -->
+  <div class="glow-orb animate-glow-pulse" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 500px; height: 500px; bottom: 20%; left: -150px; opacity: 0.12;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 400px; height: 400px; top: 50%; right: 30%; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="#cohort" class="text-muted hover:text-white transition">Beta cohort</a>
+        <a href="#vs-solana-pay" class="text-muted hover:text-white transition">vs Solana Pay</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Apply for cohort</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative pt-36 pb-20 px-4 lg:px-12 min-h-[88vh] flex items-center">
+    <div class="hero-gradient"></div>
+    <div class="max-w-6xl mx-auto w-full relative z-10">
+      <div class="text-center max-w-5xl mx-auto">
+        <!-- Live badge -->
+        <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full glass mb-10 animate-fade-up">
+          <span class="live-dot"></span>
+          <span class="text-xs font-mono text-mint uppercase tracking-[0.18em]">Live on Solana mainnet &middot; 2026-05-10</span>
+        </div>
+
+        <h1 class="text-5xl md:text-7xl lg:text-[5.5rem] leading-[1.04] font-bold mb-8 animate-fade-up tracking-tight" style="animation-delay: 0.1s; animation-fill-mode: both;">
+          Mainnet is <span class="gradient-text">live</span>.<br/>
+          The first 10 are <span class="gradient-text">already paying</span>.
+        </h1>
+
+        <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-10 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
+          ZettaPay graduated from devnet today. A curated cohort of
+          <span class="text-white font-semibold">10 beta merchants</span> is settling real USDC on
+          <span class="text-white font-semibold">Solana mainnet</span> at <span class="text-white font-semibold">0.30% fees</span>
+          and <span class="text-white font-semibold">sub-2s</span> finality.
+          Each merchant is capped at <span class="text-white font-semibold">$10k</span> for the first 30 days &mdash; controlled blast radius, real signal.
+        </p>
+
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-14 animate-fade-up" style="animation-delay: 0.3s; animation-fill-mode: both;">
+          <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
+            Apply for cohort 2
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+          </a>
+          <a href="#vs-solana-pay" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">vs Solana Pay</a>
+          <a href="/docs" class="text-muted hover:text-white text-sm font-mono mt-2 sm:mt-0 sm:ml-4 transition">Read the docs &rarr;</a>
+        </div>
+
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto pt-12 border-t border-royal/10 animate-fade-up" style="animation-delay: 0.4s; animation-fill-mode: both;">
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter">10</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Beta merchants live</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter">0.30%</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Per-tx fee</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter">&lt;2s</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Settlement</div>
+          </div>
+          <div class="text-center">
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter">30d</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Beta window</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BETA COHORT -->
+  <section id="cohort" class="relative py-28 px-4 lg:px-12 cohort-ring">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Beta cohort &middot; 10/10 seats filled</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">The first <span class="gradient-text">ten merchants</span> on mainnet</h2>
+        <p class="text-muted text-lg leading-relaxed">
+          A curated mix of AI-agent commerce, Web3 SaaS, and crypto-native storefronts.
+          Identifiers are anonymized while the cohort is active &mdash; the cap utilization is real and updates from
+          <a href="/api/beta/status" class="text-mint hover:underline font-mono text-sm">/beta/status</a> at runtime.
+        </p>
+      </div>
+
+      <!-- Cohort tile grid -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8" id="cohort-grid">
+        <!-- 10 anonymized cohort tiles, populated by script with vertical labels -->
+      </div>
+
+      <!-- Cohort meta strip -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto reveal">
+        <div class="glass rounded-xl px-6 py-5 text-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-1">Per-merchant cap</div>
+          <div class="text-2xl font-bold text-white">$10,000 <span class="text-mint text-sm font-mono">USDC</span></div>
+        </div>
+        <div class="glass rounded-xl px-6 py-5 text-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-1">Window</div>
+          <div class="text-2xl font-bold text-white">30 days <span class="text-muted text-sm font-mono">from launch</span></div>
+        </div>
+        <div class="glass rounded-xl px-6 py-5 text-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-1">Allowlist enforcement</div>
+          <div class="text-2xl font-bold text-white">Server-side <span class="text-mint text-sm font-mono">fail-closed</span></div>
+        </div>
+      </div>
+
+      <p class="text-center text-xs text-muted/70 mt-6 max-w-2xl mx-auto reveal">
+        Cohort gates are documented in
+        <a href="/docs" class="text-royal-bright hover:underline">/docs &middot; Beta launch protocol</a>.
+        Failed payments do not consume cap. Status endpoint returns 200 even when disabled so monitors detect misconfiguration.
+      </p>
+    </div>
+  </section>
+
+  <!-- vs SOLANA PAY -->
+  <section id="vs-solana-pay" class="py-28 px-4 lg:px-12 border-t border-royal/10">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-14 reveal">
+        <span class="text-xs font-mono text-solana uppercase tracking-widest">Comparison</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">ZettaPay <span class="text-muted font-light">vs</span> <span class="gradient-text">Solana Pay</span></h2>
+        <p class="text-muted text-lg leading-relaxed">
+          Solana Pay is an open spec for QR-code USDC transfers &mdash; we love it and build on the same chain.
+          ZettaPay is a full payment processor on top: APIs, webhooks, idempotency, agent protocols, fiat onramp.
+          Different tools for different jobs.
+        </p>
+      </div>
+
+      <!-- Comparison table -->
+      <div class="glass rounded-2xl overflow-hidden reveal">
+        <div class="grid grid-cols-3 text-sm">
+          <!-- Header row -->
+          <div class="compare-cell font-mono uppercase tracking-widest text-xs text-muted bg-royal/5">Capability</div>
+          <div class="compare-cell font-bold text-white compare-zp">
+            <span class="inline-flex items-center gap-2">
+              <img src="/Logo_symbol.png" class="w-5 h-5" alt="" />
+              ZettaPay
+            </span>
+          </div>
+          <div class="compare-cell font-bold text-muted">Solana Pay (spec)</div>
+
+          <!-- Rows -->
+          <div class="compare-cell text-muted">Type</div>
+          <div class="compare-cell compare-zp">Hosted payment processor + SDK</div>
+          <div class="compare-cell">Open spec for transfer / transaction requests</div>
+
+          <div class="compare-cell text-muted">Fees</div>
+          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">0.30%</span> per transaction</div>
+          <div class="compare-cell">Network gas only (you build the rest)</div>
+
+          <div class="compare-cell text-muted">Settlement</div>
+          <div class="compare-cell compare-zp">&lt;2s on-chain finality</div>
+          <div class="compare-cell">&lt;2s on-chain finality</div>
+
+          <div class="compare-cell text-muted">AI agent payments (x402)</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Native &mdash; signed tx in HTTP header</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Not in scope</div>
+
+          <div class="compare-cell text-muted">MCP tool integration</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> First-class MCP server</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Not in scope</div>
+
+          <div class="compare-cell text-muted">Webhooks (Stripe-grade)</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> HMAC, 3x retry, idempotency keys</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Build it yourself</div>
+
+          <div class="compare-cell text-muted">Idempotency keys</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Required on /pay and /merchants/register</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Not specified</div>
+
+          <div class="compare-cell text-muted">Rate limiting</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Sliding window per API key</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Not specified</div>
+
+          <div class="compare-cell text-muted">Fiat onramp</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> MoonPay (card &rarr; USDC)</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> External integration</div>
+
+          <div class="compare-cell text-muted">Merchant dashboard</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Live analytics, agent attribution</div>
+          <div class="compare-cell"><span class="cross">&#10005;</span> Build it yourself</div>
+
+          <div class="compare-cell text-muted">SDK</div>
+          <div class="compare-cell compare-zp"><span class="text-mint font-mono text-xs">@zettapay/sdk</span> (TS) &middot; widget &middot; plugins</div>
+          <div class="compare-cell"><span class="text-muted/70 font-mono text-xs">@solana/pay</span> reference impl (QR)</div>
+
+          <div class="compare-cell text-muted">Custody</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Non-custodial &mdash; direct payer&rarr;merchant</div>
+          <div class="compare-cell"><span class="check">&#10003;</span> Non-custodial</div>
+
+          <div class="compare-cell text-muted border-b-0">Best for</div>
+          <div class="compare-cell compare-zp border-b-0 font-medium">AI agents, SaaS, high-volume merchants</div>
+          <div class="compare-cell border-b-0">Storefronts that want a QR + DIY backend</div>
+        </div>
+      </div>
+
+      <p class="text-center text-xs text-muted/70 mt-6 max-w-2xl mx-auto">
+        Comparison reflects published Solana Pay spec capabilities at time of mainnet launch &mdash;
+        <a href="https://docs.solanapay.com" class="text-royal-bright hover:underline" target="_blank" rel="noopener">docs.solanapay.com</a>.
+        ZettaPay does not replace Solana Pay; it sits one layer up, the way Stripe sits above ACH.
+      </p>
+    </div>
+  </section>
+
+  <!-- TRUST STRIP -->
+  <section class="py-20 px-4 lg:px-12">
+    <div class="max-w-6xl mx-auto grid md:grid-cols-3 gap-4">
+      <div class="glass rounded-2xl p-6 reveal">
+        <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Audit</div>
+        <div class="text-lg font-semibold text-white mb-1">Pre-mainnet review complete</div>
+        <p class="text-muted text-sm">Off-chain checklist (auth, rate limits, secrets, headers) merged before cutover. Smart-contract audit (OtterSec / Halborn) pre-Z21.</p>
+      </div>
+      <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.1s;">
+        <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-3">Bounty</div>
+        <div class="text-lg font-semibold text-white mb-1">$50,000 public bug bounty</div>
+        <p class="text-muted text-sm">Open scope on protocol, API, SDK, and on-chain programs. Reachable via the security disclosure email in /docs.</p>
+      </div>
+      <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.2s;">
+        <div class="text-xs font-mono text-solana uppercase tracking-widest mb-3">Status</div>
+        <div class="text-lg font-semibold text-white mb-1">Public uptime + cohort utilization</div>
+        <p class="text-muted text-sm"><a href="/api/beta/status" class="text-mint font-mono hover:underline">/beta/status</a> exposes config, days remaining, per-merchant cap. Always 200 so monitors detect misconfig.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-28 px-4 lg:px-12">
+    <div class="max-w-4xl mx-auto text-center reveal">
+      <h2 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+        Cohort 2 opens when the<br/>30-day window closes.
+      </h2>
+      <p class="text-muted text-lg mb-10 max-w-2xl mx-auto">
+        We graduate cohorts to remove caps in stages. Apply now and get priority on the next 50 seats &mdash; or skip the line by integrating the SDK and signing up directly.
+      </p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base">Apply for cohort 2</a>
+        <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the docs</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-royal/10 py-12 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+        <span class="text-sm text-muted font-mono">ZettaPay &middot; Solana payments for AI agents and humans</span>
+      </div>
+      <div class="flex items-center gap-6 text-sm">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Cohort tile data — anonymized identifiers + vertical category labels.
+    // Real ids are revealed individually as merchants opt-in to public attribution.
+    const COHORT = [
+      { id: 'merch_01', vertical: 'AI agent commerce',  hue: 'mint' },
+      { id: 'merch_02', vertical: 'Crypto storefront',  hue: 'royal' },
+      { id: 'merch_03', vertical: 'Web3 SaaS',          hue: 'solana' },
+      { id: 'merch_04', vertical: 'AI agent commerce',  hue: 'mint' },
+      { id: 'merch_05', vertical: 'NFT marketplace',    hue: 'solana' },
+      { id: 'merch_06', vertical: 'Developer tooling',  hue: 'royal' },
+      { id: 'merch_07', vertical: 'AI agent commerce',  hue: 'mint' },
+      { id: 'merch_08', vertical: 'Crypto storefront',  hue: 'royal' },
+      { id: 'merch_09', vertical: 'Web3 SaaS',          hue: 'solana' },
+      { id: 'merch_10', vertical: 'AI agent commerce',  hue: 'mint' },
+    ];
+
+    const HUE_MAP = {
+      mint:   { dot: '#14F195', text: 'text-mint' },
+      royal:  { dot: '#6B82FF', text: 'text-royal-bright' },
+      solana: { dot: '#9945FF', text: 'text-solana' },
+    };
+
+    const grid = document.getElementById('cohort-grid');
+    if (grid) {
+      COHORT.forEach((m, i) => {
+        const h = HUE_MAP[m.hue];
+        const tile = document.createElement('div');
+        tile.className = 'cohort-tile rounded-xl p-5 reveal';
+        tile.style.transitionDelay = (i * 60) + 'ms';
+        tile.innerHTML = `
+          <div class="flex items-center justify-between mb-4">
+            <span class="cohort-id text-xs ${h.text} font-semibold">${m.id}</span>
+            <span class="inline-block w-2 h-2 rounded-full" style="background:${h.dot};box-shadow:0 0 8px ${h.dot}80;"></span>
+          </div>
+          <div class="text-[11px] uppercase font-mono tracking-widest text-muted mb-1">Vertical</div>
+          <div class="text-sm text-white font-medium leading-snug">${m.vertical}</div>
+          <div class="mt-4 pt-3 border-t border-royal/10 flex items-center justify-between text-[11px] font-mono">
+            <span class="text-muted">Cap</span>
+            <span class="text-white">$10k</span>
+          </div>
+        `;
+        grid.appendChild(tile);
+      });
+    }
+
+    // Reveal-on-scroll
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+  </script>
+</body>
+</html>
