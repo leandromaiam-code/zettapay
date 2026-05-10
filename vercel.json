@@ -30,6 +30,10 @@
     {
       "source": "/simulate/:merchant",
       "destination": "/api/simulate/:merchant"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
     }
   ],
   "headers": [
