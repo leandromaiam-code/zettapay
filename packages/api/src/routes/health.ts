@@ -1,4 +1,10 @@
 import { Router } from "express";
+import type { Database as Db } from "better-sqlite3";
+import {
+  type BetaLaunchConfig,
+  loadBetaConfig,
+} from "../beta/config.js";
+import { betaStatusSnapshot } from "../beta/monitoring.js";
 
 const SERVICE = "zettapay-api";
 const READY_TIMEOUT_MS = 2_500;
@@ -63,7 +69,12 @@ function renderMetric(metric: Metric): string {
   return lines.join("\n");
 }
 
-export function buildPrometheusMetrics(): string {
+export interface PrometheusContext {
+  db?: Db;
+  betaConfig?: BetaLaunchConfig;
+}
+
+export function buildPrometheusMetrics(ctx: PrometheusContext = {}): string {
   const mem = process.memoryUsage();
   const cpu = process.cpuUsage();
   const version = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? "dev";
@@ -141,11 +152,92 @@ export function buildPrometheusMetrics(): string {
     },
   ];
 
+  if (ctx.db && ctx.betaConfig) {
+    const snapshot = betaStatusSnapshot(ctx.db, ctx.betaConfig);
+    metrics.push(
+      {
+        name: "zettapay_beta_enabled",
+        help: "Whether the Z22.1 beta launch protocol is currently enforcing gates (1) or off (0).",
+        type: "gauge",
+        samples: [{ value: snapshot.enabled ? 1 : 0 }],
+      },
+      {
+        name: "zettapay_beta_allowlist_size",
+        help: "Number of merchants curated into the beta cohort.",
+        type: "gauge",
+        samples: [{ value: snapshot.allowlistSize }],
+      },
+      {
+        name: "zettapay_beta_max_merchants",
+        help: "Hard ceiling on the beta cohort size.",
+        type: "gauge",
+        samples: [{ value: snapshot.maxMerchants }],
+      },
+      {
+        name: "zettapay_beta_cap_usdc",
+        help: "Per-merchant beta spend cap in USDC.",
+        type: "gauge",
+        samples: [{ value: snapshot.capUsd }],
+      },
+      {
+        name: "zettapay_beta_days_remaining",
+        help: "Days remaining in the beta window. Reports 0 once expired or unset.",
+        type: "gauge",
+        samples: [{ value: snapshot.daysRemaining ?? 0 }],
+      },
+      {
+        name: "zettapay_beta_expired",
+        help: "Whether the beta launch window has elapsed (1) or not (0).",
+        type: "gauge",
+        samples: [{ value: snapshot.expired ? 1 : 0 }],
+      },
+      {
+        name: "zettapay_beta_merchants_exhausted",
+        help: "Count of beta merchants that have hit the per-merchant cap.",
+        type: "gauge",
+        samples: [{ value: snapshot.totals.merchantsExhausted }],
+      },
+      {
+        name: "zettapay_beta_cohort_cumulative_usdc",
+        help: "Sum of non-failed payment volume across the beta cohort since launch.",
+        type: "gauge",
+        samples: [{ value: snapshot.totals.cumulativeUsd }],
+      },
+      {
+        name: "zettapay_beta_merchant_cumulative_usdc",
+        help: "Per-merchant non-failed payment volume since beta launch.",
+        type: "gauge",
+        samples: snapshot.utilization.map((m) => ({
+          labels: { merchant_id: m.merchantId },
+          value: m.cumulativeUsd,
+        })),
+      },
+      {
+        name: "zettapay_beta_merchant_utilization_pct",
+        help: "Per-merchant beta cap utilization percentage (0-100).",
+        type: "gauge",
+        samples: snapshot.utilization.map((m) => ({
+          labels: { merchant_id: m.merchantId },
+          value: m.utilizationPct,
+        })),
+      },
+    );
+  }
+
   return metrics.map(renderMetric).join("\n") + "\n";
 }
 
-export function healthRouter(): Router {
+export interface HealthRouterOptions {
+  db?: Db;
+  betaConfig?: BetaLaunchConfig;
+}
+
+export function healthRouter(options: HealthRouterOptions = {}): Router {
   const router = Router();
+  const ctx: PrometheusContext = {
+    ...(options.db ? { db: options.db } : {}),
+    betaConfig: options.betaConfig ?? loadBetaConfig(),
+  };
 
   router.get("/health", (_req, res) => {
     res.json({
@@ -175,7 +267,7 @@ export function healthRouter(): Router {
 
   router.get("/metrics", (_req, res) => {
     res.setHeader("Content-Type", PROM_CONTENT_TYPE);
-    res.status(200).send(buildPrometheusMetrics());
+    res.status(200).send(buildPrometheusMetrics(ctx));
   });
 
   return router;

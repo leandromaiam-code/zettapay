@@ -3,6 +3,7 @@ export type HttpErrorCode =
   | "not_found"
   | "conflict"
   | "unauthorized"
+  | "forbidden"
   | "rate_limited"
   | "payment_failed"
   | "config_error"
@@ -33,6 +34,10 @@ export class HttpError extends Error {
 
   static unauthorized(message: string, details?: unknown): HttpError {
     return new HttpError(401, "unauthorized", message, details);
+  }
+
+  static forbidden(message: string, details?: unknown): HttpError {
+    return new HttpError(403, "forbidden", message, details);
   }
 
   static notFound(message: string): HttpError {

@@ -6,6 +6,8 @@ import { agentSpendingLimitsRouter } from "./routes/agent-spending-limits.js";
 import { agentToAgentRouter } from "./routes/agent-to-agent.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { apiDocsRouter } from "./routes/api-docs.js";
+import { betaRouter } from "./routes/beta.js";
+import { loadBetaConfig, type BetaLaunchConfig } from "./beta/config.js";
 import { funnelRouter } from "./routes/funnel.js";
 import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
@@ -59,6 +61,9 @@ export interface CreateAppOptions {
     adminKey?: string | null;
     reserveRatio?: number;
   };
+  /** Z22.1 beta launch protocol config. Defaults to env-driven loadBetaConfig().
+   * Test seam: pass an override (e.g. { enabled: false }) to bypass the gate. */
+  betaConfig?: BetaLaunchConfig;
 }
 
 const startedAt = Date.now();
@@ -75,6 +80,7 @@ export function createApp(options: CreateAppOptions): Express {
     kyc,
     treasury,
   } = options;
+  const betaConfig = options.betaConfig ?? loadBetaConfig();
 
   const app = express();
   app.disable("x-powered-by");
@@ -115,8 +121,9 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(agentIdentityRouter(db));
   app.use(agentSpendingLimitsRouter(db));
   app.use(agentToAgentRouter(db, solana));
+  app.use(betaRouter(db, betaConfig));
   app.use(merchantsRouter(db));
-  app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
+  app.use(payRouter(db, solana, { coinflow, onAutoSettle, betaConfig }));
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(registryRouter(db));
   app.use(mcpRegistryRouter(db));
