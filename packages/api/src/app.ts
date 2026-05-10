@@ -10,6 +10,7 @@ import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
+import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
 import { HttpError } from "./lib/errors.js";
 import type { GracefulShutdown } from "./lib/shutdown.js";
@@ -95,6 +96,11 @@ export function createApp(options: CreateAppOptions): Express {
   );
   app.use(
     webflowRouter(db, {
+      ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
+    }),
+  );
+  app.use(
+    wordpressRouter(db, {
       ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
     }),
   );
