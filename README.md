@@ -176,6 +176,14 @@ curl http://localhost:3001/healthz
 SQLite state is persisted in the named volume `zettapay-data` (mounted at
 `/app/data` inside the container).
 
+## Community
+
+The ZettaPay Discord is the primary support and discussion surface for
+merchants, agent builders, and SDK users. The server layout — channels
+(`#help`, `#showcase`, `#api`, `#announcements`, …), roles, rules, and the
+companion welcome + role bot — lives in
+[`community/discord/`](./community/discord/README.md).
+
 ## Security and audit
 
 Per ZettaPay constitution rules 16, 18 and 19, mainnet launch is gated

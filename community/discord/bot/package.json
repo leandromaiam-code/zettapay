@@ -1,0 +1,28 @@
+{
+  "name": "@zettapay/discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZettaPay Discord bot — welcome messages and self-assignable roles for #help / #showcase / #api / #announcements server.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "register": "tsx src/register-commands.ts"
+  },
+  "dependencies": {
+    "discord.js": "14.16.3",
+    "pino": "^10.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
