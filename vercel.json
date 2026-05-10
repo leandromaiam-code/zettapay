@@ -26,6 +26,7 @@
     { "source": "/payments", "destination": "/api/payments" },
     { "source": "/signup", "destination": "/signup.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" }
   ],

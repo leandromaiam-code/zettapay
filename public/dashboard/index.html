@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay merchant dashboard — Phantom signature login, payments stream, API key reveal/rotate, webhook + origin settings." />
+  <meta property="og:title" content="ZettaPay — Merchant control plane" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ZettaPay — Merchant Dashboard</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .btn-danger {
+      background: rgba(251, 113, 133, 0.1);
+      border: 1px solid rgba(251, 113, 133, 0.4);
+      color: #fb7185;
+      transition: all 0.25s ease;
+    }
+    .btn-danger:hover { background: rgba(251, 113, 133, 0.18); border-color: rgba(251, 113, 133, 0.7); }
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79, 107, 255, 0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 40% at 80% 20%, rgba(153, 69, 255, 0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hidden-init { display: none; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .stat-num { font-variant-numeric: tabular-nums; }
+    .badge { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.55rem; border-radius: 999px; }
+    .badge-mint { background: rgba(20, 241, 149, 0.12); border: 1px solid rgba(20, 241, 149, 0.35); color: #14F195; }
+    .badge-amber { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; }
+    .badge-muted { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: #94A3B8; }
+    .badge-rose { background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.35); color: #fb7185; }
+    .badge-royal { background: rgba(79, 107, 255, 0.12); border: 1px solid rgba(79, 107, 255, 0.4); color: #6B82FF; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60; max-width: 22rem; }
+    @media (max-width: 640px) { .toast { right: 1rem; left: 1rem; max-width: none; } }
+    .skeleton {
+      background: linear-gradient(90deg, rgba(79, 107, 255, 0.05) 0%, rgba(79, 107, 255, 0.12) 50%, rgba(79, 107, 255, 0.05) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes fadeUp {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+    .key-row {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+    }
+    input.field, textarea.field {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 0.5rem;
+      padding: 0.6rem 0.75rem;
+      width: 100%;
+      font-size: 0.875rem;
+      color: #fff;
+      outline: none;
+    }
+    input.field:focus, textarea.field:focus { border-color: rgba(79, 107, 255, 0.6); }
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 70;
+      background: rgba(2, 4, 14, 0.72);
+      backdrop-filter: blur(6px);
+      display: flex; align-items: center; justify-content: center;
+      padding: 1.25rem;
+    }
+    .modal-card { width: 100%; max-width: 36rem; max-height: 90vh; overflow: auto; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="hero-gradient"></div>
+
+  <nav class="relative z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <span class="text-sm font-mono uppercase tracking-widest text-muted">Merchant Console</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span id="net-badge" class="badge badge-muted hidden sm:inline-block">Devnet</span>
+        <span id="merchant-badge" class="badge badge-royal mono">—</span>
+        <button id="disconnect-btn" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm hidden-init">Disconnect</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="relative z-10 px-4 lg:px-12 py-8 max-w-6xl mx-auto">
+
+    <!-- LOGIN -->
+    <section id="login-screen" class="min-h-[70vh] flex items-center justify-center">
+      <div class="glass-strong rounded-2xl p-8 md:p-12 max-w-xl w-full fade-up">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="/Logo_symbol.png" class="w-12 h-12" alt="" />
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">ZettaPay</div>
+            <div class="text-xl font-bold">Merchant Dashboard</div>
+          </div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-bold mb-3 leading-tight">
+          Sign in with <span class="gradient-text">Phantom</span>
+        </h1>
+        <p class="text-muted text-base mb-2 leading-relaxed">
+          Authenticate by signing a one-time challenge with your Solana wallet.
+          No passwords. No email codes. Your wallet is your identity.
+        </p>
+        <div class="text-xs mono text-muted/80 mb-6">
+          Merchant <span id="login-merchant" class="text-royal-bright">—</span>
+        </div>
+
+        <button id="connect-btn" class="btn-primary px-6 py-4 rounded-full font-semibold text-base w-full flex items-center justify-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
+            <path d="M64 0a64 64 0 1 0 64 64A64.07 64.07 0 0 0 64 0zm45.4 65.45a3.32 3.32 0 0 1-3.32 3.31h-7.81c-.85 17.34-9.91 27.62-25.26 27.62-13.66 0-23.54-9.39-23.54-22.06 0-9.85 5.71-17.07 14.78-17.07 8.01 0 13.16 4.94 13.16 12.36 0 5.34-2.46 9.69-7.31 9.69-3.16 0-5.59-1.79-5.97-4.62a6.07 6.07 0 0 1 .11-2 .59.59 0 0 0-.55-.79c-3.13 0-5.41 3.13-5.41 7.61 0 6.71 5.04 11.02 12.5 11.02 9.83 0 16.79-7.16 17.39-19.76h-26a3.32 3.32 0 0 1-3.32-3.32V46.66a3.32 3.32 0 0 1 3.32-3.32h44.59a3.32 3.32 0 0 1 3.32 3.32z"/>
+          </svg>
+          <span id="connect-label">Connect Phantom</span>
+        </button>
+
+        <div id="connect-error" class="mt-4 text-rose text-sm hidden-init"></div>
+
+        <div class="mt-8 pt-6 border-t border-white/5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">How it works</div>
+          <ol class="text-sm text-muted space-y-2 list-decimal list-inside">
+            <li>Phantom returns your wallet pubkey.</li>
+            <li>Server issues a one-time challenge bound to merchant + nonce + 5 min TTL.</li>
+            <li>You sign the message; server verifies the Ed25519 signature.</li>
+            <li>Session token (HMAC-signed, 30 min TTL) unlocks the dashboard.</li>
+          </ol>
+          <p class="text-xs text-muted/70 mt-4">
+            No Phantom? <a class="text-royal-bright hover:underline" href="https://phantom.app/" target="_blank" rel="noopener noreferrer">Install the wallet</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="hidden-init space-y-6 fade-up">
+
+      <div class="glass rounded-2xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="min-w-0">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Signed in as</div>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="wallet-short" class="font-bold text-lg truncate">—</span>
+            <button id="copy-wallet" class="text-royal-bright hover:text-white transition text-sm" title="Copy address">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </div>
+          <div id="wallet-full" class="mono text-xs text-muted/80 mt-1 truncate"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted sm:text-right">Session</div>
+          <span id="sig-status" class="badge badge-mint">Verified · expires <span id="sig-expires">—</span></span>
+        </div>
+      </div>
+
+      <!-- Stat strip -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Completed payments</div>
+          <div class="flex items-baseline gap-2">
+            <span id="stat-completed-count" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">tx</span>
+          </div>
+          <div id="stat-completed-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Pending</div>
+          <div class="flex items-baseline gap-2">
+            <span id="stat-pending-count" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">tx</span>
+          </div>
+          <div id="stat-pending-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Failed</div>
+          <div class="flex items-baseline gap-2">
+            <span id="stat-failed-count" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">tx</span>
+          </div>
+          <div id="stat-failed-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+      </div>
+
+      <!-- Payments table -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Recent payments</div>
+            <h2 class="text-xl font-bold mt-1">Payment stream</h2>
+          </div>
+          <button id="payments-refresh" class="btn-ghost px-4 py-2 rounded-full font-semibold text-xs">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs font-mono uppercase tracking-widest text-muted border-b border-white/5">
+                <th class="py-3 pr-4 font-medium">Date</th>
+                <th class="py-3 pr-4 font-medium">Amount</th>
+                <th class="py-3 pr-4 font-medium">Status</th>
+                <th class="py-3 pr-4 font-medium">Customer wallet</th>
+                <th class="py-3 pr-4 font-medium">Tx signature</th>
+              </tr>
+            </thead>
+            <tbody id="payments-tbody"></tbody>
+          </table>
+        </div>
+        <div id="payments-skeleton" class="space-y-2 py-2">
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+        </div>
+        <div id="payments-empty" class="hidden-init text-center py-8 text-muted text-sm">No payments yet — share your checkout link to start receiving USDC.</div>
+      </div>
+
+      <!-- API Keys -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">API access</div>
+            <h2 class="text-xl font-bold mt-1">Keys</h2>
+            <p class="text-xs text-muted mt-1 max-w-xl">Treat the secret key like a password — anyone with it can sign on your behalf and trigger payouts.</p>
+          </div>
+          <div class="flex gap-2 flex-wrap">
+            <button id="keys-rotate" class="btn-danger px-4 py-2 rounded-full font-semibold text-sm">Rotate keys</button>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <div class="key-row flex items-center gap-3 flex-wrap">
+            <div class="min-w-0 flex-1">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Publishable key</div>
+              <code id="api-key-value" class="mono text-sm break-all">—</code>
+            </div>
+            <button data-copy-target="api-key-value" class="btn-ghost px-3 py-1.5 rounded-full text-xs">Copy</button>
+          </div>
+          <div class="key-row flex items-center gap-3 flex-wrap">
+            <div class="min-w-0 flex-1">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Secret key</div>
+              <code id="secret-key-value" class="mono text-sm break-all">—</code>
+            </div>
+            <button id="secret-reveal" class="btn-ghost px-3 py-1.5 rounded-full text-xs">Reveal</button>
+            <button data-copy-target="secret-key-value" class="btn-ghost px-3 py-1.5 rounded-full text-xs">Copy</button>
+          </div>
+        </div>
+        <div id="keys-feedback" class="text-xs text-muted mt-3"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="mb-4">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Configuration</div>
+          <h2 class="text-xl font-bold mt-1">Settings</h2>
+          <p class="text-xs text-muted mt-1 max-w-xl">Webhook URL receives <code class="mono text-royal-bright">payment.confirmed</code> events. Allowed origins gate the embed iframe by parent host.</p>
+        </div>
+
+        <form id="settings-form" class="space-y-4">
+          <div>
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">Webhook URL</label>
+            <input id="settings-webhook" type="url" class="field mt-1 mono" placeholder="https://your-app.com/webhooks/zettapay" />
+            <div class="text-[11px] text-muted/70 mt-1">HTTPS only. Leave blank to disable webhooks.</div>
+          </div>
+          <div>
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">Allowed origins</label>
+            <textarea id="settings-origins" class="field mt-1 mono" rows="3" placeholder="https://your-app.com&#10;https://checkout.your-app.com"></textarea>
+            <div class="text-[11px] text-muted/70 mt-1">One origin per line. Format: <code class="mono">https://host[:port]</code>. Up to 16 entries.</div>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div id="settings-fingerprint" class="text-xs text-muted mono"></div>
+            <div class="sm:ml-auto flex gap-2">
+              <button type="button" id="settings-cancel" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Discard</button>
+              <button type="submit" id="settings-save" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Save settings</button>
+            </div>
+          </div>
+        </form>
+        <div id="settings-feedback" class="text-xs text-muted mt-3"></div>
+      </div>
+
+      <footer class="text-center text-xs text-muted/60 mono py-6">
+        ZettaPay merchant console · 0.30% per tx · Solana <span id="net-tag">devnet</span>
+      </footer>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden-init">
+    <div class="glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
+  </div>
+
+  <!-- Rotate confirmation modal -->
+  <div id="rotate-modal" class="modal-backdrop hidden-init" role="dialog" aria-modal="true" aria-labelledby="rotate-modal-title">
+    <div class="glass-strong modal-card rounded-2xl p-6">
+      <h3 id="rotate-modal-title" class="text-lg font-bold mb-2">Rotate API keys?</h3>
+      <p class="text-sm text-muted mb-4">
+        This immediately revokes the current publishable + secret keys. Any server still using them will start failing,
+        and outbound webhook signatures will use the new secret. Continue?
+      </p>
+      <div class="flex justify-end gap-2">
+        <button id="rotate-cancel" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Cancel</button>
+        <button id="rotate-confirm" class="btn-danger px-4 py-2 rounded-full font-semibold text-sm">Rotate now</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // -----------------------------------------------------------------------
+    // /dashboard/:merchant — Phantom signature login + per-merchant dashboard
+    // (payments stream, API key reveal/rotate, webhook + origin settings).
+    // -----------------------------------------------------------------------
+
+    const SESSION_KEY_PREFIX = 'zettapay.dash.session.v1.';
+
+    function readMerchantId() {
+      const path = window.location.pathname || '/';
+      // /dashboard/<merchant> or /dashboard/<merchant>/
+      const match = path.match(/^\/dashboard\/([A-Za-z0-9_-]{3,64})\/?$/);
+      if (match) return match[1];
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get('merchant');
+      if (q && /^[A-Za-z0-9_-]{3,64}$/.test(q)) return q;
+      return null;
+    }
+
+    const $ = (id) => document.getElementById(id);
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 8) return addr || '';
+      return addr.slice(0, 4) + '…' + addr.slice(-4);
+    }
+
+    function formatUsdc(amount) {
+      const num = Number(amount || 0);
+      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(iso) {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '—';
+      return new Date(t).toLocaleString('en-US', {
+        month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    function relativeTime(iso) {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '—';
+      const diff = Date.now() - t;
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      const d = Math.floor(h / 24);
+      return d + 'd ago';
+    }
+
+    let toastTimer;
+    function toast(msg, kind) {
+      const el = $('toast');
+      const inner = el.firstElementChild;
+      inner.textContent = msg;
+      inner.className = 'glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl';
+      if (kind === 'error') inner.classList.add('text-rose');
+      else if (kind === 'ok') inner.classList.add('text-mint');
+      el.classList.remove('hidden-init');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden-init'), 3500);
+    }
+
+    function setVisible(id, visible) {
+      const el = $(id);
+      if (!el) return;
+      if (visible) el.classList.remove('hidden-init');
+      else el.classList.add('hidden-init');
+    }
+
+    async function copy(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        toast('Copied to clipboard', 'ok');
+      } catch (_) {
+        toast('Copy failed — select and copy manually', 'error');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Phantom + signature flow
+    // -----------------------------------------------------------------------
+
+    function getProvider() {
+      const p = window.solana || (window.phantom && window.phantom.solana);
+      if (p && p.isPhantom) return p;
+      return null;
+    }
+
+    function bytesToBase64(bytes) {
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      return window.btoa(s);
+    }
+
+    async function signInWithPhantom(merchant) {
+      const provider = getProvider();
+      if (!provider) {
+        const w = window.open('https://phantom.app/', '_blank', 'noopener');
+        if (!w) toast('Install Phantom to continue.', 'error');
+        throw new Error('Phantom wallet not detected');
+      }
+
+      const resp = await provider.connect();
+      const wallet = resp.publicKey.toString();
+
+      const challengeRes = await fetch('/api/merchants/auth/challenge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet, merchant }),
+      });
+      if (!challengeRes.ok) {
+        const txt = await challengeRes.text();
+        throw new Error('Challenge ' + challengeRes.status + ': ' + txt);
+      }
+      const challengeJson = await challengeRes.json();
+      const message = challengeJson.challenge.message;
+      const challengeToken = challengeJson.challengeToken;
+
+      const encoded = new TextEncoder().encode(message);
+      const signed = await provider.signMessage(encoded, 'utf8');
+      const signature = signed.signature || signed;
+
+      // Belt-and-suspenders: verify locally before round-tripping to server.
+      const localOk = window.nacl.sign.detached.verify(encoded, signature, resp.publicKey.toBytes());
+      if (!localOk) throw new Error('Local signature verification failed');
+
+      const verifyRes = await fetch('/api/merchants/auth/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          challengeToken,
+          signature: bytesToBase64(signature),
+        }),
+      });
+      if (!verifyRes.ok) {
+        const txt = await verifyRes.text();
+        throw new Error('Verify ' + verifyRes.status + ': ' + txt);
+      }
+      const verifyJson = await verifyRes.json();
+      return verifyJson.session;
+    }
+
+    function sessionKey(merchant) { return SESSION_KEY_PREFIX + merchant; }
+
+    function loadSession(merchant) {
+      try {
+        const raw = sessionStorage.getItem(sessionKey(merchant));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.token || !parsed.expiresAt) return null;
+        if (new Date(parsed.expiresAt).getTime() <= Date.now()) return null;
+        return parsed;
+      } catch { return null; }
+    }
+
+    function saveSession(merchant, session) {
+      sessionStorage.setItem(sessionKey(merchant), JSON.stringify(session));
+    }
+
+    function clearSession(merchant) {
+      sessionStorage.removeItem(sessionKey(merchant));
+    }
+
+    // -----------------------------------------------------------------------
+    // Authenticated fetch
+    // -----------------------------------------------------------------------
+
+    let CURRENT_SESSION = null;
+    let CURRENT_MERCHANT = null;
+
+    async function authedFetch(path, init) {
+      if (!CURRENT_SESSION || !CURRENT_SESSION.token) throw new Error('Not authenticated');
+      const headers = Object.assign({}, (init && init.headers) || {}, {
+        Authorization: 'Bearer ' + CURRENT_SESSION.token,
+      });
+      const res = await fetch(path, Object.assign({}, init, { headers }));
+      if (res.status === 401 || res.status === 403) {
+        clearSession(CURRENT_MERCHANT);
+        showLogin('Session expired — please sign in again.');
+        throw new Error('Session expired');
+      }
+      return res;
+    }
+
+    // -----------------------------------------------------------------------
+    // Render: payments / keys / settings
+    // -----------------------------------------------------------------------
+
+    function statusBadge(status) {
+      if (status === 'completed') return '<span class="badge badge-mint">completed</span>';
+      if (status === 'pending') return '<span class="badge badge-amber">pending</span>';
+      if (status === 'failed') return '<span class="badge badge-rose">failed</span>';
+      return '<span class="badge badge-muted">' + (status || 'unknown') + '</span>';
+    }
+
+    async function loadPayments() {
+      setVisible('payments-skeleton', true);
+      setVisible('payments-empty', false);
+      const tbody = $('payments-tbody');
+      tbody.innerHTML = '';
+
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/payments?limit=25');
+        if (!res.ok) throw new Error('Payments ' + res.status);
+        const json = await res.json();
+        const items = Array.isArray(json.items) ? json.items : [];
+        const summary = json.summary || {};
+
+        $('stat-completed-count').textContent = String(summary.completedCount ?? 0);
+        $('stat-completed-sub').textContent = formatUsdc(summary.completedAmountUsdc || 0) + ' USDC';
+        $('stat-pending-count').textContent = String(summary.pendingCount ?? 0);
+        $('stat-pending-sub').textContent = (summary.pendingCount === 1 ? '1 awaiting' : (summary.pendingCount || 0) + ' awaiting');
+        $('stat-failed-count').textContent = String(summary.failedCount ?? 0);
+        $('stat-failed-sub').textContent = (summary.failedCount === 1 ? '1 declined' : (summary.failedCount || 0) + ' declined');
+
+        if (!items.length) {
+          setVisible('payments-empty', true);
+          return;
+        }
+
+        for (const p of items) {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-white/5 hover:bg-white/[0.02] transition';
+          const sigCell = p.txSignature
+            ? '<a class="text-royal-bright hover:underline mono" target="_blank" rel="noopener" href="' + (p.explorerUrl || ('https://explorer.solana.com/tx/' + encodeURIComponent(p.txSignature) + '?cluster=devnet')) + '">' + shortAddr(p.txSignature) + '</a>'
+            : '<span class="text-muted mono">—</span>';
+          tr.innerHTML =
+            '<td class="py-3 pr-4 text-muted"><div>' + formatDate(p.acceptedAt) + '</div><div class="text-xs text-muted/60">' + relativeTime(p.acceptedAt) + '</div></td>' +
+            '<td class="py-3 pr-4 stat-num font-semibold">' + formatUsdc(p.amountUsdc) + ' <span class="text-muted text-xs">USDC</span></td>' +
+            '<td class="py-3 pr-4">' + statusBadge(p.status) + '</td>' +
+            '<td class="py-3 pr-4 mono text-xs"><span title="' + p.payerWallet + '">' + shortAddr(p.payerWallet) + '</span></td>' +
+            '<td class="py-3 pr-4 mono text-xs">' + sigCell + '</td>';
+          tbody.appendChild(tr);
+        }
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Failed to load payments — ' + (err && err.message || err), 'error');
+        }
+      } finally {
+        setVisible('payments-skeleton', false);
+      }
+    }
+
+    let SECRET_REVEALED = false;
+
+    async function loadKeys(reveal) {
+      const init = reveal
+        ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'reveal' }) }
+        : { method: 'GET' };
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/keys', init);
+        if (!res.ok) throw new Error('Keys ' + res.status);
+        const json = await res.json();
+        $('api-key-value').textContent = json.apiKey && json.apiKey.value ? json.apiKey.value : '—';
+        if (reveal && json.secretKey && json.secretKey.value && !json.secretKey.value.includes('•')) {
+          $('secret-key-value').textContent = json.secretKey.value;
+          $('secret-reveal').textContent = 'Hide';
+          SECRET_REVEALED = true;
+        } else {
+          $('secret-key-value').textContent = (json.secretKey && json.secretKey.masked) || '••••••••';
+          $('secret-reveal').textContent = 'Reveal';
+          SECRET_REVEALED = false;
+        }
+        $('keys-feedback').textContent = '';
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Failed to load keys — ' + (err && err.message || err), 'error');
+        }
+      }
+    }
+
+    async function rotateKeys() {
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/keys', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action: 'rotate' }),
+        });
+        if (!res.ok) throw new Error('Rotate ' + res.status);
+        const json = await res.json();
+        $('api-key-value').textContent = json.apiKey.value;
+        $('secret-key-value').textContent = json.secretKey.value;
+        $('secret-reveal').textContent = 'Hide';
+        SECRET_REVEALED = true;
+        $('keys-feedback').innerHTML = '<span class="text-amber">' + (json.warning || 'Keys rotated. Old keys are revoked.') + '</span>';
+        toast('Keys rotated — copy them now', 'ok');
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Rotate failed — ' + (err && err.message || err), 'error');
+        }
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/settings');
+        if (!res.ok) throw new Error('Settings ' + res.status);
+        const json = await res.json();
+        $('settings-webhook').value = json.webhookUrl || '';
+        $('settings-origins').value = (json.allowedOrigins || []).join('\n');
+        $('settings-fingerprint').textContent = json.webhookSecretFingerprint
+          ? 'Webhook signing secret · ' + json.webhookSecretFingerprint
+          : 'No webhook configured';
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Failed to load settings — ' + (err && err.message || err), 'error');
+        }
+      }
+    }
+
+    async function saveSettings(ev) {
+      ev.preventDefault();
+      const webhookUrl = $('settings-webhook').value.trim();
+      const originsRaw = $('settings-origins').value || '';
+      const allowedOrigins = originsRaw
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const saveBtn = $('settings-save');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      $('settings-feedback').textContent = '';
+
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/settings', {
+          method: 'PATCH',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ webhookUrl: webhookUrl || null, allowedOrigins }),
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = json && json.error && json.error.message ? json.error.message : ('Settings ' + res.status);
+          throw new Error(msg);
+        }
+        $('settings-webhook').value = json.webhookUrl || '';
+        $('settings-origins').value = (json.allowedOrigins || []).join('\n');
+        $('settings-fingerprint').textContent = json.webhookSecretFingerprint
+          ? 'Webhook signing secret · ' + json.webhookSecretFingerprint
+          : 'No webhook configured';
+        $('settings-feedback').innerHTML = '<span class="text-mint">Saved · ' + new Date().toLocaleTimeString() + '</span>';
+        toast('Settings saved', 'ok');
+      } catch (err) {
+        $('settings-feedback').innerHTML = '<span class="text-rose">' + (err && err.message || err) + '</span>';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save settings';
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Login / dashboard switching
+    // -----------------------------------------------------------------------
+
+    function showLogin(message) {
+      setVisible('login-screen', true);
+      setVisible('dashboard', false);
+      setVisible('disconnect-btn', false);
+      if (message) {
+        const err = $('connect-error');
+        err.textContent = message;
+        setVisible('connect-error', true);
+      }
+    }
+
+    function hideLogin() {
+      setVisible('login-screen', false);
+      setVisible('dashboard', true);
+      setVisible('disconnect-btn', true);
+    }
+
+    async function activateSession(session) {
+      CURRENT_SESSION = session;
+      saveSession(CURRENT_MERCHANT, session);
+      $('wallet-short').textContent = shortAddr(session.wallet);
+      $('wallet-full').textContent = session.wallet;
+      const exp = new Date(session.expiresAt);
+      $('sig-expires').textContent = exp.toLocaleTimeString();
+      hideLogin();
+      await Promise.all([loadPayments(), loadKeys(false), loadSettings()]);
+    }
+
+    async function onConnect() {
+      const btn = $('connect-btn');
+      const label = $('connect-label');
+      const err = $('connect-error');
+      err.textContent = '';
+      setVisible('connect-error', false);
+      btn.disabled = true;
+      label.textContent = 'Signing challenge…';
+
+      try {
+        const session = await signInWithPhantom(CURRENT_MERCHANT);
+        await activateSession(session);
+        toast('Signature verified — welcome back', 'ok');
+      } catch (e) {
+        err.textContent = e && e.message ? e.message : String(e);
+        setVisible('connect-error', true);
+      } finally {
+        btn.disabled = false;
+        label.textContent = 'Connect Phantom';
+      }
+    }
+
+    function onDisconnect() {
+      CURRENT_SESSION = null;
+      clearSession(CURRENT_MERCHANT);
+      try { const p = getProvider(); if (p && p.disconnect) p.disconnect(); } catch (_) {}
+      showLogin();
+      toast('Signed out', 'ok');
+    }
+
+    // -----------------------------------------------------------------------
+    // Wire up
+    // -----------------------------------------------------------------------
+
+    function wireCopyButtons() {
+      document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-copy-target');
+          const node = id ? $(id) : null;
+          if (!node) return;
+          copy(node.textContent || '');
+        });
+      });
+    }
+
+    function init() {
+      CURRENT_MERCHANT = readMerchantId();
+      if (!CURRENT_MERCHANT) {
+        document.body.innerHTML =
+          '<main class="min-h-screen flex items-center justify-center px-6">' +
+          '<div class="glass-strong rounded-2xl p-8 max-w-md text-center">' +
+          '<h1 class="text-2xl font-bold mb-2">Merchant required</h1>' +
+          '<p class="text-muted text-sm mb-4">Open this page as <code class="mono">/dashboard/&lt;merchant-id&gt;</code>. ' +
+          'You can find your merchant id in the welcome email or by running <code class="mono">POST /api/merchants/onboard</code>.</p>' +
+          '<a href="/signup" class="btn-primary px-5 py-3 rounded-full font-semibold inline-block">Create a merchant</a>' +
+          '</div></main>';
+        return;
+      }
+
+      $('login-merchant').textContent = CURRENT_MERCHANT;
+      $('merchant-badge').textContent = CURRENT_MERCHANT;
+
+      $('connect-btn').addEventListener('click', onConnect);
+      $('disconnect-btn').addEventListener('click', onDisconnect);
+      $('payments-refresh').addEventListener('click', () => loadPayments());
+      $('copy-wallet').addEventListener('click', () => CURRENT_SESSION && copy(CURRENT_SESSION.wallet));
+      $('secret-reveal').addEventListener('click', () => loadKeys(!SECRET_REVEALED));
+      $('keys-rotate').addEventListener('click', () => setVisible('rotate-modal', true));
+      $('rotate-cancel').addEventListener('click', () => setVisible('rotate-modal', false));
+      $('rotate-confirm').addEventListener('click', async () => {
+        setVisible('rotate-modal', false);
+        await rotateKeys();
+      });
+      $('settings-form').addEventListener('submit', saveSettings);
+      $('settings-cancel').addEventListener('click', (ev) => {
+        ev.preventDefault();
+        loadSettings();
+      });
+      wireCopyButtons();
+
+      const stored = loadSession(CURRENT_MERCHANT);
+      if (stored) {
+        activateSession(stored).catch(() => showLogin('Could not restore session — sign in again.'));
+      } else {
+        showLogin();
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
