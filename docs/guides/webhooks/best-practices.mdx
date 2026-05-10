@@ -1,0 +1,196 @@
+---
+title: "Webhook best practices"
+description: "The operational checklist a ZettaPay webhook receiver should clear before it sees production traffic — security, idempotency, latency, and observability."
+---
+
+A webhook handler that compiles is not a webhook handler that's safe in
+production. Treat it the same way you'd treat any other public endpoint
+that mutates state on receipt: assume the caller is hostile until you've
+proven the signature, assume the network will replay you, and assume your
+slow path will explode under load.
+
+This page is the operational checklist your handler should clear before
+you wire ZettaPay events into anything that costs money — fulfillment,
+ledger writes, customer email.
+
+## The pre-prod checklist
+
+<AccordionGroup>
+  <Accordion title="Signature is verified before the body is parsed" icon="signature">
+    Compute the HMAC over the **raw bytes** as received. If your framework
+    parses JSON automatically, capture the raw body upstream
+    (`express.raw`, Fastify's `parseAs: "buffer"`, Flask's
+    `request.get_data`, FastAPI's `request.body()`, Rails'
+    `request.raw_post`). Re-serializing JSON changes byte order and breaks
+    the HMAC.
+
+    The full table of language snippets lives in
+    [Signature verification — by language](/guides/webhooks/signing-examples).
+  </Accordion>
+
+  <Accordion title="Comparison is constant-time" icon="stopwatch">
+    Use `timingSafeEqual` (Node), `hmac.compare_digest` (Python),
+    `hmac.Equal` (Go), `hash_equals` (PHP), `secure_compare` (Ruby).
+    A naive `==` on two strings leaks information byte-by-byte.
+  </Accordion>
+
+  <Accordion title="Timestamp drift is rejected" icon="clock">
+    `X-ZettaPay-Timestamp` is epoch milliseconds. Reject anything more
+    than ±5 minutes from your clock. Without this, a leaked signature is
+    valid forever; with it, an attacker has 5 minutes from the moment of
+    leak to use it.
+
+    If you're behind a load balancer that buffers requests for several
+    minutes, use a wider tolerance — but never disable the check.
+  </Accordion>
+
+  <Accordion title="Idempotency is keyed on `X-ZettaPay-Event-Id`" icon="fingerprint">
+    The dispatcher delivers **at-least-once**. The same event id will
+    arrive again if your handler returned non-2xx, timed out, or if an
+    operator clicked Retry. Store the id in a deduplication table with a
+    unique constraint and short-circuit duplicates with `200 OK`.
+
+    Don't dedupe on payment id, settlement id, or any payload field —
+    the same payment can fire multiple legitimate events
+    (`payment.succeeded`, then later `settlement.completed`).
+  </Accordion>
+
+  <Accordion title="ACK in under 1 second" icon="bolt">
+    Return `200` as soon as you've persisted the event id and enqueued
+    the work. Anything beyond ~1s starts to look like a connection hang
+    to the dispatcher. Anything beyond the 10s timeout will be retried —
+    and your slow handler will see retries land **before** its own
+    response goes out, doubling the load.
+
+    The right pattern is **persist + enqueue + ACK**. Heavy lifting runs
+    in a worker that pulls from the queue.
+  </Accordion>
+
+  <Accordion title="HTTPS, with the right cert chain" icon="lock">
+    The dispatcher rejects `http://` URLs at registration time
+    ([premissa #15](https://github.com/leandromaiam-code/zettapay)).
+    Self-signed certs are also rejected. Use a real cert from a public CA —
+    Let's Encrypt is free, automated, and takes one command on most
+    platforms.
+  </Accordion>
+
+  <Accordion title="The four ZettaPay headers reach your handler" icon="route">
+    Reverse proxies, CDNs, and WAFs sometimes strip `X-*` headers by
+    default. Allow-list:
+
+    - `X-ZettaPay-Signature`
+    - `X-ZettaPay-Timestamp`
+    - `X-ZettaPay-Event-Id`
+    - `X-ZettaPay-Attempt`
+
+    A retry-loop where every delivery returns `400 invalid signature`
+    almost always traces back to a stripped `X-ZettaPay-Signature` here.
+  </Accordion>
+
+  <Accordion title="Status codes mean what they mean" icon="square-check">
+    The dispatcher treats:
+
+    - **`2xx`** as success — stops retries.
+    - **`400, 401, 403, 404, 410, 422`** as non-retryable — moves the
+      event straight to dead-letter.
+    - **Everything else (incl. `5xx`, timeouts)** as transient — retries
+      per the schedule.
+
+    Don't return `400` for a transient database error or you'll lose the
+    event. Don't return `500` for a malformed payload that you're sure
+    can never succeed, or you'll consume retry budget for nothing.
+  </Accordion>
+
+  <Accordion title="Secrets live outside the codebase" icon="key">
+    `WEBHOOK_SECRET` is environment-only. Don't check it in. Don't bake
+    it into a Docker image. Rotating the secret is a dashboard click —
+    plan for it. If you support multiple environments (dev / staging /
+    prod), each gets its own secret.
+  </Accordion>
+
+  <Accordion title="Logs include the event id and attempt" icon="magnifying-glass">
+    Every log line your handler emits should carry
+    `x_zettapay_event_id` and `x_zettapay_attempt`. When something goes
+    wrong four hours later, those two fields collapse a 10k-event log to
+    the exact replay history of one failure. Without them, debugging
+    duplicate-delivery questions is guesswork.
+  </Accordion>
+</AccordionGroup>
+
+## Architectures we recommend
+
+### Persist-and-queue (default)
+
+```
+[ZettaPay] ─→ [Edge: verify + dedup + enqueue] ─→ [Worker: business logic]
+                       │
+                       └─→ 200 OK (under 100ms)
+```
+
+The edge handler does only signature verification, idempotency dedup,
+and pushing the event onto a durable queue (SQS, Redis Streams, Pub/Sub,
+NATS — any of them work). The worker does the actual work. The two are
+horizontally independent: a slow worker doesn't slow your ingestion, and
+a queue outage causes loud failures instead of silent drops.
+
+### Direct-write (small scale)
+
+If your traffic is low and your handler is fast, you can write directly:
+
+```
+[ZettaPay] ─→ [verify + dedup + handle + 200] ─→ [done]
+```
+
+Acceptable when:
+
+- p99 handler latency is well under 1s.
+- The handler is purely additive (insert / upsert), so a partial run is
+  recoverable.
+- You can afford to retry whole-handler on transient errors.
+
+The moment you start fanning out HTTP calls or hitting third-party APIs
+inside the handler, move to persist-and-queue.
+
+### Polling fallback (defense in depth)
+
+Webhooks are eventually consistent — they'll get there, but a multi-day
+outage can stall delivery. For business-critical state (payment success,
+settlement), pair the webhook with a periodic poll of `GET /payments` or
+`GET /subscriptions`. The webhook is the fast path; the poll catches
+anything the dispatcher couldn't deliver before the merchant noticed.
+
+## Anti-patterns
+
+| Pattern | Why it bites |
+| --- | --- |
+| **Parsing JSON before HMAC verification** | Gives unauthenticated input access to your parser's attack surface. |
+| **Comparing signatures with `==`** | Timing leak — an attacker can recover the secret byte-by-byte. |
+| **Dedup keyed on payment id, not event id** | Misses legitimate later events on the same payment (settlement, refund). |
+| **Trusting `Date` header / `request.timestamp`** | Easily forged. Use `X-ZettaPay-Timestamp` only. |
+| **Returning `200` before the work is enqueued** | Worker dies, event is lost forever — dispatcher already ack'd. |
+| **Returning `500` for malformed bodies** | Burns retry budget. Use `400` once you're confident the body will never succeed. |
+| **One global mutex around the handler** | Retries collide head-on. Worse than no dedup. |
+| **Logging the raw body** | Payloads include amounts, wallet addresses, customer ids — log selectively. |
+
+## Production smoke test
+
+A 60-second pre-launch check:
+
+1. Hit your endpoint with a hand-crafted bad signature → expect `400`.
+2. Hit it with a stale timestamp (10 min old) → expect `400`.
+3. Hit it twice with the same `X-ZettaPay-Event-Id` → expect `200`
+   both times, but only one downstream side-effect.
+4. From the dashboard, click **Retry** on a recent `sent` event →
+   expect a new attempt with the same id and `200` from your handler
+   (idempotent).
+5. Click **Replay** (admin-only) → expect a new attempt with a fresh
+   `evt_replay_…` id and a fresh side-effect (replay does not dedupe).
+
+If all five pass, you're ready for live traffic.
+
+## Going further
+
+- **End-to-end handler walkthrough:** [Handling webhooks](/guides/handling-webhooks)
+- **Per-language verifiers:** [Signature verification — by language](/guides/webhooks/signing-examples)
+- **Operator tooling:** [Retry & replay tooling](/guides/webhooks/replay)
+- **Conceptual reference:** [Webhooks](/concepts/webhooks)

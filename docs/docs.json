@@ -55,6 +55,14 @@
               "guides/mcp-integration",
               "guides/handling-webhooks",
               {
+                "group": "Webhooks",
+                "pages": [
+                  "guides/webhooks/signing-examples",
+                  "guides/webhooks/replay",
+                  "guides/webhooks/best-practices"
+                ]
+              },
+              {
                 "group": "Native AI integrations",
                 "pages": [
                   "guides/integrations/anthropic",

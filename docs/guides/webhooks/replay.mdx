@@ -1,0 +1,216 @@
+---
+title: "Retry & replay tooling"
+description: "Drive ZettaPay's delivery log from the dashboard, the API, or a one-off script. When to retry, when to replay, and how to drain the dead-letter queue."
+---
+
+ZettaPay persists every delivery attempt in a `webhook_events` table — every
+event keeps its full lifecycle (`pending → sent | failed | dead`), every
+attempt's status code, every error message. You can inspect that log,
+re-attempt a failed delivery, or fan a fresh `event_id` out for a clean
+test, all from three surfaces:
+
+| Surface | Audience | Authentication |
+| --- | --- | --- |
+| **Merchant API** (`/webhooks/events`, `/webhooks/events/:id/retry`) | Self-service for the merchant who owns the URL | `x-zettapay-api-key` |
+| **Admin API** (`/admin/webhooks/events*`) | ZettaPay operations team | `x-zettapay-admin-key` |
+| **Dashboard → Webhooks tab** | UI on top of the merchant API | API key cookie |
+
+## Retry vs. replay — pick the right verb
+
+The two operations look similar but mean different things on the receiver
+side:
+
+| | **Retry** | **Replay** |
+| --- | --- | --- |
+| `event_id` | Same as the original | Brand new (`evt_replay_…`) |
+| Receiver dedup | Will hit your idempotency cache and skip | Looks like a new event — handler runs again |
+| Use when | A merchant outage caused the failure and you want to try again | You're debugging your handler and need the body re-delivered |
+| Audit trail | Appended as `webhook.retry` | Appended as `webhook.replay` with `sourceEventId` |
+
+<Warning>
+Replay does not respect your idempotency cache. If your handler has
+side effects (charge a card, send an email, trigger a fulfillment), a
+replay will run them again. Retry is the safe default in production.
+</Warning>
+
+## From the dashboard
+
+The Webhooks tab in the merchant dashboard lists every event with its
+status, response code, and last error. Failed and dead-lettered rows have a
+**Retry** button that calls the merchant API below. Sorting by **Latest
+attempt** surfaces what just broke; filtering on `dead` shows the queue
+that needs operator attention.
+
+## From the merchant API
+
+### List recent deliveries
+
+```bash
+curl -H "x-zettapay-api-key: $ZETTAPAY_API_KEY" \
+  "https://api.zettapay.io/webhooks/events?limit=50&status=failed"
+```
+
+Optional filters: `status` (`pending|sent|failed|dead`), `limit` (1–500,
+default 100). Results are scoped to the merchant's configured `webhookUrl`
+— you can't see another merchant's events.
+
+### Retry a single delivery
+
+```bash
+curl -X POST \
+  -H "x-zettapay-api-key: $ZETTAPAY_API_KEY" \
+  "https://api.zettapay.io/webhooks/events/$EVENT_ID/retry"
+```
+
+The endpoint runs **one immediate attempt** (`maxAttempts: 1`) and returns
+its outcome inline:
+
+```json
+{
+  "event": {
+    "event_id": "evt_8f2…",
+    "status": "sent",
+    "attempt_count": 4,
+    "last_status_code": 200
+  },
+  "delivered": true,
+  "deadLettered": false,
+  "attempts": [{ "attempt": 4, "status": 200, "error": null }]
+}
+```
+
+If you want the full Stripe-grade retry curve back in play, just call the
+endpoint again — each click resets the row to `pending` and runs another
+attempt.
+
+### Drain a batch of failed events
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+API_KEY="$ZETTAPAY_API_KEY"
+BASE="https://api.zettapay.io"
+
+curl -s -H "x-zettapay-api-key: $API_KEY" \
+  "$BASE/webhooks/events?status=failed&limit=500" \
+  | jq -r '.events[].event_id' \
+  | while read -r id; do
+      echo "retrying $id"
+      curl -s -X POST -H "x-zettapay-api-key: $API_KEY" \
+        "$BASE/webhooks/events/$id/retry" | jq '.delivered'
+      sleep 0.2  # gentle on your own ingress
+    done
+```
+
+## From the admin API
+
+The admin surface (`/admin/webhooks/events*`, requires `x-zettapay-admin-key`,
+≥24 chars) cuts across every merchant URL and exposes both **retry** and
+**replay**. The shape mirrors the merchant API:
+
+| Method | Path | Action |
+| --- | --- | --- |
+| `GET` | `/admin/webhooks/events` | Paginated list with `status`, `url`, `eventId` filters. |
+| `GET` | `/admin/webhooks/events/summary` | Counts by status (`pending|sent|failed|dead`). |
+| `GET` | `/admin/webhooks/events/:eventId` | Full row including the persisted payload. |
+| `POST` | `/admin/webhooks/events/:eventId/retry` | Reset + redispatch with the same `event_id`. |
+| `POST` | `/admin/webhooks/events/:eventId/replay` | Redispatch with a fresh `evt_replay_…` id. |
+
+Both `retry` and `replay` append an entry to `audit_journal` (`webhook.retry`
+or `webhook.replay`) including the actor, source URL, and outcome — so
+sensitive operator actions are reconstructible after the fact.
+
+### Operator runbook — drain the dead-letter queue
+
+```bash
+# 1. How bad is it?
+curl -s -H "x-zettapay-admin-key: $ADMIN_KEY" \
+  "$BASE/admin/webhooks/events/summary"
+# → { "counts": { "dead": 12, "failed": 3, … } }
+
+# 2. What's there?
+curl -s -H "x-zettapay-admin-key: $ADMIN_KEY" \
+  "$BASE/admin/webhooks/events?status=dead&limit=100" \
+  | jq '.events[] | {event_id, url, last_status_code, last_error}'
+
+# 3. Retry each — preserves event_id, safe even if the receiver
+#    re-checks idempotency.
+curl -s -H "x-zettapay-admin-key: $ADMIN_KEY" \
+  "$BASE/admin/webhooks/events?status=dead&limit=100" \
+  | jq -r '.events[].event_id' \
+  | xargs -I{} curl -s -X POST \
+      -H "x-zettapay-admin-key: $ADMIN_KEY" \
+      "$BASE/admin/webhooks/events/{}/retry"
+```
+
+## Replay-driven local development
+
+When you're iterating on a webhook handler, replay against a tunneled URL
+beats waiting for a real on-chain event to fire:
+
+1. Run your handler locally and expose it (e.g. `ngrok http 3000`,
+   `cloudflared tunnel`, or any reverse tunnel of your choice).
+2. Update the merchant's `webhookUrl` to the tunnel.
+3. Trigger one real event (a devnet payment, for example).
+4. Iterate by calling **replay** — each replay picks a fresh `event_id`,
+   so your dedup table won't short-circuit it.
+
+```bash
+# Replay the most recent dead-lettered event into the current tunnel.
+LAST=$(curl -s -H "x-zettapay-admin-key: $ADMIN_KEY" \
+  "$BASE/admin/webhooks/events?status=dead&limit=1" \
+  | jq -r '.events[0].event_id')
+
+curl -X POST -H "x-zettapay-admin-key: $ADMIN_KEY" \
+  "$BASE/admin/webhooks/events/$LAST/replay"
+```
+
+## Status semantics
+
+The status field tells you exactly where a delivery stopped:
+
+| Status | Meaning | Operator action |
+| --- | --- | --- |
+| `pending` | Worker has the row but hasn't finished the schedule. | Wait. Retrying a `pending` row returns `409`. |
+| `sent` | Got a 2xx within the retry curve. Done. | None. |
+| `failed` | All attempts in the current cycle failed; eligible for retry. | Retry once you've fixed the receiver. |
+| `dead` | Hit a non-retryable status (`400/401/403/404/410/422`) **or** exhausted the 10-attempt budget. | Investigate, fix, then retry/replay. |
+
+The retry schedule itself is documented under
+[Webhooks → Retry schedule](/concepts/webhooks#retry-schedule).
+
+## Building your own observer
+
+Need replay tooling baked into your own ops console? The merchant API
+already exposes everything the dashboard uses — there's no separate
+private surface. A minimal Node poller:
+
+```ts
+import { setInterval } from "node:timers/promises";
+
+const base = "https://api.zettapay.io";
+const headers = { "x-zettapay-api-key": process.env.ZETTAPAY_API_KEY! };
+
+for await (const _ of setInterval(60_000)) {
+  const { events } = await fetch(
+    `${base}/webhooks/events?status=dead&limit=20`,
+    { headers },
+  ).then((r) => r.json());
+
+  if (!events.length) continue;
+
+  await Promise.all(
+    events.map((e: { event_id: string }) =>
+      fetch(`${base}/webhooks/events/${e.event_id}/retry`, {
+        method: "POST",
+        headers,
+      }),
+    ),
+  );
+}
+```
+
+Pair this with the [best practices](/guides/webhooks/best-practices)
+checklist — a poller that retries indefinitely without a circuit breaker
+will hammer a broken receiver into the ground.
