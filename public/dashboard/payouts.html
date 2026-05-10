@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay merchant payouts — settlement history in USDC / USD / BRL with CSV export for accounting." />
+  <meta property="og:title" content="ZettaPay — Payouts &amp; Settlements" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ZettaPay — Payouts</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79, 107, 255, 0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 40% at 80% 20%, rgba(153, 69, 255, 0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hidden-init { display: none; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .stat-num { font-variant-numeric: tabular-nums; }
+    .badge { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.55rem; border-radius: 999px; }
+    .badge-mint { background: rgba(20, 241, 149, 0.12); border: 1px solid rgba(20, 241, 149, 0.35); color: #14F195; }
+    .badge-amber { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; }
+    .badge-muted { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: #94A3B8; }
+    .badge-rose { background: rgba(251, 113, 133, 0.12); border: 1px solid rgba(251, 113, 133, 0.35); color: #fb7185; }
+    .badge-royal { background: rgba(79, 107, 255, 0.12); border: 1px solid rgba(79, 107, 255, 0.4); color: #6B82FF; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60; max-width: 22rem; }
+    @media (max-width: 640px) { .toast { right: 1rem; left: 1rem; max-width: none; } }
+    .skeleton {
+      background: linear-gradient(90deg, rgba(79, 107, 255, 0.05) 0%, rgba(79, 107, 255, 0.12) 50%, rgba(79, 107, 255, 0.05) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    @keyframes fadeUp {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up { animation: fadeUp 0.5s ease-out forwards; }
+    .stat-card {
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.95rem;
+      padding: 1rem 1.1rem;
+    }
+    .seg {
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 999px;
+      padding: 0.25rem;
+      display: inline-flex;
+      gap: 0.25rem;
+    }
+    .seg button {
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      transition: all 0.2s ease;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .seg button:hover { color: #FFFFFF; }
+    .seg button.active {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      box-shadow: 0 0 18px rgba(79, 107, 255, 0.35);
+    }
+    .row-tx { transition: background 0.15s ease; }
+    .row-tx:hover { background: rgba(255, 255, 255, 0.025); }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="hero-gradient"></div>
+
+  <nav class="relative z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-6xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <span class="text-sm font-mono uppercase tracking-widest text-muted">Payouts</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span id="net-badge" class="badge badge-muted hidden sm:inline-block">Devnet</span>
+        <span id="merchant-badge" class="badge badge-royal mono">—</span>
+        <a id="back-to-dashboard" href="#" class="btn-ghost px-4 py-2 rounded-full font-semibold text-xs hidden sm:inline-block">← Dashboard</a>
+        <button id="disconnect-btn" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm hidden-init">Disconnect</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="relative z-10 px-4 lg:px-12 py-8 max-w-6xl mx-auto">
+
+    <!-- LOGIN -->
+    <section id="login-screen" class="min-h-[70vh] flex items-center justify-center">
+      <div class="glass-strong rounded-2xl p-8 md:p-12 max-w-xl w-full fade-up">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="/Logo_symbol.png" class="w-12 h-12" alt="" />
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">ZettaPay</div>
+            <div class="text-xl font-bold">Payouts &amp; Settlements</div>
+          </div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-bold mb-3 leading-tight">
+          Sign in with <span class="gradient-text">Phantom</span>
+        </h1>
+        <p class="text-muted text-base mb-2 leading-relaxed">
+          Authenticate to view USDC settlements, gross / net amounts in USD &amp; BRL,
+          and download a CSV for your accounting team.
+        </p>
+        <div class="text-xs mono text-muted/80 mb-6">
+          Merchant <span id="login-merchant" class="text-royal-bright">—</span>
+        </div>
+
+        <button id="connect-btn" class="btn-primary px-6 py-4 rounded-full font-semibold text-base w-full flex items-center justify-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
+            <path d="M64 0a64 64 0 1 0 64 64A64.07 64.07 0 0 0 64 0zm45.4 65.45a3.32 3.32 0 0 1-3.32 3.31h-7.81c-.85 17.34-9.91 27.62-25.26 27.62-13.66 0-23.54-9.39-23.54-22.06 0-9.85 5.71-17.07 14.78-17.07 8.01 0 13.16 4.94 13.16 12.36 0 5.34-2.46 9.69-7.31 9.69-3.16 0-5.59-1.79-5.97-4.62a6.07 6.07 0 0 1 .11-2 .59.59 0 0 0-.55-.79c-3.13 0-5.41 3.13-5.41 7.61 0 6.71 5.04 11.02 12.5 11.02 9.83 0 16.79-7.16 17.39-19.76h-26a3.32 3.32 0 0 1-3.32-3.32V46.66a3.32 3.32 0 0 1 3.32-3.32h44.59a3.32 3.32 0 0 1 3.32 3.32z"/>
+          </svg>
+          <span id="connect-label">Connect Phantom</span>
+        </button>
+
+        <div id="connect-error" class="mt-4 text-rose text-sm hidden-init"></div>
+      </div>
+    </section>
+
+    <!-- PAYOUTS -->
+    <section id="payouts" class="hidden-init space-y-6 fade-up">
+
+      <!-- Header strip -->
+      <div class="glass rounded-2xl p-5 md:p-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div class="min-w-0">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Settlements</div>
+          <h1 class="text-2xl md:text-3xl font-bold mt-1">Payouts history</h1>
+          <p class="text-sm text-muted mt-1 max-w-xl">
+            USDC settled to your bank account, with USD &amp; BRL accounting columns.
+            Download CSV at any time — fee column already nets the 0.30% ZettaPay take rate.
+          </p>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div class="text-right">
+            <div class="text-[10px] font-mono uppercase tracking-widest text-muted">FX reference</div>
+            <div id="fx-line" class="mono text-xs text-muted">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Net · USDC</div>
+          <div class="flex items-baseline gap-1.5 mt-1">
+            <span id="stat-net-usdc" class="stat-num text-2xl md:text-3xl font-bold">—</span>
+            <span class="text-muted text-xs">USDC</span>
+          </div>
+          <div id="stat-net-sub" class="text-[11px] text-muted mt-1">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Net · USD</div>
+          <div class="flex items-baseline gap-1.5 mt-1">
+            <span id="stat-net-usd" class="stat-num text-2xl md:text-3xl font-bold">—</span>
+            <span class="text-muted text-xs">USD</span>
+          </div>
+          <div class="text-[11px] text-muted mt-1">1 USDC ≈ 1 USD</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Net · BRL</div>
+          <div class="flex items-baseline gap-1.5 mt-1">
+            <span id="stat-net-brl" class="stat-num text-2xl md:text-3xl font-bold">—</span>
+            <span class="text-muted text-xs">BRL</span>
+          </div>
+          <div id="stat-brl-sub" class="text-[11px] text-muted mt-1">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Fees · 30 bps</div>
+          <div class="flex items-baseline gap-1.5 mt-1">
+            <span id="stat-fee" class="stat-num text-2xl md:text-3xl font-bold">—</span>
+            <span class="text-muted text-xs">USDC</span>
+          </div>
+          <div id="stat-fee-sub" class="text-[11px] text-muted mt-1">on completed settlements</div>
+        </div>
+      </div>
+
+      <!-- Status pill row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Completed</div>
+          <div id="stat-completed" class="stat-num text-xl font-bold mt-1">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Processing</div>
+          <div id="stat-processing" class="stat-num text-xl font-bold mt-1">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Pending</div>
+          <div id="stat-pending" class="stat-num text-xl font-bold mt-1">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Failed</div>
+          <div id="stat-failed" class="stat-num text-xl font-bold mt-1">—</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Settlement history</div>
+            <h2 class="text-xl font-bold mt-1">Recent payouts</h2>
+          </div>
+          <div class="flex flex-wrap items-center gap-3">
+            <div class="seg" role="tablist" aria-label="Currency view">
+              <button type="button" data-currency="USDC" class="active">USDC</button>
+              <button type="button" data-currency="USD">USD</button>
+              <button type="button" data-currency="BRL">BRL</button>
+            </div>
+            <button id="payouts-refresh" class="btn-ghost px-4 py-2 rounded-full font-semibold text-xs">Refresh</button>
+            <button id="payouts-download" class="btn-primary px-4 py-2 rounded-full font-semibold text-xs flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+              <span>Download CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs font-mono uppercase tracking-widest text-muted border-b border-white/5">
+                <th class="py-3 pr-4 font-medium">Created</th>
+                <th class="py-3 pr-4 font-medium">Settlement</th>
+                <th class="py-3 pr-4 font-medium">Status</th>
+                <th class="py-3 pr-4 font-medium text-right">Gross</th>
+                <th class="py-3 pr-4 font-medium text-right">Fee</th>
+                <th class="py-3 pr-4 font-medium text-right">Net</th>
+                <th class="py-3 pr-4 font-medium">Withdrawal</th>
+              </tr>
+            </thead>
+            <tbody id="payouts-tbody"></tbody>
+          </table>
+        </div>
+        <div id="payouts-skeleton" class="space-y-2 py-2">
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+          <div class="skeleton h-10 w-full rounded-lg"></div>
+        </div>
+        <div id="payouts-empty" class="hidden-init text-center py-10 text-muted text-sm">
+          No settlements yet — once you receive USDC and connect Coinflow, payouts will land here.
+        </div>
+        <div class="mt-4 text-[11px] text-muted/70">
+          USD &amp; BRL columns are reference values for accounting. The on-chain leg always settles in USDC.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden-init">
+    <div class="glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // -----------------------------------------------------------------------
+    // /dashboard/<merchant>/payouts — settlement history + CSV export
+    // -----------------------------------------------------------------------
+
+    const SESSION_KEY_PREFIX = 'zettapay.dash.session.v1.';
+    const $ = (id) => document.getElementById(id);
+
+    function readMerchantId() {
+      const path = window.location.pathname || '/';
+      const match = path.match(/^\/dashboard\/([A-Za-z0-9_-]{3,64})\/payouts\/?$/);
+      if (match) return match[1];
+      const sp = new URLSearchParams(window.location.search);
+      const q = sp.get('merchant');
+      if (q && /^[A-Za-z0-9_-]{3,64}$/.test(q)) return q;
+      return null;
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 8) return addr || '';
+      return addr.slice(0, 6) + '…' + addr.slice(-4);
+    }
+
+    function formatNumber(amount, currency) {
+      const num = Number(amount || 0);
+      const locale = currency === 'BRL' ? 'pt-BR' : 'en-US';
+      return num.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(iso) {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '—';
+      return new Date(t).toLocaleString('en-US', {
+        month: 'short', day: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      });
+    }
+
+    function relativeTime(iso) {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '—';
+      const diff = Date.now() - t;
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      const d = Math.floor(h / 24);
+      return d + 'd ago';
+    }
+
+    let toastTimer;
+    function toast(msg, kind) {
+      const el = $('toast');
+      const inner = el.firstElementChild;
+      inner.textContent = msg;
+      inner.className = 'glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl';
+      if (kind === 'error') inner.classList.add('text-rose');
+      else if (kind === 'ok') inner.classList.add('text-mint');
+      el.classList.remove('hidden-init');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden-init'), 3500);
+    }
+
+    function setVisible(id, visible) {
+      const el = $(id);
+      if (!el) return;
+      if (visible) el.classList.remove('hidden-init');
+      else el.classList.add('hidden-init');
+    }
+
+    function escapeHtml(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function statusBadge(status) {
+      if (status === 'completed') return '<span class="badge badge-mint">completed</span>';
+      if (status === 'processing') return '<span class="badge badge-royal">processing</span>';
+      if (status === 'pending') return '<span class="badge badge-amber">pending</span>';
+      if (status === 'failed') return '<span class="badge badge-rose">failed</span>';
+      return '<span class="badge badge-muted">' + (status || 'unknown') + '</span>';
+    }
+
+    // -----------------------------------------------------------------------
+    // Phantom + signature flow (shared with /dashboard)
+    // -----------------------------------------------------------------------
+
+    function getProvider() {
+      const p = window.solana || (window.phantom && window.phantom.solana);
+      if (p && p.isPhantom) return p;
+      return null;
+    }
+
+    function bytesToBase64(bytes) {
+      let s = '';
+      for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+      return window.btoa(s);
+    }
+
+    async function signInWithPhantom(merchant) {
+      const provider = getProvider();
+      if (!provider) {
+        const w = window.open('https://phantom.app/', '_blank', 'noopener');
+        if (!w) toast('Install Phantom to continue.', 'error');
+        throw new Error('Phantom wallet not detected');
+      }
+
+      const resp = await provider.connect();
+      const wallet = resp.publicKey.toString();
+
+      const challengeRes = await fetch('/api/merchants/auth/challenge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ wallet, merchant }),
+      });
+      if (!challengeRes.ok) {
+        const txt = await challengeRes.text();
+        throw new Error('Challenge ' + challengeRes.status + ': ' + txt);
+      }
+      const challengeJson = await challengeRes.json();
+      const message = challengeJson.challenge.message;
+      const challengeToken = challengeJson.challengeToken;
+
+      const encoded = new TextEncoder().encode(message);
+      const signed = await provider.signMessage(encoded, 'utf8');
+      const signature = signed.signature || signed;
+
+      const localOk = window.nacl.sign.detached.verify(encoded, signature, resp.publicKey.toBytes());
+      if (!localOk) throw new Error('Local signature verification failed');
+
+      const verifyRes = await fetch('/api/merchants/auth/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          challengeToken,
+          signature: bytesToBase64(signature),
+        }),
+      });
+      if (!verifyRes.ok) {
+        const txt = await verifyRes.text();
+        throw new Error('Verify ' + verifyRes.status + ': ' + txt);
+      }
+      const verifyJson = await verifyRes.json();
+      return verifyJson.session;
+    }
+
+    function sessionKey(merchant) { return SESSION_KEY_PREFIX + merchant; }
+
+    function loadSession(merchant) {
+      try {
+        const raw = sessionStorage.getItem(sessionKey(merchant));
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.token || !parsed.expiresAt) return null;
+        if (new Date(parsed.expiresAt).getTime() <= Date.now()) return null;
+        return parsed;
+      } catch { return null; }
+    }
+
+    function saveSession(merchant, session) {
+      sessionStorage.setItem(sessionKey(merchant), JSON.stringify(session));
+    }
+
+    function clearSession(merchant) {
+      sessionStorage.removeItem(sessionKey(merchant));
+    }
+
+    let CURRENT_SESSION = null;
+    let CURRENT_MERCHANT = null;
+    let CURRENT_CURRENCY = 'USDC';
+    let LAST_PAYLOAD = null;
+
+    async function authedFetch(path, init) {
+      if (!CURRENT_SESSION || !CURRENT_SESSION.token) throw new Error('Not authenticated');
+      const headers = Object.assign({}, (init && init.headers) || {}, {
+        Authorization: 'Bearer ' + CURRENT_SESSION.token,
+      });
+      const res = await fetch(path, Object.assign({}, init, { headers }));
+      if (res.status === 401 || res.status === 403) {
+        clearSession(CURRENT_MERCHANT);
+        showLogin('Session expired — please sign in again.');
+        throw new Error('Session expired');
+      }
+      return res;
+    }
+
+    function pickAmounts(row, currency) {
+      if (currency === 'USD') return { gross: row.amountUsd, fee: row.amountUsd - row.netUsd, net: row.netUsd };
+      if (currency === 'BRL') return { gross: row.amountBrl, fee: row.amountBrl - row.netBrl, net: row.netBrl };
+      return { gross: row.amountUsdc, fee: row.feeUsdc, net: row.netUsdc };
+    }
+
+    function renderRows() {
+      const tbody = $('payouts-tbody');
+      tbody.innerHTML = '';
+      const items = (LAST_PAYLOAD && Array.isArray(LAST_PAYLOAD.items)) ? LAST_PAYLOAD.items : [];
+      if (!items.length) {
+        setVisible('payouts-empty', true);
+        return;
+      }
+      setVisible('payouts-empty', false);
+      const cur = CURRENT_CURRENCY;
+      for (const r of items) {
+        const a = pickAmounts(r, cur);
+        const tr = document.createElement('tr');
+        tr.className = 'row-tx border-b border-white/5 last:border-b-0';
+        const wd = r.withdrawalId
+          ? '<span class="mono text-[11px]" title="' + escapeHtml(r.withdrawalId) + '">' + escapeHtml(shortAddr(r.withdrawalId)) + '</span>'
+          : '<span class="text-muted mono text-[11px]">—</span>';
+        tr.innerHTML =
+          '<td class="py-3 pr-4 text-muted">' +
+            '<div>' + formatDate(r.createdAt) + '</div>' +
+            '<div class="text-[11px] text-muted/60">' + relativeTime(r.createdAt) + '</div>' +
+          '</td>' +
+          '<td class="py-3 pr-4 mono text-[11px]">' +
+            '<div title="' + escapeHtml(r.id) + '">' + escapeHtml(shortAddr(r.id)) + '</div>' +
+            '<div class="text-muted/70" title="' + escapeHtml(r.paymentId) + '">' + escapeHtml(shortAddr(r.paymentId)) + '</div>' +
+          '</td>' +
+          '<td class="py-3 pr-4">' + statusBadge(r.status) + '</td>' +
+          '<td class="py-3 pr-4 text-right stat-num font-semibold">' + formatNumber(a.gross, cur) + ' <span class="text-muted text-[10px]">' + cur + '</span></td>' +
+          '<td class="py-3 pr-4 text-right stat-num text-muted">' + formatNumber(a.fee, cur) + '</td>' +
+          '<td class="py-3 pr-4 text-right stat-num font-semibold text-mint">' + formatNumber(a.net, cur) + '</td>' +
+          '<td class="py-3 pr-4">' + wd + '</td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    function renderSummary(payload) {
+      const s = payload.summary || {};
+      const fx = payload.fx || {};
+      $('stat-net-usdc').textContent = formatNumber(s.netUsdc, 'USDC');
+      $('stat-net-usd').textContent = formatNumber(s.netUsd, 'USD');
+      $('stat-net-brl').textContent = formatNumber(s.netBrl, 'BRL');
+      $('stat-fee').textContent = formatNumber(s.feeUsdc, 'USDC');
+      $('stat-net-sub').textContent = 'gross ' + formatNumber(s.grossUsdc, 'USDC') + ' USDC';
+      $('stat-brl-sub').textContent = '1 USD ≈ ' + (fx.usdToBrl ? Number(fx.usdToBrl).toFixed(2) : '—') + ' BRL';
+      $('stat-fee-sub').textContent = 'on ' + (s.completedCount || 0) + ' completed settlement' + ((s.completedCount === 1) ? '' : 's');
+
+      $('stat-completed').textContent = String(s.completedCount ?? 0);
+      $('stat-processing').textContent = String(s.processingCount ?? 0);
+      $('stat-pending').textContent = String(s.pendingCount ?? 0);
+      $('stat-failed').textContent = String(s.failedCount ?? 0);
+
+      $('fx-line').textContent =
+        '1 USDC = ' + (fx.usdcToUsd ? Number(fx.usdcToUsd).toFixed(2) : '—') + ' USD · ' +
+        '1 USD = ' + (fx.usdToBrl ? Number(fx.usdToBrl).toFixed(2) : '—') + ' BRL · ' +
+        (fx.asOf || '');
+    }
+
+    async function loadPayouts() {
+      setVisible('payouts-skeleton', true);
+      setVisible('payouts-empty', false);
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/payouts?limit=100');
+        if (!res.ok) throw new Error('Payouts ' + res.status);
+        const json = await res.json();
+        LAST_PAYLOAD = json;
+        renderSummary(json);
+        renderRows();
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Failed to load payouts — ' + (err && err.message || err), 'error');
+        }
+      } finally {
+        setVisible('payouts-skeleton', false);
+      }
+    }
+
+    async function downloadCsv() {
+      const btn = $('payouts-download');
+      const original = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="mono text-xs">Preparing…</span>';
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/payouts?format=csv&limit=500');
+        if (!res.ok) throw new Error('CSV ' + res.status);
+        const blob = await res.blob();
+        const today = new Date().toISOString().slice(0, 10);
+        const filename = 'zettapay-payouts-' + CURRENT_MERCHANT + '-' + today + '.csv';
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        toast('CSV downloaded', 'ok');
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          toast('Download failed — ' + (err && err.message || err), 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = original;
+      }
+    }
+
+    function wireCurrencyToggle() {
+      document.querySelectorAll('.seg button[data-currency]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cur = btn.getAttribute('data-currency') || 'USDC';
+          if (cur === CURRENT_CURRENCY) return;
+          CURRENT_CURRENCY = cur;
+          document.querySelectorAll('.seg button[data-currency]').forEach((b) => {
+            if (b.getAttribute('data-currency') === cur) b.classList.add('active');
+            else b.classList.remove('active');
+          });
+          renderRows();
+        });
+      });
+    }
+
+    function showLogin(message) {
+      setVisible('login-screen', true);
+      setVisible('payouts', false);
+      setVisible('disconnect-btn', false);
+      if (message) {
+        const err = $('connect-error');
+        err.textContent = message;
+        setVisible('connect-error', true);
+      }
+    }
+
+    function hidePayoutsLogin() {
+      setVisible('login-screen', false);
+      setVisible('payouts', true);
+      setVisible('disconnect-btn', true);
+    }
+
+    async function activateSession(session) {
+      CURRENT_SESSION = session;
+      saveSession(CURRENT_MERCHANT, session);
+      hidePayoutsLogin();
+      await loadPayouts();
+    }
+
+    async function onConnect() {
+      const btn = $('connect-btn');
+      const label = $('connect-label');
+      const err = $('connect-error');
+      err.textContent = '';
+      setVisible('connect-error', false);
+      btn.disabled = true;
+      label.textContent = 'Signing challenge…';
+      try {
+        const session = await signInWithPhantom(CURRENT_MERCHANT);
+        await activateSession(session);
+        toast('Signature verified — welcome back', 'ok');
+      } catch (e) {
+        err.textContent = e && e.message ? e.message : String(e);
+        setVisible('connect-error', true);
+      } finally {
+        btn.disabled = false;
+        label.textContent = 'Connect Phantom';
+      }
+    }
+
+    function onDisconnect() {
+      CURRENT_SESSION = null;
+      clearSession(CURRENT_MERCHANT);
+      try { const p = getProvider(); if (p && p.disconnect) p.disconnect(); } catch (_) {}
+      showLogin();
+      toast('Signed out', 'ok');
+    }
+
+    function init() {
+      CURRENT_MERCHANT = readMerchantId();
+      if (!CURRENT_MERCHANT) {
+        document.body.innerHTML =
+          '<main class="min-h-screen flex items-center justify-center px-6">' +
+          '<div class="glass-strong rounded-2xl p-8 max-w-md text-center">' +
+          '<h1 class="text-2xl font-bold mb-2">Merchant required</h1>' +
+          '<p class="text-muted text-sm mb-4">Open this page as <code class="mono">/dashboard/&lt;merchant-id&gt;/payouts</code>.</p>' +
+          '<a href="/signup" class="btn-primary px-5 py-3 rounded-full font-semibold inline-block">Create a merchant</a>' +
+          '</div></main>';
+        return;
+      }
+
+      $('login-merchant').textContent = CURRENT_MERCHANT;
+      $('merchant-badge').textContent = CURRENT_MERCHANT;
+      $('back-to-dashboard').setAttribute('href', '/dashboard/' + encodeURIComponent(CURRENT_MERCHANT));
+
+      $('connect-btn').addEventListener('click', onConnect);
+      $('disconnect-btn').addEventListener('click', onDisconnect);
+      $('payouts-refresh').addEventListener('click', () => loadPayouts());
+      $('payouts-download').addEventListener('click', downloadCsv);
+      wireCurrencyToggle();
+
+      const stored = loadSession(CURRENT_MERCHANT);
+      if (stored) {
+        activateSession(stored).catch(() => showLogin('Could not restore session — sign in again.'));
+      } else {
+        showLogin();
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

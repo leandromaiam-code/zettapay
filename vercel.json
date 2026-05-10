@@ -27,6 +27,7 @@
     { "source": "/signup", "destination": "/signup.html" },
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
+    { "source": "/dashboard/:merchant/payouts", "destination": "/dashboard/payouts.html" },
     { "source": "/launch", "destination": "/launch.html" },
     { "source": "/mainnet", "destination": "/launch.html" },
     { "source": "/pricing", "destination": "/pricing.html" },
