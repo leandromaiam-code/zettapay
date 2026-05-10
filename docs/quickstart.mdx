@@ -9,6 +9,49 @@ By the end of this page you will have:
 2. A live API key.
 3. A successful USDC payment recorded on Solana devnet.
 
+## 0. Fund your devnet wallet
+
+Every step below runs on Solana devnet. Claim 1000 USDC plus 1 SOL for rent and
+gas from the embedded faucet — one claim per recipient per hour.
+
+<iframe
+  src="https://zettapay.io/docs/faucet?embed=1"
+  title="ZettaPay devnet faucet"
+  loading="lazy"
+  style={{
+    width: "100%",
+    minHeight: "560px",
+    border: "1px solid rgba(79,107,255,0.2)",
+    borderRadius: "12px",
+    background: "transparent",
+  }}
+/>
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://api.zettapay.io/api/faucet \
+  -H "Content-Type: application/json" \
+  -d '{ "recipient": "<your-phantom-pubkey>" }'
+```
+
+```ts fetch
+const res = await fetch("https://api.zettapay.io/api/faucet", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ recipient: "<your-phantom-pubkey>" }),
+});
+const drop = await res.json();
+console.log(drop.sol.signature, drop.usdc.mintAddress);
+```
+
+</CodeGroup>
+
+The faucet returns a real SOL airdrop signature plus a 1000 USDC quota tied to
+your wallet. For canonical USDC devnet balance, redeem the same wallet at
+[faucet.circle.com](https://faucet.circle.com) — Circle is the issuer of devnet
+USDC. Read [Devnet faucet](/guides/devnet-faucet) for the full reference.
+
 ## 1. Get an API key
 
 Sign up at [zettapay.io/signup](https://zettapay.io/signup) and create

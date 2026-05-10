@@ -20,6 +20,7 @@ function handler(_req: VercelRequest, res: VercelResponse): void {
       onramp: '/onramp',
       onrampWebhook: '/onramp/webhook',
       payments: '/payments',
+      faucet: '/api/faucet',
     },
     network: 'solana-devnet',
     runtime: 'vercel-serverless',

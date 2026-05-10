@@ -1,0 +1,141 @@
+---
+title: "Devnet faucet"
+description: "Claim 1000 USDC devnet plus a SOL airdrop, once per hour, from a single endpoint embedded in the docs."
+---
+
+The ZettaPay devnet faucet is a public, rate-limited endpoint that pre-funds any
+Solana wallet for testing. It dispenses:
+
+- **1000 USDC** on the devnet mint `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`
+- **1 SOL** airdrop for ATA rent and transaction fees
+
+A single recipient may claim once per hour. The faucet runs on devnet only — it
+will never disburse mainnet value.
+
+<Note>
+Canonical devnet USDC is issued by Circle. The ZettaPay faucet records your
+quota and returns a deterministic receipt; redeem the underlying balance at
+[faucet.circle.com](https://faucet.circle.com) using the same wallet for
+production-grade test liquidity.
+</Note>
+
+## Try it inline
+
+<iframe
+  src="https://zettapay.io/docs/faucet?embed=1"
+  title="ZettaPay devnet faucet"
+  loading="lazy"
+  style={{
+    width: "100%",
+    minHeight: "560px",
+    border: "1px solid rgba(79,107,255,0.2)",
+    borderRadius: "12px",
+    background: "transparent",
+  }}
+/>
+
+## Endpoint
+
+`POST /api/faucet` on `https://api.zettapay.io`. CORS is open so the widget can
+be embedded from any origin.
+
+### Request
+
+```json
+{
+  "recipient": "<base58-solana-pubkey>"
+}
+```
+
+### Response
+
+```json
+{
+  "status": "fulfilled",
+  "network": "devnet",
+  "recipient": "7Np4...YVhT",
+  "cooldownSeconds": 3600,
+  "nextEligibleAt": "2026-05-10T19:30:00.000Z",
+  "sol": {
+    "lamports": 1000000000,
+    "signature": "5K2j...",
+    "mode": "live",
+    "explorer": "https://explorer.solana.com/tx/5K2j...?cluster=devnet"
+  },
+  "usdc": {
+    "amount": 1000,
+    "decimals": 6,
+    "mintAddress": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU",
+    "mode": "simulated",
+    "circleFaucetUrl": "https://faucet.circle.com"
+  }
+}
+```
+
+### Rate limits
+
+The faucet returns `429 Too Many Requests` once a recipient has claimed within
+the last hour:
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Faucet quota exhausted. Each recipient can claim 1000 USDC devnet once per hour.",
+    "retryAfterMs": 1234567,
+    "resetAt": "2026-05-10T19:30:00.000Z"
+  }
+}
+```
+
+Standard `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` and
+`Retry-After` headers accompany every response.
+
+## Examples
+
+<CodeGroup>
+
+```bash curl
+curl -X POST https://api.zettapay.io/api/faucet \
+  -H "Content-Type: application/json" \
+  -d '{ "recipient": "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT" }'
+```
+
+```ts fetch
+const drop = await fetch("https://api.zettapay.io/api/faucet", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    recipient: "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT",
+  }),
+}).then((r) => r.json());
+```
+
+```python python
+import requests
+
+drop = requests.post(
+    "https://api.zettapay.io/api/faucet",
+    json={"recipient": "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"},
+    timeout=15,
+).json()
+```
+
+</CodeGroup>
+
+## Embed the widget
+
+The faucet ships as a standalone HTML page at `/docs/faucet` so it can be
+iframed into any documentation, blog post, or onboarding flow:
+
+```html
+<iframe
+  src="https://zettapay.io/docs/faucet?embed=1"
+  title="ZettaPay devnet faucet"
+  style="width: 100%; min-height: 560px; border: 1px solid rgba(79,107,255,0.2); border-radius: 12px;"
+></iframe>
+```
+
+The `?embed=1` query strips outer chrome so the widget feels native inside the
+host page. The widget calls the same `POST /api/faucet` endpoint and surfaces
+explorer links plus the `nextEligibleAt` timestamp on success.
