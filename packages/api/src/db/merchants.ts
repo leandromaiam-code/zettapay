@@ -23,6 +23,7 @@ export interface MerchantRow {
   pix_key_type: PixKeyType | null;
   deleted_at: string | null;
   fraud_block_threshold: number;
+  fraud_review_threshold: number;
   created_at: string;
 }
 
@@ -60,6 +61,7 @@ export interface Merchant {
   /** Z13.3: anomaly score (0-100) at or above which a payment is rejected.
    * `0` (default) = monitor-only — anomalies are still audited but never blocked. */
   fraudBlockThreshold: number;
+  fraudReviewThreshold: number;
   createdAt: string;
 }
 
@@ -120,6 +122,7 @@ function toMerchant(row: MerchantRow): Merchant {
     },
     deletedAt: row.deleted_at,
     fraudBlockThreshold: row.fraud_block_threshold ?? 0,
+    fraudReviewThreshold: row.fraud_review_threshold,
     createdAt: row.created_at,
   };
 }
@@ -246,12 +249,23 @@ export function redactMerchant(
     input.redactedAt,
     id,
   );
+export function updateMerchantFraudThreshold(
+  db: Db,
+  id: string,
+  threshold: number,
+): Merchant {
+  const result = db
+    .prepare<[number, string]>(
+      `UPDATE merchants SET fraud_review_threshold = ? WHERE id = ?`,
+    )
+    .run(threshold, id);
   if (result.changes === 0) {
     throw new Error(`merchant ${id} not found`);
   }
   const merchant = findMerchantById(db, id);
   if (!merchant) {
     throw new Error(`merchant ${id} disappeared after redaction`);
+    throw new Error(`merchant ${id} disappeared after update`);
   }
   return merchant;
 }

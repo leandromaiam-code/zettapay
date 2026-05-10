@@ -21,6 +21,7 @@ import { settlePayment } from "../coinflow/service.js";
 import { enforceVelocityLimits } from "./velocity.js";
 import { enforceAgentSpendingLimits } from "./agent-spending-limits.js";
 import { enforceBlacklist } from "./blacklist.js";
+import { enforceRiskGate } from "./risk-scoring.js";
 import { enforceBetaLimits } from "../beta/enforcer.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
 import type { PixClient, PixProvider } from "../pix/client.js";
@@ -176,6 +177,18 @@ export async function createPayment(
           anomaly.signals.map((s) => s.kind).join(","),
         );
       }
+      // Z13.4 fraud risk gate: scores 0-100 from amount + payer history +
+      // velocity pressure + metadata heuristics; throws 403 review_queued
+      // when score > merchant.fraudReviewThreshold (default 70). Runs LAST
+      // among the pre-insert gates so signals see the freshest counter
+      // state, and so quota-exhausted attempts don't pollute the model.
+      enforceRiskGate(db, {
+        merchant,
+        payerWallet,
+        amount: input.amountUsdc,
+        metadata: input.metadata,
+        agentIdentityId: input.agentIdentityId ?? null,
+      });
 
       insertPayment(db, {
         id: paymentId,
