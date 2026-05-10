@@ -82,7 +82,9 @@
     "src/cron-worker.ts",
     "src/db/subscriptions.ts",
     "src/lib/subscription-auth.ts",
+    "src/lib/subscription-manage-auth.ts",
     "src/routes/subscriptions.ts",
+    "src/routes/subscription-manage.ts",
     "src/services/subscription_charger.ts",
     "src/services/subscription_cron.ts"
   ],

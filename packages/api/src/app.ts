@@ -18,6 +18,7 @@ import { registryRouter } from "./routes/registry.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
+import { subscriptionManageRouter } from "./routes/subscription-manage.js";
 import { treasuryRouter } from "./routes/treasury.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
@@ -142,6 +143,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(registryRouter(db));
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));
+  app.use(subscriptionManageRouter(db));
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
