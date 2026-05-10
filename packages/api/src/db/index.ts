@@ -648,5 +648,59 @@ function applyMigrations(db: Db): void {
       ON bridge_intents(status);
     CREATE UNIQUE INDEX IF NOT EXISTS bridge_intents_source_tx_uidx
       ON bridge_intents(source_tx_hash) WHERE source_tx_hash IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS aml_alerts (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      payer_wallet    TEXT,
+      rule            TEXT NOT NULL,
+      severity        TEXT NOT NULL CHECK (severity IN ('low','medium','high','critical')),
+      status          TEXT NOT NULL CHECK (status IN ('open','reviewed','dismissed','escalated')),
+      score           INTEGER NOT NULL DEFAULT 0,
+      summary         TEXT NOT NULL,
+      evidence_json   TEXT NOT NULL DEFAULT '{}',
+      reviewed_by     TEXT,
+      reviewed_at     TEXT,
+      review_notes    TEXT,
+      sar_id          TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS aml_alerts_merchant_idx
+      ON aml_alerts(merchant_id);
+    CREATE INDEX IF NOT EXISTS aml_alerts_merchant_status_idx
+      ON aml_alerts(merchant_id, status);
+    CREATE INDEX IF NOT EXISTS aml_alerts_payment_idx
+      ON aml_alerts(payment_id);
+    CREATE INDEX IF NOT EXISTS aml_alerts_payer_idx
+      ON aml_alerts(payer_wallet);
+    CREATE INDEX IF NOT EXISTS aml_alerts_created_at_idx
+      ON aml_alerts(created_at);
+
+    CREATE TABLE IF NOT EXISTS aml_sars (
+      id                  TEXT PRIMARY KEY,
+      merchant_id         TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      reference           TEXT NOT NULL UNIQUE,
+      status              TEXT NOT NULL CHECK (status IN ('draft','filed','closed')),
+      narrative           TEXT NOT NULL,
+      subject_wallet      TEXT,
+      subject_summary     TEXT,
+      total_amount_usdc   REAL NOT NULL DEFAULT 0,
+      alert_count         INTEGER NOT NULL DEFAULT 0,
+      filed_at            TEXT,
+      filed_by            TEXT,
+      external_filing_id  TEXT,
+      payload_json        TEXT NOT NULL DEFAULT '{}',
+      created_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS aml_sars_merchant_idx
+      ON aml_sars(merchant_id);
+    CREATE INDEX IF NOT EXISTS aml_sars_status_idx
+      ON aml_sars(status);
+    CREATE INDEX IF NOT EXISTS aml_sars_created_at_idx
+      ON aml_sars(created_at);
   `);
 }

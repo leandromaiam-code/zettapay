@@ -25,6 +25,12 @@ import { enforceBetaLimits } from "../beta/enforcer.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
 import type { PixClient, PixProvider } from "../pix/client.js";
 import { settlePaymentToPix } from "../pix/service.js";
+import {
+  DEFAULT_AML_CONFIG,
+  evaluatePayment,
+  type AmlMonitorConfig,
+} from "./aml.js";
+import { appendAudit } from "../db/audit_journal.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -58,6 +64,15 @@ export interface CreatePaymentDeps {
   pix?: (provider: PixProvider) => PixClient | undefined;
   /** Hook invoked after Pix auto-settle completes (success or swallow). Test seam. */
   onAutoPixSettle?: (paymentId: string, err: Error | null) => void;
+  /** AML monitoring config override (Z21.2). Defaults to DEFAULT_AML_CONFIG;
+   * pass `null` to disable post-payment AML evaluation entirely. */
+  amlConfig?: AmlMonitorConfig | null;
+  /** Hook invoked after AML evaluation completes. Test seam. */
+  onAmlEvaluated?: (
+    paymentId: string,
+    alertCount: number,
+    err: Error | null,
+  ) => void;
 }
 
 /**
@@ -169,7 +184,37 @@ export async function createPayment(
             });
         }
 
-        return { payment: getPayment(db, paymentId) };
+        const finalPayment = getPayment(db, paymentId);
+
+        // Z21.2 AML monitoring — run synchronously after settlement is dispatched
+        // but before returning. Errors are swallowed + audited so the payment
+        // result is never blocked by monitoring infra failures (premissa #14:
+        // we do not custody, so post-transfer monitoring is detective, not
+        // preventative; preventative gating is the velocity service above).
+        if (deps.amlConfig !== null) {
+          try {
+            const result = evaluatePayment(
+              db,
+              { payment: finalPayment },
+              deps.amlConfig ?? DEFAULT_AML_CONFIG,
+            );
+            deps.onAmlEvaluated?.(paymentId, result.alerts.length, null);
+          } catch (err) {
+            const error = err instanceof Error ? err : new Error(String(err));
+            try {
+              appendAudit(db, {
+                actor: `merchant:${merchant.id}`,
+                event: "aml.evaluate.error",
+                payload: { paymentId, error: error.message },
+              });
+            } catch {
+              // ignore — audit failure must not break the payment path.
+            }
+            deps.onAmlEvaluated?.(paymentId, 0, error);
+          }
+        }
+
+        return { payment: finalPayment };
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "unknown transfer error";

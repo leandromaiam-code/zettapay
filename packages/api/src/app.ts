@@ -4,6 +4,7 @@ import type { Database as Db } from "better-sqlite3";
 import { agentIdentityRouter } from "./routes/agent-identity.js";
 import { agentSpendingLimitsRouter } from "./routes/agent-spending-limits.js";
 import { agentToAgentRouter } from "./routes/agent-to-agent.js";
+import { amlRouter } from "./routes/aml.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { apiDocsRouter } from "./routes/api-docs.js";
 import { betaRouter } from "./routes/beta.js";
@@ -45,6 +46,7 @@ import type { CreatePaymentDeps } from "./services/payments.js";
 import type { CoinflowClient } from "./coinflow/client.js";
 import type { OnChainPaymentIndexer } from "./services/onchain_indexer.js";
 import type { KycProviderClient } from "./services/kyc/provider.js";
+import { loadAmlConfigFromEnv, type AmlMonitorConfig } from "./services/aml.js";
 import type {
   ShopifyAppConfig,
   ShopifyTokenExchanger,
@@ -114,6 +116,11 @@ export interface CreateAppOptions {
   /** Optional EVM service. When provided, /pay/evm/:merchantRef routes
    * (Base + Polygon ERC-20 USDC) are mounted. Disabled by default. */
   evm?: EvmService;
+  /** AML monitoring config override (Z21.2). Defaults to env-loaded config.
+   * Pass `null` to disable post-payment AML evaluation. */
+  amlConfig?: AmlMonitorConfig | null;
+  /** Hook fired after AML evaluation (success or swallowed error). Test seam. */
+  onAmlEvaluated?: CreatePaymentDeps["onAmlEvaluated"];
 }
 
 const startedAt = Date.now();
@@ -138,6 +145,11 @@ export function createApp(options: CreateAppOptions): Express {
   const betaConfig = options.betaConfig ?? loadBetaConfig();
   const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
   const { db, solana, shutdown, coinflow, onAutoSettle, evm } = options;
+    amlConfig,
+    onAmlEvaluated,
+  } = options;
+  const resolvedAmlConfig: AmlMonitorConfig | null =
+    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
 
   const app = express();
   app.disable("x-powered-by");
@@ -186,7 +198,16 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(payRouter(db, solana, { coinflow, onAutoSettle, betaConfig }));
   app.use(paymentRouter(db));
   app.use(refundRouter(db, solana));
+  app.use(
+    payRouter(db, solana, {
+      coinflow,
+      onAutoSettle,
+      amlConfig: resolvedAmlConfig,
+      onAmlEvaluated,
+    }),
+  );
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
+  app.use(amlRouter(db));
   app.use(registryRouter(db));
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));
