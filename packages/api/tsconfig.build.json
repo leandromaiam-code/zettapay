@@ -28,6 +28,7 @@
     "src/middleware/agent-identity.ts",
     "src/middleware/error.ts",
     "src/middleware/idempotency.ts",
+    "src/middleware/security-headers.ts",
     "src/db/agent_identities.ts",
     "src/db/agent_spending_limits.ts",
     "src/db/agent_to_agent_payments.ts",

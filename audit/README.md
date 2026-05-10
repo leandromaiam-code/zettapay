@@ -38,6 +38,9 @@ and finished inside a single sprint.
 | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | Self-disclosed concerns and accepted limitations. |
 | [`BUG_BOUNTY.md`](BUG_BOUNTY.md) | Public $50k bounty terms running in parallel with the audit. |
 | [`SUBMISSION.md`](SUBMISSION.md) | Engagement logistics, NDAs, deliverables, timeline. |
+| [`CODE_REVIEW_CHECKLIST.md`](CODE_REVIEW_CHECKLIST.md) | Off-chain pre-audit code-review gate (Z21.5). |
+| [`CRITICAL_PATHS.md`](CRITICAL_PATHS.md) | Off-chain critical paths and the path-specific review rules. |
+| [`OWASP_TOP_10.md`](OWASP_TOP_10.md) | OWASP 2021 Top 10 mapped to off-chain mitigations + tests. |
 
 ## Source the auditor will be looking at
 
@@ -82,3 +85,21 @@ cannot be silently rewritten by either side.
   via the launch checklist (Z22.1).
 
 See [`SCOPE.md`](SCOPE.md) for the full in / out matrix.
+
+## Off-chain coverage
+
+The off-chain code (API, SDK, dashboard, plugins) is not part of the
+external Anchor audit, but it moves real value and handles sensitive
+data, so it has its own pre-audit gate:
+
+- [`CODE_REVIEW_CHECKLIST.md`](CODE_REVIEW_CHECKLIST.md) — the row-by-row
+  checklist a reviewer walks before any off-chain change merges.
+- [`CRITICAL_PATHS.md`](CRITICAL_PATHS.md) — the eight paths that lose
+  USDC, leak KYC, or break protocol safety if they regress, plus the
+  path-specific review rules.
+- [`OWASP_TOP_10.md`](OWASP_TOP_10.md) — every OWASP 2021 category
+  mapped to the off-chain code that mitigates it and the test that
+  proves it.
+
+These three documents together are the off-chain surface answer to
+"how do you know the rest of the codebase is audit-ready?".
