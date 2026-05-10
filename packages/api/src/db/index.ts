@@ -169,5 +169,29 @@ function applyMigrations(db: Db): void {
       ON coinflow_settlements(status);
     CREATE UNIQUE INDEX IF NOT EXISTS coinflow_settlements_payment_uidx
       ON coinflow_settlements(payment_id) WHERE payment_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      customer_wallet TEXT NOT NULL,
+      amount          REAL NOT NULL CHECK (amount > 0),
+      currency        TEXT NOT NULL DEFAULT 'USDC',
+      interval        TEXT NOT NULL CHECK (interval IN ('daily','weekly','monthly')),
+      status          TEXT NOT NULL CHECK (status IN ('active','paused','canceled')),
+      next_charge_at  TEXT NOT NULL,
+      last_charge_at  TEXT,
+      metadata_json   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS subscriptions_merchant_idx
+      ON subscriptions(merchant_id);
+    CREATE INDEX IF NOT EXISTS subscriptions_status_idx
+      ON subscriptions(status);
+    CREATE INDEX IF NOT EXISTS subscriptions_next_charge_idx
+      ON subscriptions(next_charge_at) WHERE status = 'active';
+    CREATE INDEX IF NOT EXISTS subscriptions_customer_wallet_idx
+      ON subscriptions(customer_wallet);
   `);
 }
