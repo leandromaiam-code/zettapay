@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay merchant dashboard — Phantom login, USDC balance, payments stream, Coinflow settlement." />
+  <meta name="description" content="ZettaPay merchant dashboard — Phantom login, USDC balance, real-time analytics (TPV, MRR, conversion, top customers), Coinflow settlement." />
   <meta property="og:title" content="ZettaPay Dashboard — Merchant control plane" />
   <meta name="robots" content="noindex, nofollow" />
   <title>ZettaPay — Merchant Dashboard</title>
@@ -14,6 +14,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
   <script src="https://unpkg.com/bs58@5.0.0/index.min.js" defer></script>
+  <!-- React + Recharts power the analytics charts (TPV series, conversion gauge). -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -233,6 +238,81 @@
             <span class="text-muted text-sm">USDC</span>
           </div>
           <div id="pending-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+      </div>
+
+      <!-- Real-time analytics -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div class="glass rounded-2xl p-5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · Today</div>
+          <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-today">—</div>
+          <div class="text-xs text-muted mt-1" id="tpv-today-sub">—</div>
+        </div>
+        <div class="glass rounded-2xl p-5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · 7d</div>
+          <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-week">—</div>
+          <div class="text-xs text-muted mt-1" id="tpv-week-sub">—</div>
+        </div>
+        <div class="glass rounded-2xl p-5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · 30d</div>
+          <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-month">—</div>
+          <div class="text-xs text-muted mt-1" id="tpv-month-sub">—</div>
+        </div>
+        <div class="glass rounded-2xl p-5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">MRR (active subs)</div>
+          <div class="stat-num text-2xl md:text-3xl font-bold" id="mrr-num">—</div>
+          <div class="text-xs text-muted mt-1" id="mrr-sub">—</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-5 md:p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-xs font-mono uppercase tracking-widest text-muted">TPV · last 30 days</div>
+              <h2 class="text-xl font-bold mt-1">Volume trend</h2>
+            </div>
+            <span id="analytics-source" class="badge badge-muted">demo</span>
+          </div>
+          <div id="tpv-chart" style="width: 100%; height: 260px;">
+            <div class="skeleton w-full h-full rounded-xl"></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-5 md:p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Conversion rate</div>
+          <h2 class="text-xl font-bold mt-1">Completed vs failed</h2>
+          <div id="conversion-chart" style="width: 100%; height: 200px;" class="mt-2">
+            <div class="skeleton w-full h-full rounded-xl"></div>
+          </div>
+          <div class="mt-2 grid grid-cols-3 text-center text-xs gap-2">
+            <div>
+              <div class="stat-num text-mint font-bold text-base" id="conv-completed">—</div>
+              <div class="text-muted mono">completed</div>
+            </div>
+            <div>
+              <div class="stat-num text-rose font-bold text-base" id="conv-failed">—</div>
+              <div class="text-muted mono">failed</div>
+            </div>
+            <div>
+              <div class="stat-num text-amber font-bold text-base" id="conv-pending">—</div>
+              <div class="text-muted mono">pending</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Top customers · 30d</div>
+            <h2 class="text-xl font-bold mt-1">Highest spenders</h2>
+          </div>
+        </div>
+        <div id="top-customers-chart" style="width: 100%; height: 220px;">
+          <div class="skeleton w-full h-full rounded-xl"></div>
+        </div>
+        <div id="top-customers-empty" class="hidden-init text-center py-4 text-muted text-sm">
+          No completed payments yet — top spenders will appear here.
         </div>
       </div>
 
@@ -554,6 +634,309 @@
     }
 
     // -----------------------------------------------------------------------
+    // Analytics — TPV (today/week/month), MRR, conversion, top customers
+    // -----------------------------------------------------------------------
+
+    async function fetchAnalyticsLive(apiBase, apiKey) {
+      const url = apiBase.replace(/\/+$/, '') + '/analytics';
+      const res = await fetch(url, { headers: { 'x-zettapay-api-key': apiKey } });
+      if (!res.ok) throw new Error('Analytics ' + res.status);
+      const json = await res.json();
+      if (!json.analytics) throw new Error('Analytics payload missing');
+      return json.analytics;
+    }
+
+    async function fetchAnalyticsDemo(pubkey) {
+      const ref = pubkey.slice(0, 8).toLowerCase();
+      const res = await fetch('/api/analytics/' + ref);
+      if (!res.ok) throw new Error('Demo analytics ' + res.status);
+      const json = await res.json();
+      if (!json.analytics) throw new Error('Demo analytics payload missing');
+      return json.analytics;
+    }
+
+    function setStatCard(numId, subId, amount, count) {
+      $(numId).textContent = formatUsdc(amount);
+      const txt = (count === 1 ? '1 tx' : (count || 0) + ' txs');
+      $(subId).textContent = txt + ' · USDC';
+    }
+
+    function renderAnalytics(analytics) {
+      if (!analytics) {
+        clearAnalytics();
+        return;
+      }
+      const tpv = analytics.tpv || { today: {}, week: {}, month: {} };
+      setStatCard('tpv-today', 'tpv-today-sub', tpv.today.amount, tpv.today.count);
+      setStatCard('tpv-week', 'tpv-week-sub', tpv.week.amount, tpv.week.count);
+      setStatCard('tpv-month', 'tpv-month-sub', tpv.month.amount, tpv.month.count);
+
+      $('mrr-num').textContent = formatUsdc(analytics.mrr || 0);
+      $('mrr-sub').textContent = (analytics.mrr || 0) > 0
+        ? 'normalized monthly · USDC'
+        : 'No active subscriptions';
+
+      const conv = analytics.conversion || { completed: 0, failed: 0, pending: 0, rate: 0 };
+      $('conv-completed').textContent = conv.completed || 0;
+      $('conv-failed').textContent = conv.failed || 0;
+      $('conv-pending').textContent = conv.pending || 0;
+
+      renderTpvChart(analytics.tpvSeries || []);
+      renderConversionChart(conv);
+      renderTopCustomers(analytics.topCustomers || []);
+    }
+
+    function clearAnalytics() {
+      ['tpv-today', 'tpv-week', 'tpv-month', 'mrr-num'].forEach((id) => {
+        $(id).textContent = '—';
+      });
+      ['tpv-today-sub', 'tpv-week-sub', 'tpv-month-sub', 'mrr-sub'].forEach((id) => {
+        $(id).textContent = '—';
+      });
+      ['conv-completed', 'conv-failed', 'conv-pending'].forEach((id) => {
+        $(id).textContent = '—';
+      });
+    }
+
+    // ---- Recharts react roots (created lazily, reused across refreshes) ----
+
+    const rechartsRoots = {};
+
+    function rechartsReady() {
+      return !!(window.React && window.ReactDOM && window.Recharts);
+    }
+
+    function getRoot(elementId) {
+      if (!rechartsRoots[elementId]) {
+        const node = $(elementId);
+        node.innerHTML = '';
+        rechartsRoots[elementId] = window.ReactDOM.createRoot(node);
+      }
+      return rechartsRoots[elementId];
+    }
+
+    function renderTpvChart(series) {
+      if (!rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const data = series.map((p) => ({
+        date: p.date.slice(5), // MM-DD
+        amount: Number(p.amount || 0),
+        count: Number(p.count || 0),
+      }));
+
+      const tooltipFormatter = (value, name) => {
+        if (name === 'amount') return [formatUsdc(value) + ' USDC', 'Volume'];
+        if (name === 'count') return [String(value), 'Payments'];
+        return [String(value), name];
+      };
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.AreaChart,
+          { data, margin: { top: 8, right: 12, left: 0, bottom: 0 } },
+          h('defs', null,
+            h('linearGradient', { id: 'tpv-gradient', x1: 0, y1: 0, x2: 0, y2: 1 },
+              h('stop', { offset: '0%', stopColor: '#4F6BFF', stopOpacity: 0.55 }),
+              h('stop', { offset: '100%', stopColor: '#4F6BFF', stopOpacity: 0 })
+            )
+          ),
+          h(R.CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(148,163,184,0.12)', vertical: false }),
+          h(R.XAxis, {
+            dataKey: 'date',
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            interval: 'preserveStartEnd',
+            minTickGap: 24,
+            stroke: 'rgba(148,163,184,0.2)',
+          }),
+          h(R.YAxis, {
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            stroke: 'rgba(148,163,184,0.2)',
+            tickFormatter: (v) => '$' + Math.round(Number(v)).toLocaleString('en-US'),
+            width: 60,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            labelStyle: { color: '#94A3B8' },
+            itemStyle: { color: '#FFFFFF' },
+            formatter: tooltipFormatter,
+          }),
+          h(R.Area, {
+            type: 'monotone',
+            dataKey: 'amount',
+            stroke: '#4F6BFF',
+            strokeWidth: 2,
+            fill: 'url(#tpv-gradient)',
+            isAnimationActive: false,
+          })
+        )
+      );
+
+      getRoot('tpv-chart').render(chart);
+    }
+
+    function renderConversionChart(conv) {
+      if (!rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const completed = Number(conv.completed || 0);
+      const failed = Number(conv.failed || 0);
+      const ratePct = Math.round(Number(conv.rate || 0) * 1000) / 10;
+      const data = (completed + failed) === 0
+        ? [{ name: 'No data', value: 1, fill: 'rgba(148,163,184,0.3)' }]
+        : [
+            { name: 'Completed', value: completed, fill: '#14F195' },
+            { name: 'Failed', value: failed, fill: '#fb7185' },
+          ];
+
+      const labelText = (completed + failed) === 0 ? '—' : ratePct.toFixed(1) + '%';
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.PieChart,
+          null,
+          h(R.Pie, {
+            data,
+            dataKey: 'value',
+            nameKey: 'name',
+            cx: '50%',
+            cy: '50%',
+            innerRadius: 52,
+            outerRadius: 76,
+            paddingAngle: 2,
+            stroke: 'transparent',
+            isAnimationActive: false,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            itemStyle: { color: '#FFFFFF' },
+          }),
+          h('text', {
+            x: '50%',
+            y: '50%',
+            textAnchor: 'middle',
+            dominantBaseline: 'central',
+            fill: '#FFFFFF',
+            fontSize: 22,
+            fontWeight: 700,
+          }, labelText)
+        )
+      );
+
+      getRoot('conversion-chart').render(chart);
+    }
+
+    function renderTopCustomers(customers) {
+      const empty = $('top-customers-empty');
+      if (!customers.length) {
+        empty.classList.remove('hidden-init');
+        getRoot('top-customers-chart').render(null);
+        return;
+      }
+      empty.classList.add('hidden-init');
+      if (!rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const data = customers.map((c) => ({
+        wallet: shortAddr(c.payerWallet),
+        full: c.payerWallet,
+        total: Number(c.totalUsdc || 0),
+        txCount: Number(c.txCount || 0),
+      }));
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.BarChart,
+          { data, layout: 'vertical', margin: { top: 8, right: 24, left: 0, bottom: 8 } },
+          h(R.CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(148,163,184,0.12)', horizontal: false }),
+          h(R.XAxis, {
+            type: 'number',
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            stroke: 'rgba(148,163,184,0.2)',
+            tickFormatter: (v) => '$' + Math.round(Number(v)).toLocaleString('en-US'),
+          }),
+          h(R.YAxis, {
+            type: 'category',
+            dataKey: 'wallet',
+            tick: { fill: '#FFFFFF', fontSize: 12, fontFamily: 'JetBrains Mono, ui-monospace, monospace' },
+            stroke: 'rgba(148,163,184,0.2)',
+            width: 100,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            itemStyle: { color: '#FFFFFF' },
+            formatter: (value, name, ctx) => {
+              if (name === 'total') {
+                return [formatUsdc(value) + ' USDC · ' + (ctx?.payload?.txCount || 0) + ' tx', 'Spent'];
+              }
+              return [String(value), name];
+            },
+            labelFormatter: (label, payload) => {
+              const full = payload && payload[0] && payload[0].payload && payload[0].payload.full;
+              return full ? full : label;
+            },
+          }),
+          h(R.Bar, {
+            dataKey: 'total',
+            fill: '#d4a961',
+            radius: [0, 8, 8, 0],
+            isAnimationActive: false,
+          })
+        )
+      );
+
+      getRoot('top-customers-chart').render(chart);
+    }
+
+    async function loadAnalytics(prefs, session) {
+      const badge = $('analytics-source');
+      let analytics = null;
+      let source = 'demo';
+      if (prefs.apiBase && prefs.apiKey) {
+        try {
+          analytics = await fetchAnalyticsLive(prefs.apiBase, prefs.apiKey);
+          source = 'live';
+        } catch (err) {
+          // Falls back to demo silently — surfaced in payments stream toast.
+        }
+      }
+      if (!analytics) {
+        try {
+          analytics = await fetchAnalyticsDemo(session.pubkey);
+        } catch (err) {
+          clearAnalytics();
+          badge.textContent = 'unavailable';
+          badge.className = 'badge badge-amber';
+          return;
+        }
+      }
+      badge.textContent = source;
+      badge.className = 'badge ' + (source === 'live' ? 'badge-mint' : 'badge-muted');
+      renderAnalytics(analytics);
+    }
+
+    // -----------------------------------------------------------------------
     // Settlement
     // -----------------------------------------------------------------------
 
@@ -699,7 +1082,10 @@
       sourceBadge.className = 'badge ' + (source === 'live' ? 'badge-mint' : 'badge-muted');
       renderPayments(items);
 
-      await loadSettlement(prefs.apiBase, prefs.apiKey, session.pubkey);
+      await Promise.all([
+        loadAnalytics(prefs, session),
+        loadSettlement(prefs.apiBase, prefs.apiKey, session.pubkey),
+      ]);
     }
 
     function attach() {
