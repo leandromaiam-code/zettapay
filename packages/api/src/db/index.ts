@@ -410,5 +410,32 @@ function applyMigrations(db: Db): void {
       ON agent_spending_limits(merchant_id, agent_identity_id);
     CREATE INDEX IF NOT EXISTS agent_spending_limits_merchant_idx
       ON agent_spending_limits(merchant_id);
+
+    CREATE TABLE IF NOT EXISTS treasury_reserve_entries (
+      id              TEXT PRIMARY KEY,
+      kind            TEXT NOT NULL CHECK (kind IN ('credit','debit')),
+      amount_usdc     REAL NOT NULL CHECK (amount_usdc > 0),
+      reason          TEXT NOT NULL CHECK (reason IN (
+        'tpv_contribution','manual_top_up','incident_refund','operational_drawdown','rebalance'
+      )),
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      merchant_id     TEXT REFERENCES merchants(id) ON DELETE SET NULL,
+      external_ref    TEXT,
+      memo            TEXT,
+      actor           TEXT NOT NULL,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS treasury_reserve_entries_kind_idx
+      ON treasury_reserve_entries(kind);
+    CREATE INDEX IF NOT EXISTS treasury_reserve_entries_reason_idx
+      ON treasury_reserve_entries(reason);
+    CREATE INDEX IF NOT EXISTS treasury_reserve_entries_created_at_idx
+      ON treasury_reserve_entries(created_at);
+    CREATE INDEX IF NOT EXISTS treasury_reserve_entries_payment_idx
+      ON treasury_reserve_entries(payment_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS treasury_reserve_entries_payment_reason_uidx
+      ON treasury_reserve_entries(payment_id, reason)
+      WHERE payment_id IS NOT NULL AND reason = 'tpv_contribution';
   `);
 }

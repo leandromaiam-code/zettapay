@@ -57,6 +57,10 @@
     "src/services/kyc/provider.ts",
     "src/services/kyc/sumsub.ts",
     "src/services/kyc/service.ts",
+    "src/db/treasury_reserves.ts",
+    "src/middleware/treasury-auth.ts",
+    "src/routes/treasury.ts",
+    "src/services/treasury.ts",
     "src/webhook.ts",
     "src/worker.ts"
   ],

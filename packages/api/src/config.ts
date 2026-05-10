@@ -24,6 +24,10 @@ export interface AppConfig {
   binding: {
     memoNamespace: string;
   };
+  treasury: {
+    adminKey: string | null;
+    reserveRatio: number;
+  };
 }
 
 function parseCluster(raw: string | undefined): SolanaCluster {
@@ -80,7 +84,22 @@ export function loadConfig(): AppConfig {
     binding: {
       memoNamespace: process.env.ZETTAPAY_MEMO_NAMESPACE ?? "zettapay:merchant_register:v1",
     },
+    treasury: {
+      adminKey: process.env.ZETTAPAY_TREASURY_ADMIN_KEY ?? null,
+      reserveRatio: parseReserveRatio(process.env.ZETTAPAY_TREASURY_RESERVE_RATIO),
+    },
   };
+}
+
+function parseReserveRatio(raw: string | undefined): number {
+  if (raw === undefined || raw === "") return 0.05;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || value > 1) {
+    throw new Error(
+      `Invalid ZETTAPAY_TREASURY_RESERVE_RATIO="${raw}". Expected a number in [0,1].`,
+    );
+  }
+  return value;
 }
 
 let cached: AppConfig | null = null;
