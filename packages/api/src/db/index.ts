@@ -92,6 +92,16 @@ function applyAddOnColumns(db: Db): void {
   if (!auditNames.has("reason")) {
     db.exec("ALTER TABLE audit_journal ADD COLUMN reason TEXT");
   }
+
+  const agentIdentityCols = db
+    .prepare("PRAGMA table_info(agent_identities)")
+    .all() as Array<{ name: string }>;
+  const agentIdentityNames = new Set(agentIdentityCols.map((c) => c.name));
+  if (!agentIdentityNames.has("payout_wallet")) {
+    // Z20.4: optional Solana wallet where this agent receives A2A payments.
+    // Without it, the agent cannot be the payee in /agents/pay.
+    db.exec("ALTER TABLE agent_identities ADD COLUMN payout_wallet TEXT");
+  }
 }
 
 export function closeDatabase(): void {
@@ -374,6 +384,7 @@ function applyMigrations(db: Db): void {
       public_key      TEXT NOT NULL UNIQUE,
       display_name    TEXT,
       owner_email     TEXT,
+      payout_wallet   TEXT,
       status          TEXT NOT NULL CHECK (status IN ('active','revoked')) DEFAULT 'active',
       registered_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
@@ -437,5 +448,33 @@ function applyMigrations(db: Db): void {
     CREATE UNIQUE INDEX IF NOT EXISTS treasury_reserve_entries_payment_reason_uidx
       ON treasury_reserve_entries(payment_id, reason)
       WHERE payment_id IS NOT NULL AND reason = 'tpv_contribution';
+
+    CREATE TABLE IF NOT EXISTS agent_to_agent_payments (
+      id                       TEXT PRIMARY KEY,
+      payer_agent_identity_id  TEXT NOT NULL REFERENCES agent_identities(id) ON DELETE RESTRICT,
+      payee_agent_identity_id  TEXT NOT NULL REFERENCES agent_identities(id) ON DELETE RESTRICT,
+      payer_wallet             TEXT NOT NULL,
+      payee_wallet             TEXT NOT NULL,
+      amount_usdc              REAL NOT NULL CHECK (amount_usdc > 0),
+      currency                 TEXT NOT NULL DEFAULT 'USDC',
+      task_ref                 TEXT,
+      status                   TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
+      tx_signature             TEXT,
+      error_message            TEXT,
+      metadata_json            TEXT,
+      created_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at             TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS a2a_payments_payer_idx
+      ON agent_to_agent_payments(payer_agent_identity_id, created_at);
+    CREATE INDEX IF NOT EXISTS a2a_payments_payee_idx
+      ON agent_to_agent_payments(payee_agent_identity_id, created_at);
+    CREATE INDEX IF NOT EXISTS a2a_payments_status_idx
+      ON agent_to_agent_payments(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS a2a_payments_tx_signature_uidx
+      ON agent_to_agent_payments(tx_signature) WHERE tx_signature IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS a2a_payments_task_ref_idx
+      ON agent_to_agent_payments(task_ref) WHERE task_ref IS NOT NULL;
   `);
 }

@@ -9,6 +9,7 @@ export interface AgentIdentityRow {
   public_key: string;
   display_name: string | null;
   owner_email: string | null;
+  payout_wallet: string | null;
   status: AgentIdentityStatus;
   registered_at: string;
   updated_at: string;
@@ -21,6 +22,8 @@ export interface AgentIdentity {
   publicKey: string;
   displayName: string | null;
   ownerEmail: string | null;
+  /** Z20.4: Solana wallet where this agent receives A2A payments. */
+  payoutWallet: string | null;
   status: AgentIdentityStatus;
   registeredAt: string;
   updatedAt: string;
@@ -33,6 +36,7 @@ export interface InsertAgentIdentityInput {
   publicKey: string;
   displayName: string | null;
   ownerEmail: string | null;
+  payoutWallet?: string | null;
   status?: AgentIdentityStatus;
 }
 
@@ -44,6 +48,7 @@ function toAgentIdentity(row: AgentIdentityRow): AgentIdentity {
     publicKey: row.public_key,
     displayName: row.display_name,
     ownerEmail: row.owner_email,
+    payoutWallet: row.payout_wallet,
     status: row.status,
     registeredAt: row.registered_at,
     updatedAt: row.updated_at,
@@ -56,8 +61,8 @@ export function insertAgentIdentity(
 ): AgentIdentity {
   db.prepare(
     `INSERT INTO agent_identities (
-       id, provider, agent_id, public_key, display_name, owner_email, status
-     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+       id, provider, agent_id, public_key, display_name, owner_email, payout_wallet, status
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     input.id,
     input.provider,
@@ -65,6 +70,7 @@ export function insertAgentIdentity(
     input.publicKey,
     input.displayName,
     input.ownerEmail,
+    input.payoutWallet ?? null,
     input.status ?? "active",
   );
   const row = db
@@ -72,6 +78,19 @@ export function insertAgentIdentity(
     .get(input.id) as AgentIdentityRow | undefined;
   if (!row) throw new Error("agent_identities insert failed");
   return toAgentIdentity(row);
+}
+
+export function setAgentIdentityPayoutWallet(
+  db: Db,
+  id: string,
+  payoutWallet: string | null,
+): AgentIdentity | null {
+  db.prepare<[string | null, string]>(
+    `UPDATE agent_identities
+       SET payout_wallet = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ?`,
+  ).run(payoutWallet, id);
+  return findAgentIdentityById(db, id);
 }
 
 export function findAgentIdentityById(

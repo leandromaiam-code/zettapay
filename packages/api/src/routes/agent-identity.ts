@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { PublicKey } from "@solana/web3.js";
 import type { Database as Db } from "better-sqlite3";
 import { HttpError } from "../lib/errors.js";
 import {
@@ -18,7 +19,10 @@ import {
   registerAgentIdentity,
   verifyAgentProofHeader,
 } from "../services/agent-identity.js";
-import { findAgentIdentityByProviderAgent } from "../db/agent_identities.js";
+import {
+  findAgentIdentityByProviderAgent,
+  setAgentIdentityPayoutWallet,
+} from "../db/agent_identities.js";
 
 function publicView(
   identity: ReturnType<typeof findAgentIdentityByProviderAgent>,
@@ -30,9 +34,20 @@ function publicView(
     agentId: identity.agentId,
     publicKey: identity.publicKey,
     displayName: identity.displayName,
+    payoutWallet: identity.payoutWallet,
     status: identity.status,
     registeredAt: identity.registeredAt,
   };
+}
+
+function validatePayoutWallet(value: string): string {
+  try {
+    return new PublicKey(value).toBase58();
+  } catch {
+    throw HttpError.badRequest(
+      "payoutWallet must be a valid base58-encoded Solana public key",
+    );
+  }
 }
 
 function asHttpError(err: unknown): HttpError {
@@ -86,6 +101,12 @@ export function agentIdentityRouter(db: Db): Router {
         maxLength: 120,
       });
       const ownerEmail = optionalString(body, "ownerEmail", { maxLength: 254 });
+      const payoutWalletRaw = optionalString(body, "payoutWallet", {
+        maxLength: 64,
+      });
+      const payoutWallet = payoutWalletRaw
+        ? validatePayoutWallet(payoutWalletRaw)
+        : null;
 
       const proofHeader = req.header(AGENT_HEADER);
       if (!proofHeader) {
@@ -101,12 +122,30 @@ export function agentIdentityRouter(db: Db): Router {
           publicKey,
           displayName,
           ownerEmail,
+          payoutWallet,
           proofHeader,
         });
+        let identity = result.identity;
+        // If the agent already existed without a payout wallet and the
+        // caller proved ownership, persist the wallet now. Existing wallets
+        // are not overwritten silently — callers must hit the dedicated
+        // PUT /agents/identity/payout-wallet endpoint to rotate.
+        if (
+          payoutWallet &&
+          result.alreadyRegistered &&
+          !identity.payoutWallet
+        ) {
+          const updated = setAgentIdentityPayoutWallet(
+            db,
+            identity.id,
+            payoutWallet,
+          );
+          if (updated) identity = updated;
+        }
         res
           .status(result.alreadyRegistered ? 200 : 201)
           .json({
-            identity: publicView(result.identity),
+            identity: publicView(identity),
             alreadyRegistered: result.alreadyRegistered,
           });
       } catch (err) {
@@ -153,6 +192,44 @@ export function agentIdentityRouter(db: Db): Router {
           identity: publicView(verified.identity),
           verifiedAt: new Date().toISOString(),
         });
+      } catch (err) {
+        throw asHttpError(err);
+      }
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // Z20.4: rotate the payout wallet for an existing identity. Requires a
+  // fresh signed proof from the same key — the (proof, target) pair is
+  // matched to defeat substitution attacks.
+  router.put("/agents/identity/payout-wallet", (req, res, next) => {
+    try {
+      const proofHeader = req.header(AGENT_HEADER);
+      if (!proofHeader) {
+        throw HttpError.unauthorized(
+          `"${AGENT_HEADER}" header is required to rotate payout wallet`,
+        );
+      }
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const payoutWalletRaw = requireString(body, "payoutWallet", {
+        maxLength: 64,
+      });
+      const payoutWallet = validatePayoutWallet(payoutWalletRaw);
+
+      try {
+        const verified = verifyAgentProofHeader(db, proofHeader);
+        const updated = setAgentIdentityPayoutWallet(
+          db,
+          verified.identity.id,
+          payoutWallet,
+        );
+        if (!updated) {
+          throw HttpError.notFound(
+            `agent identity ${verified.identity.id} not found`,
+          );
+        }
+        res.json({ identity: publicView(updated) });
       } catch (err) {
         throw asHttpError(err);
       }

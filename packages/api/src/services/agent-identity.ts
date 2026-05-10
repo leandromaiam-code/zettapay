@@ -28,6 +28,8 @@ export interface RegisterAgentInput {
   publicKey: string;
   displayName?: string | null;
   ownerEmail?: string | null;
+  /** Z20.4: optional Solana wallet where this agent receives A2A payments. */
+  payoutWallet?: string | null;
   /** Encoded proof header value — proves the caller controls publicKey. */
   proofHeader: string;
 }
@@ -170,6 +172,7 @@ export function registerAgentIdentity(
     publicKey: input.publicKey,
     displayName: input.displayName ?? null,
     ownerEmail: input.ownerEmail ?? null,
+    payoutWallet: input.payoutWallet ?? null,
     status: "active",
   });
   // Mark the registration nonce as used so the same proof can't be replayed.

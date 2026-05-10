@@ -3,6 +3,7 @@ import type { IncomingMessage } from "node:http";
 import type { Database as Db } from "better-sqlite3";
 import { agentIdentityRouter } from "./routes/agent-identity.js";
 import { agentSpendingLimitsRouter } from "./routes/agent-spending-limits.js";
+import { agentToAgentRouter } from "./routes/agent-to-agent.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { apiDocsRouter } from "./routes/api-docs.js";
 import { funnelRouter } from "./routes/funnel.js";
@@ -113,6 +114,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(apiDocsRouter());
   app.use(agentIdentityRouter(db));
   app.use(agentSpendingLimitsRouter(db));
+  app.use(agentToAgentRouter(db, solana));
   app.use(merchantsRouter(db));
   app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
