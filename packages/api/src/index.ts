@@ -27,6 +27,8 @@ export {
   type SettlePaymentInput,
 } from "./coinflow/service.js";
 export { idempotency } from "./middleware/idempotency.js";
+export { initTracing, type TracingHandle } from "./lib/tracing.js";
+export { getTracer, withSpan, withSpanSync, recordSpanError } from "./lib/tracer.js";
 export {
   beginInstall as beginShopifyInstall,
   completeInstall as completeShopifyInstall,

@@ -1,6 +1,7 @@
 import type { Database as Db } from "better-sqlite3";
 import type { Job, Worker, WorkerOptions } from "bullmq";
 import type { Logger } from "../lib/logger.js";
+import { withSpan } from "../lib/tracer.js";
 import {
   WEBHOOK_QUEUE_NAME,
   type WebhookDeliveryJob,
@@ -53,46 +54,57 @@ export async function startWebhookWorker(
 
   const worker = new BullWorker<WebhookDeliveryJob>(
     WEBHOOK_QUEUE_NAME,
-    async (job: Job<WebhookDeliveryJob>) => {
-      const data = job.data;
-      log?.debug("webhook_worker.process_start", {
-        jobId: job.id,
-        eventId: data.eventId,
-        url: data.url,
-      });
+    async (job: Job<WebhookDeliveryJob>) =>
+      withSpan(
+        "zettapay.webhook.job",
+        {
+          "zettapay.webhook.job_id": job.id ?? "",
+          "zettapay.webhook.event_id": job.data.eventId,
+          "zettapay.webhook.url": job.data.url,
+          "messaging.system": "bullmq",
+          "messaging.destination": WEBHOOK_QUEUE_NAME,
+        },
+        async () => {
+          const data = job.data;
+          log?.debug("webhook_worker.process_start", {
+            jobId: job.id,
+            eventId: data.eventId,
+            url: data.url,
+          });
 
-      const result = await dispatchAndPersistWebhook(options.db, {
-        eventId: data.eventId,
-        url: data.url,
-        payload: data.payload,
-        secret: data.secret ?? undefined,
-        maxAttempts: data.maxAttempts,
-        retryDelaysMs: data.retryDelaysMs,
-        timeoutMs: data.timeoutMs,
-      });
+          const result = await dispatchAndPersistWebhook(options.db, {
+            eventId: data.eventId,
+            url: data.url,
+            payload: data.payload,
+            secret: data.secret ?? undefined,
+            maxAttempts: data.maxAttempts,
+            retryDelaysMs: data.retryDelaysMs,
+            timeoutMs: data.timeoutMs,
+          });
 
-      const outcome = result.delivered
-        ? "delivered"
-        : result.deadLettered
-          ? "dead_lettered"
-          : "failed";
+          const outcome = result.delivered
+            ? "delivered"
+            : result.deadLettered
+              ? "dead_lettered"
+              : "failed";
 
-      log?.info("webhook_worker.process_done", {
-        jobId: job.id,
-        eventId: data.eventId,
-        outcome,
-        attempts: result.attempts.length,
-        deadLetterReason: result.deadLetterReason ?? null,
-      });
+          log?.info("webhook_worker.process_done", {
+            jobId: job.id,
+            eventId: data.eventId,
+            outcome,
+            attempts: result.attempts.length,
+            deadLetterReason: result.deadLetterReason ?? null,
+          });
 
-      return {
-        eventId: result.eventId,
-        delivered: result.delivered,
-        deadLettered: result.deadLettered,
-        deadLetterReason: result.deadLetterReason ?? null,
-        attempts: result.attempts.length,
-      };
-    },
+          return {
+            eventId: result.eventId,
+            delivered: result.delivered,
+            deadLettered: result.deadLettered,
+            deadLetterReason: result.deadLetterReason ?? null,
+            attempts: result.attempts.length,
+          };
+        },
+      ),
     workerOptions,
   );
 

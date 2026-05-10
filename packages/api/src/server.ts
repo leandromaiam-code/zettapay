@@ -1,3 +1,8 @@
+// Tracing must boot before anything else so the auto-instrumentations can
+// patch http/express/fetch as those modules are first required below.
+import { initTracing } from "./lib/tracing.js";
+const tracing = initTracing("zettapay-api");
+
 import { createApp } from "./app.js";
 import {
   HttpCoinflowClient,
@@ -51,6 +56,7 @@ function parseClusterEnv(raw: string | undefined): Cluster {
 
 const shutdown = new GracefulShutdown({ shutdownTimeoutMs, logger });
 shutdown.register("database", () => closeDatabase());
+shutdown.register("tracing", () => tracing.shutdown());
 
 const coinflow = loadCoinflow();
 const shopify = loadShopify();
