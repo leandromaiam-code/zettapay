@@ -97,7 +97,10 @@
     "src/routes/subscriptions.ts",
     "src/routes/subscription-manage.ts",
     "src/services/subscription_charger.ts",
-    "src/services/subscription_cron.ts"
+    "src/services/subscription_cron.ts",
+    "src/db/status_page.ts",
+    "src/services/status_page.ts",
+    "src/routes/status-page.ts"
   ],
   "exclude": ["dist", "node_modules", "test/**/*", "tests/**/*", "**/*.test.ts"]
 }

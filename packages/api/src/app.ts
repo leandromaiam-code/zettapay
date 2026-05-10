@@ -20,6 +20,7 @@ import { refundRouter } from "./routes/refund.js";
 import { registryRouter } from "./routes/registry.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
+import { statusPageRouter } from "./routes/status-page.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { subscriptionManageRouter } from "./routes/subscription-manage.js";
 import { treasuryRouter } from "./routes/treasury.js";
@@ -166,6 +167,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(funnelRouter(db));
   app.use(webhooksRouter(db));
   app.use(webhooksAdminRouter(db, { adminKey: admin?.adminKey ?? null }));
+  app.use(statusPageRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(
     indexerRouter(db, {
       webhookAuthKey: indexer?.webhookAuthKey ?? null,
