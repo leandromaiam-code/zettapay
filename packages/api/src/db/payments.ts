@@ -23,6 +23,8 @@ export interface PaymentRow {
   currency: string | null;
   agent_identity_id: string | null;
   chain: string | null;
+  payer_ip: string | null;
+  payer_country: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -52,6 +54,8 @@ export interface CreatePaymentInput {
   currency?: Currency;
   agentIdentityId?: string | null;
   chain?: PaymentChain;
+  payerIp?: string | null;
+  payerCountry?: string | null;
 }
 
 function toPayment(row: PaymentRow): Payment {
@@ -72,15 +76,65 @@ function toPayment(row: PaymentRow): Payment {
   };
 }
 
+export interface PayerHistoryRow {
+  amountUsdc: number;
+  country: string | null;
+  createdAt: string;
+}
+
+/** Returns recent non-failed payments for a (merchant, payer_wallet) pair,
+ * newest first. Used by the Z13.3 anomaly detector to compute z-score baselines
+ * and historical country/time-of-day distributions. Failed rows are excluded
+ * so a thrash of failed attempts can't poison the baseline. */
+export function listPayerPaymentHistory(
+  db: Db,
+  merchantId: string,
+  payerWallet: string,
+  sinceIso: string,
+  limit: number,
+): PayerHistoryRow[] {
+  const safeLimit = Math.max(1, Math.min(limit, 1000));
+  const rows = db
+    .prepare<[string, string, string, number]>(
+      `SELECT amount_usdc, payer_country, created_at FROM payments
+       WHERE merchant_id = ? AND payer_wallet = ? AND created_at >= ?
+         AND status != 'failed'
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .all(merchantId, payerWallet, sinceIso, safeLimit) as Array<{
+      amount_usdc: number;
+      payer_country: string | null;
+      created_at: string;
+    }>;
+  return rows.map((r) => ({
+    amountUsdc: r.amount_usdc,
+    country: r.payer_country,
+    createdAt: r.created_at,
+  }));
+}
+
 export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
   const stmt = db.prepare<
-    [string, string, number, string, string | null, string, string | null]
+    [
+      string,
+      string,
+      number,
+      string,
+      string | null,
+      string,
+      string | null,
+      string | null,
+      string | null,
+    ]
   >(
     `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id)
     [string, string, number, string, string | null, string, string]
   >(
     `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, chain)
      VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
+    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id, payer_ip, payer_country)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
   );
   stmt.run(
     input.id,
@@ -91,6 +145,8 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
     input.currency ?? DEFAULT_CURRENCY,
     input.agentIdentityId ?? null,
     input.chain ?? "solana",
+    input.payerIp ?? null,
+    input.payerCountry ?? null,
   );
   return getPayment(db, input.id);
 }

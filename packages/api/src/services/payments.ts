@@ -31,6 +31,10 @@ import {
   type AmlMonitorConfig,
 } from "./aml.js";
 import { appendAudit } from "../db/audit_journal.js";
+import { evaluatePaymentAnomalies } from "./anomaly.js";
+import { enforceBetaLimits } from "../beta/enforcer.js";
+import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
+import { noopGeoIpResolver, type GeoIpResolver } from "../lib/geoip.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -41,6 +45,10 @@ export interface CreatePaymentInput {
   /** Verified agent identity from `agentIdentityMiddleware` (Z20.3). When set,
    * per-agent spending limits are enforced and the payment row is tagged. */
   agentIdentityId?: string | null;
+  /** Z13.3: client IP captured by the route (extractClientIp). Used by the
+   * anomaly detector for geolocation mismatch and persisted on the payment row
+   * for forensics. Null when no IP could be resolved. */
+  payerIp?: string | null;
 }
 
 export interface PaymentResult {
@@ -73,6 +81,10 @@ export interface CreatePaymentDeps {
     alertCount: number,
     err: Error | null,
   ) => void;
+  /** Z13.3: IP→country resolver used by the anomaly detector. Defaults to a
+   * no-op (returns null for every IP) so geolocation signals stay dormant
+   * until a real provider (MaxMind GeoLite2, ipdata) is wired up. */
+  geoIpResolver?: GeoIpResolver;
 }
 
 /**
@@ -98,6 +110,9 @@ export async function createPayment(
 
   const paymentId = newId("pay");
   const payerWallet = input.payerWallet ?? solana.getPayerPublicKey().toBase58();
+  const payerIp = input.payerIp ?? null;
+  const geoIpResolver = deps.geoIpResolver ?? noopGeoIpResolver;
+  const payerCountry = geoIpResolver(payerIp);
 
   const betaConfig = deps.betaConfig ?? loadBetaConfig();
 
@@ -145,6 +160,23 @@ export async function createPayment(
         });
       }
 
+      // Z13.3 anomaly detector: scores incoming payment against payer history.
+      // Audits any detected signals; throws 429 only when the score crosses the
+      // merchant's fraud_block_threshold (default 0 = monitor-only).
+      const anomaly = evaluatePaymentAnomalies(db, {
+        merchant,
+        payerWallet,
+        amount: input.amountUsdc,
+        payerCountry,
+      });
+      span.setAttribute("zettapay.payment.anomaly_score", anomaly.score);
+      if (anomaly.signals.length > 0) {
+        span.setAttribute(
+          "zettapay.payment.anomaly_signals",
+          anomaly.signals.map((s) => s.kind).join(","),
+        );
+      }
+
       insertPayment(db, {
         id: paymentId,
         merchantId: merchant.id,
@@ -153,6 +185,8 @@ export async function createPayment(
         metadata: input.metadata,
         currency,
         agentIdentityId: input.agentIdentityId ?? null,
+        payerIp,
+        payerCountry,
       });
 
       markPaymentProcessing(db, paymentId);
