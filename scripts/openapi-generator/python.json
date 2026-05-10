@@ -1,0 +1,8 @@
+{
+  "packageName": "zettapay_generated",
+  "projectName": "zettapay",
+  "packageVersion": "0.1.0",
+  "packageUrl": "https://github.com/leandromaiam-code/zettapay",
+  "library": "urllib3",
+  "generateSourceCodeOnly": true
+}

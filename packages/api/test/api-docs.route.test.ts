@@ -4,7 +4,10 @@ import { type Database as Db } from "better-sqlite3";
 import { Keypair } from "@solana/web3.js";
 import { createApp } from "../src/app.js";
 import { closeDatabase, openDatabase } from "../src/db/index.js";
-import { getOpenApiDocument } from "../src/lib/openapi.js";
+import {
+  getOpenApi30Document,
+  getOpenApiDocument,
+} from "../src/lib/openapi.js";
 import type { SolanaService } from "../src/services/solana.js";
 
 const dummySolana = {
@@ -168,6 +171,70 @@ describe("GET /docs", () => {
   });
 });
 
+describe("GET /openapi-3.0.json", () => {
+  let db: Db;
+  let server: RunningServer;
+
+  beforeEach(async () => {
+    closeDatabase();
+    db = openDatabase(":memory:");
+    const app = createApp({ db, solana: dummySolana });
+    server = await new Promise<RunningServer>((resolve) => {
+      const s = app.listen(0, () => {
+        const { port } = s.address() as AddressInfo;
+        resolve({
+          url: `http://127.0.0.1:${port}`,
+          close: () =>
+            new Promise<void>((r) => {
+              s.close(() => r());
+            }),
+        });
+      });
+    });
+  });
+
+  afterEach(async () => {
+    await server.close();
+    closeDatabase();
+  });
+
+  it("serves a 3.0.x document compatible with openapi-generator templates", async () => {
+    const res = await fetch(`${server.url}/openapi-3.0.json`);
+    expect(res.status).toBe(200);
+    const doc = (await res.json()) as Record<string, any>;
+    expect(doc.openapi).toMatch(/^3\.0/);
+    expect(doc.info.title).toBe("ZettaPay API");
+    // 3.0 forbids `info.summary`; downconverter folds it into description.
+    expect(doc.info.summary).toBeUndefined();
+    expect(typeof doc.info.description).toBe("string");
+
+    // Nullable fields should be expressed as `nullable: true`, never as a
+    // `type: [...,"null"]` array.
+    function walk(node: unknown): void {
+      if (!node || typeof node !== "object") return;
+      if (Array.isArray(node)) {
+        for (const item of node) walk(item);
+        return;
+      }
+      const obj = node as Record<string, unknown>;
+      if (Array.isArray(obj.type)) {
+        throw new Error(
+          `Found tuple type after downconvert: ${JSON.stringify(obj.type)}`,
+        );
+      }
+      for (const k of Object.keys(obj)) walk(obj[k]);
+    }
+    walk(doc);
+
+    // Numeric exclusiveMinimum (a 3.1-only encoding) becomes the boolean
+    // form alongside `minimum` for 3.0 consumers.
+    const amount =
+      doc.components.schemas.CreatePaymentRequest.properties.amount;
+    expect(amount.minimum).toBe(0);
+    expect(amount.exclusiveMinimum).toBe(true);
+  });
+});
+
 describe("getOpenApiDocument", () => {
   it("caches the document when no serverUrl override is supplied", () => {
     const a = getOpenApiDocument();
@@ -183,5 +250,20 @@ describe("getOpenApiDocument", () => {
       url: string;
     }>;
     expect(servers[0].url).toBe("https://example.test");
+  });
+});
+
+describe("getOpenApi30Document", () => {
+  it("caches the 3.0 document when no serverUrl override is supplied", () => {
+    const a = getOpenApi30Document();
+    const b = getOpenApi30Document();
+    expect(a).toBe(b);
+    expect((a as Record<string, any>).openapi).toMatch(/^3\.0/);
+  });
+
+  it("does not mutate the cached 3.1 document", () => {
+    const v31 = getOpenApiDocument();
+    void getOpenApi30Document();
+    expect((v31 as Record<string, any>).openapi).toMatch(/^3\.1/);
   });
 });

@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { getOpenApiDocument } from "../lib/openapi.js";
+import { getOpenApi30Document, getOpenApiDocument } from "../lib/openapi.js";
 
 const SWAGGER_UI_VERSION = "5.17.14";
 const SWAGGER_UI_BASE = `https://cdn.jsdelivr.net/npm/swagger-ui-dist@${SWAGGER_UI_VERSION}`;
@@ -57,6 +57,14 @@ export function apiDocsRouter(): Router {
 
   router.get("/openapi.json", (req: Request, res: Response) => {
     const doc = getOpenApiDocument({ serverUrl: deriveServerUrl(req) });
+    res.setHeader("cache-control", "public, max-age=300");
+    res.json(doc);
+  });
+
+  // OpenAPI 3.0.3 variant for tools whose templates lag the 3.1 spec
+  // (openapi-generator templates for python/go/rust/php). Same source of truth.
+  router.get("/openapi-3.0.json", (req: Request, res: Response) => {
+    const doc = getOpenApi30Document({ serverUrl: deriveServerUrl(req) });
     res.setHeader("cache-control", "public, max-age=300");
     res.json(doc);
   });

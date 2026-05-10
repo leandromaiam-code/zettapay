@@ -1,0 +1,66 @@
+---
+title: "Multi-language SDKs"
+description: "Generate Python, Go, Rust, and PHP clients from the canonical OpenAPI spec."
+---
+
+The TypeScript SDK at [`@zettapay/sdk`](/sdk/installation) is hand-tuned and
+canonical. For everything else — Python, Go, Rust, PHP — ZettaPay ships a
+machine-readable [OpenAPI](https://www.openapis.org/) spec so you can
+generate idiomatic clients with [openapi-generator](https://openapi-generator.tech/).
+
+## The spec
+
+Two flavors are served by every deployment, and committed snapshots live in
+this repo:
+
+| Flavor | Endpoint | Snapshot |
+| --- | --- | --- |
+| OpenAPI 3.1 (source of truth) | `GET /openapi.json` | [`docs/api-reference/openapi.json`](https://github.com/leandromaiam-code/zettapay/blob/main/docs/api-reference/openapi.json) |
+| OpenAPI 3.0.3 (generator-friendly) | `GET /openapi-3.0.json` | [`docs/api-reference/openapi-3.0.json`](https://github.com/leandromaiam-code/zettapay/blob/main/docs/api-reference/openapi-3.0.json) |
+
+Use the 3.0 file with openapi-generator — most language templates still lag
+3.1 features like JSON-Schema tuple types.
+
+## Generate from the spec
+
+```bash
+git clone https://github.com/leandromaiam-code/zettapay
+cd zettapay
+npm install
+npm run sdk:generate
+```
+
+This writes generated clients into:
+
+- `packages/sdk-python/generated/`
+- `packages/sdk-go/generated/`
+- `packages/sdk-rust/generated/`
+- `packages/sdk-php/generated/`
+
+The generator config files live under [`scripts/openapi-generator/`](https://github.com/leandromaiam-code/zettapay/tree/main/scripts/openapi-generator).
+Tweak `packageName`, `library`, etc. there and re-run.
+
+## Generate just one language
+
+```bash
+npx --yes @openapitools/openapi-generator-cli@2.13.4 generate \
+  --generator-name python \
+  --input-spec ./docs/api-reference/openapi-3.0.json \
+  --output ./packages/sdk-python/generated \
+  --config ./scripts/openapi-generator/python.json
+```
+
+Swap `python` for `go`, `rust`, `php`, `java`, `csharp`, `ruby`, etc. — see
+the full [generator list](https://openapi-generator.tech/docs/generators/).
+
+## Conventions
+
+- **Generated code is not committed by default.** The generator is meant to
+  be re-run when the spec changes; the canonical clients in
+  `packages/sdk-{lang}/` are vendored and hand-tuned.
+- **Authentication.** All four generators emit an
+  [`x-zettapay-api-key`](/api-reference/authentication) configuration option.
+  AI-agent flows that submit a pre-signed Solana transfer set the
+  `x-402-payment` header instead — see [x402 protocol](/guides/x402-protocol).
+- **Versioning.** The spec's `info.version` mirrors `@zettapay/api`. Pin
+  generated clients to the exact spec snapshot you generated against.

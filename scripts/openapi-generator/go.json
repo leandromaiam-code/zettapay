@@ -1,0 +1,7 @@
+{
+  "packageName": "zettapaygenerated",
+  "packageVersion": "0.1.0",
+  "isGoSubmodule": true,
+  "generateInterfaces": true,
+  "structPrefix": true
+}

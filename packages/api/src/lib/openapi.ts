@@ -820,6 +820,77 @@ const paths = {
 } as const;
 
 let cached: OpenApiDocument | null = null;
+let cached30: OpenApiDocument | null = null;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === "object" && value !== null && !Array.isArray(value)
+  );
+}
+
+function downconvertSchema(input: unknown): unknown {
+  if (Array.isArray(input)) return input.map(downconvertSchema);
+  if (!isPlainObject(input)) return input;
+
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    out[key] = downconvertSchema(value);
+  }
+
+  // OpenAPI 3.1 -> 3.0: `type: ["string", "null"]` becomes `type: "string", nullable: true`
+  if (Array.isArray(out.type)) {
+    const types = out.type.filter((t): t is string => typeof t === "string");
+    const nonNull = types.filter((t) => t !== "null");
+    if (types.length !== nonNull.length) {
+      out.nullable = true;
+    }
+    if (nonNull.length === 1) {
+      out.type = nonNull[0];
+    } else if (nonNull.length === 0) {
+      delete out.type;
+    } else {
+      // Multiple non-null types — represent as oneOf for 3.0 compatibility.
+      delete out.type;
+      out.oneOf = nonNull.map((t) => ({ type: t }));
+    }
+  }
+
+  // OpenAPI 3.1 numeric exclusive bounds are values; 3.0 expects boolean flags
+  // alongside `minimum`/`maximum`.
+  if (typeof out.exclusiveMinimum === "number") {
+    out.minimum = out.exclusiveMinimum;
+    out.exclusiveMinimum = true;
+  }
+  if (typeof out.exclusiveMaximum === "number") {
+    out.maximum = out.exclusiveMaximum;
+    out.exclusiveMaximum = true;
+  }
+
+  return out;
+}
+
+function downconvertDocument(doc: OpenApiDocument): OpenApiDocument {
+  const cloned = JSON.parse(JSON.stringify(doc)) as Record<string, unknown>;
+  cloned.openapi = "3.0.3";
+
+  // 3.0 info object does not allow `summary` — fold it into the description.
+  const info = cloned.info as Record<string, unknown> | undefined;
+  if (info && typeof info.summary === "string") {
+    const summary = info.summary;
+    delete info.summary;
+    if (typeof info.description === "string") {
+      info.description = `${summary}\n\n${info.description}`;
+    } else {
+      info.description = summary;
+    }
+  }
+
+  // Walk paths + components recursively to translate schema nodes.
+  cloned.components = downconvertSchema(cloned.components);
+  cloned.paths = downconvertSchema(cloned.paths);
+
+  return cloned as OpenApiDocument;
+}
 
 export function getOpenApiDocument(
   options: { serverUrl?: string } = {},
@@ -869,5 +940,14 @@ export function getOpenApiDocument(
   };
 
   if (!options.serverUrl) cached = doc;
+  return doc;
+}
+
+export function getOpenApi30Document(
+  options: { serverUrl?: string } = {},
+): OpenApiDocument {
+  if (cached30 && !options.serverUrl) return cached30;
+  const doc = downconvertDocument(getOpenApiDocument(options));
+  if (!options.serverUrl) cached30 = doc;
   return doc;
 }
