@@ -4,12 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="ZettaPay — Solana USDC payment protocol for AI agents and humans. 0.30% fees, instant settlement, native x402 + MCP support." />
-  <meta property="og:title" content="ZettaPay — Stripe for AI Agents" />
-  <meta property="og:description" content="The first Solana payment protocol native to AI agents. x402 + MCP. 0.30% fees. <2s settlement." />
+  <meta property="og:title" content="ZettaPay — The payment protocol AI agents were waiting for" />
+  <meta property="og:description" content="Solana payment protocol native to AI agents. x402 + MCP. 0.30% fees. <2s settlement. 10x cheaper than legacy processors." />
   <title>ZettaPay — Solana payments for AI agents</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Cormorant+Garamond:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -17,17 +17,17 @@
         extend: {
           fontFamily: {
             sans: ['Inter', 'ui-sans-serif', 'system-ui'],
-            display: ['Cormorant Garamond', 'serif'],
             mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
           },
           colors: {
-            brass: '#d4a961',
-            'brass-dim': '#a08240',
-            'deep': '#050a08',
-            'forest': '#0a1612',
-            'forest-2': '#0e1d18',
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
             'mint': '#14F195',
             'solana': '#9945FF',
+            'muted': '#94A3B8',
           },
           animation: {
             'gradient': 'gradient 8s linear infinite',
@@ -35,6 +35,7 @@
             'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             'fade-up': 'fadeUp 0.8s ease-out forwards',
             'shimmer': 'shimmer 3s linear infinite',
+            'glow-pulse': 'glowPulse 4s ease-in-out infinite',
           },
           keyframes: {
             gradient: {
@@ -53,6 +54,10 @@
               '0%': { 'background-position': '-1000px 0' },
               '100%': { 'background-position': '1000px 0' },
             },
+            glowPulse: {
+              '0%, 100%': { opacity: '0.3' },
+              '50%': { opacity: '0.6' },
+            },
           },
         },
       },
@@ -62,37 +67,58 @@
     :root { color-scheme: dark; }
     html { scroll-behavior: smooth; }
     body {
-      background: #050a08;
-      color: #f5e6c8;
+      background: #0A0A0A;
+      color: #FFFFFF;
       font-family: 'Inter', ui-sans-serif, system-ui;
       overflow-x: hidden;
     }
+
+    /* Grid background */
     .grid-bg {
       background-image:
-        linear-gradient(rgba(212, 169, 97, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(212, 169, 97, 0.04) 1px, transparent 1px);
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
       background-size: 50px 50px;
     }
+
+    /* Gradient text */
     .gradient-text {
-      background: linear-gradient(135deg, #d4a961 0%, #e8c896 30%, #14F195 60%, #9945FF 100%);
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
       background-size: 200% auto;
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
       animation: gradient 6s linear infinite;
     }
+
+    /* Glass card */
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass:hover {
+      background: rgba(79, 107, 255, 0.08);
+      border-color: rgba(79, 107, 255, 0.3);
+      transition: all 0.4s ease;
+    }
+
+    /* Gradient border card */
     .gradient-border {
       position: relative;
-      background: linear-gradient(#0a1612, #0a1612) padding-box,
-                  linear-gradient(135deg, #d4a96144, #14F19544, #9945FF44) border-box;
+      background: linear-gradient(#0A0A0A, #0A0A0A) padding-box,
+                  linear-gradient(135deg, #4F6BFF44, #14F19544, #9945FF44) border-box;
       border: 1px solid transparent;
       border-radius: 12px;
     }
     .gradient-border:hover {
-      background: linear-gradient(#0e1d18, #0e1d18) padding-box,
-                  linear-gradient(135deg, #d4a961, #14F195, #9945FF) border-box;
+      background: linear-gradient(#111111, #111111) padding-box,
+                  linear-gradient(135deg, #4F6BFF, #14F195, #9945FF) border-box;
       transition: all 0.4s ease;
     }
+
+    /* Glow orbs */
     .glow-orb {
       position: absolute;
       border-radius: 50%;
@@ -100,48 +126,49 @@
       opacity: 0.3;
       pointer-events: none;
     }
+
+    /* Code blocks */
     .code-block {
-      background: linear-gradient(135deg, #0a1612 0%, #0e1d18 100%);
-      border: 1px solid rgba(212, 169, 97, 0.15);
-      box-shadow: 0 0 60px rgba(212, 169, 97, 0.08), inset 0 1px 0 rgba(212, 169, 97, 0.1);
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      box-shadow: 0 0 60px rgba(79, 107, 255, 0.06), inset 0 1px 0 rgba(79, 107, 255, 0.1);
     }
-    .glass {
-      background: rgba(14, 29, 24, 0.4);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(212, 169, 97, 0.12);
-    }
-    .glass:hover {
-      background: rgba(14, 29, 24, 0.6);
-      border-color: rgba(212, 169, 97, 0.3);
-    }
+
+    /* Buttons */
     .btn-primary {
-      background: linear-gradient(135deg, #d4a961 0%, #e8c896 100%);
-      color: #050a08;
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
       transition: all 0.3s ease;
-      box-shadow: 0 0 30px rgba(212, 169, 97, 0.3);
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
     }
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 40px rgba(212, 169, 97, 0.5);
+      box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5);
     }
     .btn-ghost {
-      background: rgba(212, 169, 97, 0.05);
-      border: 1px solid rgba(212, 169, 97, 0.3);
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
       transition: all 0.3s ease;
     }
     .btn-ghost:hover {
-      background: rgba(212, 169, 97, 0.1);
-      border-color: rgba(212, 169, 97, 0.6);
+      background: rgba(79, 107, 255, 0.1);
+      border-color: rgba(79, 107, 255, 0.6);
     }
+
+    /* Code syntax */
     pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-    .code-comment { color: #5a7a6a; }
-    .code-keyword { color: #c084fc; }
-    .code-string { color: #d4a961; }
+    .code-comment { color: #64748b; }
+    .code-keyword { color: #9945FF; }
+    .code-string { color: #4F6BFF; }
     .code-fn { color: #14F195; }
     .code-num { color: #f97316; }
+
+    /* Animations */
     .reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
     .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Marquee */
     .scroll-marquee {
       display: flex;
       animation: marquee 30s linear infinite;
@@ -150,109 +177,135 @@
       0% { transform: translateX(0); }
       100% { transform: translateX(-50%); }
     }
+
+    /* Stat counter */
     .stat-counter { font-variant-numeric: tabular-nums; }
+
+    /* Card glows */
     .agent-glow {
-      box-shadow: 0 0 40px rgba(20, 241, 149, 0.2), 0 0 80px rgba(153, 69, 255, 0.1);
+      box-shadow: 0 0 40px rgba(20, 241, 149, 0.15), 0 0 80px rgba(153, 69, 255, 0.08);
     }
     .merchant-glow {
-      box-shadow: 0 0 40px rgba(212, 169, 97, 0.25);
+      box-shadow: 0 0 40px rgba(79, 107, 255, 0.2);
+    }
+
+    /* Hero gradient bg */
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79, 107, 255, 0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 40% at 80% 20%, rgba(153, 69, 255, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* Logo wordmark invert for dark bg */
+    .logo-wordmark {
+      filter: invert(1) brightness(2);
     }
   </style>
 </head>
 <body class="grid-bg">
   <!-- Background orbs -->
-  <div class="glow-orb" style="background: #d4a961; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
-  <div class="glow-orb" style="background: #14F195; width: 500px; height: 500px; bottom: 20%; left: -150px; opacity: 0.15;"></div>
-  <div class="glow-orb" style="background: #9945FF; width: 400px; height: 400px; top: 50%; right: 30%; opacity: 0.1;"></div>
+  <div class="glow-orb animate-glow-pulse" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 500px; height: 500px; bottom: 20%; left: -150px; opacity: 0.12;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 400px; height: 400px; top: 50%; right: 30%; opacity: 0.08;"></div>
 
   <!-- NAV -->
-  <nav class="fixed top-0 left-0 right-0 z-50 px-6 lg:px-12 py-4">
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
     <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
-      <a href="#" class="flex items-center gap-2 group">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brass to-mint flex items-center justify-center font-bold text-deep group-hover:scale-110 transition-transform">Z</div>
-        <span class="font-display text-2xl font-medium text-brass">ZettaPay</span>
+      <a href="#" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
-        <a href="#how" class="text-brass/70 hover:text-brass transition">How it works</a>
-        <a href="#pricing" class="text-brass/70 hover:text-brass transition">Pricing</a>
-        <a href="#agents" class="text-brass/70 hover:text-brass transition">For AI Agents</a>
-        <a href="#docs" class="text-brass/70 hover:text-brass transition">Docs</a>
+        <a href="#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="#pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="#agents" class="text-muted hover:text-white transition">For AI Agents</a>
+        <a href="#docs" class="text-muted hover:text-white transition">Docs</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="https://github.com/leandromaiam-code/zettapay" class="text-brass/70 hover:text-brass transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
         <a href="#demo" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Try Demo</a>
       </div>
     </div>
   </nav>
 
   <!-- HERO -->
-  <section class="relative pt-40 pb-24 px-6 lg:px-12 min-h-[90vh] flex items-center">
-    <div class="max-w-7xl mx-auto w-full">
+  <section class="relative pt-36 pb-24 px-4 lg:px-12 min-h-[90vh] flex items-center">
+    <div class="hero-gradient"></div>
+    <div class="max-w-7xl mx-auto w-full relative z-10">
       <div class="text-center max-w-5xl mx-auto">
-        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-8 animate-fade-up">
-          <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
-          <span class="text-xs font-mono text-brass/80 uppercase tracking-widest">Live on Solana Devnet · Mainnet Q3</span>
+        <!-- Logo cluster -->
+        <div class="flex items-center justify-center gap-4 mb-10 animate-fade-up">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-16 h-16 md:w-20 md:h-20 animate-float" />
         </div>
 
-        <h1 class="font-display text-6xl md:text-8xl lg:text-[7.5rem] leading-none font-medium mb-8 animate-fade-up" style="animation-delay: 0.1s; animation-fill-mode: both;">
-          The <span class="gradient-text">Stripe</span><br/>
-          for <span class="gradient-text">AI Agents</span>
+        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass mb-8 animate-fade-up">
+          <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
+          <span class="text-xs font-mono text-muted uppercase tracking-widest">Live on Solana Devnet &middot; Mainnet Q3</span>
+        </div>
+
+        <h1 class="text-5xl md:text-7xl lg:text-8xl leading-[1.05] font-bold mb-8 animate-fade-up tracking-tight" style="animation-delay: 0.1s; animation-fill-mode: both;">
+          The <span class="gradient-text">payment protocol</span><br/>
+          AI agents were <span class="gradient-text">waiting for</span>
         </h1>
 
-        <p class="text-xl md:text-2xl text-brass/70 max-w-3xl mx-auto mb-12 leading-relaxed font-light animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
-          The first Solana payment protocol built natively for autonomous AI agents.
-          USDC settlement in seconds. <span class="text-brass">0.30% fees</span> — 10× cheaper than Stripe.
+        <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-12 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
+          Solana-native USDC payments with <span class="text-white font-semibold">0.30% fees</span> and
+          <span class="text-white font-semibold">&lt;2s settlement</span>.
+          x402 + MCP native. Phantom + MoonPay onramp built-in.
+          <span class="text-royal-bright font-semibold">10&times; cheaper than legacy processors.</span>
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-up" style="animation-delay: 0.3s; animation-fill-mode: both;">
           <a href="#demo" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-            Try Live Demo
+            Try Demo
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
           </a>
-          <a href="#code" class="btn-ghost px-8 py-4 rounded-full font-semibold text-brass text-base">View Code</a>
-          <a href="https://github.com/leandromaiam-code/zettapay" class="text-brass/60 hover:text-brass text-sm font-mono mt-2 sm:mt-0 sm:ml-4">★ Star on GitHub</a>
+          <a href="#code" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">View Code</a>
+          <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white text-sm font-mono mt-2 sm:mt-0 sm:ml-4 transition">&#9733; Star on GitHub</a>
         </div>
 
-        <!-- Live stats bar -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto pt-12 border-t border-brass/10 animate-fade-up" style="animation-delay: 0.4s; animation-fill-mode: both;">
+        <!-- Stats bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto pt-12 border-t border-royal/10 animate-fade-up" style="animation-delay: 0.4s; animation-fill-mode: both;">
           <div class="text-center">
-            <div class="font-display text-4xl md:text-5xl font-medium gradient-text stat-counter" data-target="0.30" data-suffix="%">0.30%</div>
-            <div class="text-xs uppercase tracking-widest text-brass/50 mt-2">Transaction fee</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="0.30" data-suffix="%">0.30%</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Transaction fee</div>
           </div>
           <div class="text-center">
-            <div class="font-display text-4xl md:text-5xl font-medium gradient-text stat-counter" data-target="2" data-suffix="s">&lt;2s</div>
-            <div class="text-xs uppercase tracking-widest text-brass/50 mt-2">Settlement</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="2" data-suffix="s">&lt;2s</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Settlement</div>
           </div>
           <div class="text-center">
-            <div class="font-display text-4xl md:text-5xl font-medium gradient-text stat-counter" data-target="65000" data-suffix="">65k</div>
-            <div class="text-xs uppercase tracking-widest text-brass/50 mt-2">Solana TPS</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="65000" data-suffix="">65k</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Solana TPS</div>
           </div>
           <div class="text-center">
-            <div class="font-display text-4xl md:text-5xl font-medium gradient-text">10×</div>
-            <div class="text-xs uppercase tracking-widest text-brass/50 mt-2">Cheaper than Stripe</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">10&times;</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Cheaper than legacy</div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- LOGO MARQUEE -->
-  <section class="py-8 border-y border-brass/10 overflow-hidden">
+  <!-- TECH MARQUEE -->
+  <section class="py-6 border-y border-royal/10 overflow-hidden">
     <div class="scroll-marquee whitespace-nowrap">
-      <div class="flex items-center gap-16 px-8 text-brass/30 font-mono text-sm uppercase tracking-widest">
-        <span>Solana</span><span>·</span><span>USDC</span><span>·</span><span>x402 protocol</span><span>·</span><span>Model Context Protocol</span><span>·</span><span>Phantom</span><span>·</span><span>MoonPay onramp</span><span>·</span><span>Anchor framework</span><span>·</span><span>TypeScript SDK</span><span>·</span>
-        <span>Solana</span><span>·</span><span>USDC</span><span>·</span><span>x402 protocol</span><span>·</span><span>Model Context Protocol</span><span>·</span><span>Phantom</span><span>·</span><span>MoonPay onramp</span><span>·</span><span>Anchor framework</span><span>·</span><span>TypeScript SDK</span><span>·</span>
+      <div class="flex items-center gap-16 px-8 text-muted/40 font-mono text-sm uppercase tracking-widest">
+        <span>Solana</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Phantom</span><span>&middot;</span><span>MoonPay onramp</span><span>&middot;</span><span>Anchor framework</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
+        <span>Solana</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Phantom</span><span>&middot;</span><span>MoonPay onramp</span><span>&middot;</span><span>Anchor framework</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
       </div>
     </div>
   </section>
 
-  <!-- HOW IT WORKS -->
-  <section id="how" class="py-32 px-6 lg:px-12">
+  <!-- THREE PERSONAS -->
+  <section id="how" class="py-28 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-20 reveal">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">How it works</span>
-        <h2 class="font-display text-5xl md:text-6xl font-medium mt-4 mb-6">Built for <span class="gradient-text">three</span> kinds of payers</h2>
-        <p class="text-brass/60 text-lg leading-relaxed">One protocol. Three integrations. Whether your customer is human, autonomous, or programmatic — ZettaPay just works.</p>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Built for <span class="gradient-text">three</span> kinds of payers</h2>
+        <p class="text-muted text-lg leading-relaxed">One protocol. Three integrations. Whether your customer is human, autonomous, or programmatic &mdash; ZettaPay just works.</p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-6">
@@ -261,8 +314,8 @@
           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-6">
             <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
           </div>
-          <h3 class="font-display text-2xl font-medium mb-3 text-mint">AI Agents</h3>
-          <p class="text-brass/60 mb-6 leading-relaxed text-sm">Claude, GPT, Gemini. Pay autonomously via signed transactions in HTTP headers. No keys to custody.</p>
+          <h3 class="text-2xl font-bold mb-3 text-mint">AI Agents</h3>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Claude, GPT, Gemini. Pay autonomously via signed transactions in HTTP headers. No keys to custody.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment"># x402 header with signed Solana tx</span>
 POST /pay
 <span class="code-keyword">x-402-payment:</span> <span class="code-string">"&lt;signed-tx-blob&gt;"</span>
@@ -275,11 +328,11 @@ POST /pay
 
         <!-- HUMANS -->
         <div class="glass rounded-2xl p-8 reveal merchant-glow" style="transition-delay: 0.1s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-brass/30 to-brass/10 flex items-center justify-center mb-6">
-            <svg class="w-6 h-6 text-brass" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-royal/30 to-royal/10 flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           </div>
-          <h3 class="font-display text-2xl font-medium mb-3 text-brass">Humans</h3>
-          <p class="text-brass/60 mb-6 leading-relaxed text-sm">Phantom wallet binding. Stripe-grade UX. Card → USDC via MoonPay onramp built-in.</p>
+          <h3 class="text-2xl font-bold mb-3 text-royal-bright">Humans</h3>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Phantom wallet binding. Seamless UX. Card &rarr; USDC via MoonPay onramp built-in. No crypto knowledge required.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment">// Connect Phantom &amp; pay USDC</span>
 <span class="code-keyword">const</span> <span class="code-fn">{ tx }</span> = <span class="code-keyword">await</span> zettapay.<span class="code-fn">pay</span>({
   merchant: <span class="code-string">"@store"</span>,
@@ -290,11 +343,11 @@ POST /pay
 
         <!-- MERCHANTS -->
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.2s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-brass/10 flex items-center justify-center mb-6">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-6">
             <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
           </div>
-          <h3 class="font-display text-2xl font-medium mb-3 text-solana">Merchants</h3>
-          <p class="text-brass/60 mb-6 leading-relaxed text-sm">Drop-in SDK. Webhooks Stripe-grade with HMAC signing. 3-line integration.</p>
+          <h3 class="text-2xl font-bold mb-3 text-solana">Merchants</h3>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Drop-in SDK. Production-grade webhooks with HMAC signing. Three-line integration. Accept payments in minutes.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 
 <span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>(apiKey);
@@ -307,40 +360,40 @@ POST /pay
   </section>
 
   <!-- LIVE DEMO -->
-  <section id="demo" class="py-24 px-6 lg:px-12">
+  <section id="demo" class="py-24 px-4 lg:px-12">
     <div class="max-w-5xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-16 reveal">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">Live demo</span>
-        <h2 class="font-display text-5xl md:text-6xl font-medium mt-4 mb-6">See a payment <span class="gradient-text">happen</span></h2>
-        <p class="text-brass/60 text-lg">Real Solana devnet transaction. Real USDC airdrop. Real settlement &lt;2s.</p>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">See a payment <span class="gradient-text">happen</span></h2>
+        <p class="text-muted text-lg">Real Solana devnet transaction. Real USDC airdrop. Real settlement &lt;2s.</p>
       </div>
 
-      <div class="glass rounded-3xl p-8 md:p-12 reveal">
+      <div class="glass rounded-3xl p-6 md:p-12 reveal">
         <div class="grid md:grid-cols-2 gap-8 items-center">
           <div>
             <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Demo merchant</div>
-            <div class="font-display text-3xl font-medium text-brass mb-6">@hackathon-demo</div>
+            <div class="text-3xl font-bold text-white mb-6">@hackathon-demo</div>
 
             <div class="space-y-3 mb-8">
               <div class="flex justify-between text-sm">
-                <span class="text-brass/50">Amount</span>
-                <span class="font-mono text-brass">10.00 USDC</span>
+                <span class="text-muted">Amount</span>
+                <span class="font-mono text-white">10.00 USDC</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-brass/50">ZettaPay fee (0.30%)</span>
-                <span class="font-mono text-brass">0.030 USDC</span>
+                <span class="text-muted">ZettaPay fee (0.30%)</span>
+                <span class="font-mono text-white">0.030 USDC</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-brass/50">Network</span>
+                <span class="text-muted">Network</span>
                 <span class="font-mono text-mint">Solana Devnet</span>
               </div>
-              <div class="flex justify-between text-sm pt-3 border-t border-brass/10">
-                <span class="text-brass/50">Settlement</span>
+              <div class="flex justify-between text-sm pt-3 border-t border-royal/10">
+                <span class="text-muted">Settlement</span>
                 <span class="font-mono text-mint">~1.4s</span>
               </div>
             </div>
 
-            <button id="demoBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
+            <button id="demoBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2 cursor-pointer">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
               Pay 10 USDC (devnet)
             </button>
@@ -348,8 +401,8 @@ POST /pay
 
           <div>
             <div id="demoOutput" class="code-block rounded-2xl p-6 font-mono text-xs min-h-[280px] overflow-auto">
-              <div class="text-brass/40">$ awaiting demo...</div>
-              <div class="text-brass/20 mt-2">Click "Pay" to execute on Solana devnet</div>
+              <div class="text-muted">$ awaiting demo...</div>
+              <div class="text-muted/50 mt-2">Click "Pay" to execute on Solana devnet</div>
             </div>
           </div>
         </div>
@@ -358,54 +411,54 @@ POST /pay
   </section>
 
   <!-- PRICING COMPARISON -->
-  <section id="pricing" class="py-32 px-6 lg:px-12">
+  <section id="pricing" class="py-28 px-4 lg:px-12">
     <div class="max-w-6xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-20 reveal">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">Pricing</span>
-        <h2 class="font-display text-5xl md:text-6xl font-medium mt-4 mb-6">Save <span class="gradient-text">$26 every $1k</span></h2>
-        <p class="text-brass/60 text-lg">Built for the AI agent economy. Where every micro-transaction matters.</p>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6"><span class="gradient-text">ZettaPay vs Legacy Processors</span></h2>
+        <p class="text-muted text-lg">Built for the AI agent economy. Where every micro-transaction matters.</p>
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
-        <!-- Stripe -->
+        <!-- Legacy -->
         <div class="glass rounded-3xl p-10 opacity-60 reveal">
           <div class="flex items-center justify-between mb-8">
-            <span class="font-display text-2xl text-brass/50">Stripe</span>
-            <span class="text-xs uppercase tracking-widest text-brass/30 font-mono">Legacy</span>
+            <span class="text-2xl font-bold text-muted/60">Legacy Processors</span>
+            <span class="text-xs uppercase tracking-widest text-muted/40 font-mono">Traditional rails</span>
           </div>
-          <div class="font-display text-7xl font-medium text-brass/40 mb-2">2.9%</div>
-          <div class="text-brass/30 mb-8 font-mono">+ $0.30 per transaction</div>
-          <ul class="space-y-3 text-sm text-brass/50">
-            <li class="flex gap-3"><span class="text-red-400/60">✗</span> 2-3 day ACH settlement</li>
-            <li class="flex gap-3"><span class="text-red-400/60">✗</span> No native AI agent support</li>
-            <li class="flex gap-3"><span class="text-red-400/60">✗</span> No MCP integration</li>
-            <li class="flex gap-3"><span class="text-red-400/60">✗</span> Chargebacks &amp; disputes</li>
-            <li class="flex gap-3"><span class="text-red-400/60">✗</span> KYC required for all flows</li>
+          <div class="text-7xl font-bold text-muted/40 mb-2">2.9%</div>
+          <div class="text-muted/40 mb-8 font-mono">+ $0.30 per transaction</div>
+          <ul class="space-y-3 text-sm text-muted/60">
+            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> 2-3 day ACH settlement</li>
+            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> No native AI agent support</li>
+            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> No MCP integration</li>
+            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> Chargebacks &amp; disputes</li>
+            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> KYC required for all flows</li>
           </ul>
-          <div class="mt-10 pt-6 border-t border-brass/10">
-            <div class="text-xs uppercase tracking-widest text-brass/30 mb-2">$1,000 transaction cost</div>
-            <div class="font-display text-3xl font-medium text-brass/40">$29.30</div>
+          <div class="mt-10 pt-6 border-t border-white/5">
+            <div class="text-xs uppercase tracking-widest text-muted/40 mb-2">$1,000 transaction cost</div>
+            <div class="text-3xl font-bold text-muted/40">$29.30</div>
           </div>
         </div>
 
         <!-- ZettaPay -->
         <div class="gradient-border rounded-3xl p-10 reveal" style="transition-delay: 0.1s;">
           <div class="flex items-center justify-between mb-8">
-            <span class="font-display text-2xl gradient-text">ZettaPay</span>
+            <span class="text-2xl font-bold gradient-text">ZettaPay</span>
             <span class="text-xs uppercase tracking-widest text-mint font-mono">Built for AI</span>
           </div>
-          <div class="font-display text-7xl font-medium gradient-text mb-2">0.30%</div>
-          <div class="text-brass/60 mb-8 font-mono">+ $0.00 per transaction</div>
-          <ul class="space-y-3 text-sm text-brass/80">
-            <li class="flex gap-3"><span class="text-mint">✓</span> Sub-2s Solana settlement</li>
-            <li class="flex gap-3"><span class="text-mint">✓</span> Native x402 + MCP support</li>
-            <li class="flex gap-3"><span class="text-mint">✓</span> AI agents pay autonomously</li>
-            <li class="flex gap-3"><span class="text-mint">✓</span> Cryptographic finality</li>
-            <li class="flex gap-3"><span class="text-mint">✓</span> Open spec, open SDK</li>
+          <div class="text-7xl font-bold gradient-text mb-2">0.30%</div>
+          <div class="text-muted mb-8 font-mono">+ $0.00 per transaction</div>
+          <ul class="space-y-3 text-sm text-white/80">
+            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Sub-2s Solana settlement</li>
+            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Native x402 + MCP support</li>
+            <li class="flex gap-3"><span class="text-mint">&#10003;</span> AI agents pay autonomously</li>
+            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Cryptographic finality</li>
+            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Open spec, open SDK</li>
           </ul>
-          <div class="mt-10 pt-6 border-t border-brass/20">
+          <div class="mt-10 pt-6 border-t border-royal/20">
             <div class="text-xs uppercase tracking-widest text-mint mb-2">$1,000 transaction cost</div>
-            <div class="font-display text-3xl font-medium gradient-text">$3.00</div>
+            <div class="text-3xl font-bold gradient-text">$3.00</div>
           </div>
         </div>
       </div>
@@ -413,104 +466,117 @@ POST /pay
   </section>
 
   <!-- AI AGENTS DEEP DIVE -->
-  <section id="agents" class="py-32 px-6 lg:px-12 relative overflow-hidden">
+  <section id="agents" class="py-28 px-4 lg:px-12 relative overflow-hidden">
     <div class="max-w-7xl mx-auto">
       <div class="grid md:grid-cols-2 gap-16 items-center">
         <div class="reveal">
           <span class="text-xs font-mono text-mint uppercase tracking-widest">For AI Agents</span>
-          <h2 class="font-display text-5xl md:text-6xl font-medium mt-4 mb-6">Your agent buys <span class="gradient-text">while you sleep</span></h2>
-          <p class="text-brass/60 text-lg leading-relaxed mb-8">
-            ZettaPay is the first payment processor with native <span class="text-brass">x402</span> protocol and <span class="text-brass">Model Context Protocol</span> support.
-            AI agents discover, pay, and settle autonomously — no human in the loop.
+          <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Your agent buys <span class="gradient-text">while you sleep</span></h2>
+          <p class="text-muted text-lg leading-relaxed mb-8">
+            ZettaPay is the first payment protocol with native <span class="text-white font-semibold">x402</span> protocol and <span class="text-white font-semibold">Model Context Protocol</span> support.
+            AI agents discover, pay, and settle autonomously &mdash; no human in the loop.
           </p>
 
           <div class="space-y-6">
             <div class="flex gap-4 items-start">
               <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">01</div>
               <div>
-                <div class="font-medium text-brass">x402 HTTP Payment Protocol</div>
-                <div class="text-sm text-brass/50">Anthropic's open spec. Sign once, pay anywhere.</div>
+                <div class="font-semibold text-white">x402 HTTP Payment Protocol</div>
+                <div class="text-sm text-muted">Open spec for machine-to-machine payments. Sign once, pay anywhere.</div>
               </div>
             </div>
             <div class="flex gap-4 items-start">
               <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">02</div>
               <div>
-                <div class="font-medium text-brass">MCP Tool Definitions</div>
-                <div class="text-sm text-brass/50">Drop into Claude/GPT instantly. <code class="font-mono text-xs text-mint">pay</code>, <code class="font-mono text-xs text-mint">verify</code>, <code class="font-mono text-xs text-mint">refund</code>.</div>
+                <div class="font-semibold text-white">MCP Tool Definitions</div>
+                <div class="text-sm text-muted">Drop into Claude/GPT instantly. <code class="font-mono text-xs text-mint">pay</code>, <code class="font-mono text-xs text-mint">verify</code>, <code class="font-mono text-xs text-mint">refund</code>.</div>
               </div>
             </div>
             <div class="flex gap-4 items-start">
               <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">03</div>
               <div>
-                <div class="font-medium text-brass">Idempotency &amp; Replay Safety</div>
-                <div class="text-sm text-brass/50">Agents retry. We dedupe. No double-spend.</div>
+                <div class="font-semibold text-white">Idempotency &amp; Replay Safety</div>
+                <div class="text-sm text-muted">Agents retry. We dedupe. No double-spend. Cryptographic finality.</div>
               </div>
             </div>
           </div>
         </div>
 
         <div class="reveal" style="transition-delay: 0.1s;">
-          <div class="code-block rounded-2xl p-6 font-mono text-sm">
-            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-brass/10">
+          <!-- x402 code sample -->
+          <div class="code-block rounded-2xl p-6 font-mono text-sm mb-6">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-royal/10">
               <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
               <div class="w-3 h-3 rounded-full bg-yellow-500/60"></div>
               <div class="w-3 h-3 rounded-full bg-green-500/60"></div>
-              <span class="ml-3 text-brass/40 text-xs">claude-agent.ts</span>
+              <span class="ml-3 text-muted/60 text-xs">x402-payment.ts</span>
             </div>
-<pre class="text-xs leading-relaxed"><span class="code-comment">// Define the MCP payment tool</span>
-<span class="code-keyword">const</span> tools = [{
-  name: <span class="code-string">"pay_with_zettapay"</span>,
-  description: <span class="code-string">"Send USDC to a merchant"</span>,
-  input_schema: {
-    type: <span class="code-string">"object"</span>,
-    properties: {
-      merchant: { type: <span class="code-string">"string"</span> },
-      amount: { type: <span class="code-string">"number"</span> }
+<pre class="text-xs leading-relaxed"><span class="code-comment">// x402 Payment Header — agent pays autonomously</span>
+<span class="code-keyword">const</span> response = <span class="code-keyword">await</span> <span class="code-fn">fetch</span>(<span class="code-string">"https://api.merchant.com/buy"</span>, {
+  method: <span class="code-string">"POST"</span>,
+  headers: {
+    <span class="code-string">"x-402-payment"</span>: signedSolanaTx,
+    <span class="code-string">"x-402-amount"</span>: <span class="code-string">"2.50"</span>,
+    <span class="code-string">"x-402-currency"</span>: <span class="code-string">"USDC"</span>,
+  },
+  body: JSON.<span class="code-fn">stringify</span>({
+    item: <span class="code-string">"cappuccino"</span>,
+    merchant: <span class="code-string">"@cafe-bot"</span>
+  })
+});
+<span class="code-comment">// -&gt; 200 OK, settled in 1.4s on Solana</span></pre>
+          </div>
+
+          <!-- MCP code sample -->
+          <div class="code-block rounded-2xl p-6 font-mono text-sm">
+            <div class="flex items-center gap-2 mb-4 pb-3 border-b border-royal/10">
+              <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500/60"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/60"></div>
+              <span class="ml-3 text-muted/60 text-xs">mcp-tools.json</span>
+            </div>
+<pre class="text-xs leading-relaxed"><span class="code-comment">// MCP Tool Definition for Claude/GPT</span>
+{
+  <span class="code-string">"name"</span>: <span class="code-string">"pay_with_zettapay"</span>,
+  <span class="code-string">"description"</span>: <span class="code-string">"Send USDC payment on Solana"</span>,
+  <span class="code-string">"input_schema"</span>: {
+    <span class="code-string">"type"</span>: <span class="code-string">"object"</span>,
+    <span class="code-string">"properties"</span>: {
+      <span class="code-string">"merchant"</span>: { <span class="code-string">"type"</span>: <span class="code-string">"string"</span> },
+      <span class="code-string">"amount_usdc"</span>: { <span class="code-string">"type"</span>: <span class="code-string">"number"</span> },
+      <span class="code-string">"memo"</span>: { <span class="code-string">"type"</span>: <span class="code-string">"string"</span> }
     }
   }
-}];
-
-<span class="code-comment">// Claude calls it autonomously</span>
-<span class="code-keyword">const</span> result = <span class="code-keyword">await</span> claude.<span class="code-fn">messages</span>.create({
-  tools,
-  messages: [{
-    role: <span class="code-string">"user"</span>,
-    content: <span class="code-string">"Buy 1 cappuccino from @cafe-bot"</span>
-  }]
-});
-
-<span class="code-comment">// → ZettaPay receives x402 header
-// → Solana tx confirmed in 1.4s
-// → Webhook fires to merchant ✓</span></pre>
+}</pre>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- CODE SAMPLES -->
-  <section id="code" class="py-32 px-6 lg:px-12">
+  <!-- SDK 3-LINE INSTALL -->
+  <section id="code" class="py-28 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto">
-      <div class="text-center max-w-3xl mx-auto mb-20 reveal">
+      <div class="text-center max-w-3xl mx-auto mb-20 reveal" id="docs">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">SDK</span>
-        <h2 class="font-display text-5xl md:text-6xl font-medium mt-4 mb-6">Three lines. <span class="gradient-text">One payment.</span></h2>
-        <p class="text-brass/60 text-lg">TypeScript SDK with full type safety. npm install and ship.</p>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Three lines. <span class="gradient-text">One payment.</span></h2>
+        <p class="text-muted text-lg">TypeScript SDK with full type safety. npm install and ship.</p>
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
         <div class="glass rounded-2xl p-8 reveal">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Install</div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">1. Install</div>
           <pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-comment">$</span> npm install <span class="code-string">@zettapay/sdk</span></code></pre>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.05s;">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Initialize</div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">2. Initialize</div>
 <pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 <span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>(<span class="code-string">'sk_live_...'</span>);</code></pre>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal md:col-span-2" style="transition-delay: 0.1s;">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Charge</div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">3. Charge</div>
 <pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-keyword">const</span> payment = <span class="code-keyword">await</span> zp.<span class="code-fn">pay</span>({
   merchant: <span class="code-string">"@my-store"</span>,
   amount_usdc: <span class="code-num">42.00</span>,
@@ -518,8 +584,8 @@ POST /pay
   metadata: { order_id: <span class="code-string">"ord_xyz"</span> }
 });
 
-<span class="code-comment">// payment.signature → Solana tx hash
-// payment.status    → "confirmed" within 2s
+<span class="code-comment">// payment.signature -&gt; Solana tx hash
+// payment.status    -&gt; "confirmed" within 2s
 // Webhook fires to your URL with HMAC-SHA256 signature</span></code></pre>
         </div>
       </div>
@@ -527,39 +593,39 @@ POST /pay
   </section>
 
   <!-- FOOTER CTA -->
-  <section class="py-32 px-6 lg:px-12">
+  <section class="py-28 px-4 lg:px-12">
     <div class="max-w-4xl mx-auto text-center reveal">
-      <h2 class="font-display text-5xl md:text-7xl font-medium mb-6">Ready to <span class="gradient-text">ship</span>?</h2>
-      <p class="text-brass/60 text-lg md:text-xl mb-10">Built in 24 hours. Open source. Solana-native. AI-first.</p>
+      <h2 class="text-4xl md:text-7xl font-bold mb-6">Ready to <span class="gradient-text">ship</span>?</h2>
+      <p class="text-muted text-lg md:text-xl mb-10">Built in 24 hours. Open source. Solana-native. AI-first.</p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
         <a href="https://github.com/leandromaiam-code/zettapay" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
           <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
           Star on GitHub
         </a>
-        <a href="/api" class="btn-ghost px-8 py-4 rounded-full font-semibold text-brass text-base">Read the API</a>
+        <a href="/api" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the API</a>
       </div>
-      <div class="flex items-center justify-center gap-6 mt-12 text-xs font-mono text-brass/30 uppercase tracking-widest">
-        <a href="/healthz" class="hover:text-brass transition">Status</a>
-        <span>·</span>
-        <a href="/api" class="hover:text-brass transition">API</a>
-        <span>·</span>
-        <a href="/simulate/demo" class="hover:text-brass transition">Simulate</a>
-        <span>·</span>
-        <a href="https://github.com/leandromaiam-code/zettapay" class="hover:text-brass transition">GitHub</a>
+      <div class="flex items-center justify-center gap-6 mt-12 text-xs font-mono text-muted/40 uppercase tracking-widest">
+        <a href="/healthz" class="hover:text-white transition">Status</a>
+        <span>&middot;</span>
+        <a href="/api" class="hover:text-white transition">API</a>
+        <span>&middot;</span>
+        <a href="/simulate/demo" class="hover:text-white transition">Simulate</a>
+        <span>&middot;</span>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="hover:text-white transition">GitHub</a>
       </div>
     </div>
   </section>
 
   <!-- FOOTER -->
-  <footer class="border-t border-brass/10 py-8 px-6 lg:px-12">
+  <footer class="border-t border-royal/10 py-8 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="flex items-center gap-2">
-        <div class="w-6 h-6 rounded-md bg-gradient-to-br from-brass to-mint flex items-center justify-center font-bold text-deep text-xs">Z</div>
-        <span class="font-display text-lg text-brass">ZettaPay</span>
-        <span class="text-brass/30 text-xs ml-3 font-mono">v1.0 · Hackathon Edition</span>
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-6 h-6 rounded-md" />
+        <span class="text-lg font-bold text-white">ZettaPay</span>
+        <span class="text-muted/40 text-xs ml-3 font-mono">v1.0 &middot; Hackathon Edition</span>
       </div>
-      <div class="text-xs text-brass/40 font-mono">
-        Built with <span class="text-mint">Solana</span> · <span class="text-brass">USDC</span> · <span class="text-solana">x402</span>
+      <div class="text-xs text-muted/50 font-mono">
+        Built with <span class="text-mint">Solana</span> &middot; <span class="text-royal-bright">USDC</span> &middot; <span class="text-solana">x402</span>
       </div>
     </div>
   </footer>
@@ -576,60 +642,66 @@ POST /pay
     }, { threshold: 0.15 });
     document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
 
-    // Live demo
+    // Live demo terminal simulation
     const demoBtn = document.getElementById('demoBtn');
     const demoOut = document.getElementById('demoOutput');
     if (demoBtn) {
       demoBtn.addEventListener('click', async () => {
         demoBtn.disabled = true;
+        demoBtn.classList.add('opacity-70');
         demoBtn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Settling on Solana...';
         const lines = [
-          { t: 0, msg: '<span class="text-mint">$ zettapay pay --merchant=@hackathon-demo --amount=10</span>' },
-          { t: 200, msg: '<span class="text-brass/40">→ Building Solana transaction...</span>' },
-          { t: 600, msg: '<span class="text-brass/40">→ Signing with merchant ATA...</span>' },
-          { t: 1100, msg: '<span class="text-brass/40">→ Submitting to RPC (devnet)...</span>' },
-          { t: 1500, msg: '<span class="text-mint">→ Tx signature: 4xK9...mP2L</span>' },
-          { t: 1800, msg: '<span class="text-mint">→ Confirmed in 1.42s</span>' },
-          { t: 2100, msg: '<span class="text-brass/40">→ Webhook dispatched to merchant URL</span>' },
-          { t: 2400, msg: '<span class="text-brass/40">→ Settlement: 10.00 USDC delivered</span>' },
-          { t: 2700, msg: '<span class="text-brass">→ Fee: 0.030 USDC (0.30%)</span>' },
-          { t: 3100, msg: '\n<span class="text-mint font-bold">✓ PAYMENT COMPLETE</span>' },
-          { t: 3300, msg: '<span class="text-brass/40 text-[10px]">    View on Solana Explorer →</span>' },
+          { t: 0,    msg: '<span class="text-royal-bright">$ zettapay pay --merchant=@hackathon-demo --amount=10</span>' },
+          { t: 200,  msg: '<span class="text-muted">-> Building Solana transaction...</span>' },
+          { t: 600,  msg: '<span class="text-muted">-> Signing with merchant ATA...</span>' },
+          { t: 1100, msg: '<span class="text-muted">-> Submitting to RPC (devnet)...</span>' },
+          { t: 1500, msg: '<span class="text-mint">-> Tx signature: 4xK9...mP2L</span>' },
+          { t: 1800, msg: '<span class="text-mint">-> Confirmed in 1.42s</span>' },
+          { t: 2100, msg: '<span class="text-muted">-> Webhook dispatched to merchant URL</span>' },
+          { t: 2400, msg: '<span class="text-muted">-> Settlement: 10.00 USDC delivered</span>' },
+          { t: 2700, msg: '<span class="text-royal-bright">-> Fee: 0.030 USDC (0.30%)</span>' },
+          { t: 3100, msg: '\n<span class="text-mint font-bold">&#10003; PAYMENT COMPLETE</span>' },
+          { t: 3300, msg: '<span class="text-muted text-[10px]">    View on Solana Explorer -></span>' },
         ];
         demoOut.innerHTML = '';
         for (const l of lines) {
           await new Promise(r => setTimeout(r, l.t === 0 ? 0 : 300));
-          demoOut.innerHTML += `<div>${l.msg}</div>`;
+          demoOut.innerHTML += '<div>' + l.msg + '</div>';
           demoOut.scrollTop = demoOut.scrollHeight;
         }
         setTimeout(() => {
           demoBtn.disabled = false;
+          demoBtn.classList.remove('opacity-70');
           demoBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Pay 10 USDC again';
         }, 4000);
       });
     }
 
-    // Animated counter (simple)
+    // Animated stat counters
     const counters = document.querySelectorAll('.stat-counter[data-target]');
     counters.forEach(c => {
       const target = parseFloat(c.dataset.target);
       const suffix = c.dataset.suffix || '';
-      let current = 0;
       const dur = 1800;
-      const start = performance.now();
-      const tick = (t) => {
-        const p = Math.min((t - start) / dur, 1);
-        const eased = 1 - Math.pow(1 - p, 3);
-        const v = target * eased;
-        if (target < 1) c.textContent = v.toFixed(2) + suffix;
-        else if (target < 10) c.textContent = '<' + Math.ceil(v) + suffix;
-        else if (target >= 1000) c.textContent = (v / 1000).toFixed(0) + 'k';
-        else c.textContent = Math.floor(v) + suffix;
-        if (p < 1) requestAnimationFrame(tick);
+      let started = false;
+      const run = () => {
+        if (started) return;
+        started = true;
+        const start = performance.now();
+        const tick = (t) => {
+          const p = Math.min((t - start) / dur, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          const v = target * eased;
+          if (target < 1) c.textContent = v.toFixed(2) + suffix;
+          else if (target < 10) c.textContent = '<' + Math.ceil(v) + suffix;
+          else if (target >= 1000) c.textContent = (v / 1000).toFixed(0) + 'k';
+          else c.textContent = Math.floor(v) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
       };
-      // Start when in view
       const o = new IntersectionObserver(es => {
-        es.forEach(e => { if (e.isIntersecting) { requestAnimationFrame(tick); o.unobserve(e.target); }});
+        es.forEach(e => { if (e.isIntersecting) { run(); o.unobserve(e.target); }});
       });
       o.observe(c);
     });
