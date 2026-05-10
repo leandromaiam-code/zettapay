@@ -11,55 +11,29 @@
     }
   },
   "rewrites": [
-    {
-      "source": "/healthz",
-      "destination": "/api/healthz"
-    },
-    {
-      "source": "/health",
-      "destination": "/api/health"
-    },
-    {
-      "source": "/ready",
-      "destination": "/api/ready"
-    },
-    {
-      "source": "/metrics",
-      "destination": "/api/metrics"
-    },
-    {
-      "source": "/simulate/:merchant",
-      "destination": "/api/simulate/:merchant"
-    },
-    {
-      "source": "/analytics/:merchant",
-      "destination": "/api/analytics/:merchant"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/dashboard.html"
-    },
-    {
-      "source": "/docs",
-      "destination": "/docs/index.html"
-    },
-    {
-      "source": "/docs/quickstart",
-      "destination": "/docs/quickstart.html"
-    }
+    { "source": "/healthz", "destination": "/api/healthz" },
+    { "source": "/health", "destination": "/api/health" },
+    { "source": "/ready", "destination": "/api/ready" },
+    { "source": "/metrics", "destination": "/api/metrics" },
+    { "source": "/simulate/:merchant", "destination": "/api/simulate/:merchant" },
+    { "source": "/analytics/:merchant", "destination": "/api/analytics/:merchant" },
+    { "source": "/merchants/register", "destination": "/api/merchants/register" },
+    { "source": "/merchants/onboard", "destination": "/api/merchants/onboard" },
+    { "source": "/pay", "destination": "/api/pay" },
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/onramp", "destination": "/api/onramp" },
+    { "source": "/onramp/webhook", "destination": "/api/onramp/webhook" },
+    { "source": "/payments", "destination": "/api/payments" },
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/docs", "destination": "/docs/index.html" },
+    { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store"
-        },
-        {
-          "key": "X-Powered-By",
-          "value": "ZettaPay"
-        }
+        { "key": "Cache-Control", "value": "no-store" },
+        { "key": "X-Powered-By", "value": "ZettaPay" }
       ]
     }
   ],
