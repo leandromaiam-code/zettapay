@@ -21,6 +21,7 @@ export interface MerchantRow {
   pix_provider_merchant_id: string | null;
   pix_key: string | null;
   pix_key_type: PixKeyType | null;
+  deleted_at: string | null;
   created_at: string;
 }
 
@@ -54,6 +55,7 @@ export interface Merchant {
   coinflow: CoinflowSettlementSettings;
   velocity: VelocityLimits;
   pix: PixSettlementSettings;
+  deletedAt: string | null;
   createdAt: string;
 }
 
@@ -112,6 +114,7 @@ function toMerchant(row: MerchantRow): Merchant {
       pixKey: row.pix_key,
       pixKeyType: row.pix_key_type,
     },
+    deletedAt: row.deleted_at,
     createdAt: row.created_at,
   };
 }
@@ -197,6 +200,53 @@ export function updateMerchantCoinflow(
   const merchant = findMerchantById(db, id);
   if (!merchant) {
     throw new Error(`merchant ${id} disappeared after update`);
+  }
+  return merchant;
+}
+
+export interface RedactMerchantInput {
+  redactedName: string;
+  redactedEmail: string;
+  redactedApiKey: string;
+  redactedAt: string;
+}
+
+/**
+ * LGPD/GDPR right-to-erasure. Anonymizes the merchant's PII fields in place
+ * (name, email, webhook URL/secret, api key) and stamps `deleted_at`. The
+ * merchant ID and wallet_address are retained because the `payments` table
+ * has FK references to merchant_id and the on-chain wallet is already public
+ * — financial-record retention obligations override erasure for these fields
+ * (LGPD Art. 16 II / GDPR Art. 17(3)(b)).
+ */
+export function redactMerchant(
+  db: Db,
+  id: string,
+  input: RedactMerchantInput,
+): Merchant {
+  const stmt = db.prepare<[string, string, string, string, string]>(
+    `UPDATE merchants
+       SET name = ?,
+           email = ?,
+           api_key = ?,
+           webhook_url = NULL,
+           webhook_secret = NULL,
+           deleted_at = ?
+       WHERE id = ?`,
+  );
+  const result = stmt.run(
+    input.redactedName,
+    input.redactedEmail,
+    input.redactedApiKey,
+    input.redactedAt,
+    id,
+  );
+  if (result.changes === 0) {
+    throw new Error(`merchant ${id} not found`);
+  }
+  const merchant = findMerchantById(db, id);
+  if (!merchant) {
+    throw new Error(`merchant ${id} disappeared after redaction`);
   }
   return merchant;
 }

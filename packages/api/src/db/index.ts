@@ -79,6 +79,12 @@ function applyAddOnColumns(db: Db): void {
   }
   if (!merchantNames.has("pix_key_type")) {
     db.exec("ALTER TABLE merchants ADD COLUMN pix_key_type TEXT");
+  if (!merchantNames.has("deleted_at")) {
+    // Z21.4: timestamp set when LGPD/GDPR right-to-erasure redacts the row.
+    // Presence is the canonical signal that PII fields have been anonymized;
+    // the merchant remains in the table because payments reference it under
+    // financial-record retention obligations.
+    db.exec("ALTER TABLE merchants ADD COLUMN deleted_at TEXT");
   }
 
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all() as Array<{
@@ -179,6 +185,7 @@ function applyMigrations(db: Db): void {
       webhook_secret  TEXT,
       velocity_max_payments_per_minute INTEGER NOT NULL DEFAULT 5,
       velocity_max_amount_per_hour     REAL NOT NULL DEFAULT 1000,
+      deleted_at      TEXT,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
 
@@ -702,5 +709,28 @@ function applyMigrations(db: Db): void {
       ON aml_sars(status);
     CREATE INDEX IF NOT EXISTS aml_sars_created_at_idx
       ON aml_sars(created_at);
+    -- Z21.4: LGPD/GDPR consent ledger. Append-only by convention; "withdrawing"
+    -- consent inserts a new row with granted=0 rather than updating the prior
+    -- grant, so the proof trail (LGPD Art. 8 §6) survives. There is no UNIQUE
+    -- on (subject, purpose) precisely so re-granting is allowed.
+    CREATE TABLE IF NOT EXISTS consent_records (
+      id              TEXT PRIMARY KEY,
+      subject_type    TEXT NOT NULL CHECK (subject_type IN ('merchant','wallet')),
+      subject_id      TEXT NOT NULL,
+      purpose         TEXT NOT NULL,
+      granted         INTEGER NOT NULL CHECK (granted IN (0, 1)),
+      granted_at      TEXT,
+      withdrawn_at    TEXT,
+      source          TEXT,
+      metadata_json   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS consent_records_subject_idx
+      ON consent_records(subject_type, subject_id);
+    CREATE INDEX IF NOT EXISTS consent_records_subject_purpose_idx
+      ON consent_records(subject_type, subject_id, purpose);
+    CREATE INDEX IF NOT EXISTS consent_records_created_at_idx
+      ON consent_records(created_at);
   `);
 }
