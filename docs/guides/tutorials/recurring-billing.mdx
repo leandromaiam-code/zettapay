@@ -1,0 +1,163 @@
+---
+title: "Recurring billing"
+description: "Charge a customer wallet on a daily, weekly, or monthly cadence with automatic retries and failure handling."
+---
+
+ZettaPay subscriptions are first-class: a single `POST /subscriptions`
+call schedules a recurring USDC charge against a customer wallet.
+ZettaPay handles the cron, the on-chain transfer, the retry policy,
+and the webhook fan-out. You handle plan logic and the customer
+relationship.
+
+## What this tutorial covers
+
+- Modeling a SaaS plan as a ZettaPay subscription
+- Creating, listing, and canceling subscriptions
+- Reconciling each successful charge to your billing system
+- Handling charge failures and the auto-pause after three retries
+
+## 1. Model your plan
+
+Pick the cadence and amount per charge. ZettaPay subscriptions support
+three intervals: `daily`, `weekly`, `monthly`. Anything more complex
+(annual prepay, mid-cycle upgrades) is composed at the application
+layer by canceling and re-creating the subscription.
+
+| Plan | Amount | Interval |
+| --- | --- | --- |
+| Pro monthly | `"19.99"` | `monthly` |
+| Pro annual (prepay) | `"199.00"` | one-shot `POST /pay`, not a subscription |
+| Team weekly retainer | `"99.00"` | `weekly` |
+
+## 2. Create the subscription
+
+The customer wallet must be the same wallet the customer signed in
+with — ZettaPay debits it directly each cycle.
+
+```ts
+import { ZettaPayClient } from "@zettapay/sdk";
+
+const zetta = new ZettaPayClient({ apiKey: process.env.ZETTAPAY_API_KEY! });
+
+const subscription = await zetta.subscriptions.create(
+  {
+    customerWallet: customer.walletAddress,
+    amount: "19.99",
+    interval: "monthly",
+    metadata: {
+      userId: customer.id,
+      plan: "pro_monthly",
+    },
+  },
+  { idempotencyKey: `sub:${customer.id}:pro_monthly` },
+);
+
+await db.update("users")
+  .set({ zettapaySubscriptionId: subscription.id })
+  .where({ id: customer.id });
+```
+
+The first charge fires at `nextChargeAt` (defaults to one interval
+from now — pass an ISO-8601 string to charge immediately or backdate).
+
+## 3. Reconcile each charge
+
+Every successful charge fires `payment.succeeded` with the
+subscription metadata embedded. Use it to extend access:
+
+```ts
+app.post("/webhooks/zettapay", express.raw({ type: "*/*" }), async (req, res) => {
+  if (!verifyZettaPayWebhook(req, process.env.WEBHOOK_SECRET!)) {
+    return res.status(400).send("invalid signature");
+  }
+
+  const event = JSON.parse(req.body.toString());
+  const eventId = req.headers["x-zettapay-event-id"] as string;
+  if (await db.eventSeen(eventId)) return res.status(200).send("ok");
+
+  if (event.type === "payment.succeeded" && event.data.metadata?.subscriptionId) {
+    const { userId } = event.data.metadata;
+    await db.update("users")
+      .set({ accessUntil: addInterval(new Date(), event.data.metadata.interval) })
+      .where({ id: userId });
+  }
+
+  res.status(200).send("ok");
+});
+```
+
+The payment object carries `metadata.subscriptionId` and
+`metadata.interval` so a single webhook handler covers both one-shot
+and recurring payments.
+
+## 4. Handle charge failures
+
+A charge can fail for several reasons:
+
+| Reason | Recovery path |
+| --- | --- |
+| Customer wallet has insufficient USDC | Email the customer; ZettaPay will retry next cycle. |
+| Wallet authorization revoked on-chain | Subscription auto-pauses after the third consecutive failure. |
+| Solana RPC outage | ZettaPay retries automatically; no action needed. |
+| Velocity limit hit | Raise via `PUT /merchants/:id/velocity` if expected; investigate otherwise. |
+
+Three consecutive failures put the subscription in `paused`. The
+customer must update their wallet (or top it up) and your application
+must call `POST /subscriptions` again to resume — paused subscriptions
+do not auto-resume on their own.
+
+```ts
+if (event.type === "subscription.charge_failed") {
+  await mailer.send({
+    to: event.data.metadata.userEmail,
+    template: "payment_failed",
+    vars: { plan: event.data.metadata.plan, retryAt: event.data.nextChargeAt },
+  });
+}
+```
+
+## 5. Cancel a subscription
+
+Cancellation is a single call. Past charges are not refunded — issue a
+manual `POST /pay` in the opposite direction for prorated refunds.
+
+```ts
+await zetta.subscriptions.cancel(subscription.id);
+```
+
+The subscription transitions to `canceled` immediately; no further
+charges fire. `nextChargeAt` is preserved for audit so you can see
+when the next cycle would have run.
+
+## 6. Audit and reconcile
+
+For accounting, list subscriptions and pivot against your billing
+ledger:
+
+```ts
+const { subscriptions } = await zetta.subscriptions.list({ limit: 200 });
+for (const sub of subscriptions) {
+  await ledger.upsert({
+    externalId: sub.id,
+    customer: sub.metadata?.userId,
+    mrr: sub.interval === "monthly" ? parseFloat(sub.amount) : 0,
+    status: sub.status,
+  });
+}
+```
+
+## What can go wrong
+
+| Symptom | Likely cause |
+| --- | --- |
+| Subscription created but no charge fires | `nextChargeAt` set to a future date. Check the response. |
+| Duplicate subscriptions for the same customer | Idempotency key not pinned to a stable identifier. Use `sub:{userId}:{plan}`. |
+| `subscription.charge_failed` repeats forever | Wallet permanently unusable. Cancel and ask customer to onboard a new wallet. |
+| Customer charged after cancellation | Cancel was issued mid-charge. The single in-flight charge completes; subsequent cycles are blocked. |
+
+## Reference
+
+- [`POST /subscriptions`](/api-reference/subscriptions/create) — create
+- [`GET /subscriptions`](/api-reference/subscriptions/list) — list
+- [`POST /subscriptions/:id/cancel`](/api-reference/subscriptions/cancel) — cancel
+- [Webhooks](/concepts/webhooks) — event taxonomy and verification

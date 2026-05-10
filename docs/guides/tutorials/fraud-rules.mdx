@@ -1,0 +1,204 @@
+---
+title: "Fraud rules"
+description: "Tune velocity throttles, OFAC sanctions, and payer caps to keep abuse out without slowing real customers."
+---
+
+ZettaPay applies three layers of fraud control before a payment ever
+hits the chain: an OFAC sanctions blocklist, a sliding-window velocity
+throttle, and per-merchant amount caps. Defaults are conservative —
+this tutorial walks through observing what they do, tuning them for
+your business, and reading the audit trail when a payment is blocked.
+
+## What this tutorial covers
+
+- The order in which fraud checks run
+- Tuning velocity for high-volume merchants
+- Adding internal addresses to the sanctions list
+- Reading audit rows when a charge is blocked
+- Designing application-layer rules on top of ZettaPay's primitives
+
+## Order of checks
+
+Every `POST /pay` runs through this sequence **before** the
+transaction is submitted on-chain. Failing any check produces a
+structured error and an append-only `audit_journal` row.
+
+<Steps>
+  <Step title="Sanctions blocklist (OFAC)">
+    Hard-block if the payer or merchant wallet appears on the OFAC
+    sanctions list. Returns `403 forbidden`. Cannot be overridden.
+  </Step>
+  <Step title="Per-payer velocity">
+    Reject if the payer has already submitted N payments in the last
+    60 seconds. Default N = 5.
+  </Step>
+  <Step title="Per-merchant amount cap">
+    Reject if the merchant has already accepted $X in the last hour.
+    Default X = $1,000.
+  </Step>
+  <Step title="Beta cohort gates">
+    Reject if the merchant's beta cohort cap is reached (only relevant
+    during private beta).
+  </Step>
+</Steps>
+
+Sanctions runs first by design — a blocked attempt should not consume
+a velocity slot or a beta cap.
+
+## 1. Read the defaults
+
+Defaults live on the merchant record. Fetch them via the dashboard or
+inspect the merchant after registration:
+
+```ts
+const merchant = await zetta.merchants.retrieve(42);
+console.log(merchant.velocity);
+// { maxPaymentsPerMinute: 5, maxAmountPerHour: "1000" }
+```
+
+A value of `0` on either limit disables that cap. Use this as an
+escape hatch for trusted high-velocity merchants — never on a brand-
+new account.
+
+## 2. Tune velocity for your business
+
+A SaaS API merchant accepting agent payments will trip the default
+five-per-minute cap immediately. Raise it once you have a baseline of
+real traffic:
+
+```bash
+curl -X PUT https://api.zettapay.io/merchants/42/velocity \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "maxPaymentsPerMinute": 60,
+    "maxAmountPerHour": "25000"
+  }'
+```
+
+**Heuristic for sizing:**
+
+| Profile | `maxPaymentsPerMinute` | `maxAmountPerHour` |
+| --- | --- | --- |
+| Human checkout | 5 (default) | 5 × p99 cart value |
+| AI agent micropayments | 60 – 300 | 10 × expected hourly revenue |
+| B2B invoicing (low volume, high amount) | 5 | 5 × p99 invoice value |
+
+Always size against **observed** traffic, not aspirational. Velocity
+caps that bite during legitimate spikes train your team to ignore the
+alerts.
+
+## 3. Detect blocked payments
+
+Velocity rejections return `429 rate_limited` with a
+`scope` payload telling you which cap fired:
+
+```json
+{
+  "error": {
+    "code": "rate_limited",
+    "message": "Wallet exceeded velocity limit of 5 payments per minute",
+    "details": {
+      "scope": "per_wallet_per_minute",
+      "limit": 5,
+      "observed": 5
+    }
+  }
+}
+```
+
+Sanctions rejections return `403 forbidden`:
+
+```json
+{
+  "error": {
+    "code": "forbidden",
+    "message": "Payer wallet is on the sanctions list and cannot transact.",
+    "details": {
+      "scope": "blacklist:ofac",
+      "role": "payer",
+      "list": "OFAC SDN",
+      "sanctionedOn": "2022-08-08"
+    }
+  }
+}
+```
+
+Surface these to the buyer with a generic "payment declined" — never
+leak that the wallet is sanctioned, both for UX and for not tipping
+off the actor.
+
+## 4. Audit trail
+
+Every blocked attempt writes an `audit_journal` row. Stream the
+journal into your warehouse and pivot on `event`:
+
+| Event | Meaning |
+| --- | --- |
+| `payment.blocked.blacklist` | OFAC match. Payload includes `role` (`payer` or `merchant`) and `list`. |
+| `payment.blocked.velocity` | Velocity cap fired. Payload includes `scope`, `limit`, `observed`. |
+| `payment.blocked.beta_cohort` | Beta cap fired. Only emitted during private beta. |
+
+Rows are append-only — never deleted, never updated. They are the
+authoritative record for chargeback disputes and compliance audits.
+
+## 5. Extend the sanctions list
+
+ZettaPay ships the OFAC SDN list as a baseline. To block additional
+addresses (internal blocklist, fraud signals from your application),
+set the `OFAC_BLACKLIST_EXTRA` environment variable on the API:
+
+```bash
+OFAC_BLACKLIST_EXTRA="WalletA1...|known fraud,WalletB2...|account takeover"
+```
+
+Format is comma-separated `address|reason` pairs. Reason is logged in
+the audit row. The cache is process-local, so restart the API after
+changes.
+
+For programmatic blocklists (e.g. graph-based fraud scoring), apply
+the rule **before** calling `POST /pay` from your backend. ZettaPay's
+sanctions check is the safety net, not the policy engine.
+
+## 6. Application-layer rules
+
+ZettaPay enforces protocol-level safety. Business-level fraud rules —
+device fingerprinting, behavioral signals, payer reputation — belong
+in your application, gated before the call to `POST /pay`:
+
+```ts
+async function chargeWithRiskCheck(input: PayInput) {
+  const risk = await riskEngine.score(input);
+  if (risk.score > 0.8) {
+    audit.write("payment.blocked.app_risk", { input, risk });
+    throw new Error("payment_declined");
+  }
+  return zetta.pay(input);
+}
+```
+
+Layer them in this order:
+
+1. Application risk score (your model)
+2. ZettaPay sanctions (hard block)
+3. ZettaPay velocity (soft throttle)
+4. On-chain settlement
+
+Each layer is cheap and rejects different failure modes. Skipping
+layer 1 puts the burden of fraud detection on your velocity caps,
+which are blunt by design.
+
+## What can go wrong
+
+| Symptom | Likely cause |
+| --- | --- |
+| Real customers hitting `429 rate_limited` | Velocity caps too tight. Pull last-7-day p99 traffic and double it. |
+| `403 forbidden` on a known-good wallet | Wallet matches an internal blocklist entry — check `OFAC_BLACKLIST_EXTRA`. |
+| No audit rows for blocked payments | Audit table not being read from the same DB as the API. Check schema. |
+| Sanctions list out of date | OFAC publishes monthly. ZettaPay refreshes on release; subscribe to the changelog. |
+
+## Reference
+
+- [`PUT /merchants/:id/velocity`](/api-reference/merchants/velocity) — adjust caps
+- [`/api-reference/errors`](/api-reference/errors) — full error code list
+- [Architecture](/concepts/architecture) — where fraud checks sit in the request path
