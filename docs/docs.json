@@ -41,6 +41,7 @@
             "pages": [
               "concepts/architecture",
               "concepts/ai-agents",
+              "concepts/native-integrations",
               "concepts/webhooks",
               "concepts/onramp",
               "concepts/beta-launch"
@@ -52,7 +53,15 @@
               "guides/accept-payments",
               "guides/x402-protocol",
               "guides/mcp-integration",
-              "guides/handling-webhooks"
+              "guides/handling-webhooks",
+              {
+                "group": "Native AI integrations",
+                "pages": [
+                  "guides/integrations/anthropic",
+                  "guides/integrations/openai",
+                  "guides/integrations/huggingface"
+                ]
+              }
             ]
           }
         ]

@@ -90,6 +90,7 @@ curl https://zettapay.vercel.app/simulate/test-merchant
 - MoonPay onramp (card → USDC)
 - x402 header support
 - MCP endpoint for AI agents
+- Native integration recipes for Anthropic Claude, OpenAI, and Hugging Face — see [docs/concepts/native-integrations](docs/concepts/native-integrations.mdx)
 
 ## Vercel deployment
 
