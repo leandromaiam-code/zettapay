@@ -612,5 +612,35 @@ function applyMigrations(db: Db): void {
       ON pix_settlements(status);
     CREATE UNIQUE INDEX IF NOT EXISTS pix_settlements_payment_uidx
       ON pix_settlements(payment_id) WHERE payment_id IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS bridge_intents (
+      id                    TEXT PRIMARY KEY,
+      merchant_id           TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      source_chain          TEXT NOT NULL,
+      source_network        TEXT NOT NULL,
+      source_currency       TEXT NOT NULL,
+      destination_currency  TEXT NOT NULL,
+      recipient_wallet      TEXT NOT NULL,
+      amount_usdc           REAL NOT NULL,
+      fee_usdc              REAL NOT NULL,
+      net_usdc              REAL NOT NULL,
+      fee_bps               INTEGER NOT NULL,
+      source_tx_hash        TEXT,
+      attestation_hash      TEXT,
+      attestation_status    TEXT,
+      redemption_signature  TEXT,
+      payment_id            TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      status                TEXT NOT NULL CHECK (status IN ('pending','burned','attested','completed','failed')),
+      error_message         TEXT,
+      metadata_json         TEXT,
+      created_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at            TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS bridge_intents_merchant_idx
+      ON bridge_intents(merchant_id);
+    CREATE INDEX IF NOT EXISTS bridge_intents_status_idx
+      ON bridge_intents(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS bridge_intents_source_tx_uidx
+      ON bridge_intents(source_tx_hash) WHERE source_tx_hash IS NOT NULL;
   `);
 }
