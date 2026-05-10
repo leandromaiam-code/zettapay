@@ -9,6 +9,7 @@ import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
 import { SolanaService } from "./services/solana.js";
+import type { ShopifyAppConfig } from "./services/shopify.js";
 
 const port = Number.parseInt(process.env.PORT ?? "3001", 10);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -52,8 +53,9 @@ const shutdown = new GracefulShutdown({ shutdownTimeoutMs, logger });
 shutdown.register("database", () => closeDatabase());
 
 const coinflow = loadCoinflow();
+const shopify = loadShopify();
 
-const app = createApp({ db, solana, shutdown, coinflow });
+const app = createApp({ db, solana, shutdown, coinflow, shopify });
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -63,6 +65,15 @@ server.keepAliveTimeout = 65_000;
 server.headersTimeout = 66_000;
 
 shutdown.install(server);
+
+function loadShopify(): ShopifyAppConfig | null {
+  const apiKey = process.env.SHOPIFY_API_KEY;
+  const apiSecret = process.env.SHOPIFY_API_SECRET;
+  const appUrl = process.env.SHOPIFY_APP_URL;
+  if (!apiKey || !apiSecret || !appUrl) return null;
+  const scopes = process.env.SHOPIFY_SCOPES ?? "read_orders,write_script_tags";
+  return { apiKey, apiSecret, scopes, appUrl };
+}
 
 function loadCoinflow(): CoinflowClient | undefined {
   const apiKey = process.env.COINFLOW_API_KEY;

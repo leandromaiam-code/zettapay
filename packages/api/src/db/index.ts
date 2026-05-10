@@ -209,5 +209,24 @@ function applyMigrations(db: Db): void {
       ON subscriptions(next_charge_at) WHERE status = 'active';
     CREATE INDEX IF NOT EXISTS subscriptions_customer_wallet_idx
       ON subscriptions(customer_wallet);
+
+    CREATE TABLE IF NOT EXISTS shopify_installations (
+      id              TEXT PRIMARY KEY,
+      shop_domain     TEXT NOT NULL UNIQUE,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      access_token    TEXT,
+      scope           TEXT,
+      status          TEXT NOT NULL CHECK (status IN ('pending','installed','uninstalled')),
+      oauth_nonce     TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      installed_at    TEXT,
+      uninstalled_at  TEXT,
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS shopify_installations_merchant_idx
+      ON shopify_installations(merchant_id);
+    CREATE INDEX IF NOT EXISTS shopify_installations_status_idx
+      ON shopify_installations(status);
   `);
 }
