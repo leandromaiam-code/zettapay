@@ -304,6 +304,39 @@
       <div class="glass rounded-2xl p-5 md:p-6">
         <div class="flex items-center justify-between mb-3">
           <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Funnel · 30d</div>
+            <h2 class="text-xl font-bold mt-1">Views → checkout → completed</h2>
+          </div>
+          <span id="funnel-overall" class="badge badge-muted">—</span>
+        </div>
+        <div id="funnel-chart" style="width: 100%; height: 220px;">
+          <div class="skeleton w-full h-full rounded-xl"></div>
+        </div>
+        <div id="funnel-steps" class="grid grid-cols-3 gap-3 mt-3 text-center text-xs">
+          <div class="glass rounded-xl p-3">
+            <div class="text-muted mono uppercase tracking-widest text-[10px]">Views</div>
+            <div id="funnel-view-count" class="stat-num text-base font-bold mt-1">—</div>
+            <div id="funnel-view-drop" class="text-muted mono mt-0.5">first step</div>
+          </div>
+          <div class="glass rounded-xl p-3">
+            <div class="text-muted mono uppercase tracking-widest text-[10px]">Checkout</div>
+            <div id="funnel-checkout-count" class="stat-num text-base font-bold mt-1">—</div>
+            <div id="funnel-checkout-drop" class="text-muted mono mt-0.5">—</div>
+          </div>
+          <div class="glass rounded-xl p-3">
+            <div class="text-muted mono uppercase tracking-widest text-[10px]">Completed</div>
+            <div id="funnel-completed-count" class="stat-num text-base font-bold mt-1">—</div>
+            <div id="funnel-completed-drop" class="text-muted mono mt-0.5">—</div>
+          </div>
+        </div>
+        <div id="funnel-empty" class="hidden-init text-center py-3 text-muted text-sm mt-2">
+          No funnel data yet — POST to <span class="mono text-royal-bright">/funnel/track</span> from your checkout page to start measuring drop-off.
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-3">
+          <div>
             <div class="text-xs font-mono uppercase tracking-widest text-muted">Top customers · 30d</div>
             <h2 class="text-xl font-bold mt-1">Highest spenders</h2>
           </div>
@@ -683,6 +716,7 @@
 
       renderTpvChart(analytics.tpvSeries || []);
       renderConversionChart(conv);
+      renderFunnel(analytics.funnel);
       renderTopCustomers(analytics.topCustomers || []);
     }
 
@@ -695,6 +729,14 @@
       });
       ['conv-completed', 'conv-failed', 'conv-pending'].forEach((id) => {
         $(id).textContent = '—';
+      });
+      [
+        'funnel-view-count', 'funnel-checkout-count', 'funnel-completed-count',
+        'funnel-view-drop', 'funnel-checkout-drop', 'funnel-completed-drop',
+        'funnel-overall',
+      ].forEach((id) => {
+        const el = $(id);
+        if (el) el.textContent = '—';
       });
     }
 
@@ -838,6 +880,99 @@
       );
 
       getRoot('conversion-chart').render(chart);
+    }
+
+    function renderFunnel(funnel) {
+      const overallEl = $('funnel-overall');
+      const emptyEl = $('funnel-empty');
+      const safe = funnel && Array.isArray(funnel.steps) ? funnel : null;
+      const stepByName = {};
+      if (safe) for (const s of safe.steps) stepByName[s.name] = s;
+      const dropByTo = {};
+      if (safe && Array.isArray(safe.dropOff)) {
+        for (const d of safe.dropOff) dropByTo[d.to] = d;
+      }
+
+      const view = stepByName.view ? Number(stepByName.view.count || 0) : 0;
+      const checkout = stepByName.checkout ? Number(stepByName.checkout.count || 0) : 0;
+      const completed = stepByName.completed ? Number(stepByName.completed.count || 0) : 0;
+
+      $('funnel-view-count').textContent = view.toLocaleString('en-US');
+      $('funnel-checkout-count').textContent = checkout.toLocaleString('en-US');
+      $('funnel-completed-count').textContent = completed.toLocaleString('en-US');
+
+      const fmtPct = (n) => (Math.round(Number(n || 0) * 1000) / 10).toFixed(1) + '%';
+      const checkoutDrop = dropByTo.checkout;
+      const completedDrop = dropByTo.completed;
+      $('funnel-checkout-drop').textContent = checkoutDrop
+        ? '−' + fmtPct(checkoutDrop.rate) + ' from view'
+        : '—';
+      $('funnel-completed-drop').textContent = completedDrop
+        ? '−' + fmtPct(completedDrop.rate) + ' from checkout'
+        : '—';
+
+      if (overallEl) {
+        overallEl.textContent = view > 0 ? fmtPct(safe.overallRate) + ' end-to-end' : 'no views yet';
+      }
+
+      const isEmpty = !safe || (view + checkout + completed) === 0;
+      if (emptyEl) {
+        if (isEmpty) emptyEl.classList.remove('hidden-init');
+        else emptyEl.classList.add('hidden-init');
+      }
+
+      if (!rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const data = isEmpty
+        ? [
+            { step: 'Views', count: 0 },
+            { step: 'Checkout', count: 0 },
+            { step: 'Completed', count: 0 },
+          ]
+        : [
+            { step: 'Views', count: view, fill: '#4F6BFF' },
+            { step: 'Checkout', count: checkout, fill: '#9945FF' },
+            { step: 'Completed', count: completed, fill: '#14F195' },
+          ];
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.BarChart,
+          { data, margin: { top: 8, right: 12, left: 0, bottom: 0 } },
+          h(R.CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(148,163,184,0.12)', vertical: false }),
+          h(R.XAxis, {
+            dataKey: 'step',
+            tick: { fill: '#94A3B8', fontSize: 11, fontFamily: 'JetBrains Mono, ui-monospace, monospace' },
+            stroke: 'rgba(148,163,184,0.2)',
+          }),
+          h(R.YAxis, {
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            stroke: 'rgba(148,163,184,0.2)',
+            allowDecimals: false,
+            width: 50,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            itemStyle: { color: '#FFFFFF' },
+            formatter: (value) => [Number(value).toLocaleString('en-US'), 'Sessions'],
+          }),
+          h(R.Bar, {
+            dataKey: 'count',
+            radius: [8, 8, 0, 0],
+            isAnimationActive: false,
+          })
+        )
+      );
+
+      getRoot('funnel-chart').render(chart);
     }
 
     function renderTopCustomers(customers) {

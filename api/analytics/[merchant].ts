@@ -65,6 +65,54 @@ function sumWindow(
   return { amount: Math.round(amount * 100) / 100, count };
 }
 
+function buildFunnel(rng: () => number, completed: number) {
+  // Realistic e-commerce drop-off: ~40-55% bounce on view→checkout,
+  // ~10-20% abandon on checkout→completed. Working backwards from
+  // the completed count keeps the demo internally consistent.
+  const checkoutToCompleted = 0.82 + rng() * 0.12;
+  const viewToCheckout = 0.45 + rng() * 0.15;
+  const checkout = Math.max(
+    completed,
+    Math.round(completed / Math.max(0.2, checkoutToCompleted)),
+  );
+  const view = Math.max(checkout, Math.round(checkout / Math.max(0.2, viewToCheckout)));
+
+  const steps = (
+    [
+      ["view", view],
+      ["checkout", checkout],
+      ["completed", completed],
+    ] as const
+  ).map(([name, count]) => ({
+    name,
+    count,
+    conversionFromStart: view > 0 ? count / view : 0,
+  }));
+
+  const dropOff = [
+    {
+      from: "view" as const,
+      to: "checkout" as const,
+      dropped: Math.max(0, view - checkout),
+      rate: view > 0 ? Math.max(0, view - checkout) / view : 0,
+    },
+    {
+      from: "checkout" as const,
+      to: "completed" as const,
+      dropped: Math.max(0, checkout - completed),
+      rate:
+        checkout > 0 ? Math.max(0, checkout - completed) / checkout : 0,
+    },
+  ];
+
+  return {
+    windowDays: 30,
+    steps,
+    dropOff,
+    overallRate: view > 0 ? completed / view : 0,
+  };
+}
+
 function buildTopCustomers(ref: string, rng: () => number) {
   const out: Array<{
     payerWallet: string;
@@ -139,6 +187,7 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
         pending,
         rate: Math.round(rate * 10000) / 10000,
       },
+      funnel: buildFunnel(rng, completed),
       topCustomers: buildTopCustomers(ref, rng),
     },
   });

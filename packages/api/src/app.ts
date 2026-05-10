@@ -1,6 +1,7 @@
 import express, { type Express, type Request, type Response } from "express";
 import type { Database as Db } from "better-sqlite3";
 import { analyticsRouter } from "./routes/analytics.js";
+import { funnelRouter } from "./routes/funnel.js";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
 import { settlementRouter } from "./routes/settlement.js";
@@ -79,6 +80,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(subscriptionsRouter(db));
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
+  app.use(funnelRouter(db));
   app.use(
     shopifyRouter(db, {
       config: shopify ?? null,
