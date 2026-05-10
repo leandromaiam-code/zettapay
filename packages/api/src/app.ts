@@ -5,6 +5,7 @@ import { agentIdentityRouter } from "./routes/agent-identity.js";
 import { agentSpendingLimitsRouter } from "./routes/agent-spending-limits.js";
 import { agentToAgentRouter } from "./routes/agent-to-agent.js";
 import { amlRouter } from "./routes/aml.js";
+import { ambassadorsRouter } from "./routes/ambassadors.js";
 import { analyticsRouter } from "./routes/analytics.js";
 import { apiDocsRouter } from "./routes/api-docs.js";
 import { betaRouter } from "./routes/beta.js";
@@ -252,6 +253,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(webhooksRouter(db));
   app.use(webhooksAdminRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(statusPageRouter(db, { adminKey: admin?.adminKey ?? null }));
+  app.use(ambassadorsRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(
     indexerRouter(db, {
       webhookAuthKey: indexer?.webhookAuthKey ?? null,
