@@ -1,0 +1,130 @@
+{
+  "$schema": "./server-config.schema.json",
+  "name": "ZettaPay",
+  "description": "Solana USDC payment protocol for humans and AI agents.",
+  "icon": "../../docs/logo/symbol-light.png",
+  "verificationLevel": "MEDIUM",
+  "explicitContentFilter": "ALL_MEMBERS",
+  "defaultMessageNotifications": "ONLY_MENTIONS",
+  "rules": [
+    "Be respectful — no harassment, hate speech, or personal attacks.",
+    "Stay on topic per channel — use #help for support, #showcase for demos.",
+    "No financial advice — ZettaPay does not custody funds, run your own due diligence.",
+    "No spam, no scams, no token shilling, no airdrop bait.",
+    "Never share private keys, seed phrases, or API keys. Mods will never DM first.",
+    "English or Portuguese welcome. Use threads for long discussions.",
+    "Self-promo only in #showcase, with context about how it uses ZettaPay."
+  ],
+  "roles": [
+    {
+      "name": "Founder",
+      "color": "#d4a961",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": ["ADMINISTRATOR"]
+    },
+    {
+      "name": "Core Team",
+      "color": "#0a1612",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": ["MANAGE_CHANNELS", "MANAGE_MESSAGES", "KICK_MEMBERS", "BAN_MEMBERS", "MODERATE_MEMBERS"]
+    },
+    {
+      "name": "Moderator",
+      "color": "#1f5f4a",
+      "hoist": true,
+      "mentionable": true,
+      "permissions": ["MANAGE_MESSAGES", "MODERATE_MEMBERS", "KICK_MEMBERS"]
+    },
+    {
+      "name": "Contributor",
+      "color": "#3a8f6f",
+      "hoist": true,
+      "mentionable": true,
+      "description": "Awarded to merged PR authors via the GitHub-Discord link bot."
+    },
+    {
+      "name": "Merchant",
+      "color": "#4a6cff",
+      "hoist": false,
+      "mentionable": true,
+      "description": "Self-assign via /role in #welcome — businesses accepting USDC."
+    },
+    {
+      "name": "Agent Builder",
+      "color": "#9b59b6",
+      "hoist": false,
+      "mentionable": true,
+      "description": "Self-assign via /role — building AI agents that pay via x402/MCP."
+    },
+    {
+      "name": "Developer",
+      "color": "#2ecc71",
+      "hoist": false,
+      "mentionable": true,
+      "description": "Self-assign via /role — using the SDK or REST API."
+    },
+    {
+      "name": "Member",
+      "color": "#95a5a6",
+      "hoist": false,
+      "mentionable": false,
+      "description": "Auto-assigned on join by the welcome bot."
+    }
+  ],
+  "channels": {
+    "categories": [
+      {
+        "name": "INFORMATION",
+        "channels": [
+          { "name": "welcome", "type": "GUILD_TEXT", "topic": "Start here. Use /role to pick what describes you.", "readonlyForMembers": true },
+          { "name": "announcements", "type": "GUILD_ANNOUNCEMENT", "topic": "Releases, mainnet milestones, audits, security advisories.", "readonlyForMembers": true },
+          { "name": "rules", "type": "GUILD_TEXT", "topic": "Server rules. Reading required.", "readonlyForMembers": true },
+          { "name": "status", "type": "GUILD_TEXT", "topic": "Live mirror of status.zettapay.io incidents (webhook-driven).", "readonlyForMembers": true }
+        ]
+      },
+      {
+        "name": "COMMUNITY",
+        "channels": [
+          { "name": "general", "type": "GUILD_TEXT", "topic": "Anything ZettaPay-adjacent. Be kind." },
+          { "name": "help", "type": "GUILD_TEXT", "topic": "Stuck on integration, RPC, USDC mint, x402, or webhooks? Ask here." },
+          { "name": "showcase", "type": "GUILD_TEXT", "topic": "Built something with @zettapay/sdk or x402? Show it off." },
+          { "name": "feedback", "type": "GUILD_TEXT", "topic": "Product feedback, feature requests, DX papercuts." }
+        ]
+      },
+      {
+        "name": "DEVELOPERS",
+        "channels": [
+          { "name": "api", "type": "GUILD_TEXT", "topic": "REST + SDK questions. POST /pay, /merchants, idempotency, rate limits." },
+          { "name": "x402", "type": "GUILD_TEXT", "topic": "x402 protocol — agent payment headers, signed tx blobs, facilitators." },
+          { "name": "mcp", "type": "GUILD_TEXT", "topic": "MCP integration — exposing ZettaPay as a tool to Claude/GPT/Gemini." },
+          { "name": "webhooks", "type": "GUILD_TEXT", "topic": "Webhook signatures, retries, idempotency keys, replay debugging." },
+          { "name": "on-chain", "type": "GUILD_TEXT", "topic": "Solana program, IDL, MerchantBinding, Anchor, devnet/mainnet." },
+          { "name": "github", "type": "GUILD_TEXT", "topic": "Auto-posted PRs, issues, releases from leandromaiam-code/zettapay.", "readonlyForMembers": true }
+        ]
+      },
+      {
+        "name": "AGENT BUILDERS",
+        "channels": [
+          { "name": "agents-general", "type": "GUILD_TEXT", "topic": "Computer Use, Operator, Mariner — anything agent-economy." },
+          { "name": "marketplace", "type": "GUILD_TEXT", "topic": "Z20 AI Agent Marketplace — list services, find buyers." }
+        ]
+      },
+      {
+        "name": "VOICE",
+        "channels": [
+          { "name": "Office Hours", "type": "GUILD_VOICE", "topic": "Weekly office hours with the core team." },
+          { "name": "Pair Programming", "type": "GUILD_VOICE" }
+        ]
+      }
+    ]
+  },
+  "welcome": {
+    "channel": "welcome",
+    "title": "Welcome to ZettaPay",
+    "body": "Solana USDC payments for humans and AI agents — 0.30% fees, instant settlement.\n\nGet started:\n• Read the **rules** in #rules\n• Use **/role** below to pick what describes you (Merchant / Agent Builder / Developer)\n• Ask in **#help** if you get stuck integrating\n• Show your build in **#showcase**\n\nDocs: https://docs.zettapay.io · GitHub: https://github.com/leandromaiam-code/zettapay",
+    "color": "#d4a961"
+  },
+  "selfAssignableRoles": ["Merchant", "Agent Builder", "Developer"]
+}

@@ -33,7 +33,8 @@
             "group": "Get started",
             "pages": [
               "introduction",
-              "quickstart"
+              "quickstart",
+              "community"
             ]
           },
           {
@@ -164,6 +165,11 @@
           "anchor": "GitHub",
           "href": "https://github.com/leandromaiam-code/zettapay",
           "icon": "github"
+        },
+        {
+          "anchor": "Discord",
+          "href": "https://discord.gg/zettapay",
+          "icon": "discord"
         }
       ]
     }
