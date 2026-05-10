@@ -11,7 +11,9 @@ This document is the source for the rendered page at
 
 - Node 18+, Python 3.10+, or Go 1.22+
 - A Solana wallet (Phantom recommended) on devnet
-- Devnet SOL — request from <https://faucet.solana.com>
+- Devnet funding — claim 1000 USDC + 1 SOL once per hour from the
+  [ZettaPay devnet faucet](https://zettapay.io/docs/faucet) or
+  `POST https://api.zettapay.io/api/faucet { "recipient": "<your-pubkey>" }`
 - A ZettaPay base URL — defaults to `https://api.zettapay.dev`
 
 ## Devnet constants

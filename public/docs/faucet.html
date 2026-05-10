@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay devnet faucet — claim 1000 USDC devnet plus 1 SOL per recipient per hour. Embeddable in any docs site." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta name="robots" content="index,follow" />
+  <meta property="og:title" content="ZettaPay · Devnet faucet" />
+  <meta property="og:description" content="1000 USDC devnet + 1 SOL airdrop, one click, every hour." />
+  <title>ZettaPay · Devnet faucet</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root { color-scheme: dark; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    body.embed { padding: 16px; background: transparent; }
+    .card {
+      max-width: 520px;
+      margin: 0 auto;
+      background: #111111;
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    .eyebrow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #6B82FF;
+      margin: 0 0 8px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 6px;
+    }
+    p.lead {
+      margin: 0 0 18px;
+      color: #94A3B8;
+      font-size: 14px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: #0A0A0A;
+      color: #ffffff;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #4F6BFF;
+      box-shadow: 0 0 0 3px rgba(79, 107, 255, 0.18);
+    }
+    button {
+      width: 100%;
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 0;
+      background: #4F6BFF;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 120ms ease, transform 120ms ease;
+    }
+    button:hover:not(:disabled) { background: #6B82FF; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .meta {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .meta div {
+      background: #0A0A0A;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .meta dt {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin: 0 0 4px;
+    }
+    .meta dd {
+      margin: 0;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      word-break: break-all;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #0A0A0A;
+      font-size: 13px;
+    }
+    .status.ok { border-color: rgba(20, 241, 149, 0.4); }
+    .status.error { border-color: rgba(239, 68, 68, 0.4); }
+    .status code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #14F195;
+      word-break: break-all;
+    }
+    .status a { color: #6B82FF; text-decoration: underline; }
+    .footnote {
+      margin-top: 14px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .footnote a { color: #6B82FF; }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <p class="eyebrow">Devnet faucet · 1000 USDC / hour</p>
+    <h1>Claim test funds</h1>
+    <p class="lead">Drops 1000 USDC (devnet mint) and 1 SOL into the wallet you paste below. One claim per recipient per hour. Devnet only — never mainnet value.</p>
+    <form id="faucet-form" novalidate>
+      <label for="recipient">Recipient wallet (base58)</label>
+      <input
+        id="recipient"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+        placeholder="e.g. 7sJF...Pmn3"
+        required
+      />
+      <button type="submit" id="submit">Claim 1000 USDC + 1 SOL</button>
+    </form>
+    <dl class="meta">
+      <div>
+        <dt>USDC mint (devnet)</dt>
+        <dd>4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU</dd>
+      </div>
+      <div>
+        <dt>Network</dt>
+        <dd>solana-devnet</dd>
+      </div>
+    </dl>
+    <div id="status" class="status" hidden></div>
+    <p class="footnote">For canonical devnet USDC balance, redeem at <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a> using the same wallet. Embed this faucet in your own docs via <code>&lt;iframe src="https://zettapay.io/docs/faucet?embed=1"&gt;</code>.</p>
+  </main>
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      if (params.get('embed') === '1') {
+        document.body.classList.add('embed');
+      }
+      var form = document.getElementById('faucet-form');
+      var input = document.getElementById('recipient');
+      var button = document.getElementById('submit');
+      var status = document.getElementById('status');
+      var BASE58_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+
+      function setStatus(kind, html) {
+        status.hidden = false;
+        status.className = 'status ' + kind;
+        status.innerHTML = html;
+      }
+
+      function escape(value) {
+        return String(value)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+        var recipient = input.value.trim();
+        if (!BASE58_RE.test(recipient)) {
+          setStatus('error', 'That does not look like a base58 Solana pubkey. Double-check the wallet address.');
+          return;
+        }
+        button.disabled = true;
+        button.textContent = 'Requesting…';
+        setStatus('', 'Submitting airdrop request…');
+        fetch('/api/faucet', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ recipient: recipient })
+        })
+          .then(function (res) { return res.json().then(function (json) { return { status: res.status, body: json }; }); })
+          .then(function (result) {
+            if (result.status === 200 && result.body && result.body.status === 'fulfilled') {
+              var sol = result.body.sol || {};
+              var usdc = result.body.usdc || {};
+              var solLine = sol.signature
+                ? 'SOL airdrop submitted: <code>' + escape(sol.signature) + '</code> · <a target="_blank" rel="noopener" href="' + escape(sol.explorer || '#') + '">view on explorer</a>'
+                : 'SOL airdrop unavailable (' + escape(sol.error || 'rpc_error') + '). Retry shortly.';
+              setStatus('ok',
+                '<strong>Faucet quota fulfilled.</strong><br/>' +
+                'USDC quota: <code>' + escape(usdc.amount || 1000) + '</code> on mint <code>' + escape(usdc.mintAddress || '') + '</code>.<br/>' +
+                solLine + '<br/>' +
+                'Next eligible at ' + escape(result.body.nextEligibleAt || '') + '.<br/>' +
+                'For real USDC balance: <a target="_blank" rel="noopener" href="' + escape(usdc.circleFaucetUrl || 'https://faucet.circle.com') + '">faucet.circle.com</a>.'
+              );
+            } else if (result.status === 429) {
+              var retryAt = (result.body && result.body.error && result.body.error.resetAt) || '';
+              setStatus('error', 'Rate limit hit. Try again at <code>' + escape(retryAt) + '</code>.');
+            } else {
+              var msg = (result.body && result.body.error && result.body.error.message) || 'Unknown error.';
+              setStatus('error', escape(msg));
+            }
+          })
+          .catch(function (err) {
+            setStatus('error', 'Network error: ' + escape(err && err.message ? err.message : 'unknown'));
+          })
+          .finally(function () {
+            button.disabled = false;
+            button.textContent = 'Claim 1000 USDC + 1 SOL';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>
