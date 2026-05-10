@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay signup — connect your Phantom wallet, create a merchant account, and copy your embed snippet in under five minutes." />
-  <meta property="og:title" content="ZettaPay — Self-service merchant signup" />
+  <meta name="description" content="ZettaPay onboarding wizard — connect Phantom, name your shop, and copy your embed snippet in three guided steps." />
+  <meta property="og:title" content="ZettaPay — Onboarding" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>ZettaPay — Sign up</title>
+  <title>ZettaPay — Get started</title>
   <link rel="icon" href="/Logo_symbol.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,12 +34,17 @@
           },
           animation: {
             'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'fade-in': 'fadeIn 0.35s ease-out forwards',
             'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
           },
           keyframes: {
             fadeUp: {
               '0%': { opacity: '0', transform: 'translateY(12px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
             },
           },
         },
@@ -100,7 +105,7 @@
       box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
     }
     .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
     .btn-ghost {
       background: rgba(79, 107, 255, 0.05);
       border: 1px solid rgba(79, 107, 255, 0.3);
@@ -135,7 +140,43 @@
     }
     .input::placeholder { color: rgba(148, 163, 184, 0.6); }
     .input.error { border-color: rgba(251, 113, 133, 0.7); }
-    .step-pill {
+    .handle-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .handle-input-wrap .handle-prefix {
+      position: absolute;
+      left: 1rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #14F195;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 600;
+      font-size: 1rem;
+      pointer-events: none;
+    }
+    .handle-input-wrap .input {
+      padding-left: 2.25rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      letter-spacing: -0.01em;
+    }
+    .progress-track {
+      height: 4px;
+      width: 100%;
+      background: rgba(79, 107, 255, 0.12);
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4F6BFF 0%, #14F195 60%, #9945FF 100%);
+      border-radius: 9999px;
+      transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 0 18px rgba(79, 107, 255, 0.5);
+    }
+    .step-dot {
       width: 1.75rem;
       height: 1.75rem;
       border-radius: 9999px;
@@ -146,10 +187,20 @@
       font-family: 'JetBrains Mono', monospace;
       font-weight: 600;
       flex-shrink: 0;
+      transition: all 0.3s ease;
     }
-    .step-pill.active { background: linear-gradient(135deg, #4F6BFF, #6B82FF); color: #fff; }
-    .step-pill.done { background: rgba(20, 241, 149, 0.18); color: #14F195; border: 1px solid rgba(20, 241, 149, 0.4); }
-    .step-pill.pending { background: rgba(79, 107, 255, 0.08); color: rgba(148, 163, 184, 0.7); border: 1px solid rgba(79, 107, 255, 0.15); }
+    .step-dot.active { background: linear-gradient(135deg, #4F6BFF, #6B82FF); color: #fff; box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.18); }
+    .step-dot.done { background: rgba(20, 241, 149, 0.18); color: #14F195; border: 1px solid rgba(20, 241, 149, 0.4); }
+    .step-dot.pending { background: rgba(79, 107, 255, 0.06); color: rgba(148, 163, 184, 0.7); border: 1px solid rgba(79, 107, 255, 0.15); }
+    .step-label { font-size: 0.72rem; color: rgba(148, 163, 184, 0.7); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; }
+    .step-label.active { color: #fff; }
+    .step-label.done { color: #14F195; }
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.35s ease-out forwards; }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(8px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
     .key-row {
       background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
       border: 1px solid rgba(79, 107, 255, 0.18);
@@ -160,18 +211,11 @@
       word-break: break-all;
       letter-spacing: -0.01em;
     }
-    .copy-btn {
-      transition: all 0.2s ease;
-    }
+    .copy-btn { transition: all 0.2s ease; }
     .copy-btn.copied {
       background: rgba(20, 241, 149, 0.2);
       color: #14F195;
       border-color: rgba(20, 241, 149, 0.45);
-    }
-    .modal-backdrop {
-      background: rgba(0, 0, 0, 0.78);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
     }
     .secret-blur {
       filter: blur(7px);
@@ -196,6 +240,11 @@
       z-index: 70;
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
+    .pill-success {
+      background: rgba(20, 241, 149, 0.1);
+      border: 1px solid rgba(20, 241, 149, 0.35);
+      color: #14F195;
+    }
   </style>
 </head>
 <body class="grid-bg">
@@ -224,91 +273,238 @@
 
   <main class="pt-32 pb-16 px-4 lg:px-12 relative z-10">
     <div class="max-w-3xl mx-auto">
-      <div class="text-center mb-10 animate-fade-up">
-        <span class="text-xs font-mono text-mint uppercase tracking-widest">Self-service onboarding</span>
+
+      <!-- HEADER -->
+      <div class="text-center mb-8 animate-fade-up">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">3-step onboarding</span>
         <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 tracking-tight">
-          Start accepting <span class="gradient-text">USDC</span> in minutes
+          Get paid in <span class="gradient-text">USDC</span>, in minutes
         </h1>
         <p class="text-muted text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-          Connect your Phantom wallet, name your store, and you're done. We provision your USDC ATA, mint your API keys, and hand you a one-line embed snippet.
+          Connect your Phantom wallet, pick a handle, and copy your embed snippet. No backend, no KYC for devnet, no surprises.
         </p>
       </div>
 
-      <!-- Step indicators -->
-      <div class="flex items-center justify-center gap-3 md:gap-6 mb-10 text-xs font-mono uppercase tracking-widest text-muted">
-        <div class="flex items-center gap-2">
-          <span id="stepPill1" class="step-pill active">1</span>
-          <span class="hidden sm:inline">Connect</span>
+      <!-- PROGRESS BAR -->
+      <div class="mb-6 animate-fade-up" style="animation-delay: 0.04s; animation-fill-mode: both;">
+        <div class="flex items-center justify-between text-xs mb-3">
+          <span class="font-mono uppercase tracking-widest text-muted">
+            Step <span id="progressCurrent">1</span> of 3
+          </span>
+          <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Connect</span>
         </div>
-        <span class="text-muted/30">&mdash;</span>
-        <div class="flex items-center gap-2">
-          <span id="stepPill2" class="step-pill pending">2</span>
-          <span class="hidden sm:inline">Details</span>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-bar" style="width: 33.333%;"></div>
         </div>
-        <span class="text-muted/30">&mdash;</span>
-        <div class="flex items-center gap-2">
-          <span id="stepPill3" class="step-pill pending">3</span>
-          <span class="hidden sm:inline">Embed</span>
+        <div class="flex items-center justify-between mt-4">
+          <div class="flex items-center gap-2">
+            <span id="dot1" class="step-dot active">1</span>
+            <span id="lbl1" class="step-label active hidden sm:inline">Wallet</span>
+          </div>
+          <div class="flex-1 h-px bg-royal/15 mx-3"></div>
+          <div class="flex items-center gap-2">
+            <span id="dot2" class="step-dot pending">2</span>
+            <span id="lbl2" class="step-label pending hidden sm:inline">Shop</span>
+          </div>
+          <div class="flex-1 h-px bg-royal/15 mx-3"></div>
+          <div class="flex items-center gap-2">
+            <span id="dot3" class="step-dot pending">3</span>
+            <span id="lbl3" class="step-label pending hidden sm:inline">Embed</span>
+          </div>
         </div>
       </div>
 
-      <!-- Card -->
-      <div class="glass rounded-3xl p-6 md:p-10 animate-fade-up" style="animation-delay: 0.05s; animation-fill-mode: both;">
-        <form id="signupForm" class="space-y-6" novalidate>
-          <!-- Wallet block -->
-          <div>
-            <label class="block text-xs font-mono uppercase tracking-widest text-mint mb-3">Step 1 &middot; Solana wallet</label>
-            <div id="walletConnected" class="hidden glass rounded-2xl p-4 flex items-center justify-between gap-4">
-              <div class="min-w-0">
-                <div class="text-xs text-muted mb-1">Connected wallet (Phantom)</div>
-                <div id="walletAddrText" class="key-value text-white truncate"></div>
-              </div>
-              <button type="button" id="walletDisconnect" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Disconnect</button>
+      <!-- WIZARD CARD -->
+      <div class="glass rounded-3xl p-6 md:p-10 animate-fade-up" style="animation-delay: 0.08s; animation-fill-mode: both;">
+
+        <!-- STEP 1 — CONNECT WALLET -->
+        <section id="panel1" class="panel active" aria-labelledby="panel1-title">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
+              <svg class="w-7 h-7 text-royal-bright" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
             </div>
-            <button type="button" id="walletBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
-              Connect Phantom Wallet
-            </button>
-            <p id="walletHint" class="text-xs text-muted mt-3 leading-relaxed">
-              Don't have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>. Your private keys never leave your wallet &mdash; we only see your public address.
+            <h2 id="panel1-title" class="text-2xl md:text-3xl font-bold tracking-tight">Connect your wallet</h2>
+            <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
+              We bind your Phantom address on-chain via memo. Your private keys never leave your wallet.
             </p>
           </div>
 
-          <div class="border-t border-royal/10"></div>
-
-          <!-- Merchant details block -->
-          <div>
-            <label class="block text-xs font-mono uppercase tracking-widest text-mint mb-3">Step 2 &middot; Merchant details</label>
-            <div class="space-y-4">
-              <div>
-                <label for="merchantName" class="block text-xs text-muted mb-2">Store name</label>
-                <input type="text" id="merchantName" name="name" maxlength="120" placeholder="e.g. Café Tatuapé" autocomplete="organization" required class="input" />
-                <div id="errName" class="hidden text-xs text-rose mt-2 font-mono"></div>
+          <div id="walletConnectedBlock" class="hidden glass rounded-2xl p-4 mb-4">
+            <div class="flex items-center justify-between gap-4">
+              <div class="min-w-0 flex items-center gap-3">
+                <span class="w-2 h-2 rounded-full bg-mint animate-pulse flex-shrink-0"></span>
+                <div class="min-w-0">
+                  <div class="text-[11px] text-mint font-mono uppercase tracking-widest mb-1">Phantom connected</div>
+                  <div id="walletAddrText" class="key-value text-white truncate"></div>
+                </div>
               </div>
-              <div>
-                <label for="merchantEmail" class="block text-xs text-muted mb-2">Contact email</label>
-                <input type="email" id="merchantEmail" name="email" maxlength="254" placeholder="you@yourstore.com" autocomplete="email" required class="input" />
-                <div id="errEmail" class="hidden text-xs text-rose mt-2 font-mono"></div>
-              </div>
+              <button type="button" id="walletDisconnect" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Disconnect</button>
             </div>
           </div>
 
-          <div id="submitError" class="hidden glass rounded-xl p-4 border border-rose/40">
-            <div class="text-sm text-rose font-mono"></div>
-          </div>
-
-          <button type="submit" id="submitBtn" class="w-full btn-mint px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2" disabled>
-            <span id="submitLabel">Connect Phantom first</span>
-            <svg id="submitSpinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-            </svg>
+          <button type="button" id="walletBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
+            Connect Phantom Wallet
           </button>
 
-          <p class="text-xs text-muted text-center leading-relaxed">
-            By creating an account you agree to settle in USDC on Solana devnet. Mainnet activation requires KYC via MoonPay onramp.
+          <p id="walletHint" class="text-xs text-muted mt-3 leading-relaxed text-center">
+            Don't have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>.
           </p>
-        </form>
+
+          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-end">
+            <button type="button" id="step1Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
+              Continue
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- STEP 2 — NAME YOUR SHOP -->
+        <section id="panel2" class="panel" aria-labelledby="panel2-title">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(20,241,149,0.1); border: 1px solid rgba(20,241,149,0.3);">
+              <svg class="w-7 h-7 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7l9-4 9 4v6a9 9 0 11-18 0V7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6"></path></svg>
+            </div>
+            <h2 id="panel2-title" class="text-2xl md:text-3xl font-bold tracking-tight">Name your shop</h2>
+            <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
+              Pick a public handle. It's how customers identify your storefront. You can skip and we'll generate one.
+            </p>
+          </div>
+
+          <div>
+            <label for="shopHandle" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Shop handle</label>
+            <div class="handle-input-wrap">
+              <span class="handle-prefix">@</span>
+              <input
+                type="text"
+                id="shopHandle"
+                name="handle"
+                maxlength="32"
+                placeholder="coffee"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                class="input"
+              />
+            </div>
+            <div id="errHandle" class="hidden text-xs text-rose mt-2 font-mono"></div>
+            <p class="text-xs text-muted mt-2 leading-relaxed">
+              Lowercase letters, numbers and hyphens. 3–32 characters. Lives at <span class="font-mono text-royal-bright" id="handlePreview">zettapay.io/@coffee</span>.
+            </p>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <button type="button" id="step2Back" class="btn-ghost px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
+                Back
+              </button>
+              <button type="button" id="step2Skip" class="text-xs text-muted hover:text-white transition font-mono uppercase tracking-widest">
+                Skip — generate for me
+              </button>
+            </div>
+            <button type="button" id="step2Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
+              <span id="step2NextLabel">Create my shop</span>
+              <svg id="step2Spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              <svg id="step2NextArrow" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+            </button>
+          </div>
+
+          <div id="step2Error" class="hidden mt-4 glass rounded-xl p-4 border border-rose/40">
+            <div class="text-sm text-rose font-mono"></div>
+          </div>
+        </section>
+
+        <!-- STEP 3 — GET YOUR CODE -->
+        <section id="panel3" class="panel" aria-labelledby="panel3-title">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 pill-success px-3 py-1 rounded-full mb-4">
+              <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
+              <span class="text-[10px] font-mono uppercase tracking-widest">Account ready</span>
+            </div>
+            <h2 id="panel3-title" class="text-2xl md:text-3xl font-bold tracking-tight">Drop in your <span class="gradient-text">embed</span></h2>
+            <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
+              Paste this snippet into your site's <code class="text-royal-bright font-mono">&lt;head&gt;</code>. Done — start accepting USDC.
+            </p>
+          </div>
+
+          <!-- Shop summary -->
+          <div class="key-row rounded-xl p-4 mb-4 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Your shop</div>
+              <div id="shopSummary" class="font-mono text-mint text-sm truncate">@coffee</div>
+            </div>
+            <div class="text-right min-w-0">
+              <div class="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Merchant ID</div>
+              <code id="merchantIdSummary" class="key-value text-white">m_…</code>
+            </div>
+          </div>
+
+          <!-- Embed snippet -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-mono uppercase tracking-widest text-royal-bright">Embed snippet</label>
+              <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Drop into &lt;head&gt;</span>
+            </div>
+            <div class="key-row rounded-xl p-4">
+              <pre id="embedCodeValue" class="key-value text-white whitespace-pre-wrap break-all leading-relaxed">&lt;script ...&gt;</pre>
+            </div>
+            <button type="button" id="copyEmbedBtn" class="copy-btn w-full mt-3 btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              <span id="copyEmbedLabel">Copy embed code</span>
+            </button>
+          </div>
+
+          <!-- Keys (collapsible disclosure) -->
+          <details class="mb-4 group">
+            <summary class="cursor-pointer flex items-center justify-between gap-3 px-4 py-3 glass rounded-xl text-sm font-mono uppercase tracking-widest text-muted hover:text-white transition list-none">
+              <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                API keys
+              </span>
+              <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </summary>
+            <div class="pt-4 space-y-3">
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-xs font-mono uppercase tracking-widest text-mint">Publishable key</label>
+                  <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Safe to embed</span>
+                </div>
+                <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3">
+                  <code id="publicKeyValue" class="key-value text-white flex-1 min-w-0">pk_live_…</code>
+                  <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
+                </div>
+              </div>
+              <div>
+                <div class="flex items-center justify-between mb-2">
+                  <label class="text-xs font-mono uppercase tracking-widest text-amber">Secret key</label>
+                  <span class="text-[10px] text-amber/80 font-mono uppercase tracking-widest">Show only once</span>
+                </div>
+                <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3 border-amber/30">
+                  <code id="secretKeyValue" class="key-value text-white flex-1 min-w-0 secret-blur" title="Click to reveal">sk_live_…</code>
+                  <button type="button" data-copy-target="secretKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
+                </div>
+                <p class="text-[11px] text-amber/80 mt-2 leading-relaxed">
+                  Store this in your server-side env vars. We never display it again — rotate from the dashboard if lost.
+                </p>
+              </div>
+            </div>
+          </details>
+
+          <!-- Footer actions -->
+          <div class="border-t border-royal/15 pt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <a id="dashboardLink" href="/dashboard" class="btn-mint px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 flex-1">
+              View Dashboard
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+            </a>
+            <a href="/docs/quickstart" class="btn-ghost px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+              Read quickstart
+            </a>
+          </div>
+        </section>
       </div>
 
       <!-- Trust strip -->
@@ -329,115 +525,72 @@
     </div>
   </main>
 
-  <!-- SUCCESS MODAL -->
-  <div id="modal" class="hidden fixed inset-0 z-[60] modal-backdrop items-center justify-center p-4 overflow-y-auto">
-    <div class="glass-strong rounded-3xl max-w-2xl w-full p-6 md:p-10 my-10 animate-fade-up">
-      <div class="flex items-start justify-between mb-6 gap-4">
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mint/10 border border-mint/30 mb-4">
-            <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
-            <span class="text-[10px] font-mono text-mint uppercase tracking-widest">Account ready</span>
-          </div>
-          <h2 class="text-2xl md:text-3xl font-bold tracking-tight">Welcome to <span class="gradient-text">ZettaPay</span></h2>
-          <p class="text-muted text-sm mt-2 leading-relaxed">Save your secret key now. We display it once &mdash; treat it like a password.</p>
-        </div>
-        <button type="button" id="modalCloseTop" class="text-muted hover:text-white transition flex-shrink-0" aria-label="Close">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <!-- Public key -->
-      <div class="mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-mono uppercase tracking-widest text-mint">Publishable key</label>
-          <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Safe to embed in frontend</span>
-        </div>
-        <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3">
-          <code id="publicKeyValue" class="key-value text-white flex-1 min-w-0">pk_live_...</code>
-          <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
-        </div>
-      </div>
-
-      <!-- Secret key -->
-      <div class="mb-4">
-        <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-mono uppercase tracking-widest text-amber">Secret key</label>
-          <span class="text-[10px] text-amber/80 font-mono uppercase tracking-widest">Show only once</span>
-        </div>
-        <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3 border-amber/30">
-          <code id="secretKeyValue" class="key-value text-white flex-1 min-w-0 secret-blur" title="Click to reveal">sk_live_...</code>
-          <button type="button" data-copy-target="secretKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
-        </div>
-        <p class="text-[11px] text-amber/80 mt-2 leading-relaxed">
-          Store this in your server-side env vars. We never display it again. If you lose it, rotate from the dashboard.
-        </p>
-      </div>
-
-      <!-- Embed code -->
-      <div class="mb-6">
-        <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-mono uppercase tracking-widest text-royal-bright">Embed snippet</label>
-          <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Drop into &lt;head&gt;</span>
-        </div>
-        <div class="key-row rounded-xl p-4">
-          <pre id="embedCodeValue" class="key-value text-white whitespace-pre-wrap break-all leading-relaxed">&lt;script ...&gt;</pre>
-        </div>
-        <button type="button" id="copyEmbedBtn" class="copy-btn w-full mt-3 btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-          <span id="copyEmbedLabel">Copy embed code</span>
-        </button>
-      </div>
-
-      <!-- Footer actions -->
-      <div class="border-t border-royal/15 pt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-        <a id="dashboardLink" href="/dashboard" class="btn-mint px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 flex-1">
-          Open dashboard
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
-        </a>
-        <a href="/docs/quickstart" class="btn-ghost px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
-          Read quickstart
-        </a>
-      </div>
-    </div>
-  </div>
-
   <div id="toast" class="toast">Copied to clipboard</div>
 
   <script>
     (function () {
       const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/;
 
+      // Wizard state
+      let currentStep = 1;
+      let walletAddress = null;
+      let onboardResult = null;
+      let toastTimer = null;
+
+      // Step elements
+      const panels = [
+        document.getElementById('panel1'),
+        document.getElementById('panel2'),
+        document.getElementById('panel3'),
+      ];
+      const dots = [
+        document.getElementById('dot1'),
+        document.getElementById('dot2'),
+        document.getElementById('dot3'),
+      ];
+      const labels = [
+        document.getElementById('lbl1'),
+        document.getElementById('lbl2'),
+        document.getElementById('lbl3'),
+      ];
+      const stepNames = ['Connect', 'Name your shop', 'Get your code'];
+      const progressBar = document.getElementById('progressBar');
+      const progressCurrent = document.getElementById('progressCurrent');
+      const progressLabel = document.getElementById('progressLabel');
+
+      // Step 1 elements
       const walletBtn = document.getElementById('walletBtn');
-      const walletConnected = document.getElementById('walletConnected');
+      const walletConnectedBlock = document.getElementById('walletConnectedBlock');
       const walletAddrText = document.getElementById('walletAddrText');
       const walletDisconnect = document.getElementById('walletDisconnect');
       const walletHint = document.getElementById('walletHint');
-      const form = document.getElementById('signupForm');
-      const submitBtn = document.getElementById('submitBtn');
-      const submitLabel = document.getElementById('submitLabel');
-      const submitSpinner = document.getElementById('submitSpinner');
-      const submitError = document.getElementById('submitError');
-      const submitErrorText = submitError.querySelector('div');
-      const inputName = document.getElementById('merchantName');
-      const inputEmail = document.getElementById('merchantEmail');
-      const errName = document.getElementById('errName');
-      const errEmail = document.getElementById('errEmail');
-      const stepPill1 = document.getElementById('stepPill1');
-      const stepPill2 = document.getElementById('stepPill2');
-      const stepPill3 = document.getElementById('stepPill3');
-      const modal = document.getElementById('modal');
-      const modalCloseTop = document.getElementById('modalCloseTop');
+      const step1Next = document.getElementById('step1Next');
+
+      // Step 2 elements
+      const shopHandle = document.getElementById('shopHandle');
+      const errHandle = document.getElementById('errHandle');
+      const handlePreview = document.getElementById('handlePreview');
+      const step2Back = document.getElementById('step2Back');
+      const step2Skip = document.getElementById('step2Skip');
+      const step2Next = document.getElementById('step2Next');
+      const step2NextLabel = document.getElementById('step2NextLabel');
+      const step2NextArrow = document.getElementById('step2NextArrow');
+      const step2Spinner = document.getElementById('step2Spinner');
+      const step2Error = document.getElementById('step2Error');
+      const step2ErrorText = step2Error.querySelector('div');
+
+      // Step 3 elements
+      const shopSummary = document.getElementById('shopSummary');
+      const merchantIdSummary = document.getElementById('merchantIdSummary');
       const publicKeyValue = document.getElementById('publicKeyValue');
       const secretKeyValue = document.getElementById('secretKeyValue');
       const embedCodeValue = document.getElementById('embedCodeValue');
       const copyEmbedBtn = document.getElementById('copyEmbedBtn');
       const copyEmbedLabel = document.getElementById('copyEmbedLabel');
       const dashboardLink = document.getElementById('dashboardLink');
-      const toast = document.getElementById('toast');
 
-      let walletAddress = null;
-      let toastTimer = null;
+      const toast = document.getElementById('toast');
 
       function showToast(message) {
         toast.textContent = message;
@@ -467,56 +620,54 @@
       }
 
       function setStep(step) {
-        const pills = [stepPill1, stepPill2, stepPill3];
-        pills.forEach((pill, i) => {
-          pill.classList.remove('active', 'done', 'pending');
-          if (i + 1 < step) pill.classList.add('done');
-          else if (i + 1 === step) pill.classList.add('active');
-          else pill.classList.add('pending');
+        currentStep = step;
+        panels.forEach((p, i) => p.classList.toggle('active', i + 1 === step));
+        dots.forEach((dot, i) => {
+          dot.classList.remove('active', 'done', 'pending');
+          labels[i].classList.remove('active', 'done', 'pending');
+          if (i + 1 < step) {
+            dot.classList.add('done');
+            labels[i].classList.add('done');
+            dot.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>';
+          } else if (i + 1 === step) {
+            dot.classList.add('active');
+            labels[i].classList.add('active');
+            dot.textContent = String(i + 1);
+          } else {
+            dot.classList.add('pending');
+            labels[i].classList.add('pending');
+            dot.textContent = String(i + 1);
+          }
         });
-      }
-
-      function refreshSubmitState() {
-        const hasWallet = Boolean(walletAddress);
-        const hasName = inputName.value.trim().length > 0;
-        const hasEmail = inputEmail.value.trim().length > 0;
-        const ready = hasWallet && hasName && hasEmail;
-        submitBtn.disabled = !ready;
-        if (!hasWallet) {
-          submitLabel.textContent = 'Connect Phantom first';
-          setStep(1);
-        } else if (!hasName || !hasEmail) {
-          submitLabel.textContent = 'Fill out merchant details';
-          setStep(2);
-        } else {
-          submitLabel.textContent = 'Create my merchant account';
-          setStep(2);
-        }
-      }
-
-      function renderConnectedWallet(addr) {
-        walletAddress = addr;
-        walletAddrText.textContent = addr;
-        walletConnected.classList.remove('hidden');
-        walletConnected.classList.add('flex');
-        walletBtn.classList.add('hidden');
-        walletHint.textContent = 'Wallet connected. Your name and email stay private — only the wallet binding is on-chain.';
-        refreshSubmitState();
-      }
-
-      function clearConnectedWallet() {
-        walletAddress = null;
-        walletConnected.classList.add('hidden');
-        walletConnected.classList.remove('flex');
-        walletBtn.classList.remove('hidden');
-        walletHint.innerHTML = 'Don\'t have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>. Your private keys never leave your wallet &mdash; we only see your public address.';
-        refreshSubmitState();
+        progressCurrent.textContent = String(step);
+        progressBar.style.width = (step === 1 ? 33.333 : step === 2 ? 66.666 : 100) + '%';
+        progressLabel.textContent = stepNames[step - 1];
+        // Move focus to the panel for accessibility
+        const heading = panels[step - 1].querySelector('h2');
+        if (heading) heading.setAttribute('tabindex', '-1');
       }
 
       function getPhantom() {
         const provider = (window.phantom && window.phantom.solana) || window.solana;
         if (provider && provider.isPhantom) return provider;
         return null;
+      }
+
+      function renderConnectedWallet(addr) {
+        walletAddress = addr;
+        walletAddrText.textContent = addr;
+        walletConnectedBlock.classList.remove('hidden');
+        walletBtn.classList.add('hidden');
+        walletHint.textContent = 'Wallet ready. Click Continue to name your shop.';
+        step1Next.disabled = false;
+      }
+
+      function clearConnectedWallet() {
+        walletAddress = null;
+        walletConnectedBlock.classList.add('hidden');
+        walletBtn.classList.remove('hidden');
+        walletHint.innerHTML = 'Don\'t have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>.';
+        step1Next.disabled = true;
       }
 
       async function connectPhantom() {
@@ -550,40 +701,72 @@
         clearConnectedWallet();
       }
 
-      function clearFieldError(input, errEl) {
-        input.classList.remove('error');
-        errEl.classList.add('hidden');
-        errEl.textContent = '';
+      // ----- Handle validation -----
+      function normalizeHandle(raw) {
+        return String(raw || '')
+          .toLowerCase()
+          .trim()
+          .replace(/^@+/, '')
+          .replace(/[^a-z0-9-]/g, '');
       }
 
-      function setFieldError(input, errEl, message) {
-        input.classList.add('error');
-        errEl.classList.remove('hidden');
-        errEl.textContent = message;
+      function validateHandle(value) {
+        const h = normalizeHandle(value);
+        if (h.length === 0) return { ok: false, reason: 'Pick a handle or skip to auto-generate' };
+        if (h.length < 3) return { ok: false, reason: 'At least 3 characters' };
+        if (h.length > 32) return { ok: false, reason: 'Max 32 characters' };
+        if (!HANDLE_RE.test(h)) return { ok: false, reason: 'Use lowercase letters, numbers, hyphens (no leading/trailing hyphen)' };
+        return { ok: true, value: h };
       }
 
-      function validate() {
-        let ok = true;
-        const name = inputName.value.trim();
-        const email = inputEmail.value.trim();
-        clearFieldError(inputName, errName);
-        clearFieldError(inputEmail, errEmail);
-        if (!name) {
-          setFieldError(inputName, errName, 'Store name is required');
-          ok = false;
-        } else if (name.length > 120) {
-          setFieldError(inputName, errName, 'Max 120 characters');
-          ok = false;
+      function refreshHandleState() {
+        const raw = shopHandle.value;
+        const h = normalizeHandle(raw);
+        handlePreview.textContent = h ? `zettapay.io/@${h}` : 'zettapay.io/@coffee';
+        if (raw.trim() === '') {
+          shopHandle.classList.remove('error');
+          errHandle.classList.add('hidden');
+          step2Next.disabled = true;
+          return;
         }
-        if (!EMAIL_RE.test(email) || email.length > 254) {
-          setFieldError(inputEmail, errEmail, 'Enter a valid email address');
-          ok = false;
+        const result = validateHandle(raw);
+        if (!result.ok) {
+          shopHandle.classList.add('error');
+          errHandle.textContent = result.reason;
+          errHandle.classList.remove('hidden');
+          step2Next.disabled = true;
+        } else {
+          shopHandle.classList.remove('error');
+          errHandle.classList.add('hidden');
+          step2Next.disabled = false;
         }
-        if (!walletAddress) {
-          showToast('Connect Phantom before submitting');
-          ok = false;
-        }
-        return ok;
+      }
+
+      function randomSlug() {
+        const adjectives = ['amber', 'mint', 'royal', 'solar', 'lunar', 'nova', 'orbit', 'pixel', 'pulse', 'spark'];
+        const noun = adjectives[Math.floor(Math.random() * adjectives.length)];
+        const suffix = Math.random().toString(36).slice(2, 6);
+        return `${noun}-${suffix}`;
+      }
+
+      function setStep2Loading(loading) {
+        step2Next.disabled = loading;
+        step2Back.disabled = loading;
+        step2Skip.disabled = loading;
+        shopHandle.disabled = loading;
+        step2NextArrow.classList.toggle('hidden', loading);
+        step2Spinner.classList.toggle('hidden', !loading);
+        step2NextLabel.textContent = loading ? 'Creating your shop…' : 'Create my shop';
+      }
+
+      function showStep2Error(message) {
+        step2Error.classList.remove('hidden');
+        step2ErrorText.textContent = message;
+      }
+
+      function clearStep2Error() {
+        step2Error.classList.add('hidden');
+        step2ErrorText.textContent = '';
       }
 
       async function postOnboard(payload) {
@@ -598,78 +781,79 @@
         let body = null;
         try { body = await resp.json(); } catch (e) { body = null; }
         if (!resp.ok) {
-          const code = body && body.error && body.error.code ? body.error.code : 'request_failed';
-          const msg = body && body.error && body.error.message ? body.error.message : 'Onboarding failed (' + resp.status + ')';
-          const err = new Error(msg);
-          err.code = code;
-          throw err;
+          const msg = body && body.error && body.error.message
+            ? body.error.message
+            : 'Onboarding failed (' + resp.status + ')';
+          throw new Error(msg);
         }
         return body;
       }
 
-      function showError(message) {
-        submitError.classList.remove('hidden');
-        submitErrorText.textContent = message;
-      }
-
-      function clearError() {
-        submitError.classList.add('hidden');
-        submitErrorText.textContent = '';
-      }
-
-      function setLoading(loading) {
-        submitBtn.disabled = loading;
-        submitSpinner.classList.toggle('hidden', !loading);
-        submitLabel.textContent = loading ? 'Creating your account...' : 'Create my merchant account';
-      }
-
-      function openModal(result) {
-        publicKeyValue.textContent = result.public_key;
-        secretKeyValue.textContent = result.secret_key;
-        embedCodeValue.textContent = result.embed_code;
+      function fillStep3(result, handle) {
+        shopSummary.textContent = `@${handle}`;
+        const merchant = (result && result.merchant) || {};
+        merchantIdSummary.textContent = merchant.id || '';
+        publicKeyValue.textContent = result.public_key || '';
+        secretKeyValue.textContent = result.secret_key || '';
+        embedCodeValue.textContent = result.embed_code || '';
         dashboardLink.setAttribute('href', result.dashboard_url || '/dashboard');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        document.body.style.overflow = 'hidden';
-        setStep(3);
       }
 
-      function closeModal() {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        document.body.style.overflow = '';
+      async function submitOnboard(handleValue) {
+        if (!walletAddress) {
+          showToast('Connect Phantom first');
+          setStep(1);
+          return;
+        }
+        const handle = normalizeHandle(handleValue) || randomSlug();
+        // Synthesize merchant record. The handle is the human-facing identifier;
+        // a placeholder devnet contact email keeps the API contract satisfied
+        // until the merchant adds a real one in the dashboard.
+        const payload = {
+          wallet: walletAddress,
+          name: `@${handle}`,
+          email: `${handle}@merchants.zettapay.io`,
+        };
+        clearStep2Error();
+        setStep2Loading(true);
+        try {
+          const result = await postOnboard(payload);
+          onboardResult = result;
+          fillStep3(result, handle);
+          setStep(3);
+        } catch (err) {
+          showStep2Error(err && err.message ? err.message : 'Unexpected error — please retry');
+        } finally {
+          setStep2Loading(false);
+        }
       }
 
-      // Wire events
+      // ----- Wire events -----
       walletBtn.addEventListener('click', connectPhantom);
       walletDisconnect.addEventListener('click', disconnectPhantom);
-      inputName.addEventListener('input', () => { clearFieldError(inputName, errName); refreshSubmitState(); });
-      inputEmail.addEventListener('input', () => { clearFieldError(inputEmail, errEmail); refreshSubmitState(); });
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        clearError();
-        if (!validate()) return;
-        setLoading(true);
-        try {
-          const result = await postOnboard({
-            wallet: walletAddress,
-            name: inputName.value.trim(),
-            email: inputEmail.value.trim().toLowerCase(),
-          });
-          openModal(result);
-        } catch (err) {
-          showError(err && err.message ? err.message : 'Unexpected error — please retry');
-        } finally {
-          setLoading(false);
-        }
+      step1Next.addEventListener('click', () => {
+        if (!walletAddress) return;
+        setStep(2);
+        setTimeout(() => shopHandle.focus(), 50);
       });
 
-      modalCloseTop.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+      shopHandle.addEventListener('input', refreshHandleState);
+      shopHandle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !step2Next.disabled) {
+          e.preventDefault();
+          submitOnboard(shopHandle.value);
+        }
+      });
+      step2Back.addEventListener('click', () => setStep(1));
+      step2Skip.addEventListener('click', () => {
+        const slug = randomSlug();
+        shopHandle.value = slug;
+        refreshHandleState();
+        submitOnboard(slug);
+      });
+      step2Next.addEventListener('click', () => submitOnboard(shopHandle.value));
 
-      // Generic copy buttons (public/secret)
+      // Generic copy buttons (public/secret keys)
       document.querySelectorAll('[data-copy-target]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const targetId = btn.getAttribute('data-copy-target');
@@ -680,7 +864,6 @@
         });
       });
 
-      // Reveal-on-click for the secret key
       secretKeyValue.addEventListener('click', () => {
         secretKeyValue.classList.toggle('revealed');
       });
@@ -708,7 +891,9 @@
         } catch (e) { /* not trusted yet — silent */ }
       });
 
-      refreshSubmitState();
+      // Initial state
+      setStep(1);
+      refreshHandleState();
     })();
   </script>
 </body>
