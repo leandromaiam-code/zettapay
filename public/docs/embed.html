@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay embed quickstart — install a Pay USDC button on your site in five minutes. Copy a single script tag, paste it in your <head>, get paid in USDC on Solana." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta property="og:title" content="ZettaPay · Embed quickstart (5 min)" />
+  <meta property="og:description" content="Install a Pay USDC button on your site in five minutes. One <script> tag, no backend." />
+  <title>ZettaPay · Embed quickstart (5 min)</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .step-num {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.4);
+    }
+    .code-card {
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      box-shadow: 0 0 60px rgba(79, 107, 255, 0.06), inset 0 1px 0 rgba(79, 107, 255, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .code-card pre {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 0;
+      white-space: pre;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px 8px 0 8px;
+      border-bottom: 1px solid rgba(79, 107, 255, 0.12);
+      background: rgba(79, 107, 255, 0.04);
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: color 0.2s ease, background 0.2s ease;
+      background: transparent;
+    }
+    .tab-btn:hover { color: #c0c8d4; }
+    .tab-btn.active {
+      color: #FFFFFF;
+      background: #0d0d0d;
+      border-color: rgba(79, 107, 255, 0.2);
+    }
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      background: rgba(79, 107, 255, 0.08);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 2;
+    }
+    .copy-btn:hover {
+      color: #FFFFFF;
+      background: rgba(79, 107, 255, 0.15);
+      border-color: rgba(79, 107, 255, 0.4);
+    }
+    .copy-btn.copied {
+      color: #14F195;
+      border-color: rgba(20, 241, 149, 0.5);
+      background: rgba(20, 241, 149, 0.1);
+    }
+    pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .tk-c { color: #64748b; }
+    .tk-k { color: #9945FF; }
+    .tk-s { color: #4F6BFF; }
+    .tk-f { color: #14F195; }
+    .tk-n { color: #f97316; }
+    .tk-t { color: #6B82FF; }
+    .tk-a { color: #c084fc; }
+    .tk-v { color: #38bdf8; }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5);
+    }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(79, 107, 255, 0.1);
+      border-color: rgba(79, 107, 255, 0.6);
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .toc-link {
+      display: block;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: #94A3B8;
+      border-left: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .toc-link:hover { color: #FFFFFF; border-left-color: rgba(79, 107, 255, 0.4); }
+    .toc-link.active { color: #FFFFFF; border-left-color: #4F6BFF; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #14F195;
+      background: rgba(20, 241, 149, 0.08);
+      border: 1px solid rgba(20, 241, 149, 0.25);
+      border-radius: 999px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #14F195;
+      box-shadow: 0 0 8px #14F195;
+    }
+    .callout {
+      border-left: 2px solid #4F6BFF;
+      background: rgba(79, 107, 255, 0.06);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      color: #c0c8d4;
+    }
+    .callout strong { color: #FFFFFF; }
+    .callout-mint {
+      border-left-color: #14F195;
+      background: rgba(20, 241, 149, 0.05);
+    }
+    .kbd {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #c0c8d4;
+      background: rgba(79, 107, 255, 0.08);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      border-radius: 4px;
+    }
+    .screenshot {
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 14px;
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      overflow: hidden;
+      box-shadow: 0 30px 80px -30px rgba(79, 107, 255, 0.35), 0 0 0 1px rgba(255,255,255,0.02) inset;
+    }
+    .screenshot-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: rgba(79, 107, 255, 0.04);
+      border-bottom: 1px solid rgba(79, 107, 255, 0.1);
+    }
+    .screenshot-bar .dot {
+      width: 11px; height: 11px; border-radius: 50%;
+    }
+    .screenshot-url {
+      margin-left: 12px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #94A3B8;
+      background: rgba(0,0,0,0.4);
+      padding: 4px 12px;
+      border-radius: 6px;
+      flex: 1;
+      max-width: 320px;
+    }
+    .preview-iframe {
+      width: 100%;
+      min-height: 360px;
+      border: 0;
+      background: #0d0d0d;
+      display: block;
+    }
+    table.api-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.api-table th, table.api-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(79, 107, 255, 0.1);
+    }
+    table.api-table th {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    table.api-table td code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #6B82FF;
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px; opacity: 0.18;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 400px; height: 400px; top: 40%; left: -150px; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/docs" class="text-white transition">Docs</a>
+        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get started →</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- LAYOUT -->
+  <main class="pt-28 lg:pt-32 pb-20 max-w-7xl mx-auto px-4 lg:px-12">
+    <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10">
+
+      <!-- TOC -->
+      <aside class="hidden lg:block">
+        <div class="sticky top-32">
+          <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
+          <nav class="flex flex-col gap-1" id="toc">
+            <a href="#overview" class="toc-link active">Overview</a>
+            <a href="#step-1" class="toc-link">1 · Visit /signup</a>
+            <a href="#step-2" class="toc-link">2 · Connect Phantom</a>
+            <a href="#step-3" class="toc-link">3 · Copy embed code</a>
+            <a href="#step-4" class="toc-link">4 · Paste in &lt;head&gt;</a>
+            <a href="#step-5" class="toc-link">5 · Receive USDC</a>
+            <a href="#live-preview" class="toc-link">Live preview</a>
+            <a href="#frameworks" class="toc-link">Framework recipes</a>
+            <a href="#options" class="toc-link">Options reference</a>
+            <a href="#whats-next" class="toc-link">What's next</a>
+          </nav>
+          <div class="mt-8 px-3 text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3">Other guides</div>
+          <nav class="flex flex-col gap-1">
+            <a href="/docs/quickstart" class="toc-link">SDK quickstart</a>
+            <a href="/docs" class="toc-link">All docs</a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <article class="max-w-3xl">
+        <header class="mb-10">
+          <span class="badge mb-5"><span class="badge-dot"></span>Embed quickstart · 5 min · zero backend</span>
+          <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
+            Install a <span class="gradient-text">Pay USDC</span> button in five minutes.
+          </h1>
+          <p class="text-lg text-muted leading-relaxed">
+            Sign up, connect Phantom, copy one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag,
+            paste it in your site's <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the
+            entire integration. Settlement is sub-second, fees are 0.30%, no servers required.
+          </p>
+          <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted">
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Plain HTML</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Vanilla JS</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">React</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Next.js</span>
+          </div>
+        </header>
+
+        <!-- OVERVIEW -->
+        <section id="overview" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Overview</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            The <code class="text-mint font-mono text-sm">@zettapay/widget</code> bundle is a self-mounting
+            <code class="text-mint font-mono text-sm">&lt;script&gt;</code> that renders a Pay button anywhere
+            you drop the tag. Click → modal opens → payer scans a QR or taps the Phantom deeplink → USDC
+            lands in your wallet. The widget handles the wallet adapter, the QR, the polling, and the
+            success UI. You handle <em>nothing</em>.
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Bundle</div>
+              <div class="text-sm font-semibold">~30 kb gzipped</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Settlement</div>
+              <div class="text-sm font-semibold">~2 sec on Solana</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Fees</div>
+              <div class="text-sm font-semibold">0.30% per transaction</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- STEP 1 -->
+        <section id="step-1" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">1</div>
+            <h2 class="text-2xl font-bold">Visit <code class="text-mint font-mono text-base">/signup</code></h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            Open <a class="text-royal-bright underline" href="/signup">zettapay.io/signup</a> in any modern
+            browser. The form takes a merchant handle and an email — that is the whole intake. No
+            credit-card form, no KYC.
+          </p>
+
+          <figure class="screenshot mb-4">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">zettapay.io/signup</span>
+            </div>
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay signup form">
+              <defs>
+                <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#0a0a0a"/>
+                  <stop offset="1" stop-color="#131826"/>
+                </linearGradient>
+                <linearGradient id="cta1" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="#4F6BFF"/>
+                  <stop offset="1" stop-color="#6B82FF"/>
+                </linearGradient>
+              </defs>
+              <rect width="760" height="360" fill="url(#bg1)"/>
+              <g opacity="0.5">
+                <circle cx="640" cy="60" r="100" fill="#4F6BFF" opacity="0.08"/>
+                <circle cx="120" cy="320" r="120" fill="#9945FF" opacity="0.06"/>
+              </g>
+              <text x="60" y="78" font-family="Inter, sans-serif" font-size="13" fill="#14F195" letter-spacing="2">CREATE A MERCHANT</text>
+              <text x="60" y="118" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#fff">Get paid in USDC</text>
+              <text x="60" y="146" font-family="Inter, sans-serif" font-size="13" fill="#94A3B8">No credit card. No KYC. Phantom binds your wallet on-chain.</text>
+              <rect x="60" y="180" width="640" height="44" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.3"/>
+              <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">Merchant handle</text>
+              <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#fff" opacity="0">@yourshop</text>
+              <rect x="60" y="240" width="640" height="44" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.3"/>
+              <text x="76" y="267" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">you@yourshop.com</text>
+              <rect x="60" y="304" width="200" height="38" rx="999" fill="url(#cta1)"/>
+              <text x="160" y="328" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">Continue →</text>
+              <text x="280" y="328" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">Free tier · 100 txs / month</text>
+            </svg>
+          </figure>
+
+          <div class="callout">
+            <strong>Free tier.</strong> First 100 transactions per month are free. After that, fees are 0.30%
+            per transaction (compare: Stripe 2.9% + 30¢).
+          </div>
+        </section>
+
+        <!-- STEP 2 -->
+        <section id="step-2" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
+            <h2 class="text-2xl font-bold">Connect Phantom</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            Click <span class="kbd">Connect Phantom</span>. The extension prompts you to approve a single
+            transaction — a memo-program write that <strong class="text-white">binds your wallet to your
+            merchant handle on-chain, immutably</strong>. From this moment forward, every USDC payment
+            addressed to <code class="text-mint font-mono text-sm">@yourshop</code> lands in this wallet.
+          </p>
+
+          <figure class="screenshot mb-4">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">phantom.app · approve transaction</span>
+            </div>
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phantom wallet approval prompt">
+              <defs>
+                <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#0a0a0a"/>
+                  <stop offset="1" stop-color="#1a1426"/>
+                </linearGradient>
+              </defs>
+              <rect width="760" height="360" fill="url(#bg2)"/>
+              <rect x="200" y="40" width="360" height="280" rx="20" fill="#181024" stroke="#9945FF" stroke-opacity="0.3"/>
+              <circle cx="240" cy="80" r="18" fill="#AB9FF2"/>
+              <text x="268" y="86" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">Phantom</text>
+              <text x="268" y="102" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">zettapay.io · wants to approve</text>
+              <text x="380" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fff">Bind merchant handle</text>
+              <text x="380" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#14F195">@yourshop</text>
+              <rect x="232" y="200" width="296" height="48" rx="8" fill="#0d0918" stroke="#9945FF" stroke-opacity="0.2"/>
+              <text x="246" y="220" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Network fee</text>
+              <text x="514" y="220" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#fff">~0.000005 SOL</text>
+              <text x="246" y="238" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Action</text>
+              <text x="514" y="238" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#fff">memo · bind</text>
+              <rect x="232" y="266" width="140" height="38" rx="999" fill="#26172E" stroke="#9945FF" stroke-opacity="0.3"/>
+              <text x="302" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="#94A3B8">Reject</text>
+              <rect x="388" y="266" width="140" height="38" rx="999" fill="#9945FF"/>
+              <text x="458" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#fff">Approve</text>
+            </svg>
+          </figure>
+
+          <div class="callout">
+            <strong>One-time only.</strong> The bind transaction runs once per merchant. After it confirms,
+            your wallet is permanently associated with the handle. The protocol creates the USDC associated
+            token account on your behalf and pays the rent (~0.002 SOL).
+          </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section id="step-3" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">3</div>
+            <h2 class="text-2xl font-bold">Copy the embed code</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            You land on your <a class="text-royal-bright underline" href="/dashboard">dashboard</a>. The
+            <strong class="text-white">Install</strong> tab shows a snippet pre-filled with your handle.
+            Set the amount you want to charge, hit <span class="kbd">Copy</span>.
+          </p>
+
+          <figure class="screenshot mb-4">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">zettapay.io/dashboard · Install</span>
+            </div>
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dashboard install snippet">
+              <defs>
+                <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#0a0a0a"/>
+                  <stop offset="1" stop-color="#11141f"/>
+                </linearGradient>
+              </defs>
+              <rect width="760" height="360" fill="url(#bg3)"/>
+              <rect x="40" y="36" width="680" height="46" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.15"/>
+              <text x="56" y="64" font-family="JetBrains Mono, monospace" font-size="11" fill="#94A3B8">DASHBOARD ›</text>
+              <text x="124" y="64" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">@yourshop</text>
+              <rect x="588" y="46" width="120" height="26" rx="999" fill="rgba(20,241,149,0.08)" stroke="#14F195" stroke-opacity="0.4"/>
+              <circle cx="604" cy="59" r="3" fill="#14F195"/>
+              <text x="616" y="63" font-family="JetBrains Mono, monospace" font-size="10" fill="#14F195">LIVE · DEVNET</text>
+
+              <text x="40" y="118" font-family="JetBrains Mono, monospace" font-size="10" fill="#14F195" letter-spacing="1.5">EMBED CODE</text>
+              <text x="40" y="142" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#fff">Drop this into your &lt;head&gt;</text>
+
+              <rect x="40" y="160" width="180" height="38" rx="8" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.25"/>
+              <text x="56" y="184" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">Amount (USDC)</text>
+              <text x="208" y="184" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="13" fill="#fff" font-weight="600">10</text>
+
+              <rect x="40" y="210" width="680" height="110" rx="10" fill="#080808" stroke="#4F6BFF" stroke-opacity="0.18"/>
+              <text x="56" y="232" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">&lt;script</text>
+              <text x="74" y="250" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  src=</text>
+              <text x="118" y="250" font-family="JetBrains Mono, monospace" font-size="11" fill="#4F6BFF">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</text>
+              <text x="74" y="268" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  data-merchant=</text>
+              <text x="194" y="268" font-family="JetBrains Mono, monospace" font-size="11" fill="#14F195">"@yourshop"</text>
+              <text x="74" y="286" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  data-amount=</text>
+              <text x="178" y="286" font-family="JetBrains Mono, monospace" font-size="11" fill="#f97316">"10"</text>
+              <text x="74" y="304" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  async</text>
+              <text x="56" y="304" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">&gt;&lt;/script&gt;</text>
+
+              <rect x="620" y="222" width="86" height="28" rx="6" fill="rgba(20,241,149,0.1)" stroke="#14F195" stroke-opacity="0.5"/>
+              <text x="663" y="240" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" fill="#14F195">COPIED ✓</text>
+            </svg>
+          </figure>
+
+          <p class="text-muted leading-relaxed mb-3">
+            The exact snippet you'll see (replace <code class="text-mint font-mono text-sm">@yourshop</code>
+            with your real handle):
+          </p>
+
+          <div class="code-card relative">
+            <button class="copy-btn" data-copy-target="embed-snippet">Copy</button>
+            <pre id="embed-snippet"><span class="tk-c">&lt;!-- ZettaPay · drop into your &lt;head&gt; --&gt;</span>
+<span class="tk-k">&lt;script</span>
+  <span class="tk-a">src</span>=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
+  <span class="tk-a">data-merchant</span>=<span class="tk-f">"@yourshop"</span>
+  <span class="tk-a">data-amount</span>=<span class="tk-n">"10"</span>
+  <span class="tk-a">data-currency</span>=<span class="tk-s">"USDC"</span>
+  <span class="tk-a">async</span>
+<span class="tk-k">&gt;&lt;/script&gt;</span></pre>
+          </div>
+        </section>
+
+        <!-- STEP 4 -->
+        <section id="step-4" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+            <h2 class="text-2xl font-bold">Paste in your <code class="text-mint font-mono text-base">&lt;head&gt;</code></h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            Open your site's <code class="text-mint font-mono text-sm">index.html</code> (or layout file —
+            see <a class="text-royal-bright underline" href="#frameworks">framework recipes</a> below).
+            Paste the snippet anywhere inside <code class="text-mint font-mono text-sm">&lt;head&gt;</code>.
+            That's the whole integration.
+          </p>
+
+          <figure class="screenshot mb-4">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">~/yourshop/public/index.html — VS Code</span>
+            </div>
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Snippet pasted into head tag in editor">
+              <rect width="760" height="360" fill="#0d0d0d"/>
+              <rect width="44" height="360" fill="#11151f"/>
+              <g font-family="JetBrains Mono, monospace" font-size="11" fill="#475569">
+                <text x="32" y="40" text-anchor="end">1</text>
+                <text x="32" y="62" text-anchor="end">2</text>
+                <text x="32" y="84" text-anchor="end">3</text>
+                <text x="32" y="106" text-anchor="end">4</text>
+                <text x="32" y="128" text-anchor="end">5</text>
+                <text x="32" y="150" text-anchor="end">6</text>
+                <text x="32" y="172" text-anchor="end">7</text>
+                <text x="32" y="194" text-anchor="end">8</text>
+                <text x="32" y="216" text-anchor="end">9</text>
+                <text x="28" y="238" text-anchor="end">10</text>
+                <text x="28" y="260" text-anchor="end">11</text>
+                <text x="28" y="282" text-anchor="end">12</text>
+                <text x="28" y="304" text-anchor="end">13</text>
+                <text x="28" y="326" text-anchor="end">14</text>
+              </g>
+              <g font-family="JetBrains Mono, monospace" font-size="11.5">
+                <text x="60" y="40" fill="#64748b">&lt;!doctype html&gt;</text>
+                <text x="60" y="62" fill="#9945FF">&lt;html</text>
+                <text x="106" y="62" fill="#c084fc"> lang</text>
+                <text x="138" y="62" fill="#fff">=</text>
+                <text x="142" y="62" fill="#4F6BFF">"en"</text>
+                <text x="172" y="62" fill="#9945FF">&gt;</text>
+                <text x="60" y="84" fill="#9945FF">&lt;head&gt;</text>
+                <text x="78" y="106" fill="#9945FF">&lt;meta</text>
+                <text x="118" y="106" fill="#c084fc"> charset</text>
+                <text x="170" y="106" fill="#fff">=</text>
+                <text x="174" y="106" fill="#4F6BFF">"utf-8"</text>
+                <text x="222" y="106" fill="#9945FF"> /&gt;</text>
+                <text x="78" y="128" fill="#9945FF">&lt;title&gt;</text>
+                <text x="128" y="128" fill="#fff">Yourshop</text>
+                <text x="190" y="128" fill="#9945FF">&lt;/title&gt;</text>
+                <text x="78" y="150" fill="#14F195">&lt;!-- ZettaPay --&gt;</text>
+                <text x="78" y="172" fill="#9945FF">&lt;script</text>
+                <text x="96" y="194" fill="#c084fc">  src</text>
+                <text x="120" y="194" fill="#fff">=</text>
+                <text x="124" y="194" fill="#4F6BFF">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</text>
+                <text x="96" y="216" fill="#c084fc">  data-merchant</text>
+                <text x="190" y="216" fill="#fff">=</text>
+                <text x="194" y="216" fill="#14F195">"@yourshop"</text>
+                <text x="96" y="238" fill="#c084fc">  data-amount</text>
+                <text x="172" y="238" fill="#fff">=</text>
+                <text x="176" y="238" fill="#f97316">"10"</text>
+                <text x="96" y="260" fill="#c084fc">  async</text>
+                <text x="78" y="260" fill="#9945FF">&gt;&lt;/script&gt;</text>
+                <text x="60" y="282" fill="#9945FF">&lt;/head&gt;</text>
+                <text x="60" y="304" fill="#9945FF">&lt;body&gt;</text>
+                <text x="78" y="326" fill="#94A3B8">  &lt;!-- your site --&gt;</text>
+              </g>
+              <rect x="60" y="156" width="660" height="116" rx="6" fill="rgba(20,241,149,0.04)" stroke="#14F195" stroke-opacity="0.4" stroke-dasharray="4 4"/>
+              <rect x="660" y="148" width="80" height="20" rx="4" fill="#14F195"/>
+              <text x="700" y="162" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#0a0a0a">PASTED</text>
+            </svg>
+          </figure>
+
+          <div class="callout callout-mint">
+            <strong>That is the integration.</strong> No npm install, no build step, no backend, no API key.
+            The CDN bundle is ~30 kb gzipped, served from jsDelivr's global edge. Reload your site —
+            a Pay button is there.
+          </div>
+        </section>
+
+        <!-- STEP 5 -->
+        <section id="step-5" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">5</div>
+            <h2 class="text-2xl font-bold">Receive USDC</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            A customer clicks the button. The widget opens a modal with a QR code (mobile) and a Phantom
+            deeplink (desktop). They sign the transfer. Solana confirms in ~2 seconds. USDC lands in your
+            wallet — no escrow, no holding period, no manual settlement.
+          </p>
+
+          <figure class="screenshot mb-4">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">yourshop.com · checkout success</span>
+            </div>
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Payment success modal">
+              <defs>
+                <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#0a0a0a"/>
+                  <stop offset="1" stop-color="#0a1a14"/>
+                </linearGradient>
+                <radialGradient id="successGlow" cx="0.5" cy="0.4" r="0.6">
+                  <stop offset="0" stop-color="#14F195" stop-opacity="0.25"/>
+                  <stop offset="1" stop-color="#14F195" stop-opacity="0"/>
+                </radialGradient>
+              </defs>
+              <rect width="760" height="360" fill="url(#bg5)"/>
+              <rect width="760" height="360" fill="url(#successGlow)"/>
+              <rect x="220" y="50" width="320" height="260" rx="20" fill="#0d130f" stroke="#14F195" stroke-opacity="0.4"/>
+              <circle cx="380" cy="120" r="42" fill="rgba(20,241,149,0.12)"/>
+              <circle cx="380" cy="120" r="32" fill="#14F195"/>
+              <path d="M365 120 L376 132 L398 108" stroke="#0a0a0a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="380" y="190" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" font-weight="700" fill="#fff">Payment received</text>
+              <text x="380" y="216" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" fill="#14F195">+ 10.00 USDC</text>
+              <rect x="252" y="232" width="256" height="34" rx="8" fill="#080808" stroke="#14F195" stroke-opacity="0.18"/>
+              <text x="266" y="252" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Tx</text>
+              <text x="494" y="252" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#fff">5h2k…fJ8z</text>
+              <rect x="252" y="276" width="256" height="22" rx="999" fill="rgba(20,241,149,0.08)"/>
+              <circle cx="266" cy="287" r="3" fill="#14F195"/>
+              <text x="278" y="290" font-family="JetBrains Mono, monospace" font-size="9" fill="#14F195">CONFIRMED · 1.8 SEC · SOLANA</text>
+            </svg>
+          </figure>
+
+          <p class="text-muted leading-relaxed mb-5">
+            On the merchant side, the dashboard updates in real time — the new payment streams in via the
+            merchant socket. Your <code class="text-mint font-mono text-sm">USDC</code> balance reflects
+            immediately, no batch reconciliation. If you registered a webhook, it fires
+            <code class="text-mint font-mono text-sm">payment.confirmed</code> with the on-chain tx
+            signature attached.
+          </p>
+
+          <div class="callout">
+            <strong>Compare:</strong> Stripe takes 2-3 days to settle to your bank, charges 2.9% + 30¢, and
+            disputes ride your account for weeks. ZettaPay settles in seconds, charges 0.30%, and the
+            transaction is final on-chain.
+          </div>
+        </section>
+
+        <!-- LIVE PREVIEW -->
+        <section id="live-preview" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Live preview</h2>
+          <p class="text-muted leading-relaxed mb-5">
+            Below is the actual widget, embedded with the same script tag from step 3. Click the button —
+            the real ZettaPay modal opens (devnet mode, no funds move).
+          </p>
+          <div class="screenshot">
+            <div class="screenshot-bar">
+              <span class="dot" style="background:#ff5f56"></span>
+              <span class="dot" style="background:#ffbd2e"></span>
+              <span class="dot" style="background:#27c93f"></span>
+              <span class="screenshot-url">preview · iframe sandbox</span>
+            </div>
+            <iframe
+              class="preview-iframe"
+              title="ZettaPay widget live preview"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+              srcdoc='&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{margin:0;font-family:system-ui;background:#0d0d0d;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;gap:16px;padding:24px;text-align:center}h3{margin:0;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#94A3B8;font-weight:500}p{margin:0;font-size:13px;color:#64748b;max-width:320px;line-height:1.6}.fallback{display:none;padding:14px 20px;font-family:Inter,system-ui;font-size:14px;font-weight:600;color:#fff;background:linear-gradient(135deg,#4F6BFF,#6B82FF);border:0;border-radius:999px;cursor:pointer;box-shadow:0 0 30px rgba(79,107,255,.4)}.fallback.show{display:inline-flex;align-items:center;gap:8px}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;h3&gt;Demo widget · @zettapay/demo · 10 USDC&lt;/h3&gt;&lt;script src="https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js" data-merchant="@zettapay-demo" data-amount="10" data-currency="USDC" async onerror="document.querySelector(\".fallback\").classList.add(\"show\")"&gt;&lt;/script&gt;&lt;button class="fallback" type="button" onclick="alert(\"This preview requires the published @zettapay/widget bundle on jsDelivr. The exact script tag from step 3 renders this button on your live site.\")"&gt;Pay 10 USDC&lt;/button&gt;&lt;p&gt;Above is the real widget bundle from jsDelivr. On your site, the same script tag renders the same button — no extra setup.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;'
+            ></iframe>
+          </div>
+          <p class="text-xs text-muted mt-3">
+            Sandboxed iframe · the preview hits the public CDN. If your network blocks
+            <code class="text-mint font-mono">cdn.jsdelivr.net</code>, the fallback button appears instead.
+          </p>
+        </section>
+
+        <!-- FRAMEWORK RECIPES -->
+        <section id="frameworks" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Framework recipes</h2>
+          <p class="text-muted leading-relaxed mb-5">
+            The widget runs anywhere a <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag
+            runs. Pick your stack — every recipe produces the same Pay button.
+          </p>
+
+          <div class="code-card relative" data-tabs="frameworks">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="html">Plain HTML</button>
+              <button class="tab-btn" data-tab="vanilla">Vanilla JS</button>
+              <button class="tab-btn" data-tab="react">React</button>
+              <button class="tab-btn" data-tab="next">Next.js</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+
+<pre data-pane="html" class="block"><span class="tk-c">&lt;!-- public/index.html · paste anywhere inside &lt;head&gt; --&gt;</span>
+<span class="tk-k">&lt;script</span>
+  <span class="tk-a">src</span>=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
+  <span class="tk-a">data-merchant</span>=<span class="tk-f">"@yourshop"</span>
+  <span class="tk-a">data-amount</span>=<span class="tk-n">"24.99"</span>
+  <span class="tk-a">data-label</span>=<span class="tk-s">"Buy Pro plan"</span>
+  <span class="tk-a">async</span>
+<span class="tk-k">&gt;&lt;/script&gt;</span></pre>
+
+<pre data-pane="vanilla" class="hidden"><span class="tk-c">// vanilla JS — programmatic mount, full control</span>
+<span class="tk-k">import</span> { mount, open } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/widget'</span>;
+
+<span class="tk-c">// Render a Pay button into a specific element</span>
+mount(document.querySelector(<span class="tk-s">'#checkout'</span>), {
+  merchantId: <span class="tk-s">'@yourshop'</span>,
+  amount: <span class="tk-n">24.99</span>,
+  currency: <span class="tk-s">'USDC'</span>,
+  onSuccess: ({ paymentId, txSignature }) =&gt; {
+    console.log(<span class="tk-s">'paid'</span>, paymentId, txSignature);
+    window.location.href = <span class="tk-s">'/thanks'</span>;
+  },
+  onCancel: ({ reason }) =&gt; console.log(<span class="tk-s">'cancelled'</span>, reason),
+});
+
+<span class="tk-c">// or open the modal imperatively (no button at all)</span>
+open({ merchantId: <span class="tk-s">'@yourshop'</span>, amount: <span class="tk-n">5</span> });</pre>
+
+<pre data-pane="react" class="hidden"><span class="tk-c">// React — useEffect mounts on render, cleans up on unmount</span>
+<span class="tk-k">import</span> { useEffect, useRef } <span class="tk-k">from</span> <span class="tk-s">'react'</span>;
+<span class="tk-k">import</span> { mount } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/widget'</span>;
+
+<span class="tk-k">export function</span> <span class="tk-f">PayButton</span>({ amount }: { amount: <span class="tk-t">number</span> }) {
+  <span class="tk-k">const</span> ref = useRef&lt;<span class="tk-t">HTMLDivElement</span>&gt;(<span class="tk-k">null</span>);
+
+  useEffect(() =&gt; {
+    <span class="tk-k">if</span> (!ref.current) <span class="tk-k">return</span>;
+    <span class="tk-k">const</span> handle = mount(ref.current, {
+      merchantId: <span class="tk-s">'@yourshop'</span>,
+      amount,
+      onSuccess: ({ txSignature }) =&gt; analytics.track(<span class="tk-s">'paid'</span>, { txSignature }),
+    });
+    <span class="tk-k">return</span> () =&gt; handle.destroy();
+  }, [amount]);
+
+  <span class="tk-k">return</span> &lt;<span class="tk-t">div</span> ref={ref} /&gt;;
+}</pre>
+
+<pre data-pane="next" class="hidden"><span class="tk-c">// app/layout.tsx · App Router</span>
+<span class="tk-k">import</span> Script <span class="tk-k">from</span> <span class="tk-s">'next/script'</span>;
+
+<span class="tk-k">export default function</span> <span class="tk-f">RootLayout</span>({ children }: { children: <span class="tk-t">React.ReactNode</span> }) {
+  <span class="tk-k">return</span> (
+    &lt;<span class="tk-t">html</span> lang=<span class="tk-s">"en"</span>&gt;
+      &lt;<span class="tk-t">head</span>&gt;
+        &lt;<span class="tk-t">Script</span>
+          src=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
+          strategy=<span class="tk-s">"afterInteractive"</span>
+          data-merchant=<span class="tk-s">"@yourshop"</span>
+          data-amount=<span class="tk-s">"24.99"</span>
+        /&gt;
+      &lt;/<span class="tk-t">head</span>&gt;
+      &lt;<span class="tk-t">body</span>&gt;{children}&lt;/<span class="tk-t">body</span>&gt;
+    &lt;/<span class="tk-t">html</span>&gt;
+  );
+}
+
+<span class="tk-c">// or inside a Client Component for per-page amounts:</span>
+<span class="tk-c">// 'use client'; import { mount } from '@zettapay/widget';</span></pre>
+          </div>
+
+          <div class="callout mt-5">
+            <strong>SSR safe.</strong> The bundle no-ops during server render and mounts on hydration.
+            Next.js, Remix, SvelteKit, Astro, Nuxt — all work without flags.
+          </div>
+        </section>
+
+        <!-- OPTIONS REF -->
+        <section id="options" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-4">Options reference</h2>
+          <div class="code-card overflow-hidden">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Attribute</th>
+                  <th>Required</th>
+                  <th>Default</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>data-merchant</code></td>
+                  <td class="text-mint">yes</td>
+                  <td>—</td>
+                  <td class="text-muted">Merchant handle, e.g. <code>@yourshop</code></td>
+                </tr>
+                <tr>
+                  <td><code>data-amount</code></td>
+                  <td class="text-mint">yes</td>
+                  <td>—</td>
+                  <td class="text-muted">Amount in <code>data-currency</code> units</td>
+                </tr>
+                <tr>
+                  <td><code>data-currency</code></td>
+                  <td class="text-muted">no</td>
+                  <td><code>USDC</code></td>
+                  <td class="text-muted">ISO currency code</td>
+                </tr>
+                <tr>
+                  <td><code>data-label</code></td>
+                  <td class="text-muted">no</td>
+                  <td><code>Pay {amount} {currency}</code></td>
+                  <td class="text-muted">Button label override</td>
+                </tr>
+                <tr>
+                  <td><code>data-theme</code></td>
+                  <td class="text-muted">no</td>
+                  <td><code>dark</code></td>
+                  <td class="text-muted"><code>dark</code> or <code>light</code></td>
+                </tr>
+                <tr>
+                  <td><code>data-api-base</code></td>
+                  <td class="text-muted">no</td>
+                  <td><code>https://api.zettapay.io</code></td>
+                  <td class="text-muted">Override for staging or self-host</td>
+                </tr>
+                <tr>
+                  <td><code>data-checkout-base</code></td>
+                  <td class="text-muted">no</td>
+                  <td><code>https://pay.zettapay.io</code></td>
+                  <td class="text-muted">Hosted checkout origin used in the QR</td>
+                </tr>
+                <tr>
+                  <td><code>data-metadata</code></td>
+                  <td class="text-muted">no</td>
+                  <td>—</td>
+                  <td class="text-muted">JSON object persisted on the payment</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-muted mt-4">
+            For programmatic control (callbacks, dynamic amounts, post-mount destroy), import
+            <code class="text-mint font-mono text-xs">{ mount, open }</code> from
+            <code class="text-mint font-mono text-xs">@zettapay/widget</code> instead — see the React and
+            Vanilla recipes above.
+          </p>
+        </section>
+
+        <!-- WHATS NEXT -->
+        <section id="whats-next" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-4">What's next</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a href="/dashboard" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Dashboard</div>
+              <div class="font-semibold mb-1">Watch payments live</div>
+              <div class="text-sm text-muted">Real-time stream, USDC balance, top spenders, 30d trend.</div>
+            </a>
+            <a href="/docs/quickstart" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">SDK</div>
+              <div class="font-semibold mb-1">Server-side quickstart</div>
+              <div class="text-sm text-muted">Same flow, but with the TypeScript SDK and webhooks.</div>
+            </a>
+            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/widget" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Source</div>
+              <div class="font-semibold mb-1">@zettapay/widget on GitHub</div>
+              <div class="text-sm text-muted">MIT — the full widget source, tests, build pipeline.</div>
+            </a>
+            <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Spec</div>
+              <div class="font-semibold mb-1">x402 protocol</div>
+              <div class="text-sm text-muted">The open header spec ZettaPay implements end-to-end.</div>
+            </a>
+          </div>
+        </section>
+
+        <!-- FOOTER NAV -->
+        <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
+          <a href="/docs" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← All docs</a>
+          <a href="/signup" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Start now →</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="border-t border-royal/10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
+        <span>ZettaPay · open Solana payment protocol</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a class="hover:text-white transition" href="https://github.com/leandromaiam-code/zettapay">GitHub</a>
+        <a class="hover:text-white transition" href="/healthz">Status</a>
+        <a class="hover:text-white transition" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Tabs
+    document.querySelectorAll('[data-tabs]').forEach((card) => {
+      const buttons = card.querySelectorAll('.tab-btn');
+      const panes = card.querySelectorAll('[data-pane]');
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          buttons.forEach((b) => b.classList.toggle('active', b === btn));
+          panes.forEach((p) => {
+            const match = p.dataset.pane === target;
+            p.classList.toggle('hidden', !match);
+            p.classList.toggle('block', match);
+          });
+        });
+      });
+    });
+
+    // Copy buttons (tabbed cards copy the visible pane)
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('[data-tabs]');
+        const visible = card && card.querySelector('[data-pane]:not(.hidden)');
+        if (!visible) return;
+        try {
+          await navigator.clipboard.writeText(visible.innerText);
+          const original = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        } catch (_) {}
+      });
+    });
+
+    // Single-target copy (e.g. step 3 snippet)
+    document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-copy-target');
+        const target = id && document.getElementById(id);
+        if (!target) return;
+        try {
+          await navigator.clipboard.writeText(target.innerText);
+          const original = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        } catch (_) {}
+      });
+    });
+
+    // TOC active link on scroll
+    const tocLinks = document.querySelectorAll('#toc .toc-link');
+    const sections = Array.from(tocLinks)
+      .map((a) => {
+        const href = a.getAttribute('href');
+        if (!href || !href.startsWith('#')) return null;
+        return document.querySelector(href);
+      })
+      .filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    sections.forEach((s) => observer.observe(s));
+  </script>
+</body>
+</html>
