@@ -104,6 +104,21 @@ export function markPaymentCompleted(
   ).run(txSignature, id);
 }
 
+/**
+ * Z13.5: flip a `completed` payment to `refunded`. Uses the existing
+ * `completed` predicate so a payment in any other state cannot be marked
+ * refunded out-of-band — the refund service treats the 0-row update as a
+ * caller-side state error.
+ */
+export function markPaymentRefunded(db: Db, id: string): number {
+  const result = db
+    .prepare<[string]>(
+      `UPDATE payments SET status = 'refunded' WHERE id = ? AND status = 'completed'`,
+    )
+    .run(id);
+  return result.changes;
+}
+
 export function markPaymentFailed(
   db: Db,
   id: string,
