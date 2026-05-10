@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay platform status — live component health, incident timeline, and historical reliability for the Solana payment protocol." />
+  <meta property="og:title" content="ZettaPay status — live system health" />
+  <meta property="og:description" content="Real-time status of the ZettaPay payment protocol, indexer, webhooks, and onramp partners. Subscribe to the RSS feed for incident updates." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <title>ZettaPay status</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="alternate" type="application/rss+xml" title="ZettaPay status updates" href="/status/feed.rss" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'amber-warn': '#F59E0B',
+            'orange-warn': '#FB923C',
+            'red-crit': '#EF4444',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-soft {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .dot {
+      display: inline-block;
+      width: 0.55rem;
+      height: 0.55rem;
+      border-radius: 999px;
+    }
+    .dot-pulse {
+      box-shadow: 0 0 0 0 currentColor;
+      animation: dotPulse 2s infinite;
+    }
+    @keyframes dotPulse {
+      0%   { box-shadow: 0 0 0 0 rgba(20, 241, 149, 0.55); }
+      70%  { box-shadow: 0 0 0 8px rgba(20, 241, 149, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(20, 241, 149, 0); }
+    }
+    .timeline {
+      position: relative;
+    }
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 0.45rem;
+      top: 0.5rem;
+      bottom: 0.5rem;
+      width: 1px;
+      background: linear-gradient(180deg, rgba(79, 107, 255, 0.4), rgba(79, 107, 255, 0));
+    }
+    .timeline-node {
+      position: relative;
+      padding-left: 1.5rem;
+    }
+    .timeline-node::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0.45rem;
+      width: 0.95rem;
+      height: 0.95rem;
+      border-radius: 999px;
+      background: rgba(10, 10, 10, 1);
+      border: 2px solid rgba(79, 107, 255, 0.6);
+    }
+  </style>
+</head>
+<body class="grid-bg min-h-screen">
+
+  <!-- Top nav -->
+  <header class="max-w-5xl mx-auto px-5 sm:px-8 pt-6 sm:pt-10 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-3 group">
+      <img src="/Logo_symbol.png" alt="" width="32" height="32" class="opacity-90 group-hover:opacity-100 transition" />
+      <span class="font-semibold tracking-tight text-lg">ZettaPay</span>
+      <span class="pill glass-soft text-muted">status</span>
+    </a>
+    <nav class="hidden sm:flex items-center gap-6 text-sm text-muted">
+      <a href="/docs" class="hover:text-white transition">Docs</a>
+      <a href="/pricing" class="hover:text-white transition">Pricing</a>
+      <a href="/launch" class="hover:text-white transition">Launch</a>
+      <a href="/status/feed.rss" class="hover:text-white transition" title="Subscribe via RSS">RSS</a>
+    </nav>
+  </header>
+
+  <!-- Overall banner -->
+  <section class="max-w-5xl mx-auto px-5 sm:px-8 mt-8 sm:mt-12">
+    <div id="overall-banner" class="glass rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <div class="text-muted text-xs font-mono tracking-widest uppercase mb-2" id="overall-eyebrow">System status</div>
+        <h1 class="text-2xl sm:text-3xl font-semibold tracking-tight" id="overall-headline">Loading…</h1>
+        <p class="text-muted text-sm mt-1" id="overall-sub"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="overall-dot" class="dot dot-pulse text-mint" style="background: #14F195;"></span>
+        <span id="overall-label" class="font-mono text-xs uppercase tracking-widest text-mint">operational</span>
+      </div>
+    </div>
+    <p class="text-muted text-xs mt-3 font-mono">Last refreshed <span id="last-refreshed">—</span> · auto-refresh every 60s · <a class="text-royal-bright hover:underline" href="/status/feed.rss">Subscribe via RSS</a></p>
+  </section>
+
+  <!-- Components -->
+  <section class="max-w-5xl mx-auto px-5 sm:px-8 mt-10">
+    <h2 class="text-sm font-mono uppercase tracking-[0.2em] text-muted mb-4">Components</h2>
+    <div id="components" class="glass rounded-2xl divide-y divide-white/5">
+      <div class="p-6 text-muted text-sm" id="components-empty">Loading components…</div>
+    </div>
+  </section>
+
+  <!-- Active incidents -->
+  <section class="max-w-5xl mx-auto px-5 sm:px-8 mt-10">
+    <h2 class="text-sm font-mono uppercase tracking-[0.2em] text-muted mb-4">Active incidents</h2>
+    <div id="active-incidents" class="space-y-4">
+      <div class="glass-soft rounded-2xl p-6 text-muted text-sm" id="active-empty">Loading…</div>
+    </div>
+  </section>
+
+  <!-- Recent history -->
+  <section class="max-w-5xl mx-auto px-5 sm:px-8 mt-10 pb-20">
+    <h2 class="text-sm font-mono uppercase tracking-[0.2em] text-muted mb-4">Recent history</h2>
+    <div id="recent-incidents" class="space-y-4">
+      <div class="glass-soft rounded-2xl p-6 text-muted text-sm" id="recent-empty">Loading…</div>
+    </div>
+  </section>
+
+  <footer class="max-w-5xl mx-auto px-5 sm:px-8 pb-10 text-xs text-muted font-mono flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <span>© ZettaPay · Solana USDC payment protocol</span>
+    <span>JSON · <a class="text-royal-bright hover:underline" href="/api/status">/api/status</a> · RSS · <a class="text-royal-bright hover:underline" href="/status/feed.rss">/status/feed.rss</a></span>
+  </footer>
+
+  <script>
+    // ----- i18n dictionary (Premissa #27 — no hardcoded UI strings) ---------
+    const DICT = {
+      en: {
+        overall: {
+          all_systems_operational: { label: 'operational', headline: 'All systems operational',  sub: 'Every monitored ZettaPay component is reporting healthy.', tone: 'mint' },
+          minor_outage:             { label: 'degraded',   headline: 'Minor service degradation', sub: 'One or more components are experiencing reduced performance.', tone: 'amber' },
+          partial_outage:           { label: 'partial',    headline: 'Partial outage',            sub: 'Some functionality is unavailable for a subset of users.', tone: 'orange' },
+          major_outage:             { label: 'outage',     headline: 'Major outage',              sub: 'Core platform functionality is currently unavailable.', tone: 'red' },
+          no_components_configured: { label: 'standby',    headline: 'Status page is initializing', sub: 'Components have not been configured yet.', tone: 'muted' },
+        },
+        component: {
+          operational:           { label: 'Operational',            tone: 'mint' },
+          degraded_performance:  { label: 'Degraded performance',   tone: 'amber' },
+          partial_outage:        { label: 'Partial outage',         tone: 'orange' },
+          major_outage:          { label: 'Major outage',           tone: 'red' },
+        },
+        incidentStatus: {
+          investigating: 'Investigating',
+          identified:    'Identified',
+          monitoring:    'Monitoring',
+          resolved:      'Resolved',
+        },
+        impact: {
+          none:     'No impact',
+          minor:    'Minor',
+          major:    'Major',
+          critical: 'Critical',
+        },
+        empty: {
+          components: 'No components have been configured yet.',
+          active:     'No active incidents — all monitored systems are reporting nominal.',
+          recent:     'No incident history yet.',
+        },
+        ui: {
+          startedAt:     'Started',
+          updates:       'Updates',
+          viewIncident:  'View timeline',
+          back:          'Back',
+        },
+      },
+    };
+    const LANG = 'en';
+    const t = (path, fallback) => path.split('.').reduce((o, k) => (o && k in o ? o[k] : undefined), DICT[LANG]) ?? fallback ?? path;
+
+    const TONE_CLASS = {
+      mint:   { bg: 'rgba(20,241,149,0.12)',  fg: '#14F195', ring: 'rgba(20,241,149,0.45)' },
+      amber:  { bg: 'rgba(245,158,11,0.12)',  fg: '#F59E0B', ring: 'rgba(245,158,11,0.45)' },
+      orange: { bg: 'rgba(251,146,60,0.12)',  fg: '#FB923C', ring: 'rgba(251,146,60,0.45)' },
+      red:    { bg: 'rgba(239,68,68,0.12)',   fg: '#EF4444', ring: 'rgba(239,68,68,0.45)' },
+      muted:  { bg: 'rgba(148,163,184,0.10)', fg: '#94A3B8', ring: 'rgba(148,163,184,0.35)' },
+    };
+
+    // ----- Rendering helpers ------------------------------------------------
+    const $ = (sel) => document.querySelector(sel);
+
+    function fmtAbsolute(iso) {
+      try {
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return iso;
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      } catch { return iso; }
+    }
+
+    function fmtRelative(iso) {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return '';
+      const diff = Date.now() - d.getTime();
+      const min = Math.round(diff / 60000);
+      if (min < 1)  return 'just now';
+      if (min < 60) return `${min}m ago`;
+      const hr = Math.round(min / 60);
+      if (hr < 24) return `${hr}h ago`;
+      const day = Math.round(hr / 24);
+      return `${day}d ago`;
+    }
+
+    function pillFor(tone, text) {
+      const c = TONE_CLASS[tone] ?? TONE_CLASS.muted;
+      return `<span class="pill" style="background:${c.bg};color:${c.fg};border:1px solid ${c.ring};">
+        <span class="dot" style="background:${c.fg};"></span>${text}
+      </span>`;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function renderOverall(overall) {
+      const meta = t(`overall.${overall}`) ?? DICT.en.overall.no_components_configured;
+      const tone = TONE_CLASS[meta.tone] ?? TONE_CLASS.muted;
+      $('#overall-headline').textContent = meta.headline;
+      $('#overall-sub').textContent = meta.sub;
+      $('#overall-label').textContent = meta.label;
+      $('#overall-dot').style.background = tone.fg;
+      $('#overall-dot').style.color = tone.fg;
+      $('#overall-label').style.color = tone.fg;
+      $('#overall-banner').style.borderColor = tone.ring;
+    }
+
+    function renderComponents(components) {
+      const root = $('#components');
+      if (!components || components.length === 0) {
+        root.innerHTML = `<div class="p-6 text-muted text-sm">${escapeHtml(t('empty.components'))}</div>`;
+        return;
+      }
+      root.innerHTML = components
+        .map((c) => {
+          const meta = t(`component.${c.status}`) ?? { label: c.status, tone: 'muted' };
+          return `
+            <div class="p-5 sm:p-6 flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <div class="font-medium text-base sm:text-lg truncate">${escapeHtml(c.name)}</div>
+                ${c.description ? `<div class="text-muted text-sm mt-1">${escapeHtml(c.description)}</div>` : ''}
+              </div>
+              <div class="shrink-0">${pillFor(meta.tone, meta.label)}</div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function renderIncidentCard(inc) {
+      const headPill = pillFor(impactTone(inc.impact), `${t(`impact.${inc.impact}`)} · ${t(`incidentStatus.${inc.status}`)}`);
+      const updates = (inc.updates ?? []).slice(0, 5);
+      const updatesHtml = updates
+        .map((u) => `
+          <div class="timeline-node">
+            <div class="text-xs font-mono uppercase tracking-widest" style="color:${TONE_CLASS[statusTone(u.status)].fg};">${escapeHtml(t(`incidentStatus.${u.status}`))}</div>
+            <div class="text-sm mt-1 text-white/90">${escapeHtml(u.body)}</div>
+            <div class="text-xs text-muted font-mono mt-1">${escapeHtml(fmtAbsolute(u.createdAt))} · ${escapeHtml(fmtRelative(u.createdAt))}</div>
+          </div>
+        `)
+        .join('');
+      return `
+        <article class="glass rounded-2xl p-6">
+          <header class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div class="min-w-0">
+              <h3 class="text-lg sm:text-xl font-semibold tracking-tight truncate">${escapeHtml(inc.title)}</h3>
+              <div class="text-xs font-mono text-muted mt-1">${escapeHtml(t('ui.startedAt'))} ${escapeHtml(fmtAbsolute(inc.startedAt))} · ${escapeHtml(fmtRelative(inc.startedAt))}</div>
+            </div>
+            <div class="shrink-0">${headPill}</div>
+          </header>
+          ${updates.length > 0 ? `<div class="timeline space-y-4">${updatesHtml}</div>` : `<div class="text-muted text-sm">${escapeHtml(t('empty.recent'))}</div>`}
+        </article>
+      `;
+    }
+
+    function impactTone(impact) {
+      switch (impact) {
+        case 'critical': return 'red';
+        case 'major':    return 'orange';
+        case 'minor':    return 'amber';
+        default:         return 'muted';
+      }
+    }
+
+    function statusTone(status) {
+      switch (status) {
+        case 'resolved':      return 'mint';
+        case 'monitoring':    return 'amber';
+        case 'identified':    return 'orange';
+        case 'investigating': return 'red';
+        default:              return 'muted';
+      }
+    }
+
+    function renderIncidents(target, incidents, emptyKey) {
+      const root = $(target);
+      if (!incidents || incidents.length === 0) {
+        root.innerHTML = `<div class="glass-soft rounded-2xl p-6 text-muted text-sm">${escapeHtml(t(`empty.${emptyKey}`))}</div>`;
+        return;
+      }
+      root.innerHTML = incidents.map(renderIncidentCard).join('');
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/status', { headers: { 'accept': 'application/json' } });
+        if (!res.ok) throw new Error(`status_${res.status}`);
+        const summary = await res.json();
+        renderOverall(summary.overall);
+        renderComponents(summary.components);
+        renderIncidents('#active-incidents', summary.activeIncidents, 'active');
+        renderIncidents('#recent-incidents', summary.recentlyResolved, 'recent');
+        $('#last-refreshed').textContent = fmtAbsolute(summary.generatedAt);
+      } catch (err) {
+        // Soft-fail: keep prior render, surface a small banner update.
+        $('#overall-headline').textContent = t('overall.no_components_configured').headline;
+        $('#overall-sub').textContent = 'Status feed temporarily unavailable. Retrying.';
+        $('#last-refreshed').textContent = fmtAbsolute(new Date().toISOString()) + ' (cached)';
+      }
+    }
+
+    load();
+    setInterval(load, 60_000);
+  </script>
+</body>
+</html>

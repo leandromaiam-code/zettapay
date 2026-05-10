@@ -34,7 +34,9 @@
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" },
     { "source": "/docs/embed", "destination": "/docs/embed.html" },
-    { "source": "/checkout/:invoice_id", "destination": "/checkout.html" }
+    { "source": "/checkout/:invoice_id", "destination": "/checkout.html" },
+    { "source": "/status", "destination": "/status.html" },
+    { "source": "/status/feed.rss", "destination": "/api/status/feed.rss" }
   ],
   "headers": [
     {
