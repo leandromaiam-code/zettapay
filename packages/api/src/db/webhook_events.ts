@@ -180,3 +180,56 @@ export function listWebhookEvents(
     .all(limit) as WebhookEventRow[];
   return rows.map(toEvent);
 }
+
+export interface ListWebhookEventsByUrlOptions {
+  status?: WebhookStatus;
+  limit?: number;
+}
+
+/**
+ * List webhook events delivered to a specific URL. Used by the merchant
+ * dashboard to scope the timeline to the caller's own webhook endpoint —
+ * `webhook_events` does not store `merchant_id` so the URL is the join key.
+ */
+export function listWebhookEventsByUrl(
+  db: Db,
+  url: string,
+  options: ListWebhookEventsByUrlOptions = {},
+): WebhookEvent[] {
+  const limit = Math.max(1, Math.min(options.limit ?? 100, 1000));
+  if (options.status) {
+    const rows = db
+      .prepare<[string, WebhookStatus, number]>(
+        "SELECT * FROM webhook_events WHERE url = ? AND status = ? ORDER BY created_at DESC LIMIT ?",
+      )
+      .all(url, options.status, limit) as WebhookEventRow[];
+    return rows.map(toEvent);
+  }
+  const rows = db
+    .prepare<[string, number]>(
+      "SELECT * FROM webhook_events WHERE url = ? ORDER BY created_at DESC LIMIT ?",
+    )
+    .all(url, limit) as WebhookEventRow[];
+  return rows.map(toEvent);
+}
+
+/**
+ * Reset a finalized webhook event back to `pending` so the dispatcher can run
+ * it again. Used by the manual retry endpoint — the `event_id` and payload
+ * stay stable across retries (idempotency is preserved on the merchant side).
+ */
+export function resetWebhookEventForRetry(db: Db, eventId: string): void {
+  const nowIso = new Date().toISOString();
+  db.prepare<[string, string]>(
+    `UPDATE webhook_events
+        SET status             = 'pending',
+            attempt_count      = 0,
+            last_attempt_at    = NULL,
+            last_status_code   = NULL,
+            last_error         = NULL,
+            dead_letter_reason = NULL,
+            delivered_at       = NULL,
+            updated_at         = ?
+      WHERE event_id = ?`,
+  ).run(nowIso, eventId);
+}
