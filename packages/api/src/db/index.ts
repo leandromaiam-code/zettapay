@@ -86,6 +86,14 @@ function applyAddOnColumns(db: Db): void {
     // financial-record retention obligations.
     db.exec("ALTER TABLE merchants ADD COLUMN deleted_at TEXT");
   }
+  if (!merchantNames.has("fraud_block_threshold")) {
+    // Z13.3: when an incoming payment's anomaly score >= this value, it is
+    // rejected with 429. Default 0 = monitor-only (audit but never block),
+    // so existing merchants opt in deliberately. Score range 0-100.
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN fraud_block_threshold INTEGER NOT NULL DEFAULT 0",
+    );
+  }
 
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all() as Array<{
     name: string;
@@ -105,6 +113,14 @@ function applyAddOnColumns(db: Db): void {
     db.exec(
       "CREATE INDEX IF NOT EXISTS payments_merchant_agent_created_at_idx ON payments(merchant_id, agent_identity_id, created_at)",
     );
+  }
+  if (!paymentNames.has("payer_ip")) {
+    // Z13.3: anomaly detector reads payer_country from prior payments to
+    // flag IP geolocation mismatches. payer_ip is stored for forensics.
+    db.exec("ALTER TABLE payments ADD COLUMN payer_ip TEXT");
+  }
+  if (!paymentNames.has("payer_country")) {
+    db.exec("ALTER TABLE payments ADD COLUMN payer_country TEXT");
   }
 
   const auditCols = db.prepare("PRAGMA table_info(audit_journal)").all() as Array<{
@@ -186,6 +202,7 @@ function applyMigrations(db: Db): void {
       velocity_max_payments_per_minute INTEGER NOT NULL DEFAULT 5,
       velocity_max_amount_per_hour     REAL NOT NULL DEFAULT 1000,
       deleted_at      TEXT,
+      fraud_block_threshold            INTEGER NOT NULL DEFAULT 0,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
 
@@ -203,6 +220,8 @@ function applyMigrations(db: Db): void {
       metadata_json   TEXT,
       currency        TEXT NOT NULL DEFAULT 'USDC',
       chain           TEXT NOT NULL DEFAULT 'solana',
+      payer_ip        TEXT,
+      payer_country   TEXT,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
       completed_at    TEXT
     );

@@ -3,6 +3,7 @@ import type { Database as Db } from "better-sqlite3";
 import { createPayment, type CreatePaymentDeps } from "../services/payments.js";
 import { idempotency } from "../middleware/idempotency.js";
 import { agentIdentityMiddleware } from "../middleware/agent-identity.js";
+import { extractClientIp } from "../lib/client-ip.js";
 import { normalizeCurrency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import {
@@ -47,6 +48,7 @@ export function payRouter(
         );
 
         const agentIdentityId = req.agentIdentity?.identity.id ?? null;
+        const payerIp = extractClientIp(req);
 
         const { payment } = await createPayment(
           db,
@@ -58,6 +60,7 @@ export function payRouter(
             metadata,
             currency,
             agentIdentityId,
+            payerIp,
           },
           deps,
         );
