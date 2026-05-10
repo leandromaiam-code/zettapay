@@ -23,6 +23,8 @@ import { enforceAgentSpendingLimits } from "./agent-spending-limits.js";
 import { enforceBlacklist } from "./blacklist.js";
 import { enforceBetaLimits } from "../beta/enforcer.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
+import type { PixClient, PixProvider } from "../pix/client.js";
+import { settlePaymentToPix } from "../pix/service.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -44,12 +46,18 @@ export interface CreatePaymentDeps {
    * a settlement is fired-and-forgotten after a successful payment. Errors are
    * swallowed so settlement failures never roll back a confirmed USDC transfer. */
   coinflow?: CoinflowClient;
-  /** Hook invoked after auto-settle completes (success or swallow). Test seam. */
+  /** Hook invoked after Coinflow auto-settle completes (success or swallow). Test seam. */
   onAutoSettle?: (paymentId: string, err: Error | null) => void;
   /** Z22.1 beta launch protocol config. Defaults to env-driven loadBetaConfig().
    * No-op when `enabled=false`. Test seam: pass an override to exercise the gate
    * without touching process.env. */
   betaConfig?: BetaLaunchConfig;
+  /** Resolves a configured PixClient for the merchant's chosen provider. When
+   * the resolver returns a client AND the merchant has Pix auto-settle on,
+   * a BRL Pix payout is fired-and-forgotten. */
+  pix?: (provider: PixProvider) => PixClient | undefined;
+  /** Hook invoked after Pix auto-settle completes (success or swallow). Test seam. */
+  onAutoPixSettle?: (paymentId: string, err: Error | null) => void;
 }
 
 /**
@@ -185,4 +193,32 @@ export async function createPayment(
       }
     },
   );
+    if (
+      deps.pix &&
+      merchant.pix.enabled &&
+      merchant.pix.autoSettle &&
+      merchant.pix.provider
+    ) {
+      const pixClient = deps.pix(merchant.pix.provider);
+      if (pixClient) {
+        void settlePaymentToPix(db, pixClient, {
+          merchantId: merchant.id,
+          paymentId,
+        })
+          .then(() => deps.onAutoPixSettle?.(paymentId, null))
+          .catch((err: unknown) => {
+            const error = err instanceof Error ? err : new Error(String(err));
+            deps.onAutoPixSettle?.(paymentId, error);
+          });
+      }
+    }
+
+    return { payment: getPayment(db, paymentId) };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "unknown transfer error";
+    markPaymentFailed(db, paymentId, message);
+    if (err instanceof HttpError) throw err;
+    throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
+  }
 }

@@ -10,6 +10,14 @@ import {
   type CoinflowClient,
   type CoinflowEnvironment,
 } from "./coinflow/client.js";
+import {
+  createPixClient,
+  isPixProvider,
+  PIX_PROVIDERS,
+  type PixClient,
+  type PixEnvironment,
+  type PixProvider,
+} from "./pix/client.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
@@ -64,6 +72,7 @@ shutdown.register("tracing", () => tracing.shutdown());
 const coinflow = loadCoinflow();
 const shopify = loadShopify();
 const kyc = loadKyc();
+const pix = loadPix();
 
 const app = createApp({
   db,
@@ -81,6 +90,7 @@ const app = createApp({
   admin: {
     adminKey: process.env.ZETTAPAY_ADMIN_KEY ?? null,
   },
+  ...(pix ? { pix } : {}),
 });
 
 const server = app.listen(port, host, () => {
@@ -129,4 +139,51 @@ function loadCoinflow(): CoinflowClient | undefined {
     environment: envValue as CoinflowEnvironment,
     ...(baseUrl ? { baseUrl } : {}),
   });
+}
+
+interface PixServerConfig {
+  resolveClient: (provider: PixProvider) => PixClient | undefined;
+  availableProviders: readonly PixProvider[];
+}
+
+/**
+ * Load Pix payout providers from env. Each provider is independently
+ * configurable so an operator can ship Bitpreço-only, Transfero-only, or
+ * both. Per-provider env keys: `<PROVIDER>_API_KEY`, `<PROVIDER>_ENV`,
+ * `<PROVIDER>_BASE_URL`. Shared env: `PIX_ENV` falls through when a provider
+ * doesn't override it.
+ */
+function loadPix(): PixServerConfig | undefined {
+  const sharedEnv = (process.env.PIX_ENV ?? "sandbox").toLowerCase();
+  const clients = new Map<PixProvider, PixClient>();
+
+  for (const provider of PIX_PROVIDERS) {
+    if (!isPixProvider(provider)) continue;
+    const upper = provider.toUpperCase();
+    const apiKey = process.env[`${upper}_API_KEY`];
+    if (!apiKey) continue;
+    const providerEnv = (
+      process.env[`${upper}_ENV`] ?? sharedEnv
+    ).toLowerCase();
+    if (providerEnv !== "sandbox" && providerEnv !== "production") {
+      logger.error("pix.env.invalid", { provider, value: providerEnv });
+      continue;
+    }
+    const baseUrl = process.env[`${upper}_BASE_URL`];
+    clients.set(
+      provider,
+      createPixClient(provider, {
+        apiKey,
+        environment: providerEnv as PixEnvironment,
+        ...(baseUrl ? { baseUrl } : {}),
+      }),
+    );
+  }
+
+  if (clients.size === 0) return undefined;
+
+  return {
+    resolveClient: (provider) => clients.get(provider),
+    availableProviders: Array.from(clients.keys()),
+  };
 }

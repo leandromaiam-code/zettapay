@@ -32,6 +32,39 @@ export {
   type EnableSettlementInput,
   type SettlePaymentInput,
 } from "./coinflow/service.js";
+export {
+  HttpBitprecoClient,
+  HttpTransferoClient,
+  PixApiError,
+  createPixClient,
+  isPixKeyType,
+  isPixProvider,
+  PIX_KEY_TYPES,
+  PIX_PROVIDERS,
+  type PixClient,
+  type PixConfig,
+  type PixEnvironment,
+  type PixKeyType,
+  type PixProvider,
+  type PixWithdrawalRequest,
+  type PixWithdrawalResponse,
+} from "./pix/client.js";
+export {
+  PIX_FEE_BPS,
+  computePixSettlementFee,
+} from "./pix/fee.js";
+export {
+  enablePixSettlement,
+  disablePixSettlement,
+  settlePaymentToPix,
+  type EnablePixSettlementInput,
+  type SettlePixPaymentInput,
+} from "./pix/service.js";
+export {
+  pixRouter,
+  type PixClientResolver,
+  type PixRouterDeps,
+} from "./routes/pix.js";
 export { idempotency } from "./middleware/idempotency.js";
 export { initTracing, type TracingHandle } from "./lib/tracing.js";
 export { getTracer, withSpan, withSpanSync, recordSpanError } from "./lib/tracer.js";

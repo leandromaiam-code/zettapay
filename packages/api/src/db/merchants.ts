@@ -1,4 +1,5 @@
 import type { Database as Db } from "better-sqlite3";
+import type { PixKeyType, PixProvider } from "../pix/client.js";
 
 export interface MerchantRow {
   id: string;
@@ -14,6 +15,12 @@ export interface MerchantRow {
   coinflow_bank_account_id: string | null;
   velocity_max_payments_per_minute: number;
   velocity_max_amount_per_hour: number;
+  pix_enabled: number;
+  pix_auto_settle: number;
+  pix_provider: PixProvider | null;
+  pix_provider_merchant_id: string | null;
+  pix_key: string | null;
+  pix_key_type: PixKeyType | null;
   created_at: string;
 }
 
@@ -27,6 +34,13 @@ export interface CoinflowSettlementSettings {
 export interface VelocityLimits {
   maxPaymentsPerMinute: number;
   maxAmountPerHour: number;
+export interface PixSettlementSettings {
+  enabled: boolean;
+  autoSettle: boolean;
+  provider: PixProvider | null;
+  providerMerchantId: string | null;
+  pixKey: string | null;
+  pixKeyType: PixKeyType | null;
 }
 
 export interface Merchant {
@@ -39,6 +53,7 @@ export interface Merchant {
   webhookSecret: string | null;
   coinflow: CoinflowSettlementSettings;
   velocity: VelocityLimits;
+  pix: PixSettlementSettings;
   createdAt: string;
 }
 
@@ -62,6 +77,13 @@ export interface UpdateCoinflowInput {
 export interface UpdateVelocityInput {
   maxPaymentsPerMinute: number;
   maxAmountPerHour: number;
+export interface UpdatePixInput {
+  enabled: boolean;
+  autoSettle: boolean;
+  provider: PixProvider | null;
+  providerMerchantId: string | null;
+  pixKey: string | null;
+  pixKeyType: PixKeyType | null;
 }
 
 function toMerchant(row: MerchantRow): Merchant {
@@ -82,6 +104,13 @@ function toMerchant(row: MerchantRow): Merchant {
     velocity: {
       maxPaymentsPerMinute: row.velocity_max_payments_per_minute,
       maxAmountPerHour: row.velocity_max_amount_per_hour,
+    pix: {
+      enabled: row.pix_enabled === 1,
+      autoSettle: row.pix_auto_settle === 1,
+      provider: row.pix_provider,
+      providerMerchantId: row.pix_provider_merchant_id,
+      pixKey: row.pix_key,
+      pixKeyType: row.pix_key_type,
     },
     createdAt: row.created_at,
   };
@@ -186,6 +215,38 @@ export function updateMerchantVelocity(
   const result = stmt.run(
     input.maxPaymentsPerMinute,
     input.maxAmountPerHour,
+export function updateMerchantPix(
+  db: Db,
+  id: string,
+  input: UpdatePixInput,
+): Merchant {
+  const stmt = db.prepare<
+    [
+      number,
+      number,
+      string | null,
+      string | null,
+      string | null,
+      string | null,
+      string,
+    ]
+  >(
+    `UPDATE merchants
+       SET pix_enabled = ?,
+           pix_auto_settle = ?,
+           pix_provider = ?,
+           pix_provider_merchant_id = ?,
+           pix_key = ?,
+           pix_key_type = ?
+       WHERE id = ?`,
+  );
+  const result = stmt.run(
+    input.enabled ? 1 : 0,
+    input.autoSettle ? 1 : 0,
+    input.provider,
+    input.providerMerchantId,
+    input.pixKey,
+    input.pixKeyType,
     id,
   );
   if (result.changes === 0) {
