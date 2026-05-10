@@ -9,6 +9,7 @@ import { apiDocsRouter } from "./routes/api-docs.js";
 import { betaRouter } from "./routes/beta.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "./beta/config.js";
 import { funnelRouter } from "./routes/funnel.js";
+import { healthRouter } from "./routes/health.js";
 import { indexerRouter } from "./routes/indexer.js";
 import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
@@ -29,6 +30,7 @@ import { wixRouter } from "./routes/wix.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
+import { metricsMiddleware } from "./middleware/metrics.js";
 import { securityHeaders } from "./middleware/security-headers.js";
 import { HttpError } from "./lib/errors.js";
 import { isSentryEnabled, Sentry } from "./lib/sentry.js";
@@ -110,6 +112,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.disable("x-powered-by");
   app.set("trust proxy", true);
   app.use(securityHeaders());
+  app.use(metricsMiddleware());
   // Capture rawBody on JSON-parsed requests so webhook receivers (e.g. Sumsub)
   // can verify provider-side HMAC signatures over the original bytes — once
   // express.json() runs, re-stringifying the parsed object will not reproduce
@@ -143,6 +146,7 @@ export function createApp(options: CreateAppOptions): Express {
   });
 
   app.use(apiDocsRouter());
+  app.use(healthRouter({ db, betaConfig }));
   app.use(agentIdentityRouter(db));
   app.use(agentSpendingLimitsRouter(db));
   app.use(agentToAgentRouter(db, solana));

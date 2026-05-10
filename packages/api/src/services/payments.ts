@@ -13,6 +13,7 @@ import { appendAudit } from "../db/audit_journal.js";
 import { DEFAULT_CURRENCY, type Currency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
+import { recordPaymentOutcome } from "../lib/metrics.js";
 import { withSpan } from "../lib/tracer.js";
 import type { SolanaService } from "./solana.js";
 import type { CoinflowClient } from "../coinflow/client.js";
@@ -142,6 +143,7 @@ export async function createPayment(
         markPaymentCompleted(db, paymentId, result.signature);
         span.setAttribute("zettapay.payment.tx_signature", result.signature);
         span.setAttribute("zettapay.payment.status", "completed");
+        recordPaymentOutcome("completed", currency, input.amountUsdc);
 
         if (
           deps.coinflow &&
@@ -165,6 +167,7 @@ export async function createPayment(
           err instanceof Error ? err.message : "unknown transfer error";
         markPaymentFailed(db, paymentId, message);
         span.setAttribute("zettapay.payment.status", "failed");
+        recordPaymentOutcome("failed", currency, input.amountUsdc);
         appendAudit(db, {
           actor: `payer:${payerWallet}`,
           event: "payment.failed",

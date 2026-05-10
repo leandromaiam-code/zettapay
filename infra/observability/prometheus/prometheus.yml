@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: zettapay-self-hosted
+
+scrape_configs:
+  - job_name: zettapay-api
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - api:3001
+        labels:
+          service: zettapay-api
+          env: self-hosted
+
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
