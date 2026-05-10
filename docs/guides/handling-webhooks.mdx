@@ -7,7 +7,47 @@ Webhook handlers fail in three predictable ways: missed signatures,
 duplicate processing, and slow ACKs that trigger spurious retries. This
 guide walks through a handler that gets all three right.
 
-## Express + Node.js
+## SDK helper (recommended)
+
+The TypeScript SDK ships `parseWebhook` and `dedupe` so the entire
+verify-and-deduplicate flow collapses to a few lines. `parseWebhook`
+returns the stable `X-ZettaPay-Event-Id` so retries are trivial to
+reject — the dispatcher reuses the same id across all delivery attempts.
+
+```ts
+import express from "express";
+import { parseWebhook, dedupe, MemoryEventStore } from "@zettapay/sdk";
+
+const app = express();
+const seen = new MemoryEventStore({ maxEntries: 50_000 });
+
+app.post(
+  "/webhooks/zettapay",
+  express.raw({ type: "*/*" }),
+  async (req, res) => {
+    const result = parseWebhook({
+      secret: process.env.WEBHOOK_SECRET!,
+      body: req.body, // raw Buffer — re-encoded JSON would break the HMAC
+      headers: req.headers,
+    });
+
+    if (!result.valid) return res.status(400).send(result.reason);
+
+    const { duplicate } = await dedupe(result.event.eventId, seen);
+    if (duplicate) return res.status(200).send("duplicate");
+
+    await jobs.enqueue("process-zettapay-event", result.event.payload);
+    res.status(200).send("ok");
+  },
+);
+```
+
+`MemoryEventStore` is fine for development and single-process workers.
+For multi-instance deployments, plug in any backing store that satisfies
+the `EventStore` contract (`has(id)` + `add(id)`) — Redis `SET NX`,
+Postgres unique index, or DynamoDB conditional writes all work.
+
+## Express + Node.js (manual)
 
 ```ts
 import express from "express";

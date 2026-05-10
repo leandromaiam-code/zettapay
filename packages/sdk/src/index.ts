@@ -39,3 +39,19 @@ export {
   type SendOnChainResult,
 } from './onchain.js';
 export { ZETTAPAY_IDL, type ZettaPayErrorCode } from './idl/zettapay.js';
+export {
+  parseWebhook,
+  dedupe,
+  MemoryEventStore,
+  SIGNATURE_HEADER,
+  TIMESTAMP_HEADER,
+  EVENT_ID_HEADER,
+  ATTEMPT_HEADER,
+  type ParseWebhookOptions,
+  type ParseWebhookResult,
+  type ParsedWebhook,
+  type WebhookFailureReason,
+  type EventStore,
+  type DedupeResult,
+  type HeaderBag,
+} from './webhook.js';

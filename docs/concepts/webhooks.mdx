@@ -24,7 +24,7 @@ fire-and-forget patterns common in crypto payments.
 | --- | --- |
 | `X-ZettaPay-Signature` | `sha256=<hex>` of `${timestamp}.${rawBody}` using the merchant's webhook secret. |
 | `X-ZettaPay-Timestamp` | Epoch milliseconds. Reject if drift exceeds 5 minutes. |
-| `X-ZettaPay-Event-Id` | Stable UUID. Use as your dedup key. |
+| `X-ZettaPay-Event-Id` | Stable UUID, reused across every retry. Use as your idempotency dedup key. |
 | `X-ZettaPay-Attempt` | 1-indexed attempt number. |
 
 ## Retry schedule
