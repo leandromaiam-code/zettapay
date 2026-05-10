@@ -12,6 +12,7 @@ import { loadBetaConfig, type BetaLaunchConfig } from "./beta/config.js";
 import { funnelRouter } from "./routes/funnel.js";
 import { healthRouter } from "./routes/health.js";
 import { indexerRouter } from "./routes/indexer.js";
+import { incidentsRouter } from "./routes/incidents.js";
 import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
 import { merchantsRouter } from "./routes/merchants.js";
@@ -39,6 +40,8 @@ import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
 import { metricsMiddleware } from "./middleware/metrics.js";
 import { securityHeaders } from "./middleware/security-headers.js";
+import { incidentGuard } from "./middleware/incident-guard.js";
+import { IncidentService } from "./services/incident.js";
 import { HttpError } from "./lib/errors.js";
 import { isSentryEnabled, Sentry } from "./lib/sentry.js";
 import type { GracefulShutdown } from "./lib/shutdown.js";
@@ -122,6 +125,13 @@ export interface CreateAppOptions {
   amlConfig?: AmlMonitorConfig | null;
   /** Hook fired after AML evaluation (success or swallowed error). Test seam. */
   onAmlEvaluated?: CreatePaymentDeps["onAmlEvaluated"];
+  /** Z22.4 — incident response. Reuses the treasury admin key when no
+   * dedicated incident key is supplied; both have the same blast radius
+   * (mainnet kill switch). When the key is unset, /admin/incidents/* still
+   * mounts but rejects every call, while /status remains public. */
+  incidents?: {
+    adminKey?: string | null;
+  };
 }
 
 const startedAt = Date.now();
@@ -151,6 +161,9 @@ export function createApp(options: CreateAppOptions): Express {
   } = options;
   const resolvedAmlConfig: AmlMonitorConfig | null =
     amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
+    incidents: incidentOptions,
+  } = options;
+  const incidentService = new IncidentService(db);
 
   const app = express();
   app.disable("x-powered-by");
@@ -191,6 +204,11 @@ export function createApp(options: CreateAppOptions): Express {
 
   app.use(apiDocsRouter());
   app.use(healthRouter({ db, betaConfig }));
+  // Z22.4 — kill-switch guard runs before /pay so an active incident short-
+  // circuits payment creation with HTTP 503 + Retry-After. Other routes
+  // (status, /admin, dashboards) remain reachable so incident commanders can
+  // observe and resolve while writes are paused.
+  app.post("/pay", incidentGuard(incidentService));
   app.use(agentIdentityRouter(db));
   app.use(agentSpendingLimitsRouter(db));
   app.use(agentToAgentRouter(db, solana));
@@ -283,6 +301,13 @@ export function createApp(options: CreateAppOptions): Express {
     treasuryRouter(db, {
       treasury: treasuryService,
       adminKey: treasury?.adminKey ?? null,
+    }),
+  );
+
+  app.use(
+    incidentsRouter({
+      incidents: incidentService,
+      adminKey: incidentOptions?.adminKey ?? treasury?.adminKey ?? null,
     }),
   );
 

@@ -82,6 +82,12 @@
                 ]
               }
             ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "operations/incident-runbook"
+            ]
           }
         ]
       },

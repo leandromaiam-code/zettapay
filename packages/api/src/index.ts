@@ -188,3 +188,14 @@ export {
   listAuditEntries,
   type AuditJournalEntry,
 } from "./db/audit_journal.js";
+export {
+  IncidentService,
+  type Incident,
+  type IncidentSeverity,
+  type IncidentStatus,
+  type IncidentUpdate,
+  type OpenIncidentInput,
+  type PostUpdateInput,
+} from "./services/incident.js";
+export { incidentGuard } from "./middleware/incident-guard.js";
+export { incidentsRouter, type IncidentsRouterDeps } from "./routes/incidents.js";
