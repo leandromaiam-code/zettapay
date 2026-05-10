@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay merchant dashboard — Phantom login, USDC balance, payments stream, Coinflow settlement." />
+  <meta property="og:title" content="ZettaPay Dashboard — Merchant control plane" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ZettaPay — Merchant Dashboard</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
+  <script src="https://unpkg.com/bs58@5.0.0/index.min.js" defer></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'spin-slow': 'spin 2s linear infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(79, 107, 255, 0.12) 0%, transparent 60%),
+                  radial-gradient(ellipse 50% 40% at 80% 20%, rgba(153, 69, 255, 0.06) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .hidden-init { display: none; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .stat-num { font-variant-numeric: tabular-nums; }
+    .skeleton {
+      background: linear-gradient(90deg, rgba(79, 107, 255, 0.05) 0%, rgba(79, 107, 255, 0.12) 50%, rgba(79, 107, 255, 0.05) 100%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite linear;
+    }
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    .badge { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.65rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.15rem 0.5rem; border-radius: 999px; }
+    .badge-mint { background: rgba(20, 241, 149, 0.12); border: 1px solid rgba(20, 241, 149, 0.35); color: #14F195; }
+    .badge-amber { background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #f59e0b; }
+    .badge-muted { background: rgba(148, 163, 184, 0.1); border: 1px solid rgba(148, 163, 184, 0.3); color: #94A3B8; }
+    .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 60; max-width: 22rem; }
+    @media (max-width: 640px) { .toast { right: 1rem; left: 1rem; max-width: none; } }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="hero-gradient"></div>
+
+  <!-- NAV -->
+  <nav class="relative z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <span class="text-sm font-mono uppercase tracking-widest text-muted">Merchant Console</span>
+      </a>
+      <div class="flex items-center gap-3">
+        <span id="net-badge" class="badge badge-muted hidden sm:inline-block">Devnet</span>
+        <a href="/" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Home</a>
+        <button id="disconnect-btn" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm hidden-init">Disconnect</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="relative z-10 px-4 lg:px-12 py-8 max-w-7xl mx-auto">
+
+    <!-- LOGIN SCREEN -->
+    <section id="login-screen" class="min-h-[70vh] flex items-center justify-center">
+      <div class="glass-strong rounded-2xl p-8 md:p-12 max-w-xl w-full animate-fade-up">
+        <div class="flex items-center gap-3 mb-6">
+          <img src="/Logo_symbol.png" class="w-12 h-12" alt="" />
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">ZettaPay</div>
+            <div class="text-xl font-bold">Merchant Dashboard</div>
+          </div>
+        </div>
+
+        <h1 class="text-3xl md:text-4xl font-bold mb-3 leading-tight">
+          Sign in with <span class="gradient-text">Phantom</span>
+        </h1>
+        <p class="text-muted text-base mb-8 leading-relaxed">
+          Authenticate with a Solana signature — no passwords, no email codes. Your wallet is your identity.
+          We never custody funds.
+        </p>
+
+        <button id="connect-btn" class="btn-primary px-6 py-4 rounded-full font-semibold text-base w-full flex items-center justify-center gap-3">
+          <svg class="w-5 h-5" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
+            <path d="M64 0a64 64 0 1 0 64 64A64.07 64.07 0 0 0 64 0zm45.4 65.45a3.32 3.32 0 0 1-3.32 3.31h-7.81c-.85 17.34-9.91 27.62-25.26 27.62-13.66 0-23.54-9.39-23.54-22.06 0-9.85 5.71-17.07 14.78-17.07 8.01 0 13.16 4.94 13.16 12.36 0 5.34-2.46 9.69-7.31 9.69-3.16 0-5.59-1.79-5.97-4.62a6.07 6.07 0 0 1 .11-2 .59.59 0 0 0-.55-.79c-3.13 0-5.41 3.13-5.41 7.61 0 6.71 5.04 11.02 12.5 11.02 9.83 0 16.79-7.16 17.39-19.76h-26a3.32 3.32 0 0 1-3.32-3.32V46.66a3.32 3.32 0 0 1 3.32-3.32h44.59a3.32 3.32 0 0 1 3.32 3.32z"/>
+          </svg>
+          <span id="connect-label">Connect Phantom</span>
+        </button>
+
+        <div id="connect-error" class="mt-4 text-rose text-sm hidden-init"></div>
+
+        <div class="mt-8 pt-6 border-t border-white/5">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">How it works</div>
+          <ol class="text-sm text-muted space-y-2 list-decimal list-inside">
+            <li>Phantom returns your wallet pubkey.</li>
+            <li>You sign a one-time challenge — proves wallet ownership.</li>
+            <li>We verify the Ed25519 signature locally and unlock the dashboard.</li>
+          </ol>
+          <p class="text-xs text-muted/70 mt-4">
+            No Phantom? <a class="text-royal-bright hover:underline" href="https://phantom.app/" target="_blank" rel="noopener noreferrer">Install the wallet</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section id="dashboard" class="hidden-init space-y-6 animate-fade-up">
+
+      <!-- Header strip -->
+      <div class="glass rounded-2xl p-5 md:p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="min-w-0">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted">Signed in as</div>
+          <div class="flex items-center gap-2 mt-1">
+            <span id="wallet-short" class="font-bold text-lg truncate">—</span>
+            <button id="copy-wallet" class="text-royal-bright hover:text-white transition text-sm" title="Copy address">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            </button>
+          </div>
+          <div id="wallet-full" class="mono text-xs text-muted/80 mt-1 truncate"></div>
+        </div>
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted sm:text-right">Session signature</div>
+          <span id="sig-status" class="badge badge-mint">Verified</span>
+        </div>
+      </div>
+
+      <!-- Stat cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">USDC Balance</div>
+          <div class="flex items-baseline gap-2">
+            <span id="balance-num" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">USDC</span>
+          </div>
+          <div id="balance-sub" class="text-xs text-muted mt-2">Loading from Solana RPC…</div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Payments (24h)</div>
+          <div class="flex items-baseline gap-2">
+            <span id="payments-count" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">tx</span>
+          </div>
+          <div id="payments-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+        <div class="glass rounded-2xl p-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Pending settlement</div>
+          <div class="flex items-baseline gap-2">
+            <span id="pending-num" class="stat-num text-4xl font-bold">—</span>
+            <span class="text-muted text-sm">USDC</span>
+          </div>
+          <div id="pending-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+      </div>
+
+      <!-- Backend connection -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex flex-col md:flex-row md:items-end gap-3">
+          <div class="flex-1 min-w-0">
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">API base URL</label>
+            <input id="api-base" type="url" placeholder="https://api.zettapay.dev" class="mono mt-1 w-full bg-black/30 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div class="flex-1 min-w-0">
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">Merchant API key</label>
+            <input id="api-key" type="password" placeholder="zp_live_…" autocomplete="off" class="mono mt-1 w-full bg-black/30 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div class="flex gap-2">
+            <button id="refresh-btn" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap">Refresh</button>
+            <button id="save-creds" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm whitespace-nowrap">Save & load</button>
+          </div>
+        </div>
+        <div id="backend-hint" class="text-xs text-muted mt-3">
+          Leave the API key blank to browse the demo simulator. Provide an API base + key to load live merchant data.
+        </div>
+      </div>
+
+      <!-- Payments table -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Recent payments</div>
+            <h2 class="text-xl font-bold mt-1">Payment stream</h2>
+          </div>
+          <span id="payments-source" class="badge badge-muted">demo</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs font-mono uppercase tracking-widest text-muted border-b border-white/5">
+                <th class="py-3 pr-4 font-medium">When</th>
+                <th class="py-3 pr-4 font-medium">From</th>
+                <th class="py-3 pr-4 font-medium">Amount</th>
+                <th class="py-3 pr-4 font-medium">Status</th>
+                <th class="py-3 pr-4 font-medium">Signature</th>
+              </tr>
+            </thead>
+            <tbody id="payments-tbody"></tbody>
+          </table>
+        </div>
+        <div id="payments-empty" class="hidden-init text-center py-8 text-muted text-sm">No payments yet — share your merchant link or try the simulator.</div>
+      </div>
+
+      <!-- Settlement -->
+      <div class="glass rounded-2xl p-5 md:p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Off-ramp</div>
+            <h2 class="text-xl font-bold mt-1">Coinflow settlement</h2>
+          </div>
+          <span id="settle-status" class="badge badge-amber">Not configured</span>
+        </div>
+        <p class="text-sm text-muted mb-4 max-w-2xl">
+          Coinflow converts incoming USDC to fiat and pays out to a connected bank account. Auto-settle moves
+          funds when each payment confirms; manual mode lets you batch.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">Coinflow merchant ID</label>
+            <input id="cf-merchant" type="text" placeholder="cf_…" class="mono mt-1 w-full bg-black/30 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label class="text-xs font-mono uppercase tracking-widest text-muted">Bank account ID</label>
+            <input id="cf-bank" type="text" placeholder="bank_…" class="mono mt-1 w-full bg-black/30 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row sm:items-center gap-3 mt-4">
+          <label class="flex items-center gap-2 text-sm text-muted">
+            <input id="cf-auto" type="checkbox" checked class="accent-royal" />
+            Auto-settle on confirmation
+          </label>
+          <div class="sm:ml-auto flex gap-2">
+            <button id="cf-save" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Enable settlement</button>
+          </div>
+        </div>
+        <div id="cf-feedback" class="text-xs text-muted mt-3"></div>
+      </div>
+
+      <footer class="text-center text-xs text-muted/60 mono py-6">
+        ZettaPay merchant console · 0.30% per tx · Solana <span id="net-tag">devnet</span>
+      </footer>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden-init">
+    <div class="glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl"></div>
+  </div>
+
+  <script>
+    'use strict';
+
+    // -----------------------------------------------------------------------
+    // ZettaPay merchant dashboard — Phantom signature login + live data view.
+    // Runs as a static page; talks to Solana RPC (balance) + ZettaPay API
+    // (payments / settlement) when the merchant supplies an API key.
+    // -----------------------------------------------------------------------
+
+    const RPC_URL = 'https://api.devnet.solana.com';
+    const USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+    const SESSION_KEY = 'zettapay.session.v1';
+    const PREFS_KEY = 'zettapay.prefs.v1';
+
+    const $ = (id) => document.getElementById(id);
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 8) return addr || '';
+      return addr.slice(0, 4) + '…' + addr.slice(-4);
+    }
+
+    function formatUsdc(amount) {
+      const num = Number(amount || 0);
+      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function relativeTime(iso) {
+      const t = new Date(iso).getTime();
+      if (!Number.isFinite(t)) return '—';
+      const diff = Date.now() - t;
+      const m = Math.floor(diff / 60000);
+      if (m < 1) return 'just now';
+      if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60);
+      if (h < 24) return h + 'h ago';
+      const d = Math.floor(h / 24);
+      return d + 'd ago';
+    }
+
+    let toastTimer;
+    function toast(msg, kind = 'info') {
+      const el = $('toast');
+      const inner = el.firstElementChild;
+      inner.textContent = msg;
+      inner.className = 'glass-strong rounded-xl px-4 py-3 text-sm shadow-2xl';
+      if (kind === 'error') inner.classList.add('text-rose');
+      else if (kind === 'ok') inner.classList.add('text-mint');
+      el.classList.remove('hidden-init');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.add('hidden-init'), 3500);
+    }
+
+    // -----------------------------------------------------------------------
+    // Phantom signature login
+    // -----------------------------------------------------------------------
+
+    function getProvider() {
+      const p = window.solana || (window.phantom && window.phantom.solana);
+      if (p && p.isPhantom) return p;
+      return null;
+    }
+
+    async function connectPhantom() {
+      const provider = getProvider();
+      if (!provider) {
+        const w = window.open('https://phantom.app/', '_blank', 'noopener');
+        if (!w) toast('Install Phantom to continue.', 'error');
+        throw new Error('Phantom wallet not detected');
+      }
+
+      const resp = await provider.connect();
+      const pubkey = resp.publicKey.toString();
+
+      const nonce = crypto.getRandomValues(new Uint8Array(16));
+      const nonceHex = Array.from(nonce).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const issuedAt = new Date().toISOString();
+      const message =
+        'Sign in to ZettaPay merchant dashboard.\n\n' +
+        'Wallet: ' + pubkey + '\n' +
+        'Nonce: ' + nonceHex + '\n' +
+        'Issued at: ' + issuedAt + '\n' +
+        'Domain: ' + window.location.host + '\n' +
+        'Network: solana-devnet';
+
+      const encoded = new TextEncoder().encode(message);
+      const signed = await provider.signMessage(encoded, 'utf8');
+      const signature = signed.signature || signed; // Phantom returns {signature, publicKey}
+
+      const verified = verifyEd25519(signature, encoded, resp.publicKey.toBytes());
+      if (!verified) throw new Error('Signature verification failed');
+
+      const session = {
+        pubkey,
+        nonce: nonceHex,
+        issuedAt,
+        signatureHex: Array.from(signature).map((b) => b.toString(16).padStart(2, '0')).join(''),
+      };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      return session;
+    }
+
+    function verifyEd25519(signature, message, pubkey) {
+      try {
+        return window.nacl.sign.detached.verify(message, signature, pubkey);
+      } catch (err) {
+        console.warn('verify failed', err);
+        return false;
+      }
+    }
+
+    function loadSession() {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY);
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    }
+
+    function clearSession() {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+
+    // -----------------------------------------------------------------------
+    // Solana RPC — USDC balance
+    // -----------------------------------------------------------------------
+
+    async function rpc(method, params) {
+      const res = await fetch(RPC_URL, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      });
+      if (!res.ok) throw new Error('rpc ' + res.status);
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message || 'rpc error');
+      return json.result;
+    }
+
+    async function fetchUsdcBalance(pubkey) {
+      const result = await rpc('getTokenAccountsByOwner', [
+        pubkey,
+        { mint: USDC_MINT },
+        { encoding: 'jsonParsed' },
+      ]);
+      const accounts = (result && result.value) || [];
+      let total = 0;
+      for (const a of accounts) {
+        const info = a.account && a.account.data && a.account.data.parsed && a.account.data.parsed.info;
+        const ui = info && info.tokenAmount && Number(info.tokenAmount.uiAmount);
+        if (Number.isFinite(ui)) total += ui;
+      }
+      return { total, accounts: accounts.length };
+    }
+
+    // -----------------------------------------------------------------------
+    // Payments — live API or simulator fallback
+    // -----------------------------------------------------------------------
+
+    async function fetchPaymentsLive(apiBase, apiKey) {
+      const url = apiBase.replace(/\/+$/, '') + '/payments?limit=20';
+      const res = await fetch(url, { headers: { 'x-zettapay-api-key': apiKey } });
+      if (!res.ok) throw new Error('Backend ' + res.status);
+      const json = await res.json();
+      const items = Array.isArray(json.items) ? json.items : [];
+      return items.map((it) => ({
+        id: it.id || it.paymentId,
+        from: it.payer || it.from || it.payerPubkey,
+        amount: Number(it.amount ?? it.amountUsdc ?? 0),
+        status: it.status || 'confirmed',
+        signature: it.signature || it.txSignature,
+        acceptedAt: it.acceptedAt || it.createdAt || it.confirmedAt || new Date().toISOString(),
+      }));
+    }
+
+    async function fetchPaymentsDemo(pubkey) {
+      const ref = pubkey.slice(0, 8).toLowerCase();
+      const items = [];
+      for (let i = 0; i < 5; i++) {
+        const res = await fetch('/api/simulate/' + ref + '?amount=' + (5 + i * 12));
+        if (!res.ok) break;
+        const json = await res.json();
+        if (!json.payment) break;
+        items.push({
+          id: json.payment.id,
+          from: json.payment.from,
+          amount: Number(json.payment.amount),
+          status: 'confirmed',
+          signature: json.payment.signature,
+          acceptedAt: new Date(Date.now() - i * 19 * 60_000).toISOString(),
+        });
+      }
+      return items;
+    }
+
+    function renderPayments(items) {
+      const tbody = $('payments-tbody');
+      const empty = $('payments-empty');
+      tbody.innerHTML = '';
+      if (!items.length) {
+        empty.classList.remove('hidden-init');
+        $('payments-count').textContent = '0';
+        $('payments-sub').textContent = 'No traffic yet';
+        return;
+      }
+      empty.classList.add('hidden-init');
+      const last24h = items.filter((p) => Date.now() - new Date(p.acceptedAt).getTime() < 86_400_000);
+      $('payments-count').textContent = last24h.length;
+      const sum = last24h.reduce((s, p) => s + p.amount, 0);
+      $('payments-sub').textContent = formatUsdc(sum) + ' USDC volume';
+
+      for (const p of items) {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-white/5 hover:bg-white/[0.02] transition';
+        tr.innerHTML =
+          '<td class="py-3 pr-4 text-muted">' + relativeTime(p.acceptedAt) + '</td>' +
+          '<td class="py-3 pr-4 mono text-xs">' + shortAddr(p.from) + '</td>' +
+          '<td class="py-3 pr-4 stat-num font-semibold">' + formatUsdc(p.amount) + ' <span class="text-muted text-xs">USDC</span></td>' +
+          '<td class="py-3 pr-4"><span class="badge badge-mint">' + (p.status || 'confirmed') + '</span></td>' +
+          '<td class="py-3 pr-4 mono text-xs"><a class="text-royal-bright hover:underline" target="_blank" rel="noopener" href="https://solscan.io/tx/' + encodeURIComponent(p.signature || '') + '?cluster=devnet">' + shortAddr(p.signature) + '</a></td>';
+        tbody.appendChild(tr);
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Settlement
+    // -----------------------------------------------------------------------
+
+    async function loadSettlement(apiBase, apiKey, pubkey) {
+      if (!apiBase || !apiKey) {
+        $('pending-num').textContent = '0.00';
+        $('pending-sub').textContent = 'Connect backend to load settlements';
+        return;
+      }
+      try {
+        const url = apiBase.replace(/\/+$/, '') + '/merchants/' + encodeURIComponent(pubkey) + '/settlements';
+        const res = await fetch(url, { headers: { 'x-zettapay-api-key': apiKey } });
+        if (!res.ok) throw new Error('settlement ' + res.status);
+        const json = await res.json();
+        const list = json.settlements || [];
+        const pending = list.filter((s) => s.status !== 'completed' && s.status !== 'settled');
+        const sum = pending.reduce((s, x) => s + Number(x.amountUsdc || x.amount || 0), 0);
+        $('pending-num').textContent = formatUsdc(sum);
+        $('pending-sub').textContent = pending.length + ' awaiting · fee ' + ((json.feeBps || 0) / 100).toFixed(2) + '%';
+        const cfStatus = $('settle-status');
+        if (list.length) {
+          cfStatus.textContent = 'Active';
+          cfStatus.className = 'badge badge-mint';
+        }
+      } catch (err) {
+        $('pending-sub').textContent = 'Backend unreachable';
+      }
+    }
+
+    async function enableSettlement() {
+      const prefs = loadPrefs();
+      const session = loadSession();
+      if (!session) return;
+      const apiBase = prefs.apiBase;
+      const apiKey = prefs.apiKey;
+      const cfMerchant = $('cf-merchant').value.trim();
+      const cfBank = $('cf-bank').value.trim();
+      const auto = $('cf-auto').checked;
+      if (!apiBase || !apiKey) {
+        $('cf-feedback').textContent = 'Provide API base + key first.';
+        return;
+      }
+      if (!cfMerchant || !cfBank) {
+        $('cf-feedback').textContent = 'Coinflow merchant ID and bank account ID are required.';
+        return;
+      }
+      try {
+        const url = apiBase.replace(/\/+$/, '') + '/merchants/' + encodeURIComponent(session.pubkey) + '/settlement/coinflow';
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-zettapay-api-key': apiKey,
+            'idempotency-key': 'cf-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+          },
+          body: JSON.stringify({
+            coinflowMerchantId: cfMerchant,
+            bankAccountId: cfBank,
+            autoSettle: auto,
+          }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || ('HTTP ' + res.status));
+        }
+        $('cf-feedback').textContent = 'Coinflow settlement enabled.';
+        $('settle-status').textContent = 'Active';
+        $('settle-status').className = 'badge badge-mint';
+        toast('Settlement configured', 'ok');
+      } catch (err) {
+        $('cf-feedback').textContent = 'Failed: ' + err.message;
+        toast('Settlement update failed', 'error');
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Prefs
+    // -----------------------------------------------------------------------
+
+    function loadPrefs() {
+      try {
+        return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+      } catch {
+        return {};
+      }
+    }
+    function savePrefs(p) {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(p));
+    }
+
+    // -----------------------------------------------------------------------
+    // Wiring
+    // -----------------------------------------------------------------------
+
+    async function showDashboard(session) {
+      $('login-screen').classList.add('hidden-init');
+      $('dashboard').classList.remove('hidden-init');
+      $('disconnect-btn').classList.remove('hidden-init');
+      $('wallet-short').textContent = shortAddr(session.pubkey);
+      $('wallet-full').textContent = session.pubkey;
+
+      const prefs = loadPrefs();
+      $('api-base').value = prefs.apiBase || '';
+      $('api-key').value = prefs.apiKey || '';
+
+      await refreshAll(session, prefs);
+    }
+
+    async function refreshAll(session, prefs) {
+      $('balance-num').textContent = '…';
+      $('balance-sub').textContent = 'Querying Solana RPC…';
+
+      try {
+        const bal = await fetchUsdcBalance(session.pubkey);
+        $('balance-num').textContent = formatUsdc(bal.total);
+        $('balance-sub').textContent = bal.accounts === 0
+          ? 'No USDC token account yet'
+          : bal.accounts + ' USDC account' + (bal.accounts === 1 ? '' : 's');
+      } catch (err) {
+        $('balance-num').textContent = '—';
+        $('balance-sub').textContent = 'RPC unavailable';
+      }
+
+      let items = [];
+      let source = 'demo';
+      if (prefs.apiBase && prefs.apiKey) {
+        try {
+          items = await fetchPaymentsLive(prefs.apiBase, prefs.apiKey);
+          source = 'live';
+        } catch (err) {
+          toast('Live API failed: ' + err.message + ' — falling back to demo.', 'error');
+        }
+      }
+      if (!items.length && source === 'demo') {
+        try {
+          items = await fetchPaymentsDemo(session.pubkey);
+        } catch (err) {
+          items = [];
+        }
+      }
+      const sourceBadge = $('payments-source');
+      sourceBadge.textContent = source;
+      sourceBadge.className = 'badge ' + (source === 'live' ? 'badge-mint' : 'badge-muted');
+      renderPayments(items);
+
+      await loadSettlement(prefs.apiBase, prefs.apiKey, session.pubkey);
+    }
+
+    function attach() {
+      $('connect-btn').addEventListener('click', async () => {
+        const btn = $('connect-btn');
+        const label = $('connect-label');
+        const errEl = $('connect-error');
+        errEl.classList.add('hidden-init');
+        btn.disabled = true;
+        label.textContent = 'Waiting for Phantom…';
+        try {
+          const session = await connectPhantom();
+          await showDashboard(session);
+        } catch (err) {
+          errEl.textContent = err.message || 'Failed to sign in';
+          errEl.classList.remove('hidden-init');
+        } finally {
+          btn.disabled = false;
+          label.textContent = 'Connect Phantom';
+        }
+      });
+
+      $('disconnect-btn').addEventListener('click', () => {
+        clearSession();
+        const provider = getProvider();
+        if (provider && provider.disconnect) provider.disconnect().catch(() => {});
+        location.reload();
+      });
+
+      $('copy-wallet').addEventListener('click', async () => {
+        const session = loadSession();
+        if (!session) return;
+        try {
+          await navigator.clipboard.writeText(session.pubkey);
+          toast('Wallet copied', 'ok');
+        } catch {
+          toast('Copy failed', 'error');
+        }
+      });
+
+      $('save-creds').addEventListener('click', async () => {
+        const apiBase = $('api-base').value.trim();
+        const apiKey = $('api-key').value.trim();
+        if (apiBase && !/^https?:\/\//i.test(apiBase)) {
+          toast('API base must start with https://', 'error');
+          return;
+        }
+        savePrefs({ apiBase, apiKey });
+        const session = loadSession();
+        if (session) await refreshAll(session, { apiBase, apiKey });
+        toast('Credentials saved (this browser only)', 'ok');
+      });
+
+      $('refresh-btn').addEventListener('click', async () => {
+        const session = loadSession();
+        if (!session) return;
+        await refreshAll(session, loadPrefs());
+        toast('Refreshed', 'ok');
+      });
+
+      $('cf-save').addEventListener('click', enableSettlement);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      attach();
+      const session = loadSession();
+      if (session) showDashboard(session).catch(() => clearSession());
+    });
+  </script>
+</body>
+</html>
