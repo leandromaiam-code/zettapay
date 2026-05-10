@@ -314,5 +314,33 @@ function applyMigrations(db: Db): void {
       ON registry_tools(category);
     CREATE INDEX IF NOT EXISTS registry_tools_status_category_idx
       ON registry_tools(status, category);
+
+    CREATE TABLE IF NOT EXISTS agent_identities (
+      id              TEXT PRIMARY KEY,
+      provider        TEXT NOT NULL,
+      agent_id        TEXT NOT NULL,
+      public_key      TEXT NOT NULL UNIQUE,
+      display_name    TEXT,
+      owner_email     TEXT,
+      status          TEXT NOT NULL CHECK (status IN ('active','revoked')) DEFAULT 'active',
+      registered_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS agent_identities_provider_agent_uidx
+      ON agent_identities(provider, agent_id);
+    CREATE INDEX IF NOT EXISTS agent_identities_status_idx
+      ON agent_identities(status);
+
+    CREATE TABLE IF NOT EXISTS agent_identity_nonces (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      identity_id  TEXT NOT NULL REFERENCES agent_identities(id) ON DELETE CASCADE,
+      nonce        TEXT NOT NULL,
+      used_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      UNIQUE(identity_id, nonce)
+    );
+
+    CREATE INDEX IF NOT EXISTS agent_identity_nonces_used_at_idx
+      ON agent_identity_nonces(used_at);
   `);
 }
