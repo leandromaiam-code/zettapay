@@ -1,4 +1,6 @@
 import { createHmac, randomUUID } from 'node:crypto';
+import { context, propagation } from '@opentelemetry/api';
+import { withSpan } from './lib/tracer.js';
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -140,82 +142,120 @@ export async function dispatchWebhook(options: DispatchWebhookOptions): Promise<
 
   const body = JSON.stringify(payload);
   const totalAttempts = Math.max(1, Math.min(retryDelaysMs.length + 1, maxAttempts));
-  const attempts: WebhookAttempt[] = [];
 
-  await emitObserver(onStart, { url, eventId, payload, maxAttempts: totalAttempts });
+  return withSpan(
+    'zettapay.webhook.dispatch',
+    {
+      'zettapay.webhook.event_id': eventId,
+      'zettapay.webhook.url': url,
+      'zettapay.webhook.max_attempts': totalAttempts,
+    },
+    async (dispatchSpan) => {
+      const attempts: WebhookAttempt[] = [];
 
-  for (let attempt = 1; attempt <= totalAttempts; attempt++) {
-    const timestamp = String(now());
-    const headers: Record<string, string> = {
-      'content-type': 'application/json',
-      accept: 'application/json',
-      [EVENT_ID_HEADER]: eventId,
-      [TIMESTAMP_HEADER]: timestamp,
-      [ATTEMPT_HEADER]: String(attempt),
-    };
-    if (secret) {
-      headers[SIGNATURE_HEADER] = `sha256=${signPayload(secret, timestamp, body)}`;
-    }
+      await emitObserver(onStart, { url, eventId, payload, maxAttempts: totalAttempts });
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const startedAt = now();
-    let status: number | null = null;
-    let ok = false;
-    let error: string | undefined;
+      for (let attempt = 1; attempt <= totalAttempts; attempt++) {
+        const timestamp = String(now());
+        const headers: Record<string, string> = {
+          'content-type': 'application/json',
+          accept: 'application/json',
+          [EVENT_ID_HEADER]: eventId,
+          [TIMESTAMP_HEADER]: timestamp,
+          [ATTEMPT_HEADER]: String(attempt),
+        };
+        if (secret) {
+          headers[SIGNATURE_HEADER] = `sha256=${signPayload(secret, timestamp, body)}`;
+        }
 
-    try {
-      const response = await fetchImpl(url, {
-        method: 'POST',
-        headers,
-        body,
-        signal: controller.signal,
-      });
-      status = response.status;
-      ok = response.ok;
-    } catch (err) {
-      error = err instanceof Error ? err.message : String(err);
-    } finally {
-      clearTimeout(timeoutId);
-    }
+        // Inject W3C traceparent / tracestate so a merchant who speaks
+        // OpenTelemetry can join the same trace as the originating request.
+        propagation.inject(context.active(), headers);
 
-    const attemptRecord: WebhookAttempt = {
-      attempt,
-      status,
-      ok,
-      error,
-      durationMs: now() - startedAt,
-    };
-    attempts.push(attemptRecord);
-    await emitObserver(onAttempt, {
-      url,
-      eventId,
-      payload,
-      attempt: attemptRecord,
-      attemptedAt: new Date(startedAt).toISOString(),
-    });
+        const startedAt = now();
+        const attemptRecord = await withSpan(
+          'zettapay.webhook.attempt',
+          {
+            'zettapay.webhook.event_id': eventId,
+            'zettapay.webhook.url': url,
+            'zettapay.webhook.attempt': attempt,
+          },
+          async (attemptSpan): Promise<WebhookAttempt> => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            let status: number | null = null;
+            let ok = false;
+            let error: string | undefined;
 
-    if (ok) {
-      return { delivered: true, deadLettered: false, eventId, attempts };
-    }
+            try {
+              const response = await fetchImpl(url, {
+                method: 'POST',
+                headers,
+                body,
+                signal: controller.signal,
+              });
+              status = response.status;
+              ok = response.ok;
+            } catch (err) {
+              error = err instanceof Error ? err.message : String(err);
+            } finally {
+              clearTimeout(timeoutId);
+            }
 
-    const transportFailure = status === null;
-    if (!transportFailure && status !== null && !isRetryable(status)) {
-      const reason: DeadLetterReason = 'non_retryable_status';
+            attemptSpan.setAttribute('http.response.status_code', status ?? -1);
+            attemptSpan.setAttribute('zettapay.webhook.ok', ok);
+            if (error) attemptSpan.setAttribute('zettapay.webhook.error', error);
+
+            return {
+              attempt,
+              status,
+              ok,
+              error,
+              durationMs: now() - startedAt,
+            };
+          },
+        );
+        attempts.push(attemptRecord);
+        await emitObserver(onAttempt, {
+          url,
+          eventId,
+          payload,
+          attempt: attemptRecord,
+          attemptedAt: new Date(startedAt).toISOString(),
+        });
+
+        if (attemptRecord.ok) {
+          dispatchSpan.setAttribute('zettapay.webhook.outcome', 'delivered');
+          dispatchSpan.setAttribute('zettapay.webhook.attempts_used', attempts.length);
+          return { delivered: true, deadLettered: false, eventId, attempts };
+        }
+
+        const status = attemptRecord.status;
+        const transportFailure = status === null;
+        if (!transportFailure && status !== null && !isRetryable(status)) {
+          const reason: DeadLetterReason = 'non_retryable_status';
+          dispatchSpan.setAttribute('zettapay.webhook.outcome', 'dead_lettered');
+          dispatchSpan.setAttribute('zettapay.webhook.dead_letter_reason', reason);
+          dispatchSpan.setAttribute('zettapay.webhook.attempts_used', attempts.length);
+          await emitDeadLetter(onDeadLetter, { url, eventId, payload, attempts, reason });
+          return { delivered: false, deadLettered: true, deadLetterReason: reason, eventId, attempts };
+        }
+
+        const isLastAttempt = attempt === totalAttempts;
+        if (isLastAttempt) break;
+
+        const delay = retryDelaysMs[attempt - 1] ?? 0;
+        await sleep(delay);
+      }
+
+      const reason: DeadLetterReason = 'retries_exhausted';
+      dispatchSpan.setAttribute('zettapay.webhook.outcome', 'dead_lettered');
+      dispatchSpan.setAttribute('zettapay.webhook.dead_letter_reason', reason);
+      dispatchSpan.setAttribute('zettapay.webhook.attempts_used', attempts.length);
       await emitDeadLetter(onDeadLetter, { url, eventId, payload, attempts, reason });
       return { delivered: false, deadLettered: true, deadLetterReason: reason, eventId, attempts };
-    }
-
-    const isLastAttempt = attempt === totalAttempts;
-    if (isLastAttempt) break;
-
-    const delay = retryDelaysMs[attempt - 1] ?? 0;
-    await sleep(delay);
-  }
-
-  const reason: DeadLetterReason = 'retries_exhausted';
-  await emitDeadLetter(onDeadLetter, { url, eventId, payload, attempts, reason });
-  return { delivered: false, deadLettered: true, deadLetterReason: reason, eventId, attempts };
+    },
+  );
 }
 
 async function emitDeadLetter(

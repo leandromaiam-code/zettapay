@@ -18,6 +18,7 @@ import {
   type Currency,
   resolveMint,
 } from "../lib/currencies.js";
+import { withSpan } from "../lib/tracer.js";
 
 export interface SolanaConfig {
   rpcUrl: string;
@@ -130,54 +131,74 @@ export class SolanaService {
     const currency = params.currency ?? DEFAULT_CURRENCY;
     const resolved = this.resolve(currency);
     const mintPubkey = new PublicKey(resolved.mintAddress);
-    const mintInfo = await this.getMintInfo(currency);
-    const amountAtomic = toAtomicAmount(params.amount, mintInfo.decimals);
+    const payer = this.payer;
 
-    const payerAta = await getOrCreateAssociatedTokenAccount(
-      this.connection,
-      this.payer,
-      mintPubkey,
-      this.payer.publicKey,
-    );
+    return withSpan(
+      "zettapay.solana.transfer_token",
+      {
+        "zettapay.solana.cluster": this.cluster,
+        "zettapay.payment.currency": currency,
+        "zettapay.payment.amount": params.amount,
+        "zettapay.solana.mint": resolved.mintAddress,
+        "zettapay.solana.recipient": params.recipientOwner.toBase58(),
+      },
+      async (span) => {
+        const mintInfo = await this.getMintInfo(currency);
+        const amountAtomic = toAtomicAmount(params.amount, mintInfo.decimals);
 
-    if (payerAta.amount < amountAtomic) {
-      throw HttpError.paymentFailed(
-        `Insufficient ${currency} balance in payer ATA`,
-        {
-          required: amountAtomic.toString(),
-          available: payerAta.amount.toString(),
+        const payerAta = await getOrCreateAssociatedTokenAccount(
+          this.connection,
+          payer,
+          mintPubkey,
+          payer.publicKey,
+        );
+
+        if (payerAta.amount < amountAtomic) {
+          throw HttpError.paymentFailed(
+            `Insufficient ${currency} balance in payer ATA`,
+            {
+              required: amountAtomic.toString(),
+              available: payerAta.amount.toString(),
+              currency,
+            },
+          );
+        }
+
+        const recipientAta = await getOrCreateAssociatedTokenAccount(
+          this.connection,
+          payer,
+          mintPubkey,
+          params.recipientOwner,
+        );
+
+        const signature = await transferChecked(
+          this.connection,
+          payer,
+          payerAta.address,
+          mintPubkey,
+          recipientAta.address,
+          payer,
+          amountAtomic,
+          mintInfo.decimals,
+        );
+
+        span.setAttribute("zettapay.solana.signature", signature);
+        span.setAttribute(
+          "zettapay.solana.amount_atomic",
+          amountAtomic.toString(),
+        );
+
+        return {
+          signature,
+          payerWallet: payer.publicKey.toBase58(),
+          recipientWallet: params.recipientOwner.toBase58(),
+          amountAtomic,
+          decimals: mintInfo.decimals,
           currency,
-        },
-      );
-    }
-
-    const recipientAta = await getOrCreateAssociatedTokenAccount(
-      this.connection,
-      this.payer,
-      mintPubkey,
-      params.recipientOwner,
+          mintAddress: resolved.mintAddress,
+        };
+      },
     );
-
-    const signature = await transferChecked(
-      this.connection,
-      this.payer,
-      payerAta.address,
-      mintPubkey,
-      recipientAta.address,
-      this.payer,
-      amountAtomic,
-      mintInfo.decimals,
-    );
-
-    return {
-      signature,
-      payerWallet: this.payer.publicKey.toBase58(),
-      recipientWallet: params.recipientOwner.toBase58(),
-      amountAtomic,
-      decimals: mintInfo.decimals,
-      currency,
-      mintAddress: resolved.mintAddress,
-    };
   }
 
   /** @deprecated USDC-only shim; prefer {@link transferToken}. */

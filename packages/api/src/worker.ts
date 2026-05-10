@@ -1,3 +1,8 @@
+// Tracing boots before bullmq/ioredis are first required so the
+// auto-instrumentations can patch them at module load.
+import { initTracing } from "./lib/tracing.js";
+const tracing = initTracing("zettapay-worker");
+
 import { closeDatabase, openDatabase } from "./db/index.js";
 import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
@@ -37,6 +42,7 @@ async function main(): Promise<void> {
   const db = openDatabase(dbPath);
   const shutdown = new GracefulShutdown({ shutdownTimeoutMs, logger });
   shutdown.register("database", () => closeDatabase());
+  shutdown.register("tracing", () => tracing.shutdown());
 
   const handle = await startWebhookWorker({
     db,

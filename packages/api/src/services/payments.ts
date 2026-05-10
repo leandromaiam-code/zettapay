@@ -12,6 +12,7 @@ import {
 import { DEFAULT_CURRENCY, type Currency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
+import { withSpan } from "../lib/tracer.js";
 import type { SolanaService } from "./solana.js";
 import type { CoinflowClient } from "../coinflow/client.js";
 import { settlePayment } from "../coinflow/service.js";
@@ -62,55 +63,69 @@ export async function createPayment(
   const paymentId = newId("pay");
   const payerWallet = input.payerWallet ?? solana.getPayerPublicKey().toBase58();
 
-  // Z13.1 fraud gate: must run BEFORE insertPayment so the in-flight attempt
-  // doesn't get counted in its own window.
-  enforceVelocityLimits(db, {
-    merchant,
-    payerWallet,
-    amount: input.amountUsdc,
-  });
+  return withSpan(
+    "zettapay.payment.create",
+    {
+      "zettapay.payment.id": paymentId,
+      "zettapay.merchant.id": merchant.id,
+      "zettapay.payment.amount": input.amountUsdc,
+      "zettapay.payment.currency": currency,
+    },
+    async (span) => {
+      // Z13.1 fraud gate: must run BEFORE insertPayment so the in-flight attempt
+      // doesn't get counted in its own window.
+      enforceVelocityLimits(db, {
+        merchant,
+        payerWallet,
+        amount: input.amountUsdc,
+      });
 
-  insertPayment(db, {
-    id: paymentId,
-    merchantId: merchant.id,
-    amountUsdc: input.amountUsdc,
-    payerWallet,
-    metadata: input.metadata,
-    currency,
-  });
-
-  markPaymentProcessing(db, paymentId);
-
-  try {
-    const result = await solana.transferToken({
-      recipientOwner: merchantPubkey,
-      amount: input.amountUsdc,
-      currency,
-    });
-    markPaymentCompleted(db, paymentId, result.signature);
-
-    if (
-      deps.coinflow &&
-      merchant.coinflow.enabled &&
-      merchant.coinflow.autoSettle
-    ) {
-      void settlePayment(db, deps.coinflow, {
+      insertPayment(db, {
+        id: paymentId,
         merchantId: merchant.id,
-        paymentId,
-      })
-        .then(() => deps.onAutoSettle?.(paymentId, null))
-        .catch((err: unknown) => {
-          const error = err instanceof Error ? err : new Error(String(err));
-          deps.onAutoSettle?.(paymentId, error);
-        });
-    }
+        amountUsdc: input.amountUsdc,
+        payerWallet,
+        metadata: input.metadata,
+        currency,
+      });
 
-    return { payment: getPayment(db, paymentId) };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "unknown transfer error";
-    markPaymentFailed(db, paymentId, message);
-    if (err instanceof HttpError) throw err;
-    throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
-  }
+      markPaymentProcessing(db, paymentId);
+
+      try {
+        const result = await solana.transferToken({
+          recipientOwner: merchantPubkey,
+          amount: input.amountUsdc,
+          currency,
+        });
+        markPaymentCompleted(db, paymentId, result.signature);
+        span.setAttribute("zettapay.payment.tx_signature", result.signature);
+        span.setAttribute("zettapay.payment.status", "completed");
+
+        if (
+          deps.coinflow &&
+          merchant.coinflow.enabled &&
+          merchant.coinflow.autoSettle
+        ) {
+          void settlePayment(db, deps.coinflow, {
+            merchantId: merchant.id,
+            paymentId,
+          })
+            .then(() => deps.onAutoSettle?.(paymentId, null))
+            .catch((err: unknown) => {
+              const error = err instanceof Error ? err : new Error(String(err));
+              deps.onAutoSettle?.(paymentId, error);
+            });
+        }
+
+        return { payment: getPayment(db, paymentId) };
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "unknown transfer error";
+        markPaymentFailed(db, paymentId, message);
+        span.setAttribute("zettapay.payment.status", "failed");
+        if (err instanceof HttpError) throw err;
+        throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
+      }
+    },
+  );
 }
