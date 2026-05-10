@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay quickstart — accept your first USDC payment in under 5 minutes. Code samples in TypeScript, Python, Go and cURL." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta property="og:title" content="ZettaPay · Quickstart" />
+  <meta property="og:description" content="Accept your first USDC payment in 5 minutes. TypeScript, Python, Go and cURL samples." />
+  <title>ZettaPay · Quickstart (5 min)</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .step-num {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.4);
+    }
+
+    .code-card {
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      box-shadow: 0 0 60px rgba(79, 107, 255, 0.06), inset 0 1px 0 rgba(79, 107, 255, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .code-card pre {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 0;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px 8px 0 8px;
+      border-bottom: 1px solid rgba(79, 107, 255, 0.12);
+      background: rgba(79, 107, 255, 0.04);
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: color 0.2s ease, background 0.2s ease;
+      background: transparent;
+    }
+    .tab-btn:hover { color: #c0c8d4; }
+    .tab-btn.active {
+      color: #FFFFFF;
+      background: #0d0d0d;
+      border-color: rgba(79, 107, 255, 0.2);
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      background: rgba(79, 107, 255, 0.08);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 2;
+    }
+    .copy-btn:hover {
+      color: #FFFFFF;
+      background: rgba(79, 107, 255, 0.15);
+      border-color: rgba(79, 107, 255, 0.4);
+    }
+    .copy-btn.copied {
+      color: #14F195;
+      border-color: rgba(20, 241, 149, 0.5);
+      background: rgba(20, 241, 149, 0.1);
+    }
+
+    pre { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    .tk-c { color: #64748b; }
+    .tk-k { color: #9945FF; }
+    .tk-s { color: #4F6BFF; }
+    .tk-f { color: #14F195; }
+    .tk-n { color: #f97316; }
+    .tk-t { color: #6B82FF; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5);
+    }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover {
+      background: rgba(79, 107, 255, 0.1);
+      border-color: rgba(79, 107, 255, 0.6);
+    }
+
+    .logo-wordmark { filter: invert(1) brightness(2); }
+
+    .toc-link {
+      display: block;
+      padding: 6px 12px;
+      font-size: 13px;
+      color: #94A3B8;
+      border-left: 2px solid transparent;
+      transition: all 0.2s ease;
+    }
+    .toc-link:hover { color: #FFFFFF; border-left-color: rgba(79, 107, 255, 0.4); }
+    .toc-link.active { color: #FFFFFF; border-left-color: #4F6BFF; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #14F195;
+      background: rgba(20, 241, 149, 0.08);
+      border: 1px solid rgba(20, 241, 149, 0.25);
+      border-radius: 999px;
+    }
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #14F195;
+      box-shadow: 0 0 8px #14F195;
+    }
+
+    .callout {
+      border-left: 2px solid #4F6BFF;
+      background: rgba(79, 107, 255, 0.06);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      color: #c0c8d4;
+    }
+    .callout strong { color: #FFFFFF; }
+
+    .kbd {
+      display: inline-block;
+      padding: 2px 8px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #c0c8d4;
+      background: rgba(79, 107, 255, 0.08);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    table.api-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.api-table th, table.api-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(79, 107, 255, 0.1);
+    }
+    table.api-table th {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    table.api-table td code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #6B82FF;
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px; opacity: 0.18;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 400px; height: 400px; top: 40%; left: -150px; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/docs" class="text-white transition">Docs</a>
+        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/leandromaiam-code/zettapay" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm hidden sm:inline-flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0a12 12 0 0 0-3.79 23.4c.6.1.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.21.09 1.85 1.24 1.85 1.24 1.07 1.84 2.81 1.31 3.5 1 .1-.78.42-1.31.76-1.61-2.66-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.11-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.29-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.61-2.81 5.62-5.49 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.58A12 12 0 0 0 12 0z"/></svg>
+          Star
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- LAYOUT -->
+  <main class="pt-28 lg:pt-32 pb-20 max-w-7xl mx-auto px-4 lg:px-12">
+    <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10">
+
+      <!-- TOC -->
+      <aside class="hidden lg:block">
+        <div class="sticky top-32">
+          <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
+          <nav class="flex flex-col gap-1" id="toc">
+            <a href="#overview" class="toc-link active">Overview</a>
+            <a href="#prerequisites" class="toc-link">Prerequisites</a>
+            <a href="#step-1" class="toc-link">1 · Install the SDK</a>
+            <a href="#step-2" class="toc-link">2 · Register a merchant</a>
+            <a href="#step-3" class="toc-link">3 · Build a payment</a>
+            <a href="#step-4" class="toc-link">4 · Submit via x402</a>
+            <a href="#step-5" class="toc-link">5 · Verify the receipt</a>
+            <a href="#whats-next" class="toc-link">What's next</a>
+            <a href="#api-reference" class="toc-link">API reference</a>
+          </nav>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <article class="max-w-3xl">
+        <header class="mb-10">
+          <span class="badge mb-5"><span class="badge-dot"></span>Quickstart · 5 min</span>
+          <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
+            Accept your first <span class="gradient-text">USDC payment</span> in five minutes.
+          </h1>
+          <p class="text-lg text-muted leading-relaxed">
+            From zero to live merchant on Solana devnet — no smart-contract experience required.
+            Pick your stack, copy the snippet, run it. Receipts confirm in under a second.
+          </p>
+
+          <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted">
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">TypeScript</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Python</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Go</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">cURL</span>
+          </div>
+        </header>
+
+        <!-- OVERVIEW -->
+        <section id="overview" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Overview</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay is a Solana-native payment protocol. Merchants register a wallet, payers sign a
+            standard SPL token transfer, and the API submits it via the open <code class="text-mint font-mono text-sm">x-402-payment</code>
+            header. There is no escrow — funds move payer → merchant directly.
+          </p>
+          <div class="callout">
+            <strong>Devnet only.</strong> This guide targets Solana devnet (USDC mint
+            <code class="text-mint font-mono text-xs">4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU</code>).
+            Mainnet ships post-audit.
+          </div>
+        </section>
+
+        <!-- PREREQUISITES -->
+        <section id="prerequisites" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Prerequisites</h2>
+          <ul class="space-y-2 text-muted leading-relaxed">
+            <li class="flex gap-3"><span class="text-mint">›</span> Node 18+, Python 3.10+, or Go 1.22+ (pick one)</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> A Solana wallet (Phantom recommended) on devnet</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> Some devnet SOL — request from <a class="text-royal-bright underline" href="https://faucet.solana.com" target="_blank" rel="noopener">faucet.solana.com</a></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> A ZettaPay API base URL — defaults to <code class="text-mint font-mono text-sm">https://api.zettapay.dev</code></li>
+          </ul>
+        </section>
+
+        <!-- STEP 1 -->
+        <section id="step-1" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">1</div>
+            <h2 class="text-2xl font-bold">Install the SDK</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">Pick the language you ship in.</p>
+
+          <div class="code-card relative" data-tabs="install">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="go">Go</button>
+              <button class="tab-btn" data-tab="curl">cURL</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+            <pre data-pane="ts" class="block"><span class="tk-c"># Install the official TypeScript SDK</span>
+npm install @zettapay/sdk</pre>
+            <pre data-pane="py" class="hidden"><span class="tk-c"># Use the standard requests library — Python SDK ships in Z16.3</span>
+pip install requests</pre>
+            <pre data-pane="go" class="hidden"><span class="tk-c">// Native Go SDK — zero third-party dependencies</span>
+go get github.com/leandromaiam-code/zettapay/packages/sdk-go</pre>
+            <pre data-pane="curl" class="hidden"><span class="tk-c"># No install — every endpoint is plain JSON over HTTPS</span>
+curl --version</pre>
+          </div>
+        </section>
+
+        <!-- STEP 2 -->
+        <section id="step-2" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
+            <h2 class="text-2xl font-bold">Register a merchant</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            Bind your wallet on-chain via the memo program. The protocol pays the rent
+            (~0.002 SOL) for your USDC associated token account. Save the returned
+            <code class="text-mint font-mono text-sm">apiKey</code> — you'll need it next.
+          </p>
+
+          <div class="code-card relative" data-tabs="register">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="go">Go</button>
+              <button class="tab-btn" data-tab="curl">cURL</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ts" class="block"><span class="tk-k">import</span> { <span class="tk-t">ZettaPayClient</span> } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/sdk'</span>;
+
+<span class="tk-k">const</span> client = <span class="tk-k">new</span> <span class="tk-f">ZettaPayClient</span>({
+  baseURL: <span class="tk-s">'https://api.zettapay.dev'</span>,
+});
+
+<span class="tk-k">const</span> merchant = <span class="tk-k">await</span> client.<span class="tk-f">registerMerchant</span>({
+  name: <span class="tk-s">'Acme Coffee'</span>,
+  email: <span class="tk-s">'owner@acme.coffee'</span>,
+  walletAddress: <span class="tk-s">'7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT'</span>,
+});
+
+console.<span class="tk-f">log</span>(merchant.id, merchant.apiKey);</pre>
+<pre data-pane="py" class="hidden"><span class="tk-k">import</span> requests
+
+resp = requests.<span class="tk-f">post</span>(
+    <span class="tk-s">"https://api.zettapay.dev/merchants/register"</span>,
+    json={
+        <span class="tk-s">"name"</span>: <span class="tk-s">"Acme Coffee"</span>,
+        <span class="tk-s">"email"</span>: <span class="tk-s">"owner@acme.coffee"</span>,
+        <span class="tk-s">"walletAddress"</span>: <span class="tk-s">"7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"</span>,
+    },
+    timeout=<span class="tk-n">15</span>,
+)
+resp.<span class="tk-f">raise_for_status</span>()
+merchant = resp.<span class="tk-f">json</span>()
+<span class="tk-f">print</span>(merchant[<span class="tk-s">"merchant"</span>][<span class="tk-s">"id"</span>], merchant[<span class="tk-s">"apiKey"</span>])</pre>
+<pre data-pane="go" class="hidden"><span class="tk-k">package</span> main
+
+<span class="tk-k">import</span> (
+    <span class="tk-s">"context"</span>
+    <span class="tk-s">"log"</span>
+    <span class="tk-s">"time"</span>
+
+    zettapay <span class="tk-s">"github.com/leandromaiam-code/zettapay/packages/sdk-go"</span>
+)
+
+<span class="tk-k">func</span> <span class="tk-f">main</span>() {
+    client, _ := zettapay.<span class="tk-f">NewClient</span>(zettapay.<span class="tk-t">ClientConfig</span>{
+        BaseURL: <span class="tk-s">"https://api.zettapay.dev"</span>,
+        Retry:   zettapay.<span class="tk-f">DefaultRetryPolicy</span>(),
+    })
+
+    ctx, cancel := context.<span class="tk-f">WithTimeout</span>(context.<span class="tk-f">Background</span>(), <span class="tk-n">15</span>*time.Second)
+    <span class="tk-k">defer</span> <span class="tk-f">cancel</span>()
+
+    merchant, err := client.<span class="tk-f">RegisterMerchant</span>(ctx, zettapay.<span class="tk-t">RegisterMerchantInput</span>{
+        Name:          <span class="tk-s">"Acme Coffee"</span>,
+        Email:         <span class="tk-s">"owner@acme.coffee"</span>,
+        WalletAddress: <span class="tk-s">"7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"</span>,
+    })
+    <span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
+    log.<span class="tk-f">Println</span>(merchant.ID, merchant.APIKey)
+}</pre>
+<pre data-pane="curl" class="hidden">curl -X POST https://api.zettapay.dev/merchants/register \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -H <span class="tk-s">"Idempotency-Key: $(uuidgen)"</span> \
+  -d <span class="tk-s">'{
+    "name": "Acme Coffee",
+    "email": "owner@acme.coffee",
+    "walletAddress": "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"
+  }'</span></pre>
+          </div>
+
+          <div class="callout mt-5">
+            <strong>Idempotency.</strong> Every write endpoint accepts an
+            <code class="text-mint font-mono text-xs">Idempotency-Key</code> header. The TypeScript and Go SDKs
+            send one automatically; for Python and cURL pass any UUID v4.
+          </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section id="step-3" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">3</div>
+            <h2 class="text-2xl font-bold">Build a signed payment</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            ZettaPay never custodies funds. The payer signs a standard SPL transfer transaction
+            client-side; you then base64-encode the signed bytes and forward them to the API.
+          </p>
+
+          <div class="code-card relative" data-tabs="build">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="go">Go</button>
+              <button class="tab-btn" data-tab="curl">cURL</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ts" class="block"><span class="tk-k">import</span> {
+  <span class="tk-t">Connection</span>, <span class="tk-t">PublicKey</span>, <span class="tk-t">Transaction</span>, <span class="tk-t">clusterApiUrl</span>,
+} <span class="tk-k">from</span> <span class="tk-s">'@solana/web3.js'</span>;
+<span class="tk-k">import</span> {
+  <span class="tk-f">createTransferCheckedInstruction</span>, <span class="tk-f">getAssociatedTokenAddress</span>,
+} <span class="tk-k">from</span> <span class="tk-s">'@solana/spl-token'</span>;
+
+<span class="tk-k">const</span> connection = <span class="tk-k">new</span> <span class="tk-f">Connection</span>(<span class="tk-f">clusterApiUrl</span>(<span class="tk-s">'devnet'</span>));
+<span class="tk-k">const</span> usdcMint = <span class="tk-k">new</span> <span class="tk-f">PublicKey</span>(<span class="tk-s">'4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'</span>);
+
+<span class="tk-k">const</span> payerAta    = <span class="tk-k">await</span> <span class="tk-f">getAssociatedTokenAddress</span>(usdcMint, payer.publicKey);
+<span class="tk-k">const</span> merchantAta = <span class="tk-k">await</span> <span class="tk-f">getAssociatedTokenAddress</span>(usdcMint, merchantPubkey);
+
+<span class="tk-k">const</span> ix = <span class="tk-f">createTransferCheckedInstruction</span>(
+  payerAta, usdcMint, merchantAta, payer.publicKey,
+  <span class="tk-n">1_500_000</span>,   <span class="tk-c">// 1.50 USDC (6 decimals)</span>
+  <span class="tk-n">6</span>,
+);
+
+<span class="tk-k">const</span> tx = <span class="tk-k">new</span> <span class="tk-f">Transaction</span>().<span class="tk-f">add</span>(ix);
+tx.feePayer = payer.publicKey;
+tx.recentBlockhash = (<span class="tk-k">await</span> connection.<span class="tk-f">getLatestBlockhash</span>()).blockhash;
+tx.<span class="tk-f">sign</span>(payer);
+
+<span class="tk-k">const</span> signedBase64 = tx.<span class="tk-f">serialize</span>().<span class="tk-f">toString</span>(<span class="tk-s">'base64'</span>);</pre>
+<pre data-pane="py" class="hidden"><span class="tk-k">import</span> base64
+<span class="tk-k">from</span> solders.keypair <span class="tk-k">import</span> Keypair
+<span class="tk-k">from</span> solders.pubkey <span class="tk-k">import</span> Pubkey
+<span class="tk-k">from</span> solana.rpc.api <span class="tk-k">import</span> Client
+<span class="tk-k">from</span> solana.transaction <span class="tk-k">import</span> Transaction
+<span class="tk-k">from</span> spl.token.instructions <span class="tk-k">import</span> transfer_checked, <span class="tk-t">TransferCheckedParams</span>
+<span class="tk-k">from</span> spl.token.constants <span class="tk-k">import</span> TOKEN_PROGRAM_ID
+
+USDC = <span class="tk-t">Pubkey</span>.<span class="tk-f">from_string</span>(<span class="tk-s">"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"</span>)
+client = <span class="tk-t">Client</span>(<span class="tk-s">"https://api.devnet.solana.com"</span>)
+
+ix = <span class="tk-f">transfer_checked</span>(<span class="tk-t">TransferCheckedParams</span>(
+    program_id=TOKEN_PROGRAM_ID,
+    source=payer_ata,
+    mint=USDC,
+    dest=merchant_ata,
+    owner=payer.pubkey(),
+    amount=<span class="tk-n">1_500_000</span>,   <span class="tk-c"># 1.50 USDC</span>
+    decimals=<span class="tk-n">6</span>,
+    signers=[],
+))
+
+tx = <span class="tk-t">Transaction</span>().<span class="tk-f">add</span>(ix)
+tx.recent_blockhash = client.<span class="tk-f">get_latest_blockhash</span>().value.blockhash
+tx.<span class="tk-f">sign</span>(payer)
+
+signed_b64 = base64.<span class="tk-f">b64encode</span>(<span class="tk-f">bytes</span>(tx)).<span class="tk-f">decode</span>()</pre>
+<pre data-pane="go" class="hidden"><span class="tk-c">// Use github.com/gagliardetto/solana-go for signing.</span>
+<span class="tk-k">import</span> (
+    <span class="tk-s">"encoding/base64"</span>
+    solana <span class="tk-s">"github.com/gagliardetto/solana-go"</span>
+    <span class="tk-s">"github.com/gagliardetto/solana-go/programs/token"</span>
+    <span class="tk-s">"github.com/gagliardetto/solana-go/rpc"</span>
+)
+
+usdc := solana.<span class="tk-f">MustPublicKeyFromBase58</span>(<span class="tk-s">"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"</span>)
+client := rpc.<span class="tk-f">New</span>(rpc.DevNet_RPC)
+
+ix := token.<span class="tk-f">NewTransferCheckedInstruction</span>(
+    <span class="tk-n">1_500_000</span>, <span class="tk-n">6</span>,         <span class="tk-c">// 1.50 USDC</span>
+    payerATA, usdc, merchantATA, payer.PublicKey(),
+    []solana.PublicKey{},
+).<span class="tk-f">Build</span>()
+
+recent, _ := client.<span class="tk-f">GetLatestBlockhash</span>(ctx, rpc.CommitmentFinalized)
+tx, _ := solana.<span class="tk-f">NewTransaction</span>(
+    []solana.Instruction{ix},
+    recent.Value.Blockhash,
+    solana.<span class="tk-f">TransactionPayer</span>(payer.PublicKey()),
+)
+_, _ = tx.<span class="tk-f">Sign</span>(<span class="tk-k">func</span>(k solana.PublicKey) *solana.PrivateKey { <span class="tk-k">return</span> &payer })
+
+raw, _ := tx.<span class="tk-f">MarshalBinary</span>()
+signedB64 := base64.StdEncoding.<span class="tk-f">EncodeToString</span>(raw)</pre>
+<pre data-pane="curl" class="hidden"><span class="tk-c"># cURL doesn't sign Solana transactions. Use any of the SDK examples</span>
+<span class="tk-c"># on the left to produce $SIGNED_TX_BASE64, then continue at step 4.</span>
+<span class="tk-c"># Most teams use the Phantom in-browser signer; the resulting</span>
+<span class="tk-c"># transaction.serialize() output is the value you need.</span>
+SIGNED_TX_BASE64=<span class="tk-s">"AQABAj4...&lt;truncated&gt;"</span></pre>
+          </div>
+        </section>
+
+        <!-- STEP 4 -->
+        <section id="step-4" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">4</div>
+            <h2 class="text-2xl font-bold">Submit via the x402 header</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            ZettaPay implements the open <a class="text-royal-bright underline" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402 spec</a>:
+            the signed transaction travels in the <code class="text-mint font-mono text-sm">x-402-payment</code> header,
+            base64-encoded. The API broadcasts, confirms, and returns a typed receipt.
+          </p>
+
+          <div class="code-card relative" data-tabs="pay">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="go">Go</button>
+              <button class="tab-btn" data-tab="curl">cURL</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ts" class="block"><span class="tk-k">const</span> receipt = <span class="tk-k">await</span> client.<span class="tk-f">pay</span>({ transaction: signedBase64 });
+
+console.<span class="tk-f">log</span>(receipt.paymentId);   <span class="tk-c">// pay_01HM...</span>
+console.<span class="tk-f">log</span>(receipt.status);      <span class="tk-c">// "confirmed"</span>
+console.<span class="tk-f">log</span>(receipt.signature);   <span class="tk-c">// on-chain tx signature</span></pre>
+<pre data-pane="py" class="hidden">resp = requests.<span class="tk-f">post</span>(
+    <span class="tk-s">"https://api.zettapay.dev/pay"</span>,
+    headers={
+        <span class="tk-s">"x-402-payment"</span>: signed_b64,
+        <span class="tk-s">"Idempotency-Key"</span>: str(uuid.<span class="tk-f">uuid4</span>()),
+    },
+    timeout=<span class="tk-n">30</span>,
+)
+resp.<span class="tk-f">raise_for_status</span>()
+receipt = resp.<span class="tk-f">json</span>()
+<span class="tk-f">print</span>(receipt[<span class="tk-s">"paymentId"</span>], receipt[<span class="tk-s">"status"</span>])</pre>
+<pre data-pane="go" class="hidden">receipt, err := client.<span class="tk-f">PayBase64</span>(ctx, signedB64)
+<span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
+
+log.<span class="tk-f">Println</span>(receipt.PaymentID, receipt.Status, receipt.Signature)</pre>
+<pre data-pane="curl" class="hidden">curl -X POST https://api.zettapay.dev/pay \
+  -H <span class="tk-s">"x-402-payment: $SIGNED_TX_BASE64"</span> \
+  -H <span class="tk-s">"Idempotency-Key: $(uuidgen)"</span>
+
+<span class="tk-c"># {
+#   "paymentId": "pay_01HM...",
+#   "status":    "confirmed",
+#   "signature": "5jkA...",
+#   "merchantId":"mer_01HM...",
+#   "amount":    "1.50",
+#   "currency":  "USDC"
+# }</span></pre>
+          </div>
+        </section>
+
+        <!-- STEP 5 -->
+        <section id="step-5" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">5</div>
+            <h2 class="text-2xl font-bold">Verify the receipt</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            Receipts are immutable and queryable. Confirmation typically lands in
+            <strong class="text-white">under one second</strong> on devnet — verify with the payment id from step 4.
+          </p>
+
+          <div class="code-card relative" data-tabs="verify">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="go">Go</button>
+              <button class="tab-btn" data-tab="curl">cURL</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ts" class="block"><span class="tk-k">const</span> record = <span class="tk-k">await</span> client.<span class="tk-f">getPayment</span>(receipt.paymentId);
+console.<span class="tk-f">log</span>(record.status, record.amount, record.signature);</pre>
+<pre data-pane="py" class="hidden">payment = requests.<span class="tk-f">get</span>(
+    <span class="tk-s">f"https://api.zettapay.dev/payments/{receipt['paymentId']}"</span>,
+    timeout=<span class="tk-n">10</span>,
+).<span class="tk-f">json</span>()
+
+<span class="tk-f">print</span>(payment[<span class="tk-s">"status"</span>], payment[<span class="tk-s">"amount"</span>])</pre>
+<pre data-pane="go" class="hidden">payment, err := client.<span class="tk-f">GetPayment</span>(ctx, receipt.PaymentID)
+<span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
+log.<span class="tk-f">Println</span>(payment.Status, payment.Amount, payment.Signature)</pre>
+<pre data-pane="curl" class="hidden">curl https://api.zettapay.dev/payments/pay_01HM...</pre>
+          </div>
+
+          <div class="callout mt-5">
+            <strong>Webhooks.</strong> For production, subscribe to the
+            <code class="text-mint font-mono text-xs">payment.confirmed</code> event instead of polling.
+            Signatures are HMAC-SHA256 over the body — see the
+            <a class="text-royal-bright underline" href="#api-reference">webhook reference</a>.
+          </div>
+        </section>
+
+        <!-- WHAT'S NEXT -->
+        <section id="whats-next" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-4">What's next</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">SDK reference</div>
+              <div class="font-semibold mb-1">@zettapay/sdk</div>
+              <div class="text-sm text-muted">Full TypeScript surface area, on-chain helpers, Anchor IDL.</div>
+            </a>
+            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-go" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Go SDK</div>
+              <div class="font-semibold mb-1">sdk-go</div>
+              <div class="text-sm text-muted">Native Go client, context-aware, retries with full jitter.</div>
+            </a>
+            <a href="/dashboard" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Dashboard</div>
+              <div class="font-semibold mb-1">Merchant console</div>
+              <div class="text-sm text-muted">Phantom login, USDC balance, payment history, Coinflow settlement.</div>
+            </a>
+            <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Spec</div>
+              <div class="font-semibold mb-1">x402 protocol</div>
+              <div class="text-sm text-muted">The open header spec ZettaPay implements end-to-end.</div>
+            </a>
+          </div>
+        </section>
+
+        <!-- API REF -->
+        <section id="api-reference" class="scroll-mt-32 mb-12">
+          <h2 class="text-2xl font-bold mb-4">API reference (excerpt)</h2>
+          <div class="code-card overflow-hidden">
+            <table class="api-table">
+              <thead>
+                <tr>
+                  <th>Method</th><th>Path</th><th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td><code>POST</code></td><td><code>/merchants/register</code></td><td class="text-muted">Bind wallet on-chain, create USDC ATA, return API key.</td></tr>
+                <tr><td><code>POST</code></td><td><code>/pay</code></td><td class="text-muted">Submit signed tx via <code>x-402-payment</code> header.</td></tr>
+                <tr><td><code>GET</code></td><td><code>/payments/:id</code></td><td class="text-muted">Fetch a recorded payment by id.</td></tr>
+                <tr><td><code>GET</code></td><td><code>/payments</code></td><td class="text-muted">Paginated payment list (filter by merchant).</td></tr>
+                <tr><td><code>POST</code></td><td><code>/webhooks</code></td><td class="text-muted">Register a TLS endpoint for <code>payment.confirmed</code>.</td></tr>
+                <tr><td><code>GET</code></td><td><code>/healthz</code></td><td class="text-muted">Liveness probe (200 = OK).</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-muted mt-4">
+            All write endpoints accept an <code class="text-mint font-mono text-xs">Idempotency-Key</code> header.
+            Rate limits are per API key (sliding window). Errors mirror
+            <code class="text-mint font-mono text-xs">{ code, message, details }</code>.
+          </p>
+        </section>
+
+        <!-- FOOTER NAV -->
+        <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
+          <a href="/" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← Home</a>
+          <a href="/dashboard" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Open dashboard →</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="border-t border-royal/10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
+        <span>ZettaPay · open Solana payment protocol</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a class="hover:text-white transition" href="https://github.com/leandromaiam-code/zettapay">GitHub</a>
+        <a class="hover:text-white transition" href="/healthz">Status</a>
+        <a class="hover:text-white transition" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Tabs
+    document.querySelectorAll('[data-tabs]').forEach((card) => {
+      const buttons = card.querySelectorAll('.tab-btn');
+      const panes = card.querySelectorAll('[data-pane]');
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          buttons.forEach((b) => b.classList.toggle('active', b === btn));
+          panes.forEach((p) => {
+            const match = p.dataset.pane === target;
+            p.classList.toggle('hidden', !match);
+            p.classList.toggle('block', match);
+          });
+        });
+      });
+    });
+
+    // Copy
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('[data-tabs]');
+        const visible = card.querySelector('[data-pane]:not(.hidden)');
+        if (!visible) return;
+        try {
+          await navigator.clipboard.writeText(visible.innerText);
+          const original = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        } catch (_) {}
+      });
+    });
+
+    // TOC active link on scroll
+    const tocLinks = document.querySelectorAll('#toc .toc-link');
+    const sections = Array.from(tocLinks).map((a) => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    sections.forEach((s) => observer.observe(s));
+  </script>
+</body>
+</html>

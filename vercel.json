@@ -38,6 +38,14 @@
     {
       "source": "/dashboard",
       "destination": "/dashboard.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/docs/quickstart",
+      "destination": "/docs/quickstart.html"
     }
   ],
   "headers": [

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay developer documentation — quickstart, SDK references, and protocol spec." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <title>ZettaPay · Docs</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: {
+      fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
+      colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+    }}};
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    body { background:#0A0A0A; color:#FFF; font-family:'Inter',ui-sans-serif,system-ui; overflow-x:hidden; }
+    .grid-bg { background-image:
+      linear-gradient(rgba(79,107,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(79,107,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px; }
+    .gradient-text {
+      background: linear-gradient(135deg,#4F6BFF 0%,#14F195 50%,#9945FF 100%);
+      background-size:200% auto;
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      animation: gradient 6s linear infinite;
+    }
+    @keyframes gradient { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    .glass {
+      background: rgba(79,107,255,0.05);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79,107,255,0.15);
+      transition: all 0.3s ease;
+    }
+    .glass:hover { background: rgba(79,107,255,0.09); border-color: rgba(79,107,255,0.35); transform: translateY(-2px); }
+    .glow-orb { position:absolute; border-radius:50%; filter: blur(120px); opacity:0.18; pointer-events:none; }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 10px; font-family:'JetBrains Mono',monospace; font-size:10px;
+      font-weight:500; letter-spacing:0.08em; text-transform:uppercase;
+      color:#14F195; background:rgba(20,241,149,0.08);
+      border:1px solid rgba(20,241,149,0.25); border-radius:999px;
+    }
+    .badge-dot { width:6px; height:6px; border-radius:50%; background:#14F195; box-shadow:0 0 8px #14F195; }
+    .btn-primary {
+      background: linear-gradient(135deg,#4F6BFF 0%,#6B82FF 100%);
+      color:#FFF; transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79,107,255,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79,107,255,0.5); }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background:#4F6BFF; width:600px; height:600px; top:-200px; right:-200px;"></div>
+  <div class="glow-orb" style="background:#9945FF; width:400px; height:400px; bottom:10%; left:-150px; opacity:0.08;"></div>
+
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/docs" class="text-white">Docs</a>
+        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      </div>
+      <a href="/docs/quickstart" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Quickstart →</a>
+    </div>
+  </nav>
+
+  <main class="pt-32 pb-20 max-w-7xl mx-auto px-4 lg:px-12">
+    <header class="mb-12">
+      <span class="badge mb-5"><span class="badge-dot"></span>Developer documentation</span>
+      <h1 class="text-4xl lg:text-6xl font-bold tracking-tight leading-[1.05] mb-4">
+        Build with <span class="gradient-text">ZettaPay</span>.
+      </h1>
+      <p class="text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
+        Solana-native USDC payments for humans and AI agents. Open SDKs, x402 native, sub-second settlement.
+      </p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <a href="/docs/quickstart" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Start here</div>
+        <div class="text-2xl font-bold mb-2">Quickstart · 5 min</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Register a merchant, sign your first USDC payment, verify the receipt.
+          Code in TypeScript, Python, Go and cURL.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK</div>
+        <div class="text-2xl font-bold mb-2">@zettapay/sdk</div>
+        <p class="text-muted text-sm leading-relaxed">
+          The TypeScript reference client. Full API surface, on-chain helpers, Anchor IDL.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-go" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK</div>
+        <div class="text-2xl font-bold mb-2">Go SDK</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Native Go client. Context on every method, retries with exponential backoff, zero deps.
+        </p>
+      </a>
+
+      <a href="/dashboard" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Console</div>
+        <div class="text-2xl font-bold mb-2">Merchant dashboard</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Phantom login, USDC balance, payment history, Coinflow settlement to fiat.
+        </p>
+      </a>
+
+      <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Spec</div>
+        <div class="text-2xl font-bold mb-2">x402 protocol</div>
+        <p class="text-muted text-sm leading-relaxed">
+          The open header standard for AI-agent and machine-to-machine payments. ZettaPay is x402 native.
+        </p>
+      </a>
+
+      <a href="/healthz" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Operations</div>
+        <div class="text-2xl font-bold mb-2">Status &amp; health</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Liveness, readiness and metrics endpoints — plug them into your monitoring.
+        </p>
+      </a>
+    </div>
+  </main>
+
+  <footer class="border-t border-royal/10">
+    <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
+        <span>ZettaPay · open Solana payment protocol</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a class="hover:text-white transition" href="https://github.com/leandromaiam-code/zettapay">GitHub</a>
+        <a class="hover:text-white transition" href="/healthz">Status</a>
+        <a class="hover:text-white transition" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
