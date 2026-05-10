@@ -18,6 +18,7 @@ import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
 import { paymentRouter } from "./routes/payment.js";
 import { refundRouter } from "./routes/refund.js";
+import { privacyRouter } from "./routes/privacy.js";
 import { registryRouter } from "./routes/registry.js";
 import { payEvmRouter } from "./routes/pay_evm.js";
 import { settlementRouter } from "./routes/settlement.js";
@@ -206,6 +207,8 @@ export function createApp(options: CreateAppOptions): Express {
       onAmlEvaluated,
     }),
   );
+  app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
+  app.use(privacyRouter(db));
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(amlRouter(db));
   app.use(registryRouter(db));
