@@ -9,6 +9,7 @@ import { apiDocsRouter } from "./routes/api-docs.js";
 import { betaRouter } from "./routes/beta.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "./beta/config.js";
 import { funnelRouter } from "./routes/funnel.js";
+import { indexerRouter } from "./routes/indexer.js";
 import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
 import { merchantsRouter } from "./routes/merchants.js";
@@ -35,6 +36,7 @@ import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 import type { CreatePaymentDeps } from "./services/payments.js";
 import type { CoinflowClient } from "./coinflow/client.js";
+import type { OnChainPaymentIndexer } from "./services/onchain_indexer.js";
 import type { KycProviderClient } from "./services/kyc/provider.js";
 import type {
   ShopifyAppConfig,
@@ -76,6 +78,14 @@ export interface CreateAppOptions {
   admin?: {
     adminKey?: string | null;
   };
+  /** Z9.5 on-chain payment indexer. When `indexer` is omitted, the read API
+   * stays live but webhook + backfill routes return config_error. The
+   * `webhookAuthKey` is the shared secret presented by Helius/Geyser; same
+   * 24-char minimum and config_error fallback as the admin gate. */
+  indexer?: {
+    webhookAuthKey?: string | null;
+    indexer?: OnChainPaymentIndexer;
+  };
 }
 
 const startedAt = Date.now();
@@ -92,6 +102,7 @@ export function createApp(options: CreateAppOptions): Express {
     kyc,
     treasury,
     admin,
+    indexer,
   } = options;
   const betaConfig = options.betaConfig ?? loadBetaConfig();
 
@@ -149,6 +160,12 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(funnelRouter(db));
   app.use(webhooksRouter(db));
   app.use(webhooksAdminRouter(db, { adminKey: admin?.adminKey ?? null }));
+  app.use(
+    indexerRouter(db, {
+      webhookAuthKey: indexer?.webhookAuthKey ?? null,
+      ...(indexer?.indexer ? { indexer: indexer.indexer } : {}),
+    }),
+  );
   app.use(
     shopifyRouter(db, {
       config: shopify ?? null,

@@ -39,3 +39,26 @@ export const MERCHANT_BINDING_OFFSETS = {
 } as const;
 
 export const MERCHANT_BINDING_HANDLE_MAX_LEN = 32;
+
+/**
+ * Byte offsets inside a `Payment` receipt account's data buffer (post-Anchor
+ * 8-byte discriminator). Layout pinned by `programs/zettapay/src/lib.rs`:
+ *   [discriminator 8][bump u8][merchant_binding pubkey 32][payment_id [u8;32]]
+ *   [amount u64][tx_signature [u8;64]][recorded_at i64]
+ *
+ * Total fixed size (153 bytes), so the indexer can `memcmp` filter receipts
+ * by merchant_binding without paging the entire program account set.
+ */
+export const PAYMENT_OFFSETS = {
+  discriminator: 0,
+  bump: 8,
+  merchantBinding: 9,
+  paymentId: 41,
+  amount: 73,
+  txSignature: 81,
+  recordedAt: 145,
+} as const;
+
+export const PAYMENT_ACCOUNT_SIZE = 153;
+export const PAYMENT_ID_BYTES = 32;
+export const PAYMENT_TX_SIGNATURE_BYTES = 64;
