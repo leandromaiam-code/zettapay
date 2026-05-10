@@ -21,8 +21,19 @@ export interface SubscriptionRow {
   next_charge_at: string;
   last_charge_at: string | null;
   metadata_json: string | null;
+  authorization_signature: string | null;
+  authorization_public_key: string | null;
+  authorization_signed_at: string | null;
+  failed_charge_count: number | null;
+  last_failure_reason: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface SubscriptionAuthorization {
+  signature: string;
+  publicKey: string;
+  signedAt: string;
 }
 
 export interface Subscription {
@@ -36,6 +47,9 @@ export interface Subscription {
   nextChargeAt: string;
   lastChargeAt: string | null;
   metadata: Record<string, unknown>;
+  authorization: SubscriptionAuthorization | null;
+  failedChargeCount: number;
+  lastFailureReason: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,6 +66,14 @@ export interface CreateSubscriptionInput {
 }
 
 function toSubscription(row: SubscriptionRow): Subscription {
+  const authorization: SubscriptionAuthorization | null =
+    row.authorization_signature && row.authorization_public_key
+      ? {
+          signature: row.authorization_signature,
+          publicKey: row.authorization_public_key,
+          signedAt: row.authorization_signed_at ?? row.created_at,
+        }
+      : null;
   return {
     id: row.id,
     merchantId: row.merchant_id,
@@ -63,6 +85,9 @@ function toSubscription(row: SubscriptionRow): Subscription {
     nextChargeAt: row.next_charge_at,
     lastChargeAt: row.last_charge_at,
     metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {},
+    authorization,
+    failedChargeCount: row.failed_charge_count ?? 0,
+    lastFailureReason: row.last_failure_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -209,6 +234,8 @@ export function recordSubscriptionCharge(
       `UPDATE subscriptions
          SET last_charge_at = ?,
              next_charge_at = ?,
+             failed_charge_count = 0,
+             last_failure_reason = NULL,
              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
          WHERE id = ?`,
     )
@@ -217,4 +244,60 @@ export function recordSubscriptionCharge(
     throw new Error(`subscription ${id} not found`);
   }
   return getSubscription(db, id);
+}
+
+export interface SetAuthorizationInput {
+  signature: string;
+  publicKey: string;
+}
+
+export function setSubscriptionAuthorization(
+  db: Db,
+  id: string,
+  input: SetAuthorizationInput,
+): Subscription {
+  const result = db
+    .prepare<[string, string, string]>(
+      `UPDATE subscriptions
+         SET authorization_signature = ?,
+             authorization_public_key = ?,
+             authorization_signed_at = strftime('%Y-%m-%dT%H:%M:%fZ','now'),
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+         WHERE id = ?`,
+    )
+    .run(input.signature, input.publicKey, id);
+  if (result.changes === 0) {
+    throw new Error(`subscription ${id} not found`);
+  }
+  return getSubscription(db, id);
+}
+
+/**
+ * Record a charge failure. After three consecutive failures the subscription
+ * is auto-paused so the cron worker stops re-trying a permanently broken
+ * authorization (revoked wallet, drained balance, mutated binding).
+ */
+export function recordSubscriptionFailure(
+  db: Db,
+  id: string,
+  reason: string,
+  pauseAfter = 3,
+): Subscription {
+  const incremented = db
+    .prepare<[string, string]>(
+      `UPDATE subscriptions
+         SET failed_charge_count = COALESCE(failed_charge_count, 0) + 1,
+             last_failure_reason = ?,
+             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+         WHERE id = ?`,
+    )
+    .run(reason, id);
+  if (incremented.changes === 0) {
+    throw new Error(`subscription ${id} not found`);
+  }
+  const current = getSubscription(db, id);
+  if (current.failedChargeCount >= pauseAfter && current.status === "active") {
+    return updateSubscriptionStatus(db, id, "paused");
+  }
+  return current;
 }
