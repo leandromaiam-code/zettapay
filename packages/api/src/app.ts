@@ -7,6 +7,7 @@ import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
+import { webflowRouter } from "./routes/webflow.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { errorHandler } from "./middleware/error.js";
 import { HttpError } from "./lib/errors.js";
@@ -87,6 +88,11 @@ export function createApp(options: CreateAppOptions): Express {
   );
   app.use(
     woocommerceRouter(db, {
+      ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
+    }),
+  );
+  app.use(
+    webflowRouter(db, {
       ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
     }),
   );
