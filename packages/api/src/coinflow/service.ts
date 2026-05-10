@@ -9,6 +9,7 @@ import {
   type Settlement,
 } from "../db/coinflow_settlements.js";
 import { getPayment } from "../db/payments.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
 import { computeSettlementFee, COINFLOW_FEE_BPS } from "./fee.js";
@@ -40,6 +41,18 @@ export function enableCoinflowSettlement(
     coinflowMerchantId: input.coinflowMerchantId,
     bankAccountId: input.bankAccountId,
   });
+  appendAudit(db, {
+    actor: `merchant:${merchantId}`,
+    event: "settlement.coinflow.enabled",
+    entityType: "merchant",
+    entityId: merchantId,
+    reason: "merchant enabled fiat settlement via Coinflow",
+    payload: {
+      autoSettle: input.autoSettle,
+      coinflowMerchantId: input.coinflowMerchantId,
+      bankAccountId: input.bankAccountId,
+    },
+  });
 }
 
 export function disableCoinflowSettlement(db: Db, merchantId: string): void {
@@ -52,6 +65,13 @@ export function disableCoinflowSettlement(db: Db, merchantId: string): void {
     autoSettle: false,
     coinflowMerchantId: null,
     bankAccountId: null,
+  });
+  appendAudit(db, {
+    actor: `merchant:${merchantId}`,
+    event: "settlement.coinflow.disabled",
+    entityType: "merchant",
+    entityId: merchantId,
+    reason: "merchant disabled fiat settlement",
   });
 }
 
@@ -131,13 +151,47 @@ export async function settlePayment(
         settlement.id,
         "coinflow returned failed status",
       );
+      appendAudit(db, {
+        actor: "provider:coinflow",
+        event: "settlement.failed",
+        entityType: "settlement",
+        entityId: settlement.id,
+        reason: "coinflow returned failed status",
+        payload: {
+          merchantId: merchant.id,
+          paymentId: payment.id,
+          netUsdc: fee.netUsdc,
+        },
+      });
     } else {
       markSettlementCompleted(db, settlement.id, response.withdrawalId);
+      appendAudit(db, {
+        actor: "provider:coinflow",
+        event: "settlement.completed",
+        entityType: "settlement",
+        entityId: settlement.id,
+        reason: "coinflow withdrawal succeeded",
+        payload: {
+          merchantId: merchant.id,
+          paymentId: payment.id,
+          withdrawalId: response.withdrawalId,
+          netUsdc: fee.netUsdc,
+          feeUsdc: fee.feeUsdc,
+        },
+      });
     }
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "unknown coinflow error";
     markSettlementFailed(db, settlement.id, message);
+    appendAudit(db, {
+      actor: "provider:coinflow",
+      event: "settlement.failed",
+      entityType: "settlement",
+      entityId: settlement.id,
+      reason: message,
+      payload: { merchantId: merchant.id, paymentId: payment.id },
+    });
     throw HttpError.upstream(`Coinflow settlement failed: ${message}`);
   }
 

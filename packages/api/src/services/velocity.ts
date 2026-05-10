@@ -4,6 +4,7 @@ import {
   sumPaymentAmountByMerchantSince,
 } from "../db/payments.js";
 import type { Merchant } from "../db/merchants.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { HttpError } from "../lib/errors.js";
 
 const ONE_MINUTE_MS = 60_000;
@@ -66,6 +67,14 @@ export function enforceVelocityLimits(
   );
 
   if (perMinuteLimit > 0 && payerCountInWindow + 1 > perMinuteLimit) {
+    appendAudit(db, {
+      actor: `payer:${payerWallet}`,
+      event: "payment.blocked.velocity",
+      entityType: "merchant",
+      entityId: merchant.id,
+      reason: `per-wallet velocity exceeded (${payerCountInWindow}/${perMinuteLimit} per minute)`,
+      payload: { scope: "per_wallet_per_minute", limit: perMinuteLimit, observed: payerCountInWindow, amount },
+    });
     throw HttpError.rateLimited(
       `Wallet exceeded velocity limit of ${perMinuteLimit} payments per minute`,
       {
@@ -83,6 +92,14 @@ export function enforceVelocityLimits(
     perHourAmountLimit > 0 &&
     merchantSpendInWindow + amount > perHourAmountLimit
   ) {
+    appendAudit(db, {
+      actor: `payer:${payerWallet}`,
+      event: "payment.blocked.velocity",
+      entityType: "merchant",
+      entityId: merchant.id,
+      reason: `per-merchant amount cap exceeded (${merchantSpendInWindow}+${amount}/${perHourAmountLimit} per hour)`,
+      payload: { scope: "per_merchant_per_hour", limit: perHourAmountLimit, observed: merchantSpendInWindow, amount },
+    });
     throw HttpError.rateLimited(
       `Merchant exceeded velocity limit of ${perHourAmountLimit} per hour`,
       {

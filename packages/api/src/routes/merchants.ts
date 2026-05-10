@@ -12,6 +12,7 @@ import {
   findMerchantById,
   updateMerchantVelocity,
 } from "../db/merchants.js";
+import { appendAudit } from "../db/audit_journal.js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_RE = /^https:\/\//i;
@@ -121,6 +122,20 @@ export function merchantsRouter(db: Db): Router {
       const updated = updateMerchantVelocity(db, id, {
         maxPaymentsPerMinute,
         maxAmountPerHour,
+      });
+      appendAudit(db, {
+        actor: `merchant:${id}`,
+        event: "merchant.velocity.updated",
+        entityType: "merchant",
+        entityId: id,
+        reason: "velocity caps changed via PUT /merchants/:id/velocity",
+        payload: {
+          before: {
+            maxPaymentsPerMinute: merchant.velocity.maxPaymentsPerMinute,
+            maxAmountPerHour: merchant.velocity.maxAmountPerHour,
+          },
+          after: { maxPaymentsPerMinute, maxAmountPerHour },
+        },
       });
       res.json({ merchant: updated });
     } catch (err) {

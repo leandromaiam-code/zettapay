@@ -6,6 +6,7 @@ import {
   insertMerchant,
   type Merchant,
 } from "../db/merchants.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
 
@@ -33,7 +34,7 @@ export function registerMerchant(
   // merchants with no callback URL have no use for it.
   const webhookSecret = input.webhookUrl ? generateWebhookSecret() : null;
 
-  return insertMerchant(db, {
+  const merchant = insertMerchant(db, {
     id: newId("merch"),
     name: input.name,
     walletAddress: input.walletAddress,
@@ -42,6 +43,21 @@ export function registerMerchant(
     webhookUrl: input.webhookUrl,
     webhookSecret,
   });
+
+  appendAudit(db, {
+    actor: `merchant:${merchant.id}`,
+    event: "merchant.registered",
+    entityType: "merchant",
+    entityId: merchant.id,
+    reason: "self-service registration",
+    payload: {
+      email: merchant.email,
+      walletAddress: merchant.walletAddress,
+      hasWebhookUrl: webhookSecret !== null,
+    },
+  });
+
+  return merchant;
 }
 
 function generateApiKey(): string {

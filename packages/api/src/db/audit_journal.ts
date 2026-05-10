@@ -4,6 +4,9 @@ export interface AuditJournalRow {
   id: number;
   actor: string;
   event: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  reason: string | null;
   payload: string | null;
   created_at: string;
 }
@@ -12,6 +15,9 @@ export interface AuditJournalEntry {
   id: number;
   actor: string;
   event: string;
+  entityType: string | null;
+  entityId: string | null;
+  reason: string | null;
   payload: unknown;
   createdAt: string;
 }
@@ -19,6 +25,9 @@ export interface AuditJournalEntry {
 export interface AppendAuditInput {
   actor: string;
   event: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  reason?: string | null;
   payload?: unknown;
 }
 
@@ -27,24 +36,34 @@ function toEntry(row: AuditJournalRow): AuditJournalEntry {
     id: row.id,
     actor: row.actor,
     event: row.event,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    reason: row.reason,
     payload: row.payload === null ? null : JSON.parse(row.payload),
     createdAt: row.created_at,
   };
 }
 
 /**
- * Append-only audit record. Premissa #24 (audit-ready) requires we persist
- * security-sensitive state transitions (KYC reviews, settlement enable/disable)
- * to a tamper-resistant log scoped per-row, never UPDATE/DELETEd in app code.
+ * Append-only audit record. Premissa #24 (audit-ready) — every sensitive
+ * decision (KYC reviews, settlement enable/disable, agent revocation, registry
+ * publishing, payment failures) lands here with the actor that authorized it,
+ * the affected entity, and a reason. Rows are never UPDATE/DELETEd, enforced
+ * by triggers in db/index.ts.
  */
 export function appendAudit(db: Db, input: AppendAuditInput): AuditJournalEntry {
   const result = db
-    .prepare<[string, string, string | null]>(
-      "INSERT INTO audit_journal (actor, event, payload) VALUES (?, ?, ?)",
+    .prepare<
+      [string, string, string | null, string | null, string | null, string | null]
+    >(
+      "INSERT INTO audit_journal (actor, event, entity_type, entity_id, reason, payload) VALUES (?, ?, ?, ?, ?, ?)",
     )
     .run(
       input.actor,
       input.event,
+      input.entityType ?? null,
+      input.entityId ?? null,
+      input.reason ?? null,
       input.payload === undefined ? null : JSON.stringify(input.payload),
     );
   const row = db
@@ -59,6 +78,8 @@ export function appendAudit(db: Db, input: AppendAuditInput): AuditJournalEntry 
 export interface ListAuditOptions {
   actor?: string;
   event?: string;
+  entityType?: string;
+  entityId?: string;
   limit?: number;
 }
 
@@ -76,6 +97,14 @@ export function listAuditEntries(
   if (options.event) {
     clauses.push("event = ?");
     params.push(options.event);
+  }
+  if (options.entityType) {
+    clauses.push("entity_type = ?");
+    params.push(options.entityType);
+  }
+  if (options.entityId) {
+    clauses.push("entity_id = ?");
+    params.push(options.entityId);
   }
   const where = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
   params.push(limit);

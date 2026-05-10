@@ -78,6 +78,20 @@ function applyAddOnColumns(db: Db): void {
       "CREATE INDEX IF NOT EXISTS payments_merchant_agent_created_at_idx ON payments(merchant_id, agent_identity_id, created_at)",
     );
   }
+
+  const auditCols = db.prepare("PRAGMA table_info(audit_journal)").all() as Array<{
+    name: string;
+  }>;
+  const auditNames = new Set(auditCols.map((c) => c.name));
+  if (!auditNames.has("entity_type")) {
+    db.exec("ALTER TABLE audit_journal ADD COLUMN entity_type TEXT");
+  }
+  if (!auditNames.has("entity_id")) {
+    db.exec("ALTER TABLE audit_journal ADD COLUMN entity_id TEXT");
+  }
+  if (!auditNames.has("reason")) {
+    db.exec("ALTER TABLE audit_journal ADD COLUMN reason TEXT");
+  }
 }
 
 export function closeDatabase(): void {
@@ -131,9 +145,37 @@ function applyMigrations(db: Db): void {
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       actor       TEXT NOT NULL,
       event       TEXT NOT NULL,
+      entity_type TEXT,
+      entity_id   TEXT,
+      reason      TEXT,
       payload     TEXT,
       created_at  TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
+
+    CREATE INDEX IF NOT EXISTS audit_journal_entity_idx
+      ON audit_journal(entity_type, entity_id);
+    CREATE INDEX IF NOT EXISTS audit_journal_event_idx
+      ON audit_journal(event);
+    CREATE INDEX IF NOT EXISTS audit_journal_actor_idx
+      ON audit_journal(actor);
+    CREATE INDEX IF NOT EXISTS audit_journal_created_at_idx
+      ON audit_journal(created_at);
+
+    -- Premissa #24 (audit-ready) requires append-only: rows cannot be updated
+    -- or deleted at the storage layer, even from within the application.
+    -- These triggers backstop programmer error and a compromised app session.
+    CREATE TRIGGER IF NOT EXISTS audit_journal_no_update
+      BEFORE UPDATE ON audit_journal
+      FOR EACH ROW
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_journal is append-only — UPDATE rejected');
+      END;
+    CREATE TRIGGER IF NOT EXISTS audit_journal_no_delete
+      BEFORE DELETE ON audit_journal
+      FOR EACH ROW
+      BEGIN
+        SELECT RAISE(ABORT, 'audit_journal is append-only — DELETE rejected');
+      END;
 
     CREATE TABLE IF NOT EXISTS idempotency_keys (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -16,6 +16,7 @@ import {
   setAgentIdentityStatus,
   type AgentIdentity,
 } from "../db/agent_identities.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { newId } from "../lib/id.js";
 
 const MAX_DISPLAY_NAME = 120;
@@ -173,6 +174,19 @@ export function registerAgentIdentity(
   });
   // Mark the registration nonce as used so the same proof can't be replayed.
   recordAgentNonce(db, identity.id, proof.nonce);
+  appendAudit(db, {
+    actor: `agent:${identity.id}`,
+    event: "agent_identity.registered",
+    entityType: "agent_identity",
+    entityId: identity.id,
+    reason: "ed25519 binding established via signed proof",
+    payload: {
+      provider: identity.provider,
+      agentId: identity.agentId,
+      publicKey: identity.publicKey,
+      ownerEmail: identity.ownerEmail,
+    },
+  });
   return { identity, alreadyRegistered: false };
 }
 
@@ -233,9 +247,32 @@ export function verifyAgentProofHeader(
   return { identity, proof };
 }
 
+export interface RevokeAgentIdentityOptions {
+  /** Free-text reason saved to the audit row — e.g. "key compromised". */
+  reason?: string | null;
+  /** Actor performing the revocation; defaults to "system". */
+  actor?: string;
+}
+
 export function revokeAgentIdentityById(
   db: Db,
   id: string,
+  options: RevokeAgentIdentityOptions = {},
 ): AgentIdentity | null {
-  return setAgentIdentityStatus(db, id, "revoked");
+  const updated = setAgentIdentityStatus(db, id, "revoked");
+  if (updated) {
+    appendAudit(db, {
+      actor: options.actor ?? "system",
+      event: "agent_identity.revoked",
+      entityType: "agent_identity",
+      entityId: id,
+      reason: options.reason ?? null,
+      payload: {
+        provider: updated.provider,
+        agentId: updated.agentId,
+        publicKey: updated.publicKey,
+      },
+    });
+  }
+  return updated;
 }
