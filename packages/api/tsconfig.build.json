@@ -41,6 +41,7 @@
     "src/routes/beta.ts",
     "src/routes/merchants.ts",
     "src/routes/pay.ts",
+    "src/routes/payment.ts",
     "src/routes/settlement.ts",
     "src/routes/verify-signature.ts",
     "src/services/merchants.ts",
