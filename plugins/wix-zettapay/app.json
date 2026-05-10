@@ -1,0 +1,50 @@
+{
+  "$schema": "https://devforum.wix.com/schemas/app-manifest.json",
+  "slug": "zettapay-wix-app",
+  "name": "ZettaPay",
+  "vendor": "ZettaPay",
+  "version": "0.1.0",
+  "description": "Aceite USDC liquidado em segundos via Solana. Fees 10x menores que cartão, sem custódia.",
+  "categories": ["payments", "ecommerce"],
+  "homepage": "https://zettapay.io/wix",
+  "support": {
+    "docs": "https://zettapay.io/docs/integrations/wix",
+    "contact": "support@zettapay.io"
+  },
+  "permissions": [
+    "wix.fetch.outbound",
+    "wix.users.read",
+    "wix.stores.orders.read"
+  ],
+  "components": [
+    {
+      "type": "velo_backend_module",
+      "name": "zettapay.web.js",
+      "description": "Backend module exposing createCheckout, fetchPaymentStatus and pluginInfo to page code."
+    },
+    {
+      "type": "velo_page_module",
+      "name": "zettapay-checkout.js",
+      "description": "Page-level script wiring a Wix button to the ZettaPay checkout lightbox."
+    },
+    {
+      "type": "lightbox",
+      "name": "zettapay-checkout",
+      "description": "Lightbox containing the ZettaPay hosted checkout iframe."
+    }
+  ],
+  "oauth": {
+    "install_url": "https://api.zettapay.io/wix/install",
+    "redirect_uri": "https://api.zettapay.io/wix/callback",
+    "token_url": "https://api.zettapay.io/wix/token"
+  },
+  "endpoints": {
+    "velo_backend_module": "https://api.zettapay.io/wix/velo/backend/<merchantId>",
+    "velo_page_module": "https://api.zettapay.io/wix/velo/page",
+    "plugin_info": "https://api.zettapay.io/wix/app/info"
+  },
+  "webhook": {
+    "url": "https://api.zettapay.io/wix/webhook",
+    "events": ["payment.completed", "payment.failed", "payment.refunded"]
+  }
+}
