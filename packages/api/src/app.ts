@@ -16,6 +16,7 @@ import { mcpRegistryRouter } from "./routes/mcp-registry.js";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
 import { paymentRouter } from "./routes/payment.js";
+import { refundRouter } from "./routes/refund.js";
 import { registryRouter } from "./routes/registry.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
@@ -154,6 +155,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(merchantsRouter(db));
   app.use(payRouter(db, solana, { coinflow, onAutoSettle, betaConfig }));
   app.use(paymentRouter(db));
+  app.use(refundRouter(db, solana));
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(registryRouter(db));
   app.use(mcpRegistryRouter(db));

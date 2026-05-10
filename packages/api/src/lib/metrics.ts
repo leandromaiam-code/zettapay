@@ -262,7 +262,7 @@ export const paymentVolumeUsdcTotal = registry.register(
 );
 
 export function recordPaymentOutcome(
-  status: "completed" | "failed",
+  status: "completed" | "failed" | "refunded",
   currency: string,
   amountUsdc: number,
 ): void {

@@ -180,6 +180,34 @@ function applyMigrations(db: Db): void {
       ON payments(merchant_id, payer_wallet, created_at);
     CREATE UNIQUE INDEX IF NOT EXISTS payments_tx_signature_uidx ON payments(tx_signature) WHERE tx_signature IS NOT NULL;
 
+    -- Z13.5 refunds: a settled payment is reversed via a fresh on-chain
+    -- transfer back to the original payer. Each row captures the merchant's
+    -- signed authorization so the audit trail is reproducible from storage
+    -- alone (signature over signed_at + paymentId + amount + reason was
+    -- verified server-side at insert time). The UNIQUE(payment_id) index
+    -- prevents double-refunding the same payment.
+    CREATE TABLE IF NOT EXISTS refunds (
+      id              TEXT PRIMARY KEY,
+      payment_id      TEXT NOT NULL UNIQUE REFERENCES payments(id) ON DELETE RESTRICT,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      amount_usdc     REAL NOT NULL,
+      currency        TEXT NOT NULL DEFAULT 'USDC',
+      reason          TEXT NOT NULL,
+      status          TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
+      tx_signature    TEXT,
+      error_message   TEXT,
+      signed_by       TEXT NOT NULL,
+      signed_at       TEXT NOT NULL,
+      signature       TEXT NOT NULL,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at    TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS refunds_merchant_idx ON refunds(merchant_id);
+    CREATE INDEX IF NOT EXISTS refunds_status_idx ON refunds(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS refunds_tx_signature_uidx
+      ON refunds(tx_signature) WHERE tx_signature IS NOT NULL;
+
     CREATE TABLE IF NOT EXISTS audit_journal (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
       actor       TEXT NOT NULL,
