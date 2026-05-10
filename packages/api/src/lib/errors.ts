@@ -43,6 +43,10 @@ export class HttpError extends Error {
     return new HttpError(409, "conflict", message, details);
   }
 
+  static rateLimited(message: string, details?: unknown): HttpError {
+    return new HttpError(429, "rate_limited", message, details);
+  }
+
   static paymentFailed(message: string, details?: unknown): HttpError {
     return new HttpError(502, "payment_failed", message, details);
   }

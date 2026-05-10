@@ -12,6 +12,8 @@ export interface MerchantRow {
   coinflow_auto_settle: number;
   coinflow_merchant_id: string | null;
   coinflow_bank_account_id: string | null;
+  velocity_max_payments_per_minute: number;
+  velocity_max_amount_per_hour: number;
   created_at: string;
 }
 
@@ -20,6 +22,11 @@ export interface CoinflowSettlementSettings {
   autoSettle: boolean;
   coinflowMerchantId: string | null;
   bankAccountId: string | null;
+}
+
+export interface VelocityLimits {
+  maxPaymentsPerMinute: number;
+  maxAmountPerHour: number;
 }
 
 export interface Merchant {
@@ -31,6 +38,7 @@ export interface Merchant {
   webhookUrl: string | null;
   webhookSecret: string | null;
   coinflow: CoinflowSettlementSettings;
+  velocity: VelocityLimits;
   createdAt: string;
 }
 
@@ -51,6 +59,11 @@ export interface UpdateCoinflowInput {
   bankAccountId: string | null;
 }
 
+export interface UpdateVelocityInput {
+  maxPaymentsPerMinute: number;
+  maxAmountPerHour: number;
+}
+
 function toMerchant(row: MerchantRow): Merchant {
   return {
     id: row.id,
@@ -65,6 +78,10 @@ function toMerchant(row: MerchantRow): Merchant {
       autoSettle: row.coinflow_auto_settle === 1,
       coinflowMerchantId: row.coinflow_merchant_id,
       bankAccountId: row.coinflow_bank_account_id,
+    },
+    velocity: {
+      maxPaymentsPerMinute: row.velocity_max_payments_per_minute,
+      maxAmountPerHour: row.velocity_max_amount_per_hour,
     },
     createdAt: row.created_at,
   };
@@ -143,6 +160,32 @@ export function updateMerchantCoinflow(
     input.autoSettle ? 1 : 0,
     input.coinflowMerchantId,
     input.bankAccountId,
+    id,
+  );
+  if (result.changes === 0) {
+    throw new Error(`merchant ${id} not found`);
+  }
+  const merchant = findMerchantById(db, id);
+  if (!merchant) {
+    throw new Error(`merchant ${id} disappeared after update`);
+  }
+  return merchant;
+}
+
+export function updateMerchantVelocity(
+  db: Db,
+  id: string,
+  input: UpdateVelocityInput,
+): Merchant {
+  const stmt = db.prepare<[number, number, string]>(
+    `UPDATE merchants
+       SET velocity_max_payments_per_minute = ?,
+           velocity_max_amount_per_hour = ?
+       WHERE id = ?`,
+  );
+  const result = stmt.run(
+    input.maxPaymentsPerMinute,
+    input.maxAmountPerHour,
     id,
   );
   if (result.changes === 0) {

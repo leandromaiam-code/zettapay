@@ -32,6 +32,7 @@
     "src/services/payments.ts",
     "src/services/pricing.ts",
     "src/services/solana.ts",
+    "src/services/velocity.ts",
     "src/services/webhook_dispatcher.ts",
     "src/services/webhook_worker.ts",
     "src/coinflow/client.ts",

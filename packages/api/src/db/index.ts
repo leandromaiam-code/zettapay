@@ -48,6 +48,16 @@ function applyAddOnColumns(db: Db): void {
   if (!merchantNames.has("coinflow_bank_account_id")) {
     db.exec("ALTER TABLE merchants ADD COLUMN coinflow_bank_account_id TEXT");
   }
+  if (!merchantNames.has("velocity_max_payments_per_minute")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN velocity_max_payments_per_minute INTEGER NOT NULL DEFAULT 5",
+    );
+  }
+  if (!merchantNames.has("velocity_max_amount_per_hour")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN velocity_max_amount_per_hour REAL NOT NULL DEFAULT 1000",
+    );
+  }
 
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all() as Array<{
     name: string;
@@ -77,6 +87,8 @@ function applyMigrations(db: Db): void {
       api_key         TEXT NOT NULL UNIQUE,
       webhook_url     TEXT,
       webhook_secret  TEXT,
+      velocity_max_payments_per_minute INTEGER NOT NULL DEFAULT 5,
+      velocity_max_amount_per_hour     REAL NOT NULL DEFAULT 1000,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
 
@@ -99,6 +111,10 @@ function applyMigrations(db: Db): void {
 
     CREATE INDEX IF NOT EXISTS payments_merchant_idx ON payments(merchant_id);
     CREATE INDEX IF NOT EXISTS payments_status_idx ON payments(status);
+    CREATE INDEX IF NOT EXISTS payments_merchant_created_at_idx
+      ON payments(merchant_id, created_at);
+    CREATE INDEX IF NOT EXISTS payments_merchant_payer_created_at_idx
+      ON payments(merchant_id, payer_wallet, created_at);
     CREATE UNIQUE INDEX IF NOT EXISTS payments_tx_signature_uidx ON payments(tx_signature) WHERE tx_signature IS NOT NULL;
 
     CREATE TABLE IF NOT EXISTS audit_journal (

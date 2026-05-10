@@ -15,6 +15,7 @@ import { newId } from "../lib/id.js";
 import type { SolanaService } from "./solana.js";
 import type { CoinflowClient } from "../coinflow/client.js";
 import { settlePayment } from "../coinflow/service.js";
+import { enforceVelocityLimits } from "./velocity.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -60,6 +61,14 @@ export async function createPayment(
 
   const paymentId = newId("pay");
   const payerWallet = input.payerWallet ?? solana.getPayerPublicKey().toBase58();
+
+  // Z13.1 fraud gate: must run BEFORE insertPayment so the in-flight attempt
+  // doesn't get counted in its own window.
+  enforceVelocityLimits(db, {
+    merchant,
+    payerWallet,
+    amount: input.amountUsdc,
+  });
 
   insertPayment(db, {
     id: paymentId,
