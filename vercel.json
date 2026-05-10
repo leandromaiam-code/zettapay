@@ -11,19 +11,45 @@
     }
   },
   "rewrites": [
-    { "source": "/healthz", "destination": "/api/healthz" },
-    { "source": "/health", "destination": "/api/health" },
-    { "source": "/ready", "destination": "/api/ready" },
-    { "source": "/metrics", "destination": "/api/metrics" },
-    { "source": "/simulate/:merchant", "destination": "/api/simulate/:merchant" }
+    {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/health"
+    },
+    {
+      "source": "/ready",
+      "destination": "/api/ready"
+    },
+    {
+      "source": "/metrics",
+      "destination": "/api/metrics"
+    },
+    {
+      "source": "/simulate/:merchant",
+      "destination": "/api/simulate/:merchant"
+    }
   ],
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-store" },
-        { "key": "X-Powered-By", "value": "ZettaPay" }
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "X-Powered-By",
+          "value": "ZettaPay"
+        }
       ]
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 }
