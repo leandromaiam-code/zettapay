@@ -519,5 +519,23 @@ function applyMigrations(db: Db): void {
       ON zettapay_api_keys(merchant_id);
     CREATE INDEX IF NOT EXISTS zettapay_api_keys_active_idx
       ON zettapay_api_keys(merchant_id) WHERE revoked_at IS NULL;
+
+    CREATE TABLE IF NOT EXISTS onchain_payments (
+      pda              TEXT PRIMARY KEY,
+      merchant_binding TEXT NOT NULL,
+      payment_id_hex   TEXT NOT NULL,
+      amount           TEXT NOT NULL,
+      tx_signature     TEXT NOT NULL UNIQUE,
+      recorded_at      INTEGER NOT NULL,
+      slot             INTEGER,
+      ingested_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS onchain_payments_binding_idx
+      ON onchain_payments(merchant_binding, recorded_at);
+    CREATE INDEX IF NOT EXISTS onchain_payments_recorded_idx
+      ON onchain_payments(recorded_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS onchain_payments_binding_paymentid_uidx
+      ON onchain_payments(merchant_binding, payment_id_hex);
   `);
 }
