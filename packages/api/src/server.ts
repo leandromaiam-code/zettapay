@@ -78,6 +78,9 @@ const app = createApp({
       ? { reserveRatio: Number(process.env.ZETTAPAY_TREASURY_RESERVE_RATIO) }
       : {}),
   },
+  admin: {
+    adminKey: process.env.ZETTAPAY_ADMIN_KEY ?? null,
+  },
 });
 
 const server = app.listen(port, host, () => {
