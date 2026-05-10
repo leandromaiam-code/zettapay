@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pagar com USDC — ZettaPay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { color-scheme: dark; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(79,107,255,0.18), transparent 50%),
+    radial-gradient(circle at 80% 100%, rgba(79,107,255,0.12), transparent 50%);
+}
+.card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 40px 32px;
+  max-width: 440px;
+  width: 100%;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+.logo {
+  width: 36px; height: 36px;
+  background: #4F6BFF;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 18px;
+}
+.brand-name { font-weight: 700; font-size: 18px; }
+.label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 6px; }
+.amount { font-size: 56px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+.amount-suffix { font-size: 18px; color: #888; font-weight: 500; }
+.row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+.row:last-of-type { border-bottom: none; }
+.row .k { color: #888; }
+.row .v { color: #fff; font-weight: 500; font-family: ui-monospace, monospace; }
+.btn {
+  width: 100%;
+  margin-top: 28px;
+  padding: 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #4F6BFF, #6B85FF);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 8px 24px rgba(79,107,255,0.35);
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(79,107,255,0.45); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.status { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-family: ui-monospace, monospace; display: none; }
+.status.show { display: block; }
+.status.info { background: rgba(79,107,255,0.12); color: #aab6ff; }
+.status.success { background: rgba(20,241,149,0.12); color: #14F195; }
+.status.error { background: rgba(244,67,54,0.12); color: #ff7c7c; }
+.foot { text-align: center; margin-top: 22px; font-size: 11px; color: #555; }
+.foot a { color: #4F6BFF; text-decoration: none; }
+.error-card { text-align: center; padding: 60px 20px; }
+.error-card h2 { margin-bottom: 12px; }
+.error-card p { color: #888; }
+</style>
+</head>
+<body>
+<div class="card">
+<div id="loading" class="error-card">
+<p>Carregando...</p>
+</div>
+<div id="checkout" style="display:none">
+<div class="brand">
+<div class="logo">Z</div>
+<div class="brand-name">ZettaPay</div>
+</div>
+<div class="label" id="label-text">Pagamento</div>
+<div class="amount"><span id="amount">0</span> <span class="amount-suffix">USDC</span></div>
+<div style="margin: 28px 0 8px;">
+<div class="row"><span class="k">Para</span><span class="v" id="merchant-display">—</span></div>
+<div class="row"><span class="k">Rede</span><span class="v">Solana Devnet</span></div>
+<div class="row"><span class="k">Taxa</span><span class="v" id="fee">— USDC</span></div>
+<div class="row"><span class="k">Settlement</span><span class="v" style="color:#14F195">~2s</span></div>
+</div>
+<button id="payBtn" class="btn">⚡ Conectar Phantom &amp; Pagar</button>
+<div id="status" class="status"></div>
+<div class="foot">Powered by <a href="/">ZettaPay</a> · 0,30% fee</div>
+</div>
+<div id="error-state" class="error-card" style="display:none">
+<h2>Pagamento inválido</h2>
+<p id="error-msg">Faltam parâmetros: merchant + amount</p>
+<a href="/" class="btn" style="margin-top:24px;text-decoration:none">Voltar pra home</a>
+</div>
+</div>
+<script>
+(function(){
+  var qs = new URLSearchParams(location.search);
+  var merchant = qs.get('merchant');
+  var amount = parseFloat(qs.get('amount') || '0');
+  var label = qs.get('label') || 'Pagamento';
+  var returnUrl = qs.get('return_url') || '';
+  var pk = qs.get('pk') || '';
+
+  if (!merchant || !amount || amount <= 0) {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error-state').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('checkout').style.display = 'block';
+  document.getElementById('label-text').textContent = label;
+  document.getElementById('amount').textContent = amount.toFixed(2);
+  document.getElementById('merchant-display').textContent = merchant.length > 20 ? merchant.slice(0,8) + '…' + merchant.slice(-6) : merchant;
+  document.getElementById('fee').textContent = (amount * 0.003).toFixed(3) + ' USDC';
+
+  function setStatus(msg, kind) {
+    var s = document.getElementById('status');
+    s.className = 'status show ' + (kind || 'info');
+    s.textContent = msg;
+  }
+
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  function getPhantom() {
+    var p = (window.phantom && window.phantom.solana) || window.solana;
+    return (p && p.isPhantom) ? p : null;
+  }
+
+  document.getElementById('payBtn').addEventListener('click', function() {
+    var btn = document.getElementById('payBtn');
+    var provider = getPhantom();
+
+    if (!provider && isMobile()) {
+      setStatus('Abrindo Phantom...', 'info');
+      var ref = encodeURIComponent(location.origin);
+      location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(location.href) + '?ref=' + ref;
+      return;
+    }
+    if (!provider) {
+      setStatus('Phantom não detectado. Instale em phantom.app', 'error');
+      window.open('https://phantom.app/download', '_blank');
+      return;
+    }
+
+    btn.disabled = true;
+    setStatus('Conectando Phantom...', 'info');
+
+    provider.connect()
+      .then(function(resp) {
+        var addr = resp.publicKey.toString();
+        setStatus('Conectado: ' + addr.slice(0,6) + '…' + addr.slice(-4) + '. Iniciando pagamento...', 'info');
+        return fetch('/api/pay', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-ZettaPay-Public-Key': pk },
+          body: JSON.stringify({
+            merchantId: merchant,
+            payerWallet: addr,
+            amountUsdc: amount,
+            currency: 'USDC',
+            description: label
+          })
+        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error.message || data.error.code);
+        setStatus('✓ Pagamento confirmado! Tx: ' + (data.signature || 'pending'), 'success');
+        if (returnUrl) setTimeout(function() { location.href = returnUrl; }, 2500);
+      })
+      .catch(function(err) {
+        setStatus(err.message || 'Pagamento cancelado', 'error');
+        btn.disabled = false;
+      });
+  });
+})();
+</script>
+</body>
+</html>
