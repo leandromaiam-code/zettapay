@@ -1,3 +1,4 @@
+// @ts-nocheck — Node 18+ has global fetch, TS 4.9 cannot type it
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { withSentry } from './_lib/sentry.js';
 
