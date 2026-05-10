@@ -32,6 +32,10 @@
       "destination": "/api/simulate/:merchant"
     },
     {
+      "source": "/analytics/:merchant",
+      "destination": "/api/analytics/:merchant"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     }

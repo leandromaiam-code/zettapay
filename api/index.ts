@@ -11,6 +11,7 @@ export default function handler(_req: VercelRequest, res: VercelResponse): void 
       ready: '/ready',
       metrics: '/metrics',
       simulate: '/simulate/:merchant',
+      analytics: '/analytics/:merchant',
     },
     network: 'solana-devnet',
     runtime: 'vercel-serverless',
