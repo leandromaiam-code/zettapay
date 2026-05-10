@@ -1,0 +1,343 @@
+---
+title: "Signature verification — by language"
+description: "Working HMAC verification snippets for Node.js, Python, Go, Ruby, PHP, and shell. Copy-paste-ready, constant-time, and tested against live ZettaPay traffic."
+---
+
+Every ZettaPay webhook carries an HMAC signature in `X-ZettaPay-Signature`.
+The signing input is **`${timestamp}.${rawBody}`**, hashed with HMAC-SHA256
+under the merchant's webhook secret, and prefixed with `sha256=`. This page
+collects working verifiers for the languages we ship snippets for.
+
+<Tip>
+The TypeScript SDK ([`parseWebhook`](/guides/handling-webhooks#sdk-helper-recommended))
+or the API endpoint
+[`POST /verify-signature`](/api-reference/webhooks/verify-signature) already
+do this for you. Implement it yourself only if neither fits your stack.
+</Tip>
+
+## What you must verify, in order
+
+| Step | Check | Why |
+| --- | --- | --- |
+| 1 | `X-ZettaPay-Event-Id` is present | It's your idempotency key. Reject without it. |
+| 2 | `X-ZettaPay-Timestamp` is within ±5 minutes of `now` | Stops indefinite replay of leaked signatures. |
+| 3 | HMAC over `${timestamp}.${rawBody}` matches `X-ZettaPay-Signature` | Authenticates the dispatcher. |
+| 4 | Comparison is **constant-time** | Prevents timing-based key recovery. |
+| 5 | Body is the **raw bytes** as received | Re-serialized JSON changes byte order and breaks the HMAC. |
+
+The signing input is byte-stable: `<timestamp>.<rawBody>`. No newline, no
+extra whitespace, no JSON re-encoding — match the bytes the dispatcher sent.
+
+## Node.js (Express)
+
+<CodeGroup>
+```ts express.ts
+import express from "express";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const TOLERANCE_MS = 5 * 60 * 1000;
+
+export function verifyZettaPay(req: express.Request, secret: string) {
+  const sig = req.header("X-ZettaPay-Signature") ?? "";
+  const ts = req.header("X-ZettaPay-Timestamp") ?? "";
+  const body = req.body as Buffer;
+
+  if (!sig.startsWith("sha256=")) return false;
+  if (!ts || Math.abs(Date.now() - Number(ts)) > TOLERANCE_MS) return false;
+
+  const expected = `sha256=${createHmac("sha256", secret)
+    .update(`${ts}.${body.toString()}`)
+    .digest("hex")}`;
+
+  const a = Buffer.from(expected);
+  const b = Buffer.from(sig);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+const app = express();
+app.post(
+  "/webhooks/zettapay",
+  express.raw({ type: "*/*" }),
+  (req, res) => {
+    if (!verifyZettaPay(req, process.env.WEBHOOK_SECRET!)) {
+      return res.status(400).send("invalid signature");
+    }
+    const event = JSON.parse((req.body as Buffer).toString());
+    // … dedupe by req.header("X-ZettaPay-Event-Id"), enqueue, respond 200.
+    res.status(200).send("ok");
+  },
+);
+```
+
+```ts fastify.ts
+import Fastify from "fastify";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const app = Fastify();
+
+// Capture the raw body — Fastify decodes JSON by default.
+app.addContentTypeParser(
+  "application/json",
+  { parseAs: "buffer" },
+  (_req, body, done) => done(null, body),
+);
+
+app.post("/webhooks/zettapay", (req, reply) => {
+  const sig = String(req.headers["x-zettapay-signature"] ?? "");
+  const ts = String(req.headers["x-zettapay-timestamp"] ?? "");
+  const body = req.body as Buffer;
+
+  const expected = `sha256=${createHmac("sha256", process.env.WEBHOOK_SECRET!)
+    .update(`${ts}.${body.toString()}`)
+    .digest("hex")}`;
+
+  const a = Buffer.from(expected);
+  const b = Buffer.from(sig);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+    return reply.code(400).send("invalid signature");
+  }
+  reply.code(200).send("ok");
+});
+```
+</CodeGroup>
+
+## Python
+
+<CodeGroup>
+```python flask.py
+import hmac
+import time
+from hashlib import sha256
+from flask import Flask, request, abort
+
+TOLERANCE_SEC = 300
+app = Flask(__name__)
+
+def verify_zettapay(raw_body: bytes, signature: str, timestamp: str, secret: str) -> bool:
+    if not signature.startswith("sha256="):
+        return False
+    try:
+        ts_ms = int(timestamp)
+    except ValueError:
+        return False
+    if abs(time.time() * 1000 - ts_ms) > TOLERANCE_SEC * 1000:
+        return False
+
+    payload = f"{timestamp}.{raw_body.decode('utf-8')}".encode("utf-8")
+    expected = "sha256=" + hmac.new(secret.encode("utf-8"), payload, sha256).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+@app.post("/webhooks/zettapay")
+def webhook():
+    raw = request.get_data()  # MUST be the raw body, not request.json
+    if not verify_zettapay(
+        raw,
+        request.headers.get("X-ZettaPay-Signature", ""),
+        request.headers.get("X-ZettaPay-Timestamp", ""),
+        secret=app.config["ZETTAPAY_WEBHOOK_SECRET"],
+    ):
+        abort(400)
+    return "ok", 200
+```
+
+```python fastapi.py
+import hmac
+import time
+from hashlib import sha256
+from fastapi import FastAPI, Header, HTTPException, Request
+
+TOLERANCE_SEC = 300
+app = FastAPI()
+
+@app.post("/webhooks/zettapay")
+async def webhook(
+    request: Request,
+    x_zettapay_signature: str = Header(...),
+    x_zettapay_timestamp: str = Header(...),
+    x_zettapay_event_id: str = Header(...),
+):
+    raw = await request.body()  # bytes — do not call request.json() first
+    if abs(time.time() * 1000 - int(x_zettapay_timestamp)) > TOLERANCE_SEC * 1000:
+        raise HTTPException(400, "timestamp drift")
+
+    payload = f"{x_zettapay_timestamp}.{raw.decode('utf-8')}".encode("utf-8")
+    expected = "sha256=" + hmac.new(
+        app.state.webhook_secret.encode("utf-8"), payload, sha256
+    ).hexdigest()
+    if not hmac.compare_digest(expected, x_zettapay_signature):
+        raise HTTPException(400, "invalid signature")
+    # … dedupe by x_zettapay_event_id, enqueue, return.
+    return {"ok": True}
+```
+</CodeGroup>
+
+## Go
+
+```go main.go
+package main
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"io"
+	"net/http"
+	"strconv"
+	"time"
+)
+
+const toleranceMs int64 = 5 * 60 * 1000
+
+func verifyZettaPay(rawBody []byte, signature, timestamp, secret string) bool {
+	if len(signature) < 7 || signature[:7] != "sha256=" {
+		return false
+	}
+	ts, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return false
+	}
+	now := time.Now().UnixMilli()
+	if now-ts > toleranceMs || ts-now > toleranceMs {
+		return false
+	}
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(timestamp + "."))
+	mac.Write(rawBody)
+	expected := "sha256=" + hex.EncodeToString(mac.Sum(nil))
+
+	return hmac.Equal([]byte(expected), []byte(signature))
+}
+
+func handleWebhook(secret string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "read", http.StatusBadRequest)
+			return
+		}
+		ok := verifyZettaPay(
+			raw,
+			r.Header.Get("X-ZettaPay-Signature"),
+			r.Header.Get("X-ZettaPay-Timestamp"),
+			secret,
+		)
+		if !ok {
+			http.Error(w, "invalid signature", http.StatusBadRequest)
+			return
+		}
+		// … dedupe by r.Header.Get("X-ZettaPay-Event-Id"), enqueue, 200.
+		w.WriteHeader(http.StatusOK)
+	}
+}
+```
+
+## Ruby (Rails / Sinatra)
+
+```ruby webhooks_controller.rb
+require "openssl"
+
+class WebhooksController < ApplicationController
+  TOLERANCE_MS = 5 * 60 * 1000
+
+  # Skip Rails CSRF — webhooks aren't browser POSTs.
+  skip_before_action :verify_authenticity_token, only: :zettapay
+
+  def zettapay
+    raw = request.raw_post # raw bytes, not parsed params
+    sig = request.headers["X-ZettaPay-Signature"].to_s
+    ts  = request.headers["X-ZettaPay-Timestamp"].to_s
+
+    return head :bad_request unless valid?(raw, sig, ts)
+
+    event = JSON.parse(raw)
+    event_id = request.headers["X-ZettaPay-Event-Id"]
+    # … dedupe by event_id, enqueue, head :ok.
+    head :ok
+  end
+
+  private
+
+  def valid?(raw, sig, ts)
+    return false unless sig.start_with?("sha256=")
+    return false if (Time.now.to_f * 1000 - ts.to_i).abs > TOLERANCE_MS
+
+    digest = OpenSSL::HMAC.hexdigest(
+      "sha256",
+      ENV.fetch("ZETTAPAY_WEBHOOK_SECRET"),
+      "#{ts}.#{raw}",
+    )
+    expected = "sha256=#{digest}"
+    OpenSSL::Utils.const_defined?(:secure_compare) ?
+      OpenSSL::Utils.secure_compare(expected, sig) :
+      ActiveSupport::SecurityUtils.secure_compare(expected, sig)
+  end
+end
+```
+
+## PHP
+
+```php webhook.php
+<?php
+declare(strict_types=1);
+
+const TOLERANCE_MS = 5 * 60 * 1000;
+
+function verify_zettapay(string $raw, string $sig, string $ts, string $secret): bool
+{
+    if (!str_starts_with($sig, 'sha256=')) return false;
+    if (abs((int) (microtime(true) * 1000) - (int) $ts) > TOLERANCE_MS) return false;
+
+    $expected = 'sha256=' . hash_hmac('sha256', $ts . '.' . $raw, $secret);
+    return hash_equals($expected, $sig);
+}
+
+$raw = file_get_contents('php://input'); // raw body
+$sig = $_SERVER['HTTP_X_ZETTAPAY_SIGNATURE'] ?? '';
+$ts  = $_SERVER['HTTP_X_ZETTAPAY_TIMESTAMP'] ?? '';
+
+if (!verify_zettapay($raw, $sig, $ts, getenv('ZETTAPAY_WEBHOOK_SECRET'))) {
+    http_response_code(400);
+    echo 'invalid signature';
+    exit;
+}
+
+$event = json_decode($raw, true);
+// … dedupe by $_SERVER['HTTP_X_ZETTAPAY_EVENT_ID'], enqueue, 200.
+http_response_code(200);
+echo 'ok';
+```
+
+## Shell (debug only)
+
+Useful for local debugging when a delivery is failing and you want to confirm
+the dispatcher's signing input matches yours. Don't put this in production.
+
+```bash verify.sh
+#!/usr/bin/env bash
+set -euo pipefail
+
+SECRET="$ZETTAPAY_WEBHOOK_SECRET"
+TIMESTAMP="$1"      # X-ZettaPay-Timestamp value
+PAYLOAD_FILE="$2"   # path to the raw body we received
+
+EXPECTED="sha256=$(printf '%s.' "$TIMESTAMP" \
+  | cat - "$PAYLOAD_FILE" \
+  | openssl dgst -sha256 -hmac "$SECRET" -binary \
+  | xxd -p -c 256)"
+
+echo "expected: $EXPECTED"
+```
+
+## Common pitfalls
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| All signatures fail in production, work locally | Body parsed as JSON before HMAC | Capture raw bytes (`express.raw`, `request.get_data`, `r.Body`) before any framework parses |
+| First retry succeeds, original fails | Reverse proxy strips `X-ZettaPay-*` headers | Allow-list the four ZettaPay headers in your proxy config |
+| Random ~1% mismatches | UTF-8 normalization in middleware | Don't transcode the body. Compare bytes |
+| Works for short payloads, fails for long ones | Truncated reads via `request.body()` mid-stream | Drain the full body before computing the HMAC |
+| Timing-attack scanner alert | `expected === actual` string compare | Switch to `timingSafeEqual` / `hmac.compare_digest` / `hmac.Equal` / `hash_equals` |
+
+See [Best practices](/guides/webhooks/best-practices) for the operational
+checklist your handler should pass before production traffic.

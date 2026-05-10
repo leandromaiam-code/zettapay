@@ -7,6 +7,18 @@ Webhook handlers fail in three predictable ways: missed signatures,
 duplicate processing, and slow ACKs that trigger spurious retries. This
 guide walks through a handler that gets all three right.
 
+<CardGroup cols={3}>
+  <Card title="By language" icon="code" href="/guides/webhooks/signing-examples">
+    Working HMAC verifiers for Node, Python, Go, Ruby, PHP, and shell.
+  </Card>
+  <Card title="Retry & replay" icon="rotate" href="/guides/webhooks/replay">
+    Drive the delivery log from the dashboard, API, or scripts.
+  </Card>
+  <Card title="Best practices" icon="square-check" href="/guides/webhooks/best-practices">
+    The pre-prod checklist your handler should clear before live traffic.
+  </Card>
+</CardGroup>
+
 ## SDK helper (recommended)
 
 The TypeScript SDK ships `parseWebhook` and `dedupe` so the entire
@@ -137,3 +149,9 @@ short-circuit straight to the dead-letter queue. Use them only when the
 event is malformed or definitively does not belong to your service.
 Return `5xx` (or simply time out) for transient failures so the
 delivery is retried.
+
+## Next steps
+
+- Pick the verifier for your stack: [Signature verification — by language](/guides/webhooks/signing-examples).
+- Drain failed deliveries when something breaks: [Retry & replay tooling](/guides/webhooks/replay).
+- Audit your handler against the operational checklist: [Best practices](/guides/webhooks/best-practices).
