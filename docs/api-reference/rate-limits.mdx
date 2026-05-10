@@ -1,0 +1,48 @@
+---
+title: "Rate limits"
+description: "Sliding-window rate limits per API key with velocity rules per merchant."
+---
+
+ZettaPay protects the API and the network with two layered controls:
+
+1. **API-level rate limits.** Sliding-window limit per API key (or per
+   IP for unauthenticated calls).
+2. **Velocity rules.** Per-merchant business limits — payments per
+   minute and aggregate USD volume per hour.
+
+## Rate-limit response headers
+
+Every response carries the current state of the sliding window:
+
+| Header | Description |
+| --- | --- |
+| `X-RateLimit-Limit` | Maximum requests allowed in the window. |
+| `X-RateLimit-Remaining` | Remaining requests before the next 429. |
+| `X-RateLimit-Reset` | Epoch seconds when the window rolls over. |
+| `X-RateLimit-Scope` | `key:…` or `ip:…` — which axis was limited. |
+| `Retry-After` | Seconds to wait. Present only on `429 rate_limited`. |
+
+The store is Redis-backed in production; the limit window is one minute.
+
+## Velocity rules
+
+Each merchant has two configurable velocity ceilings:
+
+| Field | Default | Maximum |
+| --- | --- | --- |
+| `maxPaymentsPerMinute` | 5 | 1000 |
+| `maxAmountPerHour` | $1,000 | $1,000,000 |
+
+A payment that would exceed either ceiling fails with
+`422 velocity_block`. Adjust the limits via
+[`PUT /merchants/:id/velocity`](/api-reference/merchants/velocity).
+
+## Recommended client behavior
+
+- Treat `429` as a transient signal. Retry after `Retry-After` seconds
+  with exponential jitter.
+- Treat `422 velocity_block` as a **business** signal. Either raise the
+  velocity ceiling, surface the limit to the payer, or queue the
+  payment for the next hour.
+- Cache the rate-limit headers and proactively shape your traffic if
+  `X-RateLimit-Remaining` falls below 10% of the limit.

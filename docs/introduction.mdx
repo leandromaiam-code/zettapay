@@ -1,0 +1,65 @@
+---
+title: "Introduction"
+description: "ZettaPay is the Solana-native payment protocol for humans and AI agents."
+---
+
+ZettaPay is an open payment protocol on Solana. It lets merchants accept
+USDC with one HTTP call, lets AI agents pay autonomously through the
+[x402](/guides/x402-protocol) header and [MCP](/guides/mcp-integration)
+tools, and settles end-to-end in seconds at **0.30%** per transaction.
+
+## Why ZettaPay
+
+<CardGroup cols={2}>
+  <Card title="Built for AI agents" icon="robot">
+    Native x402 + MCP. Agents pay without holding private keys, without
+    custody, and without bespoke per-vendor integrations.
+  </Card>
+  <Card title="Stripe-grade reliability" icon="shield-check">
+    Idempotency keys, signed webhooks, exponential retry, rate limits,
+    velocity rules. The boring parts done right.
+  </Card>
+  <Card title="0.30% protocol fee" icon="circle-dollar-to-slot">
+    Roughly an order of magnitude below legacy card processing. No
+    chargebacks. No multi-day settlement.
+  </Card>
+  <Card title="Open source SDK + spec" icon="code">
+    The TypeScript SDK and protocol spec are MIT-licensed. Adopt it,
+    extend it, or audit every byte.
+  </Card>
+</CardGroup>
+
+## Core primitives
+
+| Primitive | What it does |
+| --- | --- |
+| **Merchants** | Wallet-bound identities that receive USDC. Created via `POST /merchants/register`. |
+| **Payments** | One-shot `transferChecked` USDC transactions. Created via `POST /pay`. |
+| **Subscriptions** | Recurring billing on a daily / weekly / monthly cadence. |
+| **Settlement** | Optional fiat off-ramp via Coinflow. |
+| **Webhooks** | HMAC-SHA256 signed events with up to 10 retry attempts. |
+| **MoonPay onramp** | Card → USDC funding flow for paying customers. |
+
+## Core constraints
+
+ZettaPay V1 is intentionally narrow so the surface area stays auditable:
+
+- **Solana mainnet / devnet only.** Multi-chain is on the post-PMF roadmap.
+- **USDC only.** Other stablecoins land after PMF.
+- **Non-custodial.** USDC always moves payer → merchant directly. ZettaPay
+  never holds funds.
+- **TLS-only webhooks.** HTTP webhook URLs are rejected at registration.
+
+## Pick your path
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Register a merchant and accept your first USDC payment in five minutes.
+  </Card>
+  <Card title="API reference" icon="bolt" href="/api-reference/introduction">
+    Every endpoint, every header, every error code.
+  </Card>
+  <Card title="TypeScript SDK" icon="square-js" href="/sdk/installation">
+    `@zettapay/sdk` — the canonical client library.
+  </Card>
+</CardGroup>

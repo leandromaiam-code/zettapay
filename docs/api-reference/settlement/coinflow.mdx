@@ -1,0 +1,69 @@
+---
+title: "Coinflow settlement"
+description: "Optional fiat off-ramp: convert merchant USDC balances to bank settlement via Coinflow."
+---
+
+ZettaPay integrates with [Coinflow](https://coinflow.cash) so merchants
+that prefer to hold fiat instead of USDC can settle automatically into
+their bank account. The settlement layer is opt-in per merchant — by
+default, USDC remains in the merchant wallet untouched.
+
+## Endpoints
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/merchants/:id/settlement/coinflow` | Enable settlement and persist Coinflow credentials. |
+| `GET` | `/merchants/:id/settlement/coinflow` | Fetch current configuration. |
+| `DELETE` | `/merchants/:id/settlement/coinflow` | Disable settlement. |
+| `POST` | `/merchants/:id/settlement/coinflow/payments/:paymentId` | Manually trigger settlement of a single payment. |
+| `GET` | `/merchants/:id/settlements` | List settlement attempts. |
+
+All endpoints require `x-zettapay-api-key` and route ownership
+verification — the API key must own the merchant in the path.
+
+## Enable settlement — `POST /merchants/:id/settlement/coinflow`
+
+```bash
+curl -X POST https://api.zettapay.io/merchants/42/settlement/coinflow \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "coinflowMerchantId": "coinflow_abc123",
+    "feeBps": 30
+  }'
+```
+
+### Response — `200 OK`
+
+```json
+{
+  "merchantId": 42,
+  "coinflow": {
+    "enabled": true,
+    "coinflowMerchantId": "coinflow_abc123",
+    "configuredAt": "2026-05-10T19:42:00.000Z"
+  },
+  "feeBps": 30
+}
+```
+
+## Trigger settlement of a payment
+
+```bash
+curl -X POST https://api.zettapay.io/merchants/42/settlement/coinflow/payments/pay_01J9VV... \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+ZettaPay enqueues the payment for off-ramp via Coinflow and emits a
+`settlement.completed` webhook when the fiat leg confirms. The endpoint
+itself returns immediately with a settlement record id.
+
+## List settlements
+
+```bash
+curl https://api.zettapay.io/merchants/42/settlements \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+Returns the merchant's settlement attempts, most recent first, with
+`status` of `pending`, `completed`, or `failed`.

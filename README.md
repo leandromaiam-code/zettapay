@@ -8,6 +8,7 @@ Open-source universal payment protocol on Solana for humans and AI agents.
 | --- | --- |
 | Production (Vercel) | https://zettapay.vercel.app |
 | Custom domain | https://zettapay.fabric.4profitai.com |
+| Documentation | https://docs.zettapay.io |
 
 Quick checks:
 
@@ -103,6 +104,21 @@ npx vercel dev
 curl http://localhost:3000/healthz
 curl http://localhost:3000/simulate/test-merchant
 ```
+
+## Documentation site
+
+The public docs at [docs.zettapay.io](https://docs.zettapay.io) live in
+[`docs/`](./docs) and are rendered by [Mintlify](https://mintlify.com).
+Mintlify builds directly from the `main` branch — there is no Vercel
+build for the docs site.
+
+```bash
+npm run docs:dev      # local preview at http://localhost:3000
+npm run docs:check    # validate links and references
+```
+
+See [`docs/README.md`](./docs/README.md) for the full structure and
+Algolia DocSearch configuration.
 
 ## Docker
 

@@ -1,0 +1,40 @@
+---
+title: "Onramp webhook"
+description: "Inbound webhook from MoonPay confirming a successful fiat → USDC purchase."
+api: "POST https://api.zettapay.io/onramp/webhook"
+---
+
+This endpoint is **not** called by merchants. It is the public ingress
+that MoonPay calls when a card or bank transfer settles into a payer
+wallet. It is documented here so that operators understand the full
+trust chain.
+
+## Authentication
+
+The request is authenticated via the `moonpay-signature-v2` header in
+the format `t=<timestamp>,s=<hex>`. ZettaPay validates the HMAC using
+`MOONPAY_WEBHOOK_SECRET` with a 5-minute tolerance window.
+
+## Behavior
+
+- Only `payment.confirmed` events are acted on. Other event types are
+  acknowledged but not processed.
+- Duplicate events (same MoonPay payment id) are deduplicated.
+- On a confirmed payment, ZettaPay records the funding event and
+  emits an `onramp.completed` webhook to the relevant merchant.
+
+## Response — `200 OK`
+
+```json
+{
+  "accepted": true,
+  "ignored": false,
+  "paymentId": "pay_01J9VV...",
+  "deduplicated": false,
+  "notified": true
+}
+```
+
+The endpoint always returns `200` for valid signatures even when the
+event is intentionally ignored, to avoid MoonPay's retry queue
+exploding on event types we do not yet support.

@@ -1,0 +1,84 @@
+---
+title: "Register merchant"
+description: "Create a merchant, mint its USDC ATA, and bind it to a wallet on-chain."
+api: "POST https://api.zettapay.io/merchants/register"
+---
+
+Creates a new merchant. The protocol fee payer pays SOL rent to derive
+or create the merchant's USDC Associated Token Account (ATA), then
+submits a memo program transaction that immutably binds the merchant id
+to the wallet on-chain.
+
+## Headers
+
+| Header | Required | Description |
+| --- | --- | --- |
+| `Content-Type` | Yes | `application/json`. |
+| `Idempotency-Key` | Recommended | 8 – 128 character `[A-Za-z0-9_-]` token. See [Idempotency](/api-reference/idempotency). |
+
+This endpoint is **public** — no API key is required, since this is how
+merchants obtain one.
+
+## Body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | ≤ 120 characters. |
+| `email` | string | Yes | Valid RFC-5322 address. |
+| `walletAddress` | string | Yes | Solana base58 pubkey. |
+| `webhookUrl` | string | No | HTTPS only. HTTP URLs are rejected. |
+
+## Example request
+
+```bash
+curl -X POST https://api.zettapay.io/merchants/register \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: my-first-merchant-001" \
+  -d '{
+    "name": "Café Tatuapé",
+    "email": "owner@cafetatuape.com",
+    "walletAddress": "3xQy...phantom-pubkey",
+    "webhookUrl": "https://example.com/webhooks/zettapay"
+  }'
+```
+
+## Response — `201 Created`
+
+```json
+{
+  "merchant": {
+    "id": 42,
+    "name": "Café Tatuapé",
+    "email": "owner@cafetatuape.com",
+    "walletAddress": "3xQy...",
+    "ataAddress": "9aBc...",
+    "webhookUrl": "https://example.com/webhooks/zettapay",
+    "status": "active",
+    "createdAt": "2026-05-10T18:24:11.430Z"
+  },
+  "binding": {
+    "ataAddress": "9aBc...",
+    "ataCreated": true,
+    "txSignature": "5K2j...",
+    "memoPayload": "{\"ns\":\"zettapay:merchant_register:v1\", ... }",
+    "feePayer": "FEE...payer-pubkey",
+    "cluster": "mainnet-beta"
+  },
+  "apiKey": "zp_live_a1b2c3...",
+  "webhookSecret": "whsec_..."
+}
+```
+
+<Warning>
+`apiKey` and `webhookSecret` are returned **once**. Both values are
+hashed server-side and cannot be recovered. Store them in a secret
+manager immediately.
+</Warning>
+
+## Errors
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `validation_error` | Invalid email, wallet, name length, or non-HTTPS webhook URL. |
+| `409` | `idempotency_conflict` | Idempotency key reused with a different body. |
+| `502` | `solana_rpc_error` | Solana RPC failed during ATA creation or memo submission. |

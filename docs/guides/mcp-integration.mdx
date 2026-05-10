@@ -1,0 +1,120 @@
+---
+title: "MCP integration"
+description: "Expose ZettaPay payments to Claude, ChatGPT operators and any MCP-aware runtime."
+---
+
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is
+the open standard for exposing tools to AI agents. ZettaPay ships an
+MCP server that exposes four tools over JSON-RPC 2.0:
+
+| Tool | Purpose |
+| --- | --- |
+| `pay` | Submit a base64-encoded signed transaction. |
+| `get_merchant` | Fetch a merchant by id. |
+| `list_payments` | Paginated list of payments for the calling merchant. |
+| `create_onramp_url` | Generate a MoonPay funding URL. |
+
+## Wire it into Claude Desktop
+
+Add the following to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "zettapay": {
+      "url": "https://api.zettapay.io",
+      "headers": {
+        "x-zettapay-api-key": "zp_live_..."
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The four ZettaPay tools appear in the tool
+picker and can be called by the assistant directly.
+
+## Call shape — JSON-RPC
+
+The MCP endpoint speaks plain JSON-RPC 2.0 at the API root. A `pay`
+call looks like this:
+
+```bash
+curl -X POST https://api.zettapay.io/ \
+  -H "Content-Type: application/json" \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "tools/call",
+    "params": {
+      "name": "pay",
+      "arguments": {
+        "transaction": "<base64-encoded-signed-tx>"
+      }
+    }
+  }'
+```
+
+Response:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      { "type": "text", "text": "Payment confirmed" }
+    ],
+    "structuredContent": {
+      "payment": { "id": "pay_...", "status": "succeeded", "txSignature": "..." }
+    }
+  }
+}
+```
+
+## Tool reference
+
+### `pay`
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `transaction` | string | Base64 signed Solana transaction. |
+
+Returns the confirmed payment record.
+
+### `get_merchant`
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `merchantId` | integer | Merchant id. |
+
+Returns the merchant record.
+
+### `list_payments`
+
+| Argument | Type | Default |
+| --- | --- | --- |
+| `limit` | integer | 50 |
+| `offset` | integer | 0 |
+
+### `create_onramp_url`
+
+| Argument | Type | Description |
+| --- | --- | --- |
+| `merchantId` | integer | Merchant the payer is funding to pay. |
+| `fiatCurrency` | string | ISO-4217 code. Defaults to `USD`. |
+| `fiatAmount` | string | Optional decimal amount. |
+
+Returns a one-time MoonPay onramp URL. When the payer completes
+the flow, ZettaPay receives a webhook from MoonPay and emits an
+`onramp.completed` event to the merchant.
+
+## Security model
+
+- The MCP server enforces the same `x-zettapay-api-key` authentication
+  as the HTTP API. Agents never see the underlying API key — the host
+  application (Claude Desktop, your own runtime, etc.) holds it.
+- `pay` accepts only signed transactions, so the agent cannot move
+  funds without an upstream signature. The MCP layer does not custody
+  any keys.

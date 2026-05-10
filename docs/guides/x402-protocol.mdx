@@ -1,0 +1,101 @@
+---
+title: "x402 protocol"
+description: "How to authorize a ZettaPay payment with the x-402-payment header."
+---
+
+x402 is an open header spec for autonomous agent payments. The agent
+attaches a signed Solana transaction blob to its HTTP request. The
+upstream service — ZettaPay in our case — submits the transaction on
+behalf of the agent and returns a confirmation.
+
+## The header
+
+```
+x-402-payment: <base64-encoded Solana transaction>
+```
+
+The decoded bytes must be a serialized legacy or v0 Solana transaction,
+≤ 1232 bytes, signed by the payer.
+
+## Validation rules
+
+ZettaPay validates the header before submitting:
+
+| Check | Failure code |
+| --- | --- |
+| Header present | `missing_header` |
+| Valid base64 | `invalid_encoding` |
+| Parses as a Solana transaction | `malformed_transaction` |
+| Legacy or v0 (versioned not yet supported) | `unsupported_version` |
+| Payer signature present | `missing_signatures` |
+| Signature verifies against the embedded payer pubkey | `invalid_signature` |
+| ≤ 1232 bytes (Solana packet limit) | `malformed_transaction` |
+
+A failed check returns `400` with the corresponding `code`.
+
+## Flow
+
+<Steps>
+  <Step title="Quote">
+    The agent retrieves the merchant id, amount and recent blockhash
+    from the merchant's `/quote` endpoint (merchant-defined).
+  </Step>
+  <Step title="Build">
+    The agent constructs a `transferChecked` instruction over USDC,
+    payer → merchant ATA, and signs the transaction.
+  </Step>
+  <Step title="Encode">
+    The agent base64-encodes the serialized transaction.
+  </Step>
+  <Step title="Submit">
+    The agent calls `POST /pay` with the blob in the `x-402-payment`
+    header. No `payerWallet` field in the body is needed — the wallet
+    is derived from the embedded signature.
+  </Step>
+  <Step title="Confirm">
+    ZettaPay submits the transaction, blocks until confirmation, and
+    returns the standard payment response.
+  </Step>
+</Steps>
+
+## Minimal client snippet
+
+```ts
+import { Connection, Transaction } from "@solana/web3.js";
+import { createTransferCheckedInstruction } from "@solana/spl-token";
+
+const tx = new Transaction({
+  feePayer: payer.publicKey,
+  recentBlockhash: (await connection.getLatestBlockhash()).blockhash,
+});
+tx.add(
+  createTransferCheckedInstruction(
+    payerAta,
+    USDC_MINT,
+    merchantAta,
+    payer.publicKey,
+    BigInt(amountUsdc * 1_000_000),
+    6,
+  ),
+);
+tx.sign(payer);
+
+const blob = tx.serialize().toString("base64");
+
+await fetch("https://api.zettapay.io/pay", {
+  method: "POST",
+  headers: {
+    "x-zettapay-api-key": API_KEY,
+    "x-402-payment": blob,
+  },
+  body: JSON.stringify({ merchantId: 42, amount: amountUsdc.toFixed(2) }),
+});
+```
+
+## Notes for merchants
+
+x402 does not change merchant integration. Your `POST /pay` flow is
+identical — ZettaPay handles header validation transparently. If you
+want to gate access to a resource behind an x402 quote, return
+`402 Payment Required` with a JSON body describing the merchant id,
+amount and target ATA, and let the agent retry with the header set.

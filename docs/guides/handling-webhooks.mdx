@@ -1,0 +1,99 @@
+---
+title: "Handling webhooks"
+description: "Verify signatures, dedupe events, and acknowledge fast."
+---
+
+Webhook handlers fail in three predictable ways: missed signatures,
+duplicate processing, and slow ACKs that trigger spurious retries. This
+guide walks through a handler that gets all three right.
+
+## Express + Node.js
+
+```ts
+import express from "express";
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+const app = express();
+
+// Use the raw body so the HMAC matches byte-for-byte.
+app.post("/webhooks/zettapay",
+  express.raw({ type: "*/*" }),
+  async (req, res) => {
+    const sig = req.header("X-ZettaPay-Signature") ?? "";
+    const ts = req.header("X-ZettaPay-Timestamp") ?? "";
+    const eventId = req.header("X-ZettaPay-Event-Id") ?? "";
+    const body = req.body as Buffer;
+
+    // 1. Drift check — reject events older than 5 minutes.
+    if (Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) {
+      return res.status(400).send("timestamp_drift");
+    }
+
+    // 2. Signature check — constant-time compare.
+    const expected = `sha256=${createHmac("sha256", process.env.WEBHOOK_SECRET!)
+      .update(`${ts}.${body.toString()}`)
+      .digest("hex")}`;
+
+    const a = Buffer.from(expected);
+    const b = Buffer.from(sig);
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return res.status(400).send("signature_mismatch");
+    }
+
+    // 3. Idempotency — skip already-seen event ids.
+    if (await db.events.exists(eventId)) {
+      return res.status(200).send("duplicate");
+    }
+    await db.events.markSeen(eventId);
+
+    // 4. ACK fast — 200 within ~1s. Defer heavy work to a queue.
+    const event = JSON.parse(body.toString());
+    await jobs.enqueue("process-zettapay-event", event);
+    res.status(200).send("ok");
+  });
+```
+
+## Why the patterns matter
+
+| Pattern | Why |
+| --- | --- |
+| **Raw body** | Re-serializing JSON would change byte order and break the HMAC. |
+| **Drift check** | Stops a leaked signature from being replayed indefinitely. |
+| **Constant-time compare** | Prevents timing-based key recovery on the secret. |
+| **Idempotency** | Retries are guaranteed at-least-once, not exactly-once. Dedupe by `X-ZettaPay-Event-Id`. |
+| **ACK fast, defer work** | A handler that takes 30s to fulfill an order will see retries trigger before its own response lands. |
+
+## Use the API helper
+
+If you would rather not implement HMAC verification yourself, call
+[`POST /verify-signature`](/api-reference/webhooks/verify-signature) and
+let the protocol perform the check:
+
+```ts
+const { valid } = await fetch("https://api.zettapay.io/verify-signature", {
+  method: "POST",
+  headers: {
+    "x-zettapay-api-key": process.env.ZETTAPAY_API_KEY!,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    payload: rawBodyAsString,
+    signature: req.header("X-ZettaPay-Signature"),
+    timestamp: req.header("X-ZettaPay-Timestamp"),
+  }),
+}).then((r) => r.json());
+```
+
+## Retries you should expect
+
+ZettaPay retries on every non-2xx response:
+
+```
+1s → 5s → 25s → 2m → 10m → 1h → 6h → 24h → 24h → 24h
+```
+
+Non-retryable statuses (`400`, `401`, `403`, `404`, `410`, `422`)
+short-circuit straight to the dead-letter queue. Use them only when the
+event is malformed or definitively does not belong to your service.
+Return `5xx` (or simply time out) for transient failures so the
+delivery is retried.

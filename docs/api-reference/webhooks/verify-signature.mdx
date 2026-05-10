@@ -1,0 +1,76 @@
+---
+title: "Verify signature"
+description: "Server-side helper for verifying ZettaPay webhook HMAC signatures."
+api: "POST https://api.zettapay.io/verify-signature"
+---
+
+A convenience endpoint that verifies a webhook payload + signature on
+the server. Use this when implementing webhook verification in a
+language without an HMAC-SHA256 library, or when you want a
+single-source-of-truth check identical to ZettaPay's internal logic.
+
+## Headers
+
+| Header | Required |
+| --- | --- |
+| `x-zettapay-api-key` | Yes |
+| `Content-Type` | Yes |
+
+## Body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `payload` | string | Raw request body of the original webhook. |
+| `signature` | string | Value of `X-ZettaPay-Signature` (e.g. `sha256=…`). |
+| `timestamp` | string | Value of `X-ZettaPay-Timestamp` (ISO-8601 or epoch ms). |
+
+## Example request
+
+```bash
+curl -X POST https://api.zettapay.io/verify-signature \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "payload": "{\"event\":\"payment.succeeded\",\"data\":{...}}",
+    "signature": "sha256=ab12cd...",
+    "timestamp": "1731278400000"
+  }'
+```
+
+## Response — `200 OK`
+
+```json
+{ "valid": true }
+```
+
+On failure:
+
+```json
+{ "valid": false, "reason": "signature_mismatch" }
+```
+
+## Reason codes
+
+| `reason` | Meaning |
+| --- | --- |
+| `signature_mismatch` | HMAC did not match the expected value. |
+| `timestamp_drift` | Timestamp older than the 5-minute tolerance window. |
+| `malformed_signature` | Signature header was not in the expected `sha256=<hex>` form. |
+
+## Static info — `GET /verify-signature/info`
+
+Public, unauthenticated. Returns the canonical signing parameters so
+clients can implement verification themselves:
+
+```json
+{
+  "algorithm": "HMAC-SHA256",
+  "signatureFormat": "sha256=<hex>",
+  "signedString": "${timestamp}.${payload}",
+  "headers": {
+    "signature": "X-ZettaPay-Signature",
+    "timestamp": "X-ZettaPay-Timestamp"
+  },
+  "toleranceSec": 300
+}
+```

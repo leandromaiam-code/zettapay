@@ -1,0 +1,50 @@
+---
+title: "Health & readiness"
+description: "Liveness, readiness and Prometheus endpoints."
+---
+
+ZettaPay exposes the standard set of operational endpoints. None
+require authentication.
+
+## `GET /healthz` — liveness
+
+Returns `200` if the API process is up.
+
+```json
+{ "status": "ok", "uptimeSec": 12345 }
+```
+
+## `GET /ready` — readiness
+
+Returns `200` if the API can reach Solana RPC and the persistence
+layer.
+
+```json
+{
+  "status": "ready",
+  "checks": {
+    "rpc": "ok",
+    "db": "ok"
+  }
+}
+```
+
+A `503` indicates the service is up but degraded — typically a Solana
+RPC outage or database connectivity issue. Load balancers should treat
+`503` as unhealthy.
+
+## `GET /metrics` — Prometheus exposition
+
+Returns Prometheus text-format metrics for scrape. Counters cover
+payments, webhook deliveries, RPC error rates and rate-limit hits.
+Sample fragment:
+
+```
+# HELP zettapay_payments_total Number of payments by status
+# TYPE zettapay_payments_total counter
+zettapay_payments_total{status="succeeded"} 1284
+zettapay_payments_total{status="failed"} 7
+```
+
+A public dashboard backed by these metrics is published at
+[status.zettapay.io](https://status.zettapay.io).

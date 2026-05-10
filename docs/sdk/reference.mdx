@@ -1,0 +1,58 @@
+---
+title: "Reference"
+description: "Complete signature surface of @zettapay/sdk."
+---
+
+## `ZettaPayClient`
+
+```ts
+new ZettaPayClient(opts: ZettaPayClientOptions)
+
+interface ZettaPayClientOptions {
+  baseURL: string;
+  timeoutMs?: number;
+  headers?: Record<string, string>;
+  axiosInstance?: AxiosInstance;
+}
+```
+
+### Methods
+
+| Method | Signature | Returns |
+| --- | --- | --- |
+| `pay` | `(input: PayInput \| string \| Uint8Array)` | `PayResponse` |
+| `registerMerchant` | `(input: RegisterMerchantInput)` | `Merchant` |
+| `getMerchant` | `(id: number)` | `Merchant` |
+| `listMerchants` | `(opts?: ListMerchantsOptions)` | `ListMerchantsResponse` |
+| `updateMerchant` | `(id: number, patch: Partial<Merchant>)` | `Merchant` |
+| `deleteMerchant` | `(id: number)` | `void` |
+| `getPayment` | `(id: string)` | `PaymentRecord` |
+| `listPayments` | `(opts?: ListPaymentsOptions)` | `ListPaymentsResponse` |
+| `health` | `()` | `HealthStatus` |
+
+## On-chain helpers
+
+| Helper | Signature |
+| --- | --- |
+| `deriveMerchantBindingPda` | `(handle: string, owner: PublicKey) => { pda: PublicKey; bump: number }` |
+| `derivePaymentPda` | `(merchantBinding: PublicKey, paymentId: string) => { pda: PublicKey; bump: number }` |
+| `buildRegisterMerchantInstruction` | `(params: BuildRegisterMerchantParams) => TransactionInstruction` |
+| `buildRecordPaymentInstruction` | `(params: BuildRecordPaymentParams) => TransactionInstruction` |
+| `registerMerchantOnChain` | `(params: RegisterOnChainParams) => Promise<{ signature: string; pda: PublicKey }>` |
+| `recordPayment` | `(params: RecordPaymentParams) => Promise<{ signature: string; pda: PublicKey }>` |
+
+## Errors
+
+```ts
+class ZettaPayError extends Error {
+  code: string;
+  status: number;
+  details?: Record<string, unknown>;
+}
+```
+
+## Types
+
+The package re-exports every input and response type. Browse the
+[GitHub source](https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk/src)
+for the canonical definitions.

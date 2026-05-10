@@ -1,0 +1,81 @@
+---
+title: "Webhooks"
+description: "Stripe-grade webhook delivery: signed, retried, idempotent."
+---
+
+ZettaPay emits webhook events for every state change you care about:
+payments, subscriptions, settlements, onramp confirmations. Delivery is
+designed to match what you expect from Stripe — not the unreliable
+fire-and-forget patterns common in crypto payments.
+
+## Guarantees
+
+| Guarantee | Mechanism |
+| --- | --- |
+| **At-least-once delivery** | Persistent queue + 10-attempt retry schedule. |
+| **Authenticity** | HMAC-SHA256 signature in `X-ZettaPay-Signature`. |
+| **Replay protection** | Reject events older than 5 minutes via `X-ZettaPay-Timestamp`. |
+| **Idempotency** | `X-ZettaPay-Event-Id` is stable across retries. |
+| **Ordering** | Best-effort. Always reconcile by `created_at` in the payload. |
+
+## Headers
+
+| Header | Description |
+| --- | --- |
+| `X-ZettaPay-Signature` | `sha256=<hex>` of `${timestamp}.${rawBody}` using the merchant's webhook secret. |
+| `X-ZettaPay-Timestamp` | Epoch milliseconds. Reject if drift exceeds 5 minutes. |
+| `X-ZettaPay-Event-Id` | Stable UUID. Use as your dedup key. |
+| `X-ZettaPay-Attempt` | 1-indexed attempt number. |
+
+## Retry schedule
+
+```
+1s → 5s → 25s → 2m → 10m → 1h → 6h → 24h → 24h → 24h
+```
+
+The schedule is exponential-with-cap: ten attempts spread across roughly
+36 hours. Any 2xx response stops retries. Any non-retryable status
+(400, 401, 403, 404, 410, 422) immediately moves the event to the
+dead-letter queue, skipping further attempts.
+
+## Signature verification
+
+```ts
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+export function verifyZettaPayWebhook(req, secret: string) {
+  const sig = req.headers["x-zettapay-signature"] as string;
+  const ts = req.headers["x-zettapay-timestamp"] as string;
+  const body = req.rawBody as string;
+
+  if (!sig || !ts || !body) return false;
+  if (Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) return false;
+
+  const expected = `sha256=${createHmac("sha256", secret)
+    .update(`${ts}.${body}`)
+    .digest("hex")}`;
+
+  const a = Buffer.from(expected);
+  const b = Buffer.from(sig);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+The matching helper is also exposed by [`POST /verify-signature`](/api-reference/webhooks/verify-signature)
+if you would rather not implement HMAC verification yourself.
+
+## Event types
+
+| Event | Fired when |
+| --- | --- |
+| `payment.succeeded` | Payment confirmed on Solana. |
+| `payment.failed` | Transaction reverted or signature timed out. |
+| `subscription.created` | Subscription registered. |
+| `subscription.charged` | Recurring charge succeeded. |
+| `subscription.canceled` | Subscription manually canceled. |
+| `subscription.failed` | Recurring charge failed permanently. |
+| `settlement.completed` | Coinflow off-ramp finalized to fiat. |
+| `onramp.completed` | MoonPay funded the payer's wallet. |
+
+See [Handling webhooks](/guides/handling-webhooks) for an end-to-end
+implementation walk-through.
