@@ -476,5 +476,19 @@ function applyMigrations(db: Db): void {
       ON agent_to_agent_payments(tx_signature) WHERE tx_signature IS NOT NULL;
     CREATE INDEX IF NOT EXISTS a2a_payments_task_ref_idx
       ON agent_to_agent_payments(task_ref) WHERE task_ref IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS zettapay_api_keys (
+      id           TEXT PRIMARY KEY,
+      merchant_id  TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      public_key   TEXT NOT NULL UNIQUE,
+      secret_hash  TEXT NOT NULL UNIQUE,
+      label        TEXT,
+      created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      revoked_at   TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS zettapay_api_keys_merchant_idx
+      ON zettapay_api_keys(merchant_id);
+    CREATE INDEX IF NOT EXISTS zettapay_api_keys_active_idx
+      ON zettapay_api_keys(merchant_id) WHERE revoked_at IS NULL;
   `);
 }
