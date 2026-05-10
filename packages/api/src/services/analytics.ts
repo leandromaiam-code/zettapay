@@ -1,4 +1,5 @@
 import type { Database as Db } from "better-sqlite3";
+import { countFunnelEvents } from "../db/funnel_events.js";
 
 export interface TpvWindow {
   amount: number;
@@ -32,12 +33,43 @@ export interface ConversionStats {
   rate: number;
 }
 
+export type FunnelStepName = "view" | "checkout" | "completed";
+
+export interface FunnelStep {
+  name: FunnelStepName;
+  count: number;
+  /** Conversion rate from the *first* step (views). 1.0 when this is the
+   * first step itself. 0 when there are no views to convert from. */
+  conversionFromStart: number;
+}
+
+export interface FunnelDropOff {
+  from: FunnelStepName;
+  to: FunnelStepName;
+  /** Absolute drop between consecutive steps (count[from] - count[to]).
+   * Clamped to ≥ 0 so out-of-order tracking does not surface negative drops. */
+  dropped: number;
+  /** Drop rate vs the previous step (`dropped / count[from]`). 0 when the
+   * previous step has no events. */
+  rate: number;
+}
+
+export interface FunnelStats {
+  /** Last 30-day window — matches the rest of the analytics envelope. */
+  windowDays: number;
+  steps: FunnelStep[];
+  dropOff: FunnelDropOff[];
+  /** Overall conversion: completed / view in the same window. 0 when no views. */
+  overallRate: number;
+}
+
 export interface AnalyticsResult {
   generatedAt: string;
   tpv: TpvBreakdown;
   tpvSeries: TpvSeriesPoint[];
   mrr: number;
   conversion: ConversionStats;
+  funnel: FunnelStats;
   topCustomers: TopCustomer[];
 }
 
@@ -185,6 +217,38 @@ function conversion(
   return { total, completed, failed, pending, rate };
 }
 
+function computeFunnel(
+  db: Db,
+  merchantId: string,
+  sinceIso: string,
+  windowDays: number,
+): FunnelStats {
+  const counts = countFunnelEvents(db, merchantId, sinceIso);
+
+  const ordered: FunnelStepName[] = ["view", "checkout", "completed"];
+  const steps: FunnelStep[] = ordered.map((name) => {
+    const count = counts[name];
+    const start = counts.view;
+    const conversionFromStart =
+      name === "view" ? (start > 0 ? 1 : 0) : start > 0 ? count / start : 0;
+    return { name, count, conversionFromStart };
+  });
+
+  const dropOff: FunnelDropOff[] = [];
+  for (let i = 1; i < ordered.length; i++) {
+    const from = ordered[i - 1]!;
+    const to = ordered[i]!;
+    const fromCount = counts[from];
+    const toCount = counts[to];
+    const dropped = Math.max(0, fromCount - toCount);
+    const rate = fromCount > 0 ? dropped / fromCount : 0;
+    dropOff.push({ from, to, dropped, rate });
+  }
+
+  const overallRate = counts.view > 0 ? counts.completed / counts.view : 0;
+  return { windowDays, steps, dropOff, overallRate };
+}
+
 function activeMrr(db: Db, merchantId: string): number {
   const row = db
     .prepare<[string]>(
@@ -234,6 +298,7 @@ export function computeAnalytics(
     tpvSeries,
     mrr: activeMrr(db, merchantId),
     conversion: conversion(db, merchantId, monthStart.toISOString()),
+    funnel: computeFunnel(db, merchantId, monthStart.toISOString(), 30),
     topCustomers: topCustomers(db, merchantId, monthStart.toISOString()),
   };
 }

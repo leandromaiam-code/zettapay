@@ -210,6 +210,25 @@ function applyMigrations(db: Db): void {
     CREATE INDEX IF NOT EXISTS subscriptions_customer_wallet_idx
       ON subscriptions(customer_wallet);
 
+    CREATE TABLE IF NOT EXISTS funnel_events (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      session_id      TEXT NOT NULL,
+      event_type      TEXT NOT NULL CHECK (event_type IN ('view','checkout','completed')),
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      metadata_json   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS funnel_events_merchant_idx
+      ON funnel_events(merchant_id);
+    CREATE INDEX IF NOT EXISTS funnel_events_merchant_created_at_idx
+      ON funnel_events(merchant_id, created_at);
+    CREATE INDEX IF NOT EXISTS funnel_events_merchant_type_created_at_idx
+      ON funnel_events(merchant_id, event_type, created_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS funnel_events_session_type_uidx
+      ON funnel_events(merchant_id, session_id, event_type);
+
     CREATE TABLE IF NOT EXISTS shopify_installations (
       id              TEXT PRIMARY KEY,
       shop_domain     TEXT NOT NULL UNIQUE,
