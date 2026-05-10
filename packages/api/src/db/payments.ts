@@ -131,3 +131,41 @@ export function findPaymentBySignature(
     .get(txSignature) as PaymentRow | undefined;
   return row ? toPayment(row) : null;
 }
+
+// Velocity windows count any payment row whose status is not `failed` —
+// pending/processing/completed all consume budget. Failed transfers must NOT
+// shield an attacker from rate caps (they'd retry until success otherwise),
+// but a refused row with `status='failed'` is a known-bad and shouldn't be
+// charged against legitimate future spend.
+const VELOCITY_STATUS_FILTER = "status != 'failed'";
+
+export function countPaymentsByPayerSince(
+  db: Db,
+  merchantId: string,
+  payerWallet: string,
+  sinceIso: string,
+): number {
+  const row = db
+    .prepare<[string, string, string]>(
+      `SELECT COUNT(*) AS n FROM payments
+       WHERE merchant_id = ? AND payer_wallet = ? AND created_at >= ?
+         AND ${VELOCITY_STATUS_FILTER}`,
+    )
+    .get(merchantId, payerWallet, sinceIso) as { n: number } | undefined;
+  return row?.n ?? 0;
+}
+
+export function sumPaymentAmountByMerchantSince(
+  db: Db,
+  merchantId: string,
+  sinceIso: string,
+): number {
+  const row = db
+    .prepare<[string, string]>(
+      `SELECT COALESCE(SUM(amount_usdc), 0) AS total FROM payments
+       WHERE merchant_id = ? AND created_at >= ?
+         AND ${VELOCITY_STATUS_FILTER}`,
+    )
+    .get(merchantId, sinceIso) as { total: number } | undefined;
+  return row?.total ?? 0;
+}
