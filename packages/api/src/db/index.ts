@@ -92,6 +92,11 @@ function applyAddOnColumns(db: Db): void {
     // so existing merchants opt in deliberately. Score range 0-100.
     db.exec(
       "ALTER TABLE merchants ADD COLUMN fraud_block_threshold INTEGER NOT NULL DEFAULT 0",
+  // Z13.4: per-merchant fraud-score threshold. Score > threshold queues the
+  // attempt for manual review (rejected at runtime, surfaced in /risk/queue).
+  if (!merchantNames.has("fraud_review_threshold")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN fraud_review_threshold INTEGER NOT NULL DEFAULT 70",
     );
   }
 
@@ -203,6 +208,7 @@ function applyMigrations(db: Db): void {
       velocity_max_amount_per_hour     REAL NOT NULL DEFAULT 1000,
       deleted_at      TEXT,
       fraud_block_threshold            INTEGER NOT NULL DEFAULT 0,
+      fraud_review_threshold           INTEGER NOT NULL DEFAULT 70,
       created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
     );
 
@@ -751,5 +757,37 @@ function applyMigrations(db: Db): void {
       ON consent_records(subject_type, subject_id, purpose);
     CREATE INDEX IF NOT EXISTS consent_records_created_at_idx
       ON consent_records(created_at);
+    -- Z13.4 fraud risk scoring: every payment attempt that reaches the risk
+    -- gate (post-blacklist/beta/velocity) gets one row here. A row is written
+    -- even for allow decisions so signals can be replayed later for model
+    -- tuning. payment_id is nullable because high-risk attempts are short-
+    -- circuited BEFORE the payment row is created (same pattern as the
+    -- velocity gate), so they never get a payment id.
+    CREATE TABLE IF NOT EXISTS risk_assessments (
+      id              TEXT PRIMARY KEY,
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      payer_wallet    TEXT NOT NULL,
+      amount_usdc     REAL NOT NULL,
+      score           INTEGER NOT NULL CHECK (score >= 0 AND score <= 100),
+      threshold       INTEGER NOT NULL,
+      signals_json    TEXT NOT NULL,
+      decision        TEXT NOT NULL CHECK (decision IN ('allow','review')),
+      review_status   TEXT CHECK (review_status IN ('pending','approved','rejected')),
+      reviewed_by     TEXT,
+      reviewed_at     TEXT,
+      review_reason   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS risk_assessments_merchant_idx
+      ON risk_assessments(merchant_id);
+    CREATE INDEX IF NOT EXISTS risk_assessments_merchant_review_idx
+      ON risk_assessments(merchant_id, review_status, created_at)
+      WHERE review_status IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS risk_assessments_payment_idx
+      ON risk_assessments(payment_id) WHERE payment_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS risk_assessments_created_at_idx
+      ON risk_assessments(created_at);
   `);
 }

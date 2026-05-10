@@ -22,6 +22,7 @@ import { refundRouter } from "./routes/refund.js";
 import { privacyRouter } from "./routes/privacy.js";
 import { registryRouter } from "./routes/registry.js";
 import { payEvmRouter } from "./routes/pay_evm.js";
+import { riskRouter } from "./routes/risk.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
 import { statusPageRouter } from "./routes/status-page.js";
@@ -230,6 +231,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(amlRouter(db));
   app.use(registryRouter(db));
+  app.use(riskRouter(db));
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));
   app.use(subscriptionManageRouter(db));
