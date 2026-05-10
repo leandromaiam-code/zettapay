@@ -100,7 +100,8 @@
     "src/services/subscription_cron.ts",
     "src/db/status_page.ts",
     "src/services/status_page.ts",
-    "src/routes/status-page.ts"
+    "src/routes/status-page.ts",
+    "src/services/synthetic_monitor.ts"
   ],
   "exclude": ["dist", "node_modules", "test/**/*", "tests/**/*", "**/*.test.ts"]
 }
