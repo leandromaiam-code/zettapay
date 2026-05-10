@@ -1,8 +1,10 @@
 import express, { type Express, type Request, type Response } from "express";
+import type { IncomingMessage } from "node:http";
 import type { Database as Db } from "better-sqlite3";
 import { analyticsRouter } from "./routes/analytics.js";
 import { apiDocsRouter } from "./routes/api-docs.js";
 import { funnelRouter } from "./routes/funnel.js";
+import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
@@ -21,6 +23,7 @@ import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 import type { CreatePaymentDeps } from "./services/payments.js";
 import type { CoinflowClient } from "./coinflow/client.js";
+import type { KycProviderClient } from "./services/kyc/provider.js";
 import type {
   ShopifyAppConfig,
   ShopifyTokenExchanger,
@@ -41,6 +44,9 @@ export interface CreateAppOptions {
   shopify?: ShopifyAppConfig | null;
   /** Test seam — replaces the Shopify token exchange HTTP call. */
   shopifyTokenExchanger?: ShopifyTokenExchanger;
+  /** When provided, /merchants/:id/kyc/* + /webhooks/sumsub are wired through
+   * to a real KYC provider. Without it, those routes 503 with kyc_disabled. */
+  kyc?: KycProviderClient;
 }
 
 const startedAt = Date.now();
@@ -54,12 +60,24 @@ export function createApp(options: CreateAppOptions): Express {
     onAutoSettle,
     shopify,
     shopifyTokenExchanger,
+    kyc,
   } = options;
 
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", true);
-  app.use(express.json({ limit: "256kb" }));
+  // Capture rawBody on JSON-parsed requests so webhook receivers (e.g. Sumsub)
+  // can verify provider-side HMAC signatures over the original bytes — once
+  // express.json() runs, re-stringifying the parsed object will not reproduce
+  // the canonical payload the provider signed.
+  app.use(
+    express.json({
+      limit: "256kb",
+      verify: (req: IncomingMessage, _res, buf: Buffer): void => {
+        (req as IncomingMessage & { rawBody?: Buffer }).rawBody = Buffer.from(buf);
+      },
+    }),
+  );
 
   app.get("/", (_req: Request, res: Response) => {
     res.json({
@@ -83,6 +101,7 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(apiDocsRouter());
   app.use(merchantsRouter(db));
   app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
+  app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(registryRouter(db));
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));

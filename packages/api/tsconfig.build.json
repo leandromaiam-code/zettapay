@@ -42,7 +42,13 @@
     "src/coinflow/service.ts",
     "src/db/coinflow_settlements.ts",
     "src/db/webhook_events.ts",
+    "src/db/kyc.ts",
+    "src/db/audit_journal.ts",
     "src/lib/webhook-queue.ts",
+    "src/routes/kyc.ts",
+    "src/services/kyc/provider.ts",
+    "src/services/kyc/sumsub.ts",
+    "src/services/kyc/service.ts",
     "src/webhook.ts",
     "src/worker.ts"
   ],

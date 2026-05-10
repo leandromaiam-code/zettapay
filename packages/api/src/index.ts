@@ -81,3 +81,42 @@ export {
   type WebhookWorkerOptions,
   type WebhookWorkerHandle,
 } from "./services/webhook_worker.js";
+export { kycRouter, type KycRouterOptions } from "./routes/kyc.js";
+export type {
+  KycProviderClient,
+  AccessTokenInput,
+  AccessTokenResult,
+  CreateApplicantInput,
+  CreateApplicantResult,
+  WebhookVerifyResult,
+} from "./services/kyc/provider.js";
+export {
+  createSumsubClient,
+  verifySumsubWebhook,
+  mapSumsubReview,
+  type SumsubConfig,
+  type SumsubReviewPayload,
+  type MappedSumsubVerdict,
+} from "./services/kyc/sumsub.js";
+export {
+  startKyc,
+  recordDocument,
+  getKycStatus,
+  applyWebhookEvent,
+  type StartKycInput,
+  type StartKycResult,
+  type RecordDocumentInput,
+  type RecordDocumentResult,
+  type KycStatusView,
+} from "./services/kyc/service.js";
+export type {
+  KycProvider,
+  KycStatus,
+  KycVerification,
+  KycDocument,
+} from "./db/kyc.js";
+export {
+  appendAudit,
+  listAuditEntries,
+  type AuditJournalEntry,
+} from "./db/audit_journal.js";
