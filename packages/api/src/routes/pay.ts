@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Database as Db } from "better-sqlite3";
 import { createPayment, type CreatePaymentDeps } from "../services/payments.js";
 import { idempotency } from "../middleware/idempotency.js";
+import { agentIdentityMiddleware } from "../middleware/agent-identity.js";
 import { normalizeCurrency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import {
@@ -24,6 +25,9 @@ export function payRouter(
   router.post(
     "/pay",
     idempotency(db, { scope: "POST /pay" }),
+    // Optional — when present, the agent proof is verified and per-agent
+    // spending limits (Z20.3) are enforced on the resulting payment.
+    agentIdentityMiddleware(db, { required: false }),
     async (req, res, next) => {
       try {
         const body = (req.body ?? {}) as Record<string, unknown>;
@@ -42,6 +46,8 @@ export function payRouter(
           optionalString(body, "currency", { maxLength: 8 }),
         );
 
+        const agentIdentityId = req.agentIdentity?.identity.id ?? null;
+
         const { payment } = await createPayment(
           db,
           solana,
@@ -51,6 +57,7 @@ export function payRouter(
             payerWallet,
             metadata,
             currency,
+            agentIdentityId,
           },
           deps,
         );
@@ -66,6 +73,7 @@ export function payRouter(
             status: payment.status,
             txSignature: payment.txSignature,
             metadata: payment.metadata,
+            agentIdentityId: payment.agentIdentityId,
             createdAt: payment.createdAt,
             completedAt: payment.completedAt,
           },

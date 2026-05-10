@@ -18,6 +18,7 @@ export interface PaymentRow {
   error_message: string | null;
   metadata_json: string | null;
   currency: string | null;
+  agent_identity_id: string | null;
   created_at: string;
   completed_at: string | null;
 }
@@ -32,6 +33,7 @@ export interface Payment {
   errorMessage: string | null;
   metadata: Record<string, unknown>;
   currency: Currency;
+  agentIdentityId: string | null;
   createdAt: string;
   completedAt: string | null;
 }
@@ -43,6 +45,7 @@ export interface CreatePaymentInput {
   payerWallet: string;
   metadata: Record<string, unknown> | null;
   currency?: Currency;
+  agentIdentityId?: string | null;
 }
 
 function toPayment(row: PaymentRow): Payment {
@@ -56,6 +59,7 @@ function toPayment(row: PaymentRow): Payment {
     errorMessage: row.error_message,
     metadata: row.metadata_json ? JSON.parse(row.metadata_json) : {},
     currency: ((row.currency ?? DEFAULT_CURRENCY) as Currency),
+    agentIdentityId: row.agent_identity_id,
     createdAt: row.created_at,
     completedAt: row.completed_at,
   };
@@ -63,10 +67,10 @@ function toPayment(row: PaymentRow): Payment {
 
 export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
   const stmt = db.prepare<
-    [string, string, number, string, string | null, string]
+    [string, string, number, string, string | null, string, string | null]
   >(
-    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency)
-     VALUES (?, ?, ?, ?, 'pending', ?, ?)`,
+    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
   );
   stmt.run(
     input.id,
@@ -75,6 +79,7 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
     input.payerWallet,
     input.metadata ? JSON.stringify(input.metadata) : null,
     input.currency ?? DEFAULT_CURRENCY,
+    input.agentIdentityId ?? null,
   );
   return getPayment(db, input.id);
 }
@@ -167,5 +172,21 @@ export function sumPaymentAmountByMerchantSince(
          AND ${VELOCITY_STATUS_FILTER}`,
     )
     .get(merchantId, sinceIso) as { total: number } | undefined;
+  return row?.total ?? 0;
+}
+
+export function sumPaymentAmountByAgentSince(
+  db: Db,
+  merchantId: string,
+  agentIdentityId: string,
+  sinceIso: string,
+): number {
+  const row = db
+    .prepare<[string, string, string]>(
+      `SELECT COALESCE(SUM(amount_usdc), 0) AS total FROM payments
+       WHERE merchant_id = ? AND agent_identity_id = ? AND created_at >= ?
+         AND ${VELOCITY_STATUS_FILTER}`,
+    )
+    .get(merchantId, agentIdentityId, sinceIso) as { total: number } | undefined;
   return row?.total ?? 0;
 }

@@ -17,6 +17,7 @@ import type { SolanaService } from "./solana.js";
 import type { CoinflowClient } from "../coinflow/client.js";
 import { settlePayment } from "../coinflow/service.js";
 import { enforceVelocityLimits } from "./velocity.js";
+import { enforceAgentSpendingLimits } from "./agent-spending-limits.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -24,6 +25,9 @@ export interface CreatePaymentInput {
   payerWallet: string | null;
   metadata: Record<string, unknown> | null;
   currency?: Currency;
+  /** Verified agent identity from `agentIdentityMiddleware` (Z20.3). When set,
+   * per-agent spending limits are enforced and the payment row is tagged. */
+  agentIdentityId?: string | null;
 }
 
 export interface PaymentResult {
@@ -80,6 +84,16 @@ export async function createPayment(
         amount: input.amountUsdc,
       });
 
+      // Z20.3: per-agent spending caps + freeze gate. Same ordering rule —
+      // run BEFORE insertPayment so the new attempt doesn't count itself.
+      if (input.agentIdentityId) {
+        enforceAgentSpendingLimits(db, {
+          merchantId: merchant.id,
+          agentIdentityId: input.agentIdentityId,
+          amount: input.amountUsdc,
+        });
+      }
+
       insertPayment(db, {
         id: paymentId,
         merchantId: merchant.id,
@@ -87,6 +101,7 @@ export async function createPayment(
         payerWallet,
         metadata: input.metadata,
         currency,
+        agentIdentityId: input.agentIdentityId ?? null,
       });
 
       markPaymentProcessing(db, paymentId);
