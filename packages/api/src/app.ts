@@ -21,6 +21,7 @@ import { treasuryRouter } from "./routes/treasury.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
 import { webhooksRouter } from "./routes/webhooks.js";
+import { wixRouter } from "./routes/wix.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
@@ -151,6 +152,11 @@ export function createApp(options: CreateAppOptions): Express {
   );
   app.use(
     wordpressRouter(db, {
+      ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
+    }),
+  );
+  app.use(
+    wixRouter(db, {
       ...(shopify?.appUrl ? { publicAppUrl: shopify.appUrl } : {}),
     }),
   );
