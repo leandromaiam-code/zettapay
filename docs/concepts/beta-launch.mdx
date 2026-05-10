@@ -1,0 +1,174 @@
+---
+title: "Beta launch protocol"
+description: "Mainnet cutover gates: 10 curated merchants, $10k cap each, 24/7 monitoring for 30 days."
+---
+
+ZettaPay graduates from devnet to mainnet through a controlled beta. Beta
+mode is enforced server-side by the API and exists strictly to bound
+blast radius during the first 30 days of mainnet operation. Once the
+beta window closes the gates flip off and the protocol returns to
+standard operation.
+
+## The three gates
+
+Every `POST /pay` request runs through three independent gates before any
+on-chain transfer is built. Each gate is fail-closed and emits a
+structured error so monitoring can distinguish them.
+
+| Gate | Condition | HTTP | Error code | Detail scope |
+| --- | --- | --- | --- | --- |
+| Allowlist | Merchant id must be in the curated cohort | 403 | `forbidden` | `beta:allowlist` |
+| Window expiry | `launchAt + durationDays` must be in the future | 403 | `forbidden` | `beta:window_expired` |
+| Merchant cap | Cumulative non-failed volume since `launchAt` must stay under the per-merchant cap | 429 | `rate_limited` | `beta:merchant_cap` |
+
+Failed payments do **not** consume cap budget, mirroring the velocity
+limiter — an attacker cannot exhaust a merchant's cap with refused
+attempts.
+
+## Configuration
+
+Beta mode is configured entirely via environment variables on the API
+server. No DB migrations, no per-merchant flags.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `BETA_MODE_ENABLED` | `false` | Master switch. Disabled in dev/test. |
+| `BETA_ALLOWED_MERCHANTS` | _empty_ | Comma-separated merchant ids permitted to transact. |
+| `BETA_MAX_MERCHANTS` | `10` | Hard ceiling on the allowlist size. Config error if exceeded. |
+| `BETA_MERCHANT_CAP_USDC` | `10000` | Per-merchant cumulative non-failed volume cap (USD). |
+| `BETA_LAUNCH_AT` | _none_ | ISO-8601 timestamp when the beta window opened. Spend predating this is ignored. |
+| `BETA_DURATION_DAYS` | `30` | Length of the beta window in days. |
+
+A representative production rollout looks like:
+
+```sh
+BETA_MODE_ENABLED=true
+BETA_LAUNCH_AT=2026-05-10T00:00:00Z
+BETA_DURATION_DAYS=30
+BETA_MERCHANT_CAP_USDC=10000
+BETA_MAX_MERCHANTS=10
+BETA_ALLOWED_MERCHANTS=merch_1,merch_2,merch_3,merch_4,merch_5,merch_6,merch_7,merch_8,merch_9,merch_10
+```
+
+## 24/7 monitoring
+
+### Status endpoint
+
+`GET /beta/status` is the canonical operator endpoint. It returns the
+config, days remaining, per-merchant cap utilization, and aggregate
+totals. Always 200, even when disabled, so monitors can detect a
+misconfigured rollout.
+
+```json
+{
+  "enabled": true,
+  "launchAt": "2026-05-10T00:00:00.000Z",
+  "endsAt": "2026-06-09T00:00:00.000Z",
+  "daysRemaining": 27,
+  "expired": false,
+  "capUsd": 10000,
+  "maxMerchants": 10,
+  "allowlistSize": 10,
+  "utilization": [
+    {
+      "merchantId": "merch_1",
+      "cumulativeUsd": 4250.5,
+      "capUsd": 10000,
+      "utilizationPct": 42.5,
+      "remainingUsd": 5749.5,
+      "exhausted": false
+    }
+  ],
+  "totals": {
+    "cumulativeUsd": 4250.5,
+    "capUsd": 100000,
+    "utilizationPct": 4.3,
+    "merchantsExhausted": 0
+  }
+}
+```
+
+### Prometheus metrics
+
+The `/metrics` endpoint exposes the beta posture as Prometheus gauges
+when the API is started with a database handle. Wire these into the
+operator dashboard.
+
+| Metric | Labels | Meaning |
+| --- | --- | --- |
+| `zettapay_beta_enabled` | — | 1 when gates are enforcing, 0 when disabled. |
+| `zettapay_beta_allowlist_size` | — | Cohort size. Should equal `max_merchants` during steady state. |
+| `zettapay_beta_max_merchants` | — | Hard ceiling on the cohort. |
+| `zettapay_beta_cap_usdc` | — | Per-merchant cap. Static. |
+| `zettapay_beta_days_remaining` | — | Days left in the window. Drops to 0 once expired. |
+| `zettapay_beta_expired` | — | 1 once the window has elapsed, 0 otherwise. |
+| `zettapay_beta_merchants_exhausted` | — | Count of merchants at or above the cap. Page on > 0. |
+| `zettapay_beta_cohort_cumulative_usdc` | — | Aggregate non-failed volume across the cohort since `launchAt`. |
+| `zettapay_beta_merchant_cumulative_usdc` | `merchant_id` | Per-merchant non-failed volume since `launchAt`. |
+| `zettapay_beta_merchant_utilization_pct` | `merchant_id` | Per-merchant cap utilization (0–100). |
+
+### Recommended alert rules
+
+```yaml
+- alert: ZettaPayBetaCapApproaching
+  expr: zettapay_beta_merchant_utilization_pct > 80
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "Beta merchant {{ $labels.merchant_id }} above 80% of cap"
+
+- alert: ZettaPayBetaMerchantExhausted
+  expr: zettapay_beta_merchants_exhausted > 0
+  for: 1m
+  labels: { severity: page }
+  annotations:
+    summary: "Beta merchant has hit the $10k cap — payment refusal in flight"
+
+- alert: ZettaPayBetaDisabledUnexpectedly
+  expr: zettapay_beta_enabled == 0 and zettapay_beta_days_remaining > 0
+  for: 1m
+  labels: { severity: page }
+  annotations:
+    summary: "Beta mode flipped off while the window is still open"
+
+- alert: ZettaPayBetaWindowExpired
+  expr: zettapay_beta_expired == 1 and zettapay_beta_enabled == 1
+  for: 5m
+  labels: { severity: warning }
+  annotations:
+    summary: "Beta window elapsed — graduate to GA by setting BETA_MODE_ENABLED=false"
+```
+
+## Runbook: cap exhausted
+
+When `zettapay_beta_merchants_exhausted` pages:
+
+1. Confirm the affected merchant via `GET /beta/status` and check
+   `cumulativeUsd` against `capUsd`.
+2. Capture context (timestamp, merchant id, recent activity) into the
+   incident ticket.
+3. Decide between two recoveries:
+   - **Stay in beta**: raise the global `BETA_MERCHANT_CAP_USDC` and
+     redeploy. Affects all cohort merchants symmetrically.
+   - **Graduate the merchant**: remove the beta cohort entirely (set
+     `BETA_MODE_ENABLED=false`) and rely on per-merchant velocity
+     limits. Only do this when post-beta operational gates are met.
+4. Update the audit journal with the action taken.
+
+## Runbook: graduation to GA
+
+At `launchAt + durationDays`, or earlier if all gates have been green
+for the full window:
+
+1. Confirm `zettapay_beta_expired == 1` (or pre-emptively, that the
+   beta success criteria are met).
+2. Set `BETA_MODE_ENABLED=false` and redeploy. The gates short-circuit
+   immediately; no DB migration is required.
+3. Remove the alert rules above from the operator dashboard.
+4. Archive `BETA_ALLOWED_MERCHANTS` for postmortem reference.
+
+## Test coverage
+
+`packages/api/test/beta.test.ts` covers config parsing, the three
+enforcement gates, the monitoring snapshot, and end-to-end `POST /pay`
+behavior. It is part of the standard vitest run.

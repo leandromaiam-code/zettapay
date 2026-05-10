@@ -19,6 +19,8 @@ import type { CoinflowClient } from "../coinflow/client.js";
 import { settlePayment } from "../coinflow/service.js";
 import { enforceVelocityLimits } from "./velocity.js";
 import { enforceAgentSpendingLimits } from "./agent-spending-limits.js";
+import { enforceBetaLimits } from "../beta/enforcer.js";
+import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
 
 export interface CreatePaymentInput {
   merchantId: string;
@@ -42,6 +44,10 @@ export interface CreatePaymentDeps {
   coinflow?: CoinflowClient;
   /** Hook invoked after auto-settle completes (success or swallow). Test seam. */
   onAutoSettle?: (paymentId: string, err: Error | null) => void;
+  /** Z22.1 beta launch protocol config. Defaults to env-driven loadBetaConfig().
+   * No-op when `enabled=false`. Test seam: pass an override to exercise the gate
+   * without touching process.env. */
+  betaConfig?: BetaLaunchConfig;
 }
 
 /**
@@ -68,6 +74,8 @@ export async function createPayment(
   const paymentId = newId("pay");
   const payerWallet = input.payerWallet ?? solana.getPayerPublicKey().toBase58();
 
+  const betaConfig = deps.betaConfig ?? loadBetaConfig();
+
   return withSpan(
     "zettapay.payment.create",
     {
@@ -77,6 +85,13 @@ export async function createPayment(
       "zettapay.payment.currency": currency,
     },
     async (span) => {
+      // Z22.1 beta gate: allowlist + $10k cap + window expiry. No-op when disabled.
+      // Runs before velocity so an out-of-cohort attempt never consumes a velocity slot.
+      enforceBetaLimits(db, betaConfig, {
+        merchant,
+        amount: input.amountUsdc,
+      });
+
       // Z13.1 fraud gate: must run BEFORE insertPayment so the in-flight attempt
       // doesn't get counted in its own window.
       enforceVelocityLimits(db, {
