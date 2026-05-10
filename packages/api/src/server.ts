@@ -15,6 +15,8 @@ import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
 import { SolanaService } from "./services/solana.js";
 import type { ShopifyAppConfig } from "./services/shopify.js";
+import { createSumsubClient } from "./services/kyc/sumsub.js";
+import type { KycProviderClient } from "./services/kyc/provider.js";
 
 const port = Number.parseInt(process.env.PORT ?? "3001", 10);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -60,8 +62,16 @@ shutdown.register("tracing", () => tracing.shutdown());
 
 const coinflow = loadCoinflow();
 const shopify = loadShopify();
+const kyc = loadKyc();
 
-const app = createApp({ db, solana, shutdown, coinflow, shopify });
+const app = createApp({
+  db,
+  solana,
+  shutdown,
+  coinflow,
+  shopify,
+  ...(kyc ? { kyc } : {}),
+});
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -79,6 +89,20 @@ function loadShopify(): ShopifyAppConfig | null {
   if (!apiKey || !apiSecret || !appUrl) return null;
   const scopes = process.env.SHOPIFY_SCOPES ?? "read_orders,write_script_tags";
   return { apiKey, apiSecret, scopes, appUrl };
+}
+
+function loadKyc(): KycProviderClient | undefined {
+  const appToken = process.env.SUMSUB_APP_TOKEN;
+  const secretKey = process.env.SUMSUB_SECRET_KEY;
+  const webhookSecret = process.env.SUMSUB_WEBHOOK_SECRET;
+  if (!appToken || !secretKey || !webhookSecret) return undefined;
+  const baseUrl = process.env.SUMSUB_BASE_URL;
+  return createSumsubClient({
+    appToken,
+    secretKey,
+    webhookSecret,
+    ...(baseUrl ? { baseUrl } : {}),
+  });
 }
 
 function loadCoinflow(): CoinflowClient | undefined {

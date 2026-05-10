@@ -229,6 +229,42 @@ function applyMigrations(db: Db): void {
     CREATE UNIQUE INDEX IF NOT EXISTS funnel_events_session_type_uidx
       ON funnel_events(merchant_id, session_id, event_type);
 
+    CREATE TABLE IF NOT EXISTS kyc_verifications (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL UNIQUE REFERENCES merchants(id) ON DELETE CASCADE,
+      provider        TEXT NOT NULL CHECK (provider IN ('sumsub','persona')),
+      external_id     TEXT,
+      applicant_id    TEXT,
+      level_name      TEXT,
+      status          TEXT NOT NULL CHECK (status IN ('pending','in_review','approved','rejected','blocked')),
+      review_answer   TEXT,
+      review_reason   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS kyc_verifications_status_idx
+      ON kyc_verifications(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS kyc_verifications_external_uidx
+      ON kyc_verifications(provider, external_id) WHERE external_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS kyc_verifications_applicant_uidx
+      ON kyc_verifications(provider, applicant_id) WHERE applicant_id IS NOT NULL;
+
+    CREATE TABLE IF NOT EXISTS kyc_documents (
+      id              TEXT PRIMARY KEY,
+      verification_id TEXT NOT NULL REFERENCES kyc_verifications(id) ON DELETE CASCADE,
+      doc_type        TEXT NOT NULL,
+      doc_subtype     TEXT,
+      file_name       TEXT,
+      mime_type       TEXT,
+      size_bytes      INTEGER,
+      external_ref    TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS kyc_documents_verification_idx
+      ON kyc_documents(verification_id);
+
     CREATE TABLE IF NOT EXISTS shopify_installations (
       id              TEXT PRIMARY KEY,
       shop_domain     TEXT NOT NULL UNIQUE,
