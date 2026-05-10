@@ -133,3 +133,18 @@ curl http://localhost:3001/healthz
 
 SQLite state is persisted in the named volume `zettapay-data` (mounted at
 `/app/data` inside the container).
+
+## Security and audit
+
+Per ZettaPay constitution rules 16, 18 and 19, mainnet launch is gated
+on a third-party audit of the on-chain program (OtterSec or Halborn)
+plus a public bug bounty.
+
+The audit submission package lives in [`audit/`](./audit) and contains
+the threat model, scope, security assumptions, self-disclosed known
+issues, the parallel $50k bug bounty terms, and the engagement
+logistics for the audit firm. The on-chain program itself is in
+[`programs/zettapay/src/lib.rs`](./programs/zettapay/src/lib.rs).
+
+Vulnerability disclosures: `security@zettapay.io`. Public bounty
+program details: [`audit/BUG_BOUNTY.md`](./audit/BUG_BOUNTY.md).
