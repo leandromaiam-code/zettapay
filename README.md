@@ -1,6 +1,23 @@
 # ZettaPay
 
+[![@zettapay/sdk](https://img.shields.io/npm/v/%40zettapay%2Fsdk?label=%40zettapay%2Fsdk&color=0a1612)](https://www.npmjs.com/package/@zettapay/sdk)
+[![@zettapay/widget](https://img.shields.io/npm/v/%40zettapay%2Fwidget?label=%40zettapay%2Fwidget&color=d4a961)](https://www.npmjs.com/package/@zettapay/widget)
+[![license: MIT](https://img.shields.io/badge/license-MIT-f5e6c8.svg)](./LICENSE)
+
 Open-source universal payment protocol on Solana for humans and AI agents.
+
+## Install
+
+```bash
+npm install @zettapay/sdk
+# or, for the drop-in checkout button
+npm install @zettapay/widget
+```
+
+Both packages are published from this monorepo. A push of a `v<version>` git
+tag triggers [`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml),
+which builds and publishes `@zettapay/sdk` and `@zettapay/widget` with npm
+provenance attestations.
 
 ## Live deployment
 
