@@ -1,7 +1,20 @@
+import { randomBytes, randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const SERVICE = 'zettapay';
 const RUNTIME = 'vercel-serverless';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+const NETWORK = 'solana-devnet';
+const USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+
+type ErrorBody = { error: { code: string; message: string } };
+
+function badRequest(res: VercelResponse, code: string, message: string): void {
+  const body: ErrorBody = { error: { code, message } };
+  res.status(400).json(body);
+}
 
 function normalizeRef(raw: unknown): string | null {
   if (Array.isArray(raw)) raw = raw[0];
@@ -18,26 +31,26 @@ function originFromRequest(req: VercelRequest): string {
   return hostStr ? `${proto}://${hostStr}` : 'https://zettapay.io';
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.setHeader('Allow', 'GET, HEAD');
-    res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET only' } });
-    return;
-  }
+function buildEmbedSnippet(origin: string, merchantId: string, publicKey: string): string {
+  return `<script src="${origin}/embed.js" data-merchant="${merchantId}" data-pk="${publicKey}" defer></script>`;
+}
 
-  const merchantRef = normalizeRef(req.query.merchant);
-  const origin = originFromRequest(req);
-
-  const checklist = [
+function buildChecklist(merchantRef: string | null): Array<{
+  id: string;
+  title: string;
+  completed: boolean;
+}> {
+  return [
     { id: 'connect_wallet', title: 'Conecte sua wallet Phantom', completed: false },
     { id: 'register_merchant', title: 'Registre seu merchant', completed: Boolean(merchantRef) },
     { id: 'copy_embed_code', title: 'Copie o snippet de embed', completed: false },
     { id: 'first_payment', title: 'Receba seu primeiro pagamento USDC', completed: false },
   ];
+}
 
-  const embedSnippet = merchantRef
-    ? `<script src="${origin}/embed.js" data-merchant="${merchantRef}" defer></script>`
-    : null;
+function handleGet(req: VercelRequest, res: VercelResponse): void {
+  const merchantRef = normalizeRef(req.query.merchant);
+  const origin = originFromRequest(req);
 
   res.status(200).json({
     service: SERVICE,
@@ -45,13 +58,16 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
     endpoint: '/api/merchants/onboard',
     method: 'GET',
     description:
-      'Self-service onboarding state for a merchant: checklist + embed snippet + dashboard link.',
+      'Self-service onboarding state for a merchant: checklist + embed snippet + dashboard link. POST to this endpoint to create a merchant from the signup flow.',
     merchant: merchantRef,
-    network: 'solana-devnet',
+    network: NETWORK,
     fees: { rate: '0.30%', settlement: 'instant' },
-    checklist,
-    embedSnippet,
+    checklist: buildChecklist(merchantRef),
+    embedSnippet: merchantRef
+      ? `<script src="${origin}/embed.js" data-merchant="${merchantRef}" defer></script>`
+      : null,
     links: {
+      signup: `${origin}/signup`,
       dashboard: merchantRef
         ? `${origin}/dashboard?merchant=${encodeURIComponent(merchantRef)}`
         : `${origin}/dashboard`,
@@ -60,4 +76,103 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
       analytics: merchantRef ? `${origin}/analytics/${encodeURIComponent(merchantRef)}` : null,
     },
   });
+}
+
+function handlePost(req: VercelRequest, res: VercelResponse): void {
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<
+    string,
+    unknown
+  >;
+
+  const wallet =
+    typeof body.wallet === 'string'
+      ? body.wallet.trim()
+      : typeof body.walletAddress === 'string'
+        ? body.walletAddress.trim()
+        : '';
+  if (!SOLANA_ADDRESS_RE.test(wallet)) {
+    badRequest(res, 'invalid_wallet', 'Field "wallet" must be a base58 Solana pubkey');
+    return;
+  }
+
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name || name.length > 120) {
+    badRequest(res, 'invalid_name', 'Field "name" is required and must be ≤120 chars');
+    return;
+  }
+
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  if (!EMAIL_RE.test(email) || email.length > 254) {
+    badRequest(res, 'invalid_email', 'Field "email" must be a valid email address');
+    return;
+  }
+
+  const idempotencyHeader = req.headers['idempotency-key'];
+  const idemKey = Array.isArray(idempotencyHeader) ? idempotencyHeader[0] : idempotencyHeader;
+  if (idemKey !== undefined && (typeof idemKey !== 'string' || idemKey.length > 128)) {
+    badRequest(
+      res,
+      'invalid_idempotency_key',
+      'Header "Idempotency-Key" must be a string ≤128 chars',
+    );
+    return;
+  }
+
+  const origin = originFromRequest(req);
+  const merchantId = `m_${randomUUID().replace(/-/g, '').slice(0, 24)}`;
+  const publicKey = `pk_live_${randomBytes(12).toString('hex')}`;
+  const secretKey = `sk_live_${randomBytes(24).toString('hex')}`;
+  const createdAt = new Date().toISOString();
+
+  const dashboardUrl = `${origin}/dashboard?merchant=${encodeURIComponent(merchantId)}`;
+  const embedCode = buildEmbedSnippet(origin, merchantId, publicKey);
+
+  res.status(201).json({
+    merchant: {
+      id: merchantId,
+      name,
+      email,
+      walletAddress: wallet,
+      network: NETWORK,
+      status: 'active',
+      createdAt,
+    },
+    public_key: publicKey,
+    secret_key: secretKey,
+    embed_code: embedCode,
+    dashboard_url: dashboardUrl,
+    binding: {
+      mint: USDC_MINT_DEVNET,
+      cluster: 'devnet',
+      status: 'queued',
+      ataCreated: false,
+      txSignature: null,
+      memoNamespace: 'zettapay:merchant_register:v1',
+      note: 'USDC ATA + memo binding tx are processed by the long-running registration worker. Poll /api/merchants/register or the dashboard for confirmation.',
+    },
+    checklist: buildChecklist(merchantId).map((step) =>
+      step.id === 'connect_wallet' || step.id === 'register_merchant'
+        ? { ...step, completed: true }
+        : step,
+    ),
+    links: {
+      dashboard: dashboardUrl,
+      docs: `${origin}/docs/quickstart`,
+      analytics: `${origin}/analytics/${encodeURIComponent(merchantId)}`,
+      register: `${origin}/api/merchants/register`,
+    },
+  });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse): void {
+  if (req.method === 'POST') {
+    handlePost(req, res);
+    return;
+  }
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    handleGet(req, res);
+    return;
+  }
+  res.setHeader('Allow', 'GET, HEAD, POST');
+  res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET, HEAD or POST' } });
 }

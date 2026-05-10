@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay signup — connect your Phantom wallet, create a merchant account, and copy your embed snippet in under five minutes." />
+  <meta property="og:title" content="ZettaPay — Self-service merchant signup" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ZettaPay — Sign up</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 8s linear infinite;
+    }
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.25);
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.28;
+      pointer-events: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-mint {
+      background: linear-gradient(135deg, #14F195 0%, #0bd87f 100%);
+      color: #0A0A0A;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 24px rgba(20, 241, 149, 0.28);
+    }
+    .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(20, 241, 149, 0.45); }
+    .btn-mint:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .input {
+      width: 100%;
+      background: rgba(10, 10, 10, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      color: #FFFFFF;
+      padding: 0.875rem 1rem;
+      border-radius: 0.75rem;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: inherit;
+    }
+    .input:focus {
+      outline: none;
+      border-color: rgba(79, 107, 255, 0.6);
+      box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.12);
+    }
+    .input::placeholder { color: rgba(148, 163, 184, 0.6); }
+    .input.error { border-color: rgba(251, 113, 133, 0.7); }
+    .step-pill {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .step-pill.active { background: linear-gradient(135deg, #4F6BFF, #6B82FF); color: #fff; }
+    .step-pill.done { background: rgba(20, 241, 149, 0.18); color: #14F195; border: 1px solid rgba(20, 241, 149, 0.4); }
+    .step-pill.pending { background: rgba(79, 107, 255, 0.08); color: rgba(148, 163, 184, 0.7); border: 1px solid rgba(79, 107, 255, 0.15); }
+    .key-row {
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+    }
+    .key-value {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+      letter-spacing: -0.01em;
+    }
+    .copy-btn {
+      transition: all 0.2s ease;
+    }
+    .copy-btn.copied {
+      background: rgba(20, 241, 149, 0.2);
+      color: #14F195;
+      border-color: rgba(20, 241, 149, 0.45);
+    }
+    .modal-backdrop {
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .secret-blur {
+      filter: blur(7px);
+      transition: filter 0.25s ease;
+      cursor: pointer;
+    }
+    .secret-blur.revealed { filter: none; }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: rgba(17, 17, 17, 0.95);
+      border: 1px solid rgba(20, 241, 149, 0.4);
+      color: #FFFFFF;
+      padding: 0.75rem 1.25rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      transition: transform 0.3s ease;
+      z-index: 70;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.14;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 360px; height: 360px; top: 35%; right: 28%; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/#pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
+        <a href="/" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Back to home</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-32 pb-16 px-4 lg:px-12 relative z-10">
+    <div class="max-w-3xl mx-auto">
+      <div class="text-center mb-10 animate-fade-up">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Self-service onboarding</span>
+        <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 tracking-tight">
+          Start accepting <span class="gradient-text">USDC</span> in minutes
+        </h1>
+        <p class="text-muted text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+          Connect your Phantom wallet, name your store, and you're done. We provision your USDC ATA, mint your API keys, and hand you a one-line embed snippet.
+        </p>
+      </div>
+
+      <!-- Step indicators -->
+      <div class="flex items-center justify-center gap-3 md:gap-6 mb-10 text-xs font-mono uppercase tracking-widest text-muted">
+        <div class="flex items-center gap-2">
+          <span id="stepPill1" class="step-pill active">1</span>
+          <span class="hidden sm:inline">Connect</span>
+        </div>
+        <span class="text-muted/30">&mdash;</span>
+        <div class="flex items-center gap-2">
+          <span id="stepPill2" class="step-pill pending">2</span>
+          <span class="hidden sm:inline">Details</span>
+        </div>
+        <span class="text-muted/30">&mdash;</span>
+        <div class="flex items-center gap-2">
+          <span id="stepPill3" class="step-pill pending">3</span>
+          <span class="hidden sm:inline">Embed</span>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div class="glass rounded-3xl p-6 md:p-10 animate-fade-up" style="animation-delay: 0.05s; animation-fill-mode: both;">
+        <form id="signupForm" class="space-y-6" novalidate>
+          <!-- Wallet block -->
+          <div>
+            <label class="block text-xs font-mono uppercase tracking-widest text-mint mb-3">Step 1 &middot; Solana wallet</label>
+            <div id="walletConnected" class="hidden glass rounded-2xl p-4 flex items-center justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-xs text-muted mb-1">Connected wallet (Phantom)</div>
+                <div id="walletAddrText" class="key-value text-white truncate"></div>
+              </div>
+              <button type="button" id="walletDisconnect" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Disconnect</button>
+            </div>
+            <button type="button" id="walletBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
+              Connect Phantom Wallet
+            </button>
+            <p id="walletHint" class="text-xs text-muted mt-3 leading-relaxed">
+              Don't have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>. Your private keys never leave your wallet &mdash; we only see your public address.
+            </p>
+          </div>
+
+          <div class="border-t border-royal/10"></div>
+
+          <!-- Merchant details block -->
+          <div>
+            <label class="block text-xs font-mono uppercase tracking-widest text-mint mb-3">Step 2 &middot; Merchant details</label>
+            <div class="space-y-4">
+              <div>
+                <label for="merchantName" class="block text-xs text-muted mb-2">Store name</label>
+                <input type="text" id="merchantName" name="name" maxlength="120" placeholder="e.g. Café Tatuapé" autocomplete="organization" required class="input" />
+                <div id="errName" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              </div>
+              <div>
+                <label for="merchantEmail" class="block text-xs text-muted mb-2">Contact email</label>
+                <input type="email" id="merchantEmail" name="email" maxlength="254" placeholder="you@yourstore.com" autocomplete="email" required class="input" />
+                <div id="errEmail" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="submitError" class="hidden glass rounded-xl p-4 border border-rose/40">
+            <div class="text-sm text-rose font-mono"></div>
+          </div>
+
+          <button type="submit" id="submitBtn" class="w-full btn-mint px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-2" disabled>
+            <span id="submitLabel">Connect Phantom first</span>
+            <svg id="submitSpinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </button>
+
+          <p class="text-xs text-muted text-center leading-relaxed">
+            By creating an account you agree to settle in USDC on Solana devnet. Mainnet activation requires KYC via MoonPay onramp.
+          </p>
+        </form>
+      </div>
+
+      <!-- Trust strip -->
+      <div class="grid grid-cols-3 gap-3 md:gap-6 mt-8 text-center">
+        <div class="glass rounded-xl p-4">
+          <div class="text-xl md:text-2xl font-bold gradient-text">0.30%</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Per transaction</div>
+        </div>
+        <div class="glass rounded-xl p-4">
+          <div class="text-xl md:text-2xl font-bold gradient-text">&lt;2s</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Settlement</div>
+        </div>
+        <div class="glass rounded-xl p-4">
+          <div class="text-xl md:text-2xl font-bold gradient-text">0</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Lines of crypto code</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SUCCESS MODAL -->
+  <div id="modal" class="hidden fixed inset-0 z-[60] modal-backdrop items-center justify-center p-4 overflow-y-auto">
+    <div class="glass-strong rounded-3xl max-w-2xl w-full p-6 md:p-10 my-10 animate-fade-up">
+      <div class="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-mint/10 border border-mint/30 mb-4">
+            <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
+            <span class="text-[10px] font-mono text-mint uppercase tracking-widest">Account ready</span>
+          </div>
+          <h2 class="text-2xl md:text-3xl font-bold tracking-tight">Welcome to <span class="gradient-text">ZettaPay</span></h2>
+          <p class="text-muted text-sm mt-2 leading-relaxed">Save your secret key now. We display it once &mdash; treat it like a password.</p>
+        </div>
+        <button type="button" id="modalCloseTop" class="text-muted hover:text-white transition flex-shrink-0" aria-label="Close">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Public key -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-mono uppercase tracking-widest text-mint">Publishable key</label>
+          <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Safe to embed in frontend</span>
+        </div>
+        <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3">
+          <code id="publicKeyValue" class="key-value text-white flex-1 min-w-0">pk_live_...</code>
+          <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
+        </div>
+      </div>
+
+      <!-- Secret key -->
+      <div class="mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-mono uppercase tracking-widest text-amber">Secret key</label>
+          <span class="text-[10px] text-amber/80 font-mono uppercase tracking-widest">Show only once</span>
+        </div>
+        <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3 border-amber/30">
+          <code id="secretKeyValue" class="key-value text-white flex-1 min-w-0 secret-blur" title="Click to reveal">sk_live_...</code>
+          <button type="button" data-copy-target="secretKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
+        </div>
+        <p class="text-[11px] text-amber/80 mt-2 leading-relaxed">
+          Store this in your server-side env vars. We never display it again. If you lose it, rotate from the dashboard.
+        </p>
+      </div>
+
+      <!-- Embed code -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-mono uppercase tracking-widest text-royal-bright">Embed snippet</label>
+          <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Drop into &lt;head&gt;</span>
+        </div>
+        <div class="key-row rounded-xl p-4">
+          <pre id="embedCodeValue" class="key-value text-white whitespace-pre-wrap break-all leading-relaxed">&lt;script ...&gt;</pre>
+        </div>
+        <button type="button" id="copyEmbedBtn" class="copy-btn w-full mt-3 btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+          <span id="copyEmbedLabel">Copy embed code</span>
+        </button>
+      </div>
+
+      <!-- Footer actions -->
+      <div class="border-t border-royal/15 pt-5 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <a id="dashboardLink" href="/dashboard" class="btn-mint px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 flex-1">
+          Open dashboard
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+        </a>
+        <a href="/docs/quickstart" class="btn-ghost px-5 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+          Read quickstart
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Copied to clipboard</div>
+
+  <script>
+    (function () {
+      const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      const walletBtn = document.getElementById('walletBtn');
+      const walletConnected = document.getElementById('walletConnected');
+      const walletAddrText = document.getElementById('walletAddrText');
+      const walletDisconnect = document.getElementById('walletDisconnect');
+      const walletHint = document.getElementById('walletHint');
+      const form = document.getElementById('signupForm');
+      const submitBtn = document.getElementById('submitBtn');
+      const submitLabel = document.getElementById('submitLabel');
+      const submitSpinner = document.getElementById('submitSpinner');
+      const submitError = document.getElementById('submitError');
+      const submitErrorText = submitError.querySelector('div');
+      const inputName = document.getElementById('merchantName');
+      const inputEmail = document.getElementById('merchantEmail');
+      const errName = document.getElementById('errName');
+      const errEmail = document.getElementById('errEmail');
+      const stepPill1 = document.getElementById('stepPill1');
+      const stepPill2 = document.getElementById('stepPill2');
+      const stepPill3 = document.getElementById('stepPill3');
+      const modal = document.getElementById('modal');
+      const modalCloseTop = document.getElementById('modalCloseTop');
+      const publicKeyValue = document.getElementById('publicKeyValue');
+      const secretKeyValue = document.getElementById('secretKeyValue');
+      const embedCodeValue = document.getElementById('embedCodeValue');
+      const copyEmbedBtn = document.getElementById('copyEmbedBtn');
+      const copyEmbedLabel = document.getElementById('copyEmbedLabel');
+      const dashboardLink = document.getElementById('dashboardLink');
+      const toast = document.getElementById('toast');
+
+      let walletAddress = null;
+      let toastTimer = null;
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+      }
+
+      async function copyText(text, button) {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Copied to clipboard');
+          if (button) {
+            button.classList.add('copied');
+            const original = button.textContent;
+            button.textContent = 'Copied';
+            setTimeout(() => {
+              button.classList.remove('copied');
+              button.textContent = original;
+            }, 1600);
+          }
+          return true;
+        } catch (e) {
+          showToast('Copy failed — select text manually');
+          return false;
+        }
+      }
+
+      function setStep(step) {
+        const pills = [stepPill1, stepPill2, stepPill3];
+        pills.forEach((pill, i) => {
+          pill.classList.remove('active', 'done', 'pending');
+          if (i + 1 < step) pill.classList.add('done');
+          else if (i + 1 === step) pill.classList.add('active');
+          else pill.classList.add('pending');
+        });
+      }
+
+      function refreshSubmitState() {
+        const hasWallet = Boolean(walletAddress);
+        const hasName = inputName.value.trim().length > 0;
+        const hasEmail = inputEmail.value.trim().length > 0;
+        const ready = hasWallet && hasName && hasEmail;
+        submitBtn.disabled = !ready;
+        if (!hasWallet) {
+          submitLabel.textContent = 'Connect Phantom first';
+          setStep(1);
+        } else if (!hasName || !hasEmail) {
+          submitLabel.textContent = 'Fill out merchant details';
+          setStep(2);
+        } else {
+          submitLabel.textContent = 'Create my merchant account';
+          setStep(2);
+        }
+      }
+
+      function renderConnectedWallet(addr) {
+        walletAddress = addr;
+        walletAddrText.textContent = addr;
+        walletConnected.classList.remove('hidden');
+        walletConnected.classList.add('flex');
+        walletBtn.classList.add('hidden');
+        walletHint.textContent = 'Wallet connected. Your name and email stay private — only the wallet binding is on-chain.';
+        refreshSubmitState();
+      }
+
+      function clearConnectedWallet() {
+        walletAddress = null;
+        walletConnected.classList.add('hidden');
+        walletConnected.classList.remove('flex');
+        walletBtn.classList.remove('hidden');
+        walletHint.innerHTML = 'Don\'t have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>. Your private keys never leave your wallet &mdash; we only see your public address.';
+        refreshSubmitState();
+      }
+
+      function getPhantom() {
+        const provider = (window.phantom && window.phantom.solana) || window.solana;
+        if (provider && provider.isPhantom) return provider;
+        return null;
+      }
+
+      async function connectPhantom() {
+        const provider = getPhantom();
+        if (!provider) {
+          showToast('Phantom not detected — install the extension');
+          window.open('https://phantom.app/download', '_blank', 'noopener');
+          return;
+        }
+        try {
+          walletBtn.disabled = true;
+          const resp = await provider.connect();
+          const addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
+          if (!addr || !SOLANA_ADDRESS_RE.test(addr)) {
+            throw new Error('Phantom returned an invalid public key');
+          }
+          renderConnectedWallet(addr);
+        } catch (err) {
+          const msg = (err && err.message) ? err.message : 'Wallet connection rejected';
+          showToast(msg);
+        } finally {
+          walletBtn.disabled = false;
+        }
+      }
+
+      async function disconnectPhantom() {
+        const provider = getPhantom();
+        if (provider && typeof provider.disconnect === 'function') {
+          try { await provider.disconnect(); } catch (e) { /* ignore */ }
+        }
+        clearConnectedWallet();
+      }
+
+      function clearFieldError(input, errEl) {
+        input.classList.remove('error');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+      }
+
+      function setFieldError(input, errEl, message) {
+        input.classList.add('error');
+        errEl.classList.remove('hidden');
+        errEl.textContent = message;
+      }
+
+      function validate() {
+        let ok = true;
+        const name = inputName.value.trim();
+        const email = inputEmail.value.trim();
+        clearFieldError(inputName, errName);
+        clearFieldError(inputEmail, errEmail);
+        if (!name) {
+          setFieldError(inputName, errName, 'Store name is required');
+          ok = false;
+        } else if (name.length > 120) {
+          setFieldError(inputName, errName, 'Max 120 characters');
+          ok = false;
+        }
+        if (!EMAIL_RE.test(email) || email.length > 254) {
+          setFieldError(inputEmail, errEmail, 'Enter a valid email address');
+          ok = false;
+        }
+        if (!walletAddress) {
+          showToast('Connect Phantom before submitting');
+          ok = false;
+        }
+        return ok;
+      }
+
+      async function postOnboard(payload) {
+        const resp = await fetch('/api/merchants/onboard', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': payload.wallet + ':' + Date.now(),
+          },
+          body: JSON.stringify(payload),
+        });
+        let body = null;
+        try { body = await resp.json(); } catch (e) { body = null; }
+        if (!resp.ok) {
+          const code = body && body.error && body.error.code ? body.error.code : 'request_failed';
+          const msg = body && body.error && body.error.message ? body.error.message : 'Onboarding failed (' + resp.status + ')';
+          const err = new Error(msg);
+          err.code = code;
+          throw err;
+        }
+        return body;
+      }
+
+      function showError(message) {
+        submitError.classList.remove('hidden');
+        submitErrorText.textContent = message;
+      }
+
+      function clearError() {
+        submitError.classList.add('hidden');
+        submitErrorText.textContent = '';
+      }
+
+      function setLoading(loading) {
+        submitBtn.disabled = loading;
+        submitSpinner.classList.toggle('hidden', !loading);
+        submitLabel.textContent = loading ? 'Creating your account...' : 'Create my merchant account';
+      }
+
+      function openModal(result) {
+        publicKeyValue.textContent = result.public_key;
+        secretKeyValue.textContent = result.secret_key;
+        embedCodeValue.textContent = result.embed_code;
+        dashboardLink.setAttribute('href', result.dashboard_url || '/dashboard');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        document.body.style.overflow = 'hidden';
+        setStep(3);
+      }
+
+      function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        document.body.style.overflow = '';
+      }
+
+      // Wire events
+      walletBtn.addEventListener('click', connectPhantom);
+      walletDisconnect.addEventListener('click', disconnectPhantom);
+      inputName.addEventListener('input', () => { clearFieldError(inputName, errName); refreshSubmitState(); });
+      inputEmail.addEventListener('input', () => { clearFieldError(inputEmail, errEmail); refreshSubmitState(); });
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearError();
+        if (!validate()) return;
+        setLoading(true);
+        try {
+          const result = await postOnboard({
+            wallet: walletAddress,
+            name: inputName.value.trim(),
+            email: inputEmail.value.trim().toLowerCase(),
+          });
+          openModal(result);
+        } catch (err) {
+          showError(err && err.message ? err.message : 'Unexpected error — please retry');
+        } finally {
+          setLoading(false);
+        }
+      });
+
+      modalCloseTop.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+      // Generic copy buttons (public/secret)
+      document.querySelectorAll('[data-copy-target]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.getAttribute('data-copy-target');
+          const target = targetId ? document.getElementById(targetId) : null;
+          if (!target) return;
+          if (target === secretKeyValue) target.classList.add('revealed');
+          copyText(target.textContent || '', btn);
+        });
+      });
+
+      // Reveal-on-click for the secret key
+      secretKeyValue.addEventListener('click', () => {
+        secretKeyValue.classList.toggle('revealed');
+      });
+
+      copyEmbedBtn.addEventListener('click', async () => {
+        const ok = await copyText(embedCodeValue.textContent || '', null);
+        if (ok) {
+          copyEmbedBtn.classList.add('copied');
+          copyEmbedLabel.textContent = 'Embed code copied';
+          setTimeout(() => {
+            copyEmbedBtn.classList.remove('copied');
+            copyEmbedLabel.textContent = 'Copy embed code';
+          }, 1800);
+        }
+      });
+
+      // Auto-detect already-trusted Phantom on load
+      window.addEventListener('load', async () => {
+        const provider = getPhantom();
+        if (!provider) return;
+        try {
+          const resp = await provider.connect({ onlyIfTrusted: true });
+          const addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
+          if (addr && SOLANA_ADDRESS_RE.test(addr)) renderConnectedWallet(addr);
+        } catch (e) { /* not trusted yet — silent */ }
+      });
+
+      refreshSubmitState();
+    })();
+  </script>
+</body>
+</html>
