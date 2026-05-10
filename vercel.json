@@ -31,7 +31,8 @@
     { "source": "/mainnet", "destination": "/launch.html" },
     { "source": "/docs", "destination": "/docs/index.html" },
     { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" },
-    { "source": "/docs/embed", "destination": "/docs/embed.html" }
+    { "source": "/docs/embed", "destination": "/docs/embed.html" },
+    { "source": "/checkout/:invoice_id", "destination": "/checkout.html" }
   ],
   "headers": [
     {

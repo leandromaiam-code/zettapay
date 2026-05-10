@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay hosted checkout — pay an invoice in USDC on Solana with your Phantom wallet." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta property="og:title" content="ZettaPay — Hosted checkout" />
+  <title>ZettaPay — Pay invoice</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(12px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glow-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.18;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-mint {
+      background: linear-gradient(135deg, #14F195 0%, #0bd87f 100%);
+      color: #0A0A0A;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 24px rgba(20, 241, 149, 0.28);
+    }
+    .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(20, 241, 149, 0.45); }
+    .btn-mint:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .key-row {
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+    }
+    .key-value {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.78rem;
+      word-break: break-all;
+      letter-spacing: -0.01em;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .amount-display {
+      font-family: 'Inter', ui-sans-serif;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 0.95;
+    }
+    .check-mark {
+      stroke-dasharray: 60;
+      stroke-dashoffset: 60;
+      animation: drawCheck 0.6s ease-out 0.1s forwards;
+    }
+    @keyframes drawCheck {
+      to { stroke-dashoffset: 0; }
+    }
+    .secure-pill {
+      background: rgba(20, 241, 149, 0.08);
+      border: 1px solid rgba(20, 241, 149, 0.25);
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.12;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 360px; height: 360px; top: 35%; right: 28%; opacity: 0.07;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-3xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-mint">
+        <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
+        <span class="hidden sm:inline">Secure checkout</span>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-28 pb-12 px-4 lg:px-12 relative z-10">
+    <div class="max-w-xl mx-auto">
+
+      <!-- INVALID INVOICE -->
+      <div id="invalidCard" class="hidden glass rounded-3xl p-8 md:p-10 text-center animate-fade-up">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose/10 border border-rose/30 mb-5">
+          <svg class="w-8 h-8 text-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+        </div>
+        <h1 class="text-2xl font-bold mb-2">Invalid invoice</h1>
+        <p id="invalidReason" class="text-muted text-sm leading-relaxed mb-6">This checkout link is missing required parameters.</p>
+        <a href="/" class="btn-ghost inline-block px-5 py-2.5 rounded-full font-semibold text-sm">Back to ZettaPay</a>
+      </div>
+
+      <!-- CHECKOUT CARD -->
+      <div id="checkoutCard" class="hidden glass rounded-3xl p-6 md:p-10 animate-fade-up">
+        <div class="text-center mb-6">
+          <div class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Invoice</div>
+          <div class="key-value text-muted/80" id="invoiceIdLabel"></div>
+        </div>
+
+        <div class="key-row rounded-2xl p-6 md:p-8 mb-6 text-center">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3" id="merchantLabel">Pay merchant</div>
+          <div class="amount-display text-5xl md:text-6xl mb-2">
+            <span id="amountValue" class="gradient-text">0</span>
+            <span id="currencyValue" class="text-2xl md:text-3xl text-white/80 font-bold tracking-tight ml-2">USDC</span>
+          </div>
+          <div class="text-xs text-muted font-mono mt-3">on Solana &middot; <span class="text-mint">~2s settlement</span> &middot; 0.30% fee</div>
+        </div>
+
+        <div id="descriptionBlock" class="hidden mb-6">
+          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Description</div>
+          <p id="descriptionValue" class="text-sm text-white/90 leading-relaxed bg-deep-card/40 border border-royal/10 rounded-xl px-4 py-3"></p>
+        </div>
+
+        <!-- Step 1: connect -->
+        <div id="connectBlock">
+          <button type="button" id="walletBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
+            <svg class="w-5 h-5" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true"><path d="M64 0C28.7 0 0 28.7 0 64s28.7 64 64 64h2.7c33.7 0 61-26.7 61.3-60.5 0-1-.7-1.7-1.7-1.7H99.7c-1.7 0-3 1.3-3 3 0 14-11.3 25.3-25.3 25.3S46 82.8 46 68.8s11.3-25.3 25.3-25.3h54c1.7 0 3-1.3 3-3 0-1.7-1.3-3-3-3H64z"/></svg>
+            Connect Phantom
+          </button>
+          <p class="text-xs text-muted text-center mt-3 leading-relaxed">
+            Don't have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>. Your private keys never leave your wallet.
+          </p>
+        </div>
+
+        <!-- Step 2: pay -->
+        <div id="payBlock" class="hidden space-y-4">
+          <div class="key-row rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <div class="text-[10px] font-mono uppercase tracking-widest text-muted mb-0.5">Paying from</div>
+              <div id="payerWalletLabel" class="key-value text-white truncate"></div>
+            </div>
+            <button type="button" id="walletDisconnect" class="text-[10px] text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Switch</button>
+          </div>
+
+          <button type="button" id="payBtn" class="w-full btn-mint px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
+            <span id="payLabel">Pay now</span>
+            <svg id="paySpinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+          </button>
+
+          <div id="payError" class="hidden glass rounded-xl px-4 py-3 border border-rose/40 text-sm text-rose font-mono"></div>
+
+          <div class="flex items-center justify-center gap-2 secure-pill rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-mint mx-auto w-fit">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            <span>Audited &middot; Non-custodial</span>
+          </div>
+        </div>
+
+        <!-- Step 3: success -->
+        <div id="successBlock" class="hidden text-center py-4">
+          <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-mint/10 border-2 border-mint/40 mb-5">
+            <svg class="w-10 h-10 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="check-mark" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+          <h2 class="text-2xl font-bold mb-2">Payment authorized</h2>
+          <p class="text-muted text-sm mb-5 leading-relaxed">Redirecting you back to the merchant&hellip;</p>
+          <div class="key-row rounded-xl px-4 py-3 text-left mb-4">
+            <div class="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Tx signature</div>
+            <div id="txSigLabel" class="key-value text-mint truncate"></div>
+          </div>
+          <a id="manualRedirect" href="#" class="btn-ghost inline-block px-5 py-2.5 rounded-full font-semibold text-sm">Continue manually</a>
+        </div>
+      </div>
+
+      <!-- TRUST FOOTER -->
+      <div class="grid grid-cols-3 gap-3 mt-8 text-center">
+        <div class="glass rounded-xl p-3">
+          <div class="text-base md:text-lg font-bold gradient-text">0.30%</div>
+          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Fee</div>
+        </div>
+        <div class="glass rounded-xl p-3">
+          <div class="text-base md:text-lg font-bold gradient-text">&lt;2s</div>
+          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Settlement</div>
+        </div>
+        <div class="glass rounded-xl p-3">
+          <div class="text-base md:text-lg font-bold gradient-text">USDC</div>
+          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">on Solana</div>
+        </div>
+      </div>
+
+      <p class="text-[11px] text-muted/70 text-center mt-6 leading-relaxed">
+        Powered by <a href="/" class="text-royal-bright hover:underline">ZettaPay</a>. Solana devnet preview &middot; mainnet activation requires KYC via MoonPay.
+      </p>
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const ALLOWED_CURRENCIES = ['USDC', 'USD', 'BRL', 'EUR'];
+    const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const MERCHANT_REF_RE = /^[a-zA-Z0-9_-]{3,64}$/;
+    const INVOICE_RE = /^[a-zA-Z0-9_-]{1,64}$/;
+    const MAX_AMOUNT = 1_000_000;
+    const REDIRECT_DELAY_MS = 2200;
+
+    const els = {
+      invalidCard: document.getElementById('invalidCard'),
+      invalidReason: document.getElementById('invalidReason'),
+      checkoutCard: document.getElementById('checkoutCard'),
+      invoiceIdLabel: document.getElementById('invoiceIdLabel'),
+      merchantLabel: document.getElementById('merchantLabel'),
+      amountValue: document.getElementById('amountValue'),
+      currencyValue: document.getElementById('currencyValue'),
+      descriptionBlock: document.getElementById('descriptionBlock'),
+      descriptionValue: document.getElementById('descriptionValue'),
+      connectBlock: document.getElementById('connectBlock'),
+      walletBtn: document.getElementById('walletBtn'),
+      payBlock: document.getElementById('payBlock'),
+      payerWalletLabel: document.getElementById('payerWalletLabel'),
+      walletDisconnect: document.getElementById('walletDisconnect'),
+      payBtn: document.getElementById('payBtn'),
+      payLabel: document.getElementById('payLabel'),
+      paySpinner: document.getElementById('paySpinner'),
+      payError: document.getElementById('payError'),
+      successBlock: document.getElementById('successBlock'),
+      txSigLabel: document.getElementById('txSigLabel'),
+      manualRedirect: document.getElementById('manualRedirect'),
+    };
+
+    function showInvalid(reason) {
+      els.invalidReason.textContent = reason;
+      els.invalidCard.classList.remove('hidden');
+      els.checkoutCard.classList.add('hidden');
+    }
+
+    function trimToLen(s, n) {
+      if (typeof s !== 'string') return '';
+      const t = s.trim();
+      return t.length > n ? t.slice(0, n) : t;
+    }
+
+    function parseInvoice() {
+      const path = window.location.pathname || '';
+      const m = path.match(/\/checkout\/([^/?#]+)/);
+      const invoiceId = m ? decodeURIComponent(m[1]) : '';
+      if (!INVOICE_RE.test(invoiceId)) {
+        return { error: 'Missing or invalid invoice id in URL.' };
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const merchant = trimToLen(params.get('merchant') || '', 64);
+      if (!MERCHANT_REF_RE.test(merchant)) {
+        return { error: 'Missing or invalid `merchant` in URL.' };
+      }
+
+      const amountRaw = params.get('amount');
+      const amount = amountRaw === null ? NaN : Number(amountRaw);
+      if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
+        return { error: 'Missing or invalid `amount` in URL.' };
+      }
+
+      let currency = trimToLen((params.get('currency') || 'USDC').toUpperCase(), 8);
+      if (!ALLOWED_CURRENCIES.includes(currency)) currency = 'USDC';
+
+      const description = trimToLen(params.get('description') || '', 280);
+
+      const successUrl = trimToLen(params.get('success_url') || '', 2048);
+      let validatedSuccessUrl = '';
+      if (successUrl) {
+        try {
+          const u = new URL(successUrl);
+          if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+            return { error: 'success_url must be http(s).' };
+          }
+          if (u.protocol === 'http:' && u.hostname !== 'localhost' && u.hostname !== '127.0.0.1') {
+            return { error: 'success_url must use https.' };
+          }
+          validatedSuccessUrl = u.toString();
+        } catch {
+          return { error: 'success_url is not a valid URL.' };
+        }
+      }
+
+      return {
+        invoice: { invoiceId, merchant, amount, currency, description, successUrl: validatedSuccessUrl },
+      };
+    }
+
+    function formatAmount(n) {
+      if (Number.isInteger(n)) return String(n);
+      return Number(n).toFixed(2).replace(/\.?0+$/, '');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] || c;
+      });
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length <= 12) return addr || '';
+      return addr.slice(0, 6) + '…' + addr.slice(-6);
+    }
+
+    const BS58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+    function base58Encode(bytes) {
+      if (!bytes || bytes.length === 0) return '';
+      const digits = [0];
+      for (let i = 0; i < bytes.length; i++) {
+        let carry = bytes[i] || 0;
+        for (let j = 0; j < digits.length; j++) {
+          carry += (digits[j] || 0) << 8;
+          digits[j] = carry % 58;
+          carry = (carry / 58) | 0;
+        }
+        while (carry > 0) {
+          digits.push(carry % 58);
+          carry = (carry / 58) | 0;
+        }
+      }
+      let leadingZeros = 0;
+      for (let i = 0; i < bytes.length; i++) {
+        if (bytes[i] !== 0) break;
+        leadingZeros++;
+      }
+      let out = '';
+      for (let i = 0; i < leadingZeros; i++) out += '1';
+      for (let i = digits.length - 1; i >= 0; i--) out += BS58_ALPHABET[digits[i] || 0];
+      return out;
+    }
+
+    function getPhantomProvider() {
+      const provider = (window.phantom && window.phantom.solana) || window.solana;
+      if (provider && provider.isPhantom) return provider;
+      return null;
+    }
+
+    let invoice = null;
+    let payerPubkey = null;
+
+    function renderInvoice(inv) {
+      els.invoiceIdLabel.textContent = '#' + inv.invoiceId;
+      els.merchantLabel.textContent = 'Pay @' + inv.merchant;
+      els.amountValue.textContent = formatAmount(inv.amount);
+      els.currencyValue.textContent = inv.currency;
+      if (inv.description) {
+        els.descriptionValue.textContent = inv.description;
+        els.descriptionBlock.classList.remove('hidden');
+      }
+      document.title = 'Pay ' + formatAmount(inv.amount) + ' ' + inv.currency + ' to @' + inv.merchant;
+      els.checkoutCard.classList.remove('hidden');
+    }
+
+    async function connectPhantom() {
+      const provider = getPhantomProvider();
+      if (!provider) {
+        window.open('https://phantom.app/download', '_blank', 'noopener');
+        return;
+      }
+      els.walletBtn.disabled = true;
+      try {
+        const resp = await provider.connect();
+        payerPubkey = resp.publicKey.toString();
+        if (!SOLANA_ADDRESS_RE.test(payerPubkey)) {
+          throw new Error('Phantom returned an unexpected wallet address');
+        }
+        els.payerWalletLabel.textContent = shortAddr(payerPubkey);
+        els.payerWalletLabel.title = payerPubkey;
+        els.connectBlock.classList.add('hidden');
+        els.payBlock.classList.remove('hidden');
+      } catch (err) {
+        els.walletBtn.disabled = false;
+        const msg = (err && err.message) ? err.message : 'Wallet connection rejected';
+        showPayError(msg);
+      }
+    }
+
+    async function disconnectPhantom() {
+      const provider = getPhantomProvider();
+      if (provider && typeof provider.disconnect === 'function') {
+        try { await provider.disconnect(); } catch (e) { /* ignore */ }
+      }
+      payerPubkey = null;
+      els.payBlock.classList.add('hidden');
+      els.connectBlock.classList.remove('hidden');
+      els.walletBtn.disabled = false;
+      hidePayError();
+    }
+
+    function showPayError(message) {
+      els.payError.textContent = message;
+      els.payError.classList.remove('hidden');
+    }
+    function hidePayError() {
+      els.payError.textContent = '';
+      els.payError.classList.add('hidden');
+    }
+
+    function setPayBusy(busy, label) {
+      els.payBtn.disabled = busy;
+      els.payLabel.textContent = label || (busy ? 'Authorizing…' : 'Pay now');
+      els.paySpinner.classList.toggle('hidden', !busy);
+    }
+
+    async function pay() {
+      if (!invoice || !payerPubkey) return;
+      hidePayError();
+      setPayBusy(true, 'Authorizing in Phantom…');
+
+      const provider = getPhantomProvider();
+      if (!provider) {
+        setPayBusy(false);
+        showPayError('Phantom wallet not detected.');
+        return;
+      }
+
+      let authorizationSignature = '';
+      try {
+        const authPayload = JSON.stringify({
+          ns: 'zettapay:hosted_checkout:v1',
+          invoiceId: invoice.invoiceId,
+          merchant: invoice.merchant,
+          amount: invoice.amount,
+          currency: invoice.currency,
+          payer: payerPubkey,
+          ts: Date.now(),
+        });
+        const encoded = new TextEncoder().encode(authPayload);
+        const signed = await provider.signMessage(encoded, 'utf8');
+        const sigBytes = signed && signed.signature ? signed.signature : signed;
+        if (sigBytes && sigBytes.length) {
+          authorizationSignature = base58Encode(sigBytes);
+        }
+      } catch (err) {
+        setPayBusy(false);
+        const msg = (err && err.message) ? err.message : 'Authorization rejected in wallet';
+        showPayError(msg);
+        return;
+      }
+
+      setPayBusy(true, 'Submitting payment…');
+
+      let paymentId = '';
+      let txSignature = authorizationSignature;
+      try {
+        const idemKey = 'inv_' + invoice.invoiceId + '_' + payerPubkey.slice(0, 8);
+        const resp = await fetch('/api/pay', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idemKey,
+          },
+          body: JSON.stringify({
+            merchantId: invoice.merchant,
+            amount: invoice.amount,
+            currency: invoice.currency,
+            payerWallet: payerPubkey,
+            metadata: {
+              source: 'hosted_checkout',
+              invoiceId: invoice.invoiceId,
+              description: invoice.description || undefined,
+              authorizationSignature: authorizationSignature || undefined,
+            },
+          }),
+        });
+        const payload = await resp.json().catch(function () { return null; });
+        if (!resp.ok) {
+          const code = payload && payload.error && payload.error.code ? payload.error.code : 'pay_failed';
+          const msg = payload && payload.error && payload.error.message ? payload.error.message : 'Payment failed (' + resp.status + ')';
+          throw new Error('[' + code + '] ' + msg);
+        }
+        paymentId = (payload && payload.payment && payload.payment.id) || '';
+        if (payload && payload.txSignature) txSignature = payload.txSignature;
+      } catch (err) {
+        setPayBusy(false);
+        const msg = (err && err.message) ? err.message : 'Payment failed';
+        showPayError(msg);
+        return;
+      }
+
+      if (!txSignature) {
+        txSignature = authorizationSignature;
+      }
+
+      onPaymentSuccess({ paymentId: paymentId, txSignature: txSignature });
+    }
+
+    function buildRedirectUrl(base, params) {
+      const u = new URL(base);
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') {
+          u.searchParams.set(k, String(params[k]));
+        }
+      });
+      return u.toString();
+    }
+
+    function onPaymentSuccess(result) {
+      els.payBlock.classList.add('hidden');
+      els.successBlock.classList.remove('hidden');
+      els.txSigLabel.textContent = result.txSignature || result.paymentId || '—';
+
+      if (invoice.successUrl) {
+        const target = buildRedirectUrl(invoice.successUrl, {
+          invoice_id: invoice.invoiceId,
+          payment_id: result.paymentId,
+          tx_signature: result.txSignature,
+          payer: payerPubkey,
+          status: 'completed',
+        });
+        els.manualRedirect.href = target;
+        els.manualRedirect.textContent = 'Continue to merchant';
+        setTimeout(function () { window.location.href = target; }, REDIRECT_DELAY_MS);
+      } else {
+        els.manualRedirect.href = '/';
+        els.manualRedirect.textContent = 'Back to ZettaPay';
+      }
+    }
+
+    // Boot
+    (function init() {
+      const parsed = parseInvoice();
+      if (parsed.error) {
+        showInvalid(parsed.error);
+        return;
+      }
+      invoice = parsed.invoice;
+      renderInvoice(invoice);
+
+      els.walletBtn.addEventListener('click', function () { connectPhantom().catch(function () {}); });
+      els.walletDisconnect.addEventListener('click', function () { disconnectPhantom().catch(function () {}); });
+      els.payBtn.addEventListener('click', function () { pay().catch(function () {}); });
+
+      // Auto-connect if Phantom previously trusted this origin.
+      window.addEventListener('load', async function () {
+        const provider = getPhantomProvider();
+        if (!provider) return;
+        try {
+          const resp = await provider.connect({ onlyIfTrusted: true });
+          payerPubkey = resp.publicKey.toString();
+          if (SOLANA_ADDRESS_RE.test(payerPubkey)) {
+            els.payerWalletLabel.textContent = shortAddr(payerPubkey);
+            els.payerWalletLabel.title = payerPubkey;
+            els.connectBlock.classList.add('hidden');
+            els.payBlock.classList.remove('hidden');
+          }
+        } catch (e) { /* user not trusted yet — fine */ }
+      });
+    })();
+  </script>
+</body>
+</html>
