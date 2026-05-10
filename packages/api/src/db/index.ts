@@ -68,6 +68,16 @@ function applyAddOnColumns(db: Db): void {
       "ALTER TABLE payments ADD COLUMN currency TEXT NOT NULL DEFAULT 'USDC'",
     );
   }
+  if (!paymentNames.has("agent_identity_id")) {
+    // Z20.3: tag payments with the verified agent that initiated them so
+    // per-agent spending caps can roll up by (merchant_id, agent_identity_id).
+    db.exec(
+      "ALTER TABLE payments ADD COLUMN agent_identity_id TEXT REFERENCES agent_identities(id) ON DELETE SET NULL",
+    );
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS payments_merchant_agent_created_at_idx ON payments(merchant_id, agent_identity_id, created_at)",
+    );
+  }
 }
 
 export function closeDatabase(): void {
@@ -342,5 +352,21 @@ function applyMigrations(db: Db): void {
 
     CREATE INDEX IF NOT EXISTS agent_identity_nonces_used_at_idx
       ON agent_identity_nonces(used_at);
+
+    CREATE TABLE IF NOT EXISTS agent_spending_limits (
+      id                 TEXT PRIMARY KEY,
+      merchant_id        TEXT NOT NULL REFERENCES merchants(id) ON DELETE CASCADE,
+      agent_identity_id  TEXT NOT NULL REFERENCES agent_identities(id) ON DELETE CASCADE,
+      max_per_request    REAL,
+      daily_cap          REAL,
+      frozen             INTEGER NOT NULL DEFAULT 0,
+      created_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS agent_spending_limits_merchant_agent_uidx
+      ON agent_spending_limits(merchant_id, agent_identity_id);
+    CREATE INDEX IF NOT EXISTS agent_spending_limits_merchant_idx
+      ON agent_spending_limits(merchant_id);
   `);
 }
