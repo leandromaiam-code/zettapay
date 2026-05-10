@@ -28,7 +28,8 @@
     { "source": "/dashboard", "destination": "/dashboard.html" },
     { "source": "/dashboard/:merchant", "destination": "/dashboard/index.html" },
     { "source": "/docs", "destination": "/docs/index.html" },
-    { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" }
+    { "source": "/docs/quickstart", "destination": "/docs/quickstart.html" },
+    { "source": "/docs/embed", "destination": "/docs/embed.html" }
   ],
   "headers": [
     {
