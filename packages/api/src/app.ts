@@ -25,6 +25,7 @@ import { wixRouter } from "./routes/wix.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
+import { securityHeaders } from "./middleware/security-headers.js";
 import { HttpError } from "./lib/errors.js";
 import { isSentryEnabled, Sentry } from "./lib/sentry.js";
 import type { GracefulShutdown } from "./lib/shutdown.js";
@@ -87,6 +88,7 @@ export function createApp(options: CreateAppOptions): Express {
   const app = express();
   app.disable("x-powered-by");
   app.set("trust proxy", true);
+  app.use(securityHeaders());
   // Capture rawBody on JSON-parsed requests so webhook receivers (e.g. Sumsub)
   // can verify provider-side HMAC signatures over the original bytes — once
   // express.json() runs, re-stringifying the parsed object will not reproduce
