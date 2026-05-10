@@ -9,6 +9,7 @@ import {
   upsertAgentSpendingLimit,
   type AgentSpendingLimit,
 } from "../db/agent_spending_limits.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { HttpError } from "../lib/errors.js";
 
 // Hard ceilings: a misconfigured value of `1e18` would silently disable the
@@ -120,6 +121,14 @@ export function agentSpendingLimitsRouter(db: Db): Router {
           maxPerRequest,
           dailyCap,
         });
+        appendAudit(db, {
+          actor: `merchant:${merchantId}`,
+          event: "agent_spending_limit.upserted",
+          entityType: "agent_identity",
+          entityId: agentIdentityId,
+          reason: "merchant configured per-agent spending caps",
+          payload: { merchantId, maxPerRequest, dailyCap },
+        });
         res.json({ limit: publicView(limit) });
       } catch (err) {
         next(err);
@@ -144,6 +153,14 @@ export function agentSpendingLimitsRouter(db: Db): Router {
             `Failed to freeze agent ${agentIdentityId}`,
           );
         }
+        appendAudit(db, {
+          actor: `merchant:${merchantId}`,
+          event: "agent_identity.frozen",
+          entityType: "agent_identity",
+          entityId: agentIdentityId,
+          reason: "merchant pressed freeze button — payments suspended",
+          payload: { merchantId },
+        });
         res.json({ limit: publicView(limit) });
       } catch (err) {
         next(err);
@@ -168,6 +185,14 @@ export function agentSpendingLimitsRouter(db: Db): Router {
           res.json({ limit: null });
           return;
         }
+        appendAudit(db, {
+          actor: `merchant:${merchantId}`,
+          event: "agent_identity.unfrozen",
+          entityType: "agent_identity",
+          entityId: agentIdentityId,
+          reason: "merchant unfroze agent — payments resumed",
+          payload: { merchantId },
+        });
         res.json({ limit: publicView(limit) });
       } catch (err) {
         next(err);

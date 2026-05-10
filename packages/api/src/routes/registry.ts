@@ -10,6 +10,7 @@ import {
   updateRegistryTool,
   type RegistryToolStatus,
 } from "../db/registry_tools.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
 import { idempotency } from "../middleware/idempotency.js";
@@ -188,6 +189,19 @@ export function registryRouter(db: Db): Router {
             optionalString(body, "status", { maxLength: 16 }),
           ),
         });
+        appendAudit(db, {
+          actor: `merchant:${merchant.id}`,
+          event: "registry.tool.created",
+          entityType: "registry_tool",
+          entityId: tool.id,
+          reason: `merchant published MCP tool "${tool.slug}" (status=${tool.status})`,
+          payload: {
+            slug: tool.slug,
+            category: tool.category,
+            priceUsdc: tool.priceUsdc,
+            status: tool.status,
+          },
+        });
         res.status(201).json({ tool });
       } catch (err) {
         next(err);
@@ -313,6 +327,27 @@ export function registryRouter(db: Db): Router {
       }
 
       const tool = updateRegistryTool(db, existing.id, patch);
+      if (!tool) {
+        throw HttpError.notFound(`Tool "${req.params.slug}" not found`);
+      }
+      const fields = Object.keys(patch);
+      appendAudit(db, {
+        actor: `merchant:${merchant.id}`,
+        event:
+          patch.status && patch.status !== existing.status
+            ? `registry.tool.status.${patch.status}`
+            : "registry.tool.updated",
+        entityType: "registry_tool",
+        entityId: tool.id,
+        reason: `merchant patched ${fields.join(", ")}`,
+        payload: {
+          slug: tool.slug,
+          fields,
+          ...(patch.status
+            ? { fromStatus: existing.status, toStatus: patch.status }
+            : {}),
+        },
+      });
       res.json({ tool });
     } catch (err) {
       next(err);
@@ -327,6 +362,14 @@ export function registryRouter(db: Db): Router {
         throw HttpError.notFound(`Tool "${req.params.slug}" not found`);
       }
       deleteRegistryTool(db, existing.id);
+      appendAudit(db, {
+        actor: `merchant:${merchant.id}`,
+        event: "registry.tool.deleted",
+        entityType: "registry_tool",
+        entityId: existing.id,
+        reason: `merchant deleted MCP tool "${existing.slug}"`,
+        payload: { slug: existing.slug, status: existing.status },
+      });
       res.status(204).end();
     } catch (err) {
       next(err);

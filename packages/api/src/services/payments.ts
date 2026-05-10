@@ -9,6 +9,7 @@ import {
   getPayment,
   type Payment,
 } from "../db/payments.js";
+import { appendAudit } from "../db/audit_journal.js";
 import { DEFAULT_CURRENCY, type Currency } from "../lib/currencies.js";
 import { HttpError } from "../lib/errors.js";
 import { newId } from "../lib/id.js";
@@ -138,6 +139,18 @@ export async function createPayment(
           err instanceof Error ? err.message : "unknown transfer error";
         markPaymentFailed(db, paymentId, message);
         span.setAttribute("zettapay.payment.status", "failed");
+        appendAudit(db, {
+          actor: `payer:${payerWallet}`,
+          event: "payment.failed",
+          entityType: "payment",
+          entityId: paymentId,
+          reason: message,
+          payload: {
+            merchantId: merchant.id,
+            amountUsdc: input.amountUsdc,
+            currency,
+          },
+        });
         if (err instanceof HttpError) throw err;
         throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
       }
