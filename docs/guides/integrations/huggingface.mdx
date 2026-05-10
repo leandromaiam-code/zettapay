@@ -1,0 +1,117 @@
+---
+title: "Hugging Face"
+description: "Pay through ZettaPay from Hugging Face Inference, smolagents and transformers Agents."
+---
+
+Open-weights models served from Hugging Face Inference Endpoints, the
+Inference API, or local `transformers` agent runtimes do not have a
+single standardized tool-calling shape. ZettaPay sidesteps the problem
+by exposing the **x402 HTTP path**: any agent runtime that can issue an
+HTTP request can pay.
+
+## smolagents
+
+[`smolagents`](https://github.com/huggingface/smolagents) is the
+canonical lightweight agent framework from Hugging Face. Register a
+ZettaPay tool with a few lines:
+
+```python
+from smolagents import Tool, CodeAgent, HfApiModel
+import requests
+
+class ZettaPayPay(Tool):
+    name = "zettapay_pay"
+    description = "Submit a signed Solana USDC transaction via ZettaPay."
+    inputs = {
+        "transaction": {
+            "type": "string",
+            "description": "Base64-encoded signed Solana transaction.",
+        }
+    }
+    output_type = "string"
+
+    def forward(self, transaction: str) -> str:
+        response = requests.post(
+            "https://api.zettapay.io/pay",
+            headers={
+                "x-zettapay-api-key": os.environ["ZETTAPAY_API_KEY"],
+                "x-402-payment": transaction,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        return response.json()["payment"]["txSignature"]
+
+agent = CodeAgent(
+    tools=[ZettaPayPay()],
+    model=HfApiModel("meta-llama/Llama-3.3-70B-Instruct"),
+)
+agent.run("Pay merchant 42 for the dataset bundle.")
+```
+
+The agent runtime — whether it is a Hugging Face-hosted model or a
+local `transformers` model — only ever sees the tool schema. The
+merchant API key lives in the host process.
+
+## transformers Agents 2.0
+
+Same pattern with the legacy `transformers.agents` runtime:
+
+```python
+from transformers import HfAgent
+
+agent = HfAgent("https://api-inference.huggingface.co/models/bigcode/starcoder")
+agent.toolbox.add_tool(ZettaPayPay())
+```
+
+## Inference Endpoints — direct HTTP
+
+For a model served behind a Hugging Face Inference Endpoint that does
+not run a tool loop, treat ZettaPay as a downstream HTTP call from your
+own application. The endpoint streams generated text; your app
+interprets a `<tool_call>` block and forwards it to ZettaPay:
+
+```python
+import requests, os
+
+def settle(transaction_b64: str) -> dict:
+    return requests.post(
+        "https://api.zettapay.io/pay",
+        headers={
+            "x-zettapay-api-key": os.environ["ZETTAPAY_API_KEY"],
+            "x-402-payment": transaction_b64,
+        },
+        timeout=30,
+    ).json()
+```
+
+This is the same call shape used by the [x402 protocol
+guide](/guides/x402-protocol) — there is nothing Hugging Face-specific
+on the wire.
+
+## Settlement & confirmation
+
+`POST /pay` blocks until the transaction is confirmed on Solana
+(typically 1–2 seconds). The response includes the transaction
+signature, the resulting payment record, and the merchant id, so the
+agent can return a structured tool result on the next turn.
+
+```json
+{
+  "payment": {
+    "id": "pay_01HXYZ...",
+    "merchantId": "merch_42",
+    "amount": "5.00",
+    "currency": "USDC",
+    "status": "succeeded",
+    "txSignature": "5p9...",
+    "settledAt": "2026-05-10T18:24:11.412Z"
+  }
+}
+```
+
+## Reference
+
+- [x402 protocol](/guides/x402-protocol) — header spec and validation rules
+- [Native AI integrations overview](/concepts/native-integrations)
+- [SDK installation](/sdk/installation) — for the host application layer

@@ -1,0 +1,120 @@
+---
+title: "OpenAI"
+description: "Use ZettaPay with GPT-4, GPT-4o, GPT-5 via function calling or the Assistants API."
+---
+
+OpenAI models do not implement MCP directly, but they expose
+**function calling**, which is functionally equivalent: the model
+returns a structured tool call, your application executes it, and you
+feed the result back into the conversation. ZettaPay slots into that
+loop with a single tool definition.
+
+## Function calling — Chat Completions
+
+Define the `zettapay_pay` tool once and pass it on every request:
+
+```ts
+import OpenAI from "openai";
+import { ZettaPay } from "@zettapay/sdk";
+
+const openai = new OpenAI();
+const zettapay = new ZettaPay({ apiKey: process.env.ZETTAPAY_API_KEY! });
+
+const tools = [
+  {
+    type: "function" as const,
+    function: {
+      name: "zettapay_pay",
+      description:
+        "Submit a signed Solana USDC transaction. Use when a 402 Payment Required quote needs settling.",
+      parameters: {
+        type: "object",
+        properties: {
+          transaction: {
+            type: "string",
+            description: "Base64-encoded signed Solana transaction.",
+          },
+        },
+        required: ["transaction"],
+      },
+    },
+  },
+];
+
+const completion = await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{ role: "user", content: "Pay merchant 42 for the dataset." }],
+  tools,
+});
+
+const call = completion.choices[0].message.tool_calls?.[0];
+if (call?.function.name === "zettapay_pay") {
+  const args = JSON.parse(call.function.arguments) as { transaction: string };
+  const payment = await zettapay.payments.create({ transaction: args.transaction });
+  // Return the payment as a `tool` role message on the next turn.
+}
+```
+
+The merchant API key lives in your backend. The model never sees it,
+which means a prompt-injection attack cannot exfiltrate it.
+
+## Assistants API v2
+
+For long-running agents that retain state across turns, register the
+same tool against an Assistant once and forget about it:
+
+```ts
+const assistant = await openai.beta.assistants.create({
+  name: "Payments operator",
+  model: "gpt-4o",
+  tools: [
+    {
+      type: "function",
+      function: {
+        name: "zettapay_pay",
+        description: "Settle a ZettaPay quote.",
+        parameters: {
+          type: "object",
+          properties: { transaction: { type: "string" } },
+          required: ["transaction"],
+        },
+      },
+    },
+  ],
+});
+```
+
+When a run produces a `requires_action` event with this tool call,
+forward the `transaction` argument to ZettaPay and submit the result
+back via `submitToolOutputs`. The pattern is identical to any other
+tool the Assistants runtime handles.
+
+## Operator / Computer Use
+
+Operator agents that drive a browser will encounter merchant pages
+that respond with `402 Payment Required` and an `x-402-payment-quote`
+header. Wire ZettaPay as a function tool exactly as above; the agent
+will call it whenever it sees a quote, with no separate browser
+plumbing required.
+
+## x402 — direct HTTP path
+
+If you would rather skip function calling and let the model call HTTP
+directly (via a `fetch`-style tool), the agent can attach the
+`x-402-payment` header itself:
+
+```http
+POST /pay HTTP/1.1
+Host: api.zettapay.io
+x-zettapay-api-key: zp_live_...
+x-402-payment: <base64 signed tx>
+```
+
+See the [x402 protocol guide](/guides/x402-protocol) for the full
+header spec.
+
+## Reference
+
+- [x402 protocol](/guides/x402-protocol)
+- [SDK reference](/sdk/reference)
+- [Native AI integrations overview](/concepts/native-integrations)

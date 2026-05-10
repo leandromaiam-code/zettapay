@@ -1,0 +1,75 @@
+---
+title: "Native AI integrations"
+description: "ZettaPay ships drop-in payment support for Anthropic Claude, OpenAI and Hugging Face — no custom adapters."
+---
+
+ZettaPay is the payment layer for the agentic AI economy. Every major
+agent runtime in production today already speaks one of two protocols
+that ZettaPay implements natively:
+
+- **MCP** — for tool-calling agents (Claude, ChatGPT operators, custom
+  hosts that embed `@modelcontextprotocol/sdk`).
+- **x402** — for HTTP-driven agents that pay inline via a header (any
+  agent that can `fetch`, including Hugging Face Inference clients,
+  LangChain tools, and bare cURL).
+
+Because these are open specs, no formal partnership is needed for an
+agent to transact. The integrations below are the supported, tested
+recipes — pick the runtime you ship on and copy the snippet.
+
+## Supported runtimes
+
+<CardGroup cols={3}>
+  <Card title="Anthropic Claude" icon="comment" href="/guides/integrations/anthropic">
+    Claude Desktop and the Claude API both call MCP tools natively.
+    Wire ZettaPay in with two lines of JSON config and the assistant
+    can pay merchants directly.
+  </Card>
+  <Card title="OpenAI" icon="bolt" href="/guides/integrations/openai">
+    Function calling and the Assistants API consume ZettaPay through
+    a thin wrapper around `POST /pay`. Works for GPT-4, GPT-4o and
+    GPT-5.
+  </Card>
+  <Card title="Hugging Face" icon="microchip" href="/guides/integrations/huggingface">
+    Any agent built on Hugging Face Inference, transformers Agents 2.0
+    or `smolagents` can attach an `x-402-payment` header on tool calls.
+  </Card>
+</CardGroup>
+
+## Compatibility matrix
+
+| Runtime | Protocol | Auth method | Status |
+| --- | --- | --- | --- |
+| Claude Desktop | MCP over HTTPS | `x-zettapay-api-key` header | Supported |
+| Claude API (`tool_use`) | MCP via host bridge | Host-managed key | Supported |
+| OpenAI Assistants v2 | x402 + function tool | `x-zettapay-api-key` header | Supported |
+| OpenAI function calling | x402 + function tool | `x-zettapay-api-key` header | Supported |
+| Hugging Face Inference | x402 header | `x-zettapay-api-key` header | Supported |
+| `smolagents` / transformers | x402 header | `x-zettapay-api-key` header | Supported |
+| LangChain / LangGraph | x402 + tool wrapper | `x-zettapay-api-key` header | Supported |
+
+ZettaPay does not custody any keys for any of the runtimes above. The
+host application holds the merchant API key; the agent's signing key
+is scoped to a single transaction at signing time. See
+[AI agents](/concepts/ai-agents) for the full security model.
+
+## Why native, not branded
+
+ZettaPay deliberately ships against open protocols rather than
+private SDKs from any single AI vendor:
+
+- **No vendor lock-in.** The same payment call works whether the
+  agent runtime is Claude, GPT, an open-weights model on Hugging
+  Face, or a future provider that has not shipped yet.
+- **Stable ABI.** MCP and x402 are standardized; vendor-specific
+  function-calling shapes change between minor releases.
+- **No custody handoff.** Branded SDKs typically expect to manage
+  funds. ZettaPay never custodies USDC — the agent signs, ZettaPay
+  submits. That property is preserved across every runtime.
+
+## Get started
+
+<Card title="Pick your runtime" icon="arrow-right" href="/guides/integrations/anthropic">
+  Each guide walks through a concrete payment flow for one provider in
+  under five minutes.
+</Card>

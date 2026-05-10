@@ -1,0 +1,114 @@
+---
+title: "Anthropic Claude"
+description: "Wire ZettaPay into Claude Desktop or the Claude API in under five minutes."
+---
+
+Claude is MCP-native — both Claude Desktop and the Claude API consume
+[Model Context Protocol](https://modelcontextprotocol.io) tool servers
+directly. ZettaPay ships an MCP server with four tools (`pay`,
+`get_merchant`, `list_payments`, `create_onramp_url`), so Claude can
+transact with no glue code on your side.
+
+## Claude Desktop
+
+Add ZettaPay to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "zettapay": {
+      "url": "https://api.zettapay.io",
+      "headers": {
+        "x-zettapay-api-key": "zp_live_..."
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The four ZettaPay tools appear in the tool
+picker. Try the canonical prompt:
+
+> Pay merchant `merch_42` 5 USDC for "premium API access"
+
+Claude will call `get_merchant` to resolve the recipient, then `pay`
+with a signed transaction. The merchant API key never leaves the host.
+
+## Claude API (Messages + tool_use)
+
+The Messages API supports `tool_use` blocks with the same JSON shape
+MCP exposes. Bridge the MCP tool definitions through your application:
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+import { ZettaPay } from "@zettapay/sdk";
+
+const claude = new Anthropic();
+const zettapay = new ZettaPay({ apiKey: process.env.ZETTAPAY_API_KEY! });
+
+const tools = [
+  {
+    name: "zettapay_pay",
+    description: "Submit a signed Solana USDC transaction via ZettaPay.",
+    input_schema: {
+      type: "object",
+      properties: {
+        transaction: { type: "string", description: "Base64 signed tx" },
+      },
+      required: ["transaction"],
+    },
+  },
+];
+
+const response = await claude.messages.create({
+  model: "claude-sonnet-4-6",
+  max_tokens: 1024,
+  tools,
+  messages: [{ role: "user", content: "Pay merchant 42 for the report." }],
+});
+
+for (const block of response.content) {
+  if (block.type === "tool_use" && block.name === "zettapay_pay") {
+    const result = await zettapay.payments.create({
+      transaction: (block.input as { transaction: string }).transaction,
+    });
+    // Feed result back as a tool_result block on the next turn.
+  }
+}
+```
+
+The agent never holds the merchant API key — your application does.
+The transaction it submits is already signed by the payer wallet, so
+even a hostile agent cannot redirect funds.
+
+## Computer Use
+
+For Computer Use agents that drive a browser or shell, the same MCP
+configuration works. Mount ZettaPay alongside any browser-control
+tools and the model will call `pay` whenever a `402 Payment Required`
+quote needs to be settled in a flow.
+
+## Test against devnet first
+
+Use a `zp_test_` key (issued from the dashboard) and the devnet USDC
+mint while wiring up the integration. Test keys do not move real
+funds and behave identically against `POST /pay`.
+
+```json
+{
+  "mcpServers": {
+    "zettapay": {
+      "url": "https://api-devnet.zettapay.io",
+      "headers": {
+        "x-zettapay-api-key": "zp_test_..."
+      }
+    }
+  }
+}
+```
+
+## Reference
+
+- [MCP integration guide](/guides/mcp-integration) — full tool reference
+- [x402 protocol](/guides/x402-protocol) — when you need raw HTTP
+- [SDK installation](/sdk/installation) — `@zettapay/sdk` for the host app
