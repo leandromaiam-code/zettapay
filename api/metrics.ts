@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { withSentry } from './_lib/sentry.js';
 
 const SERVICE = 'zettapay';
 const PROM_CONTENT_TYPE = 'text/plain; version=0.0.4; charset=utf-8';
@@ -120,7 +121,7 @@ function buildMetrics(): string {
   return metrics.map(renderMetric).join('\n') + '\n';
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
+function handler(req: VercelRequest, res: VercelResponse): void {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET only' } });
@@ -131,4 +132,5 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
   res.status(200).send(buildMetrics());
 }
 
+export default withSentry(handler);
 export { buildMetrics };

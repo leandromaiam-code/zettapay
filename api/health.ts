@@ -1,9 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { withSentry } from './_lib/sentry.js';
 
 const SERVICE = 'zettapay';
 const RUNTIME = 'vercel-serverless';
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
+function handler(req: VercelRequest, res: VercelResponse): void {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET only' } });
@@ -19,3 +20,5 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
     timestamp: new Date().toISOString(),
   });
 }
+
+export default withSentry(handler);

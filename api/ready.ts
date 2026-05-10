@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { withSentry } from './_lib/sentry.js';
 
 const READY_TIMEOUT_MS = 2_500;
 
@@ -37,7 +38,7 @@ async function checkSolanaRpc(url: string): Promise<CheckResult> {
   }
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.setHeader('Allow', 'GET, HEAD');
     res.status(405).json({ error: { code: 'method_not_allowed', message: 'GET only' } });
@@ -62,3 +63,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     checks,
   });
 }
+
+export default withSentry(handler);

@@ -23,6 +23,7 @@ import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
 import { errorHandler } from "./middleware/error.js";
 import { HttpError } from "./lib/errors.js";
+import { isSentryEnabled, Sentry } from "./lib/sentry.js";
 import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 import type { CreatePaymentDeps } from "./services/payments.js";
@@ -166,6 +167,15 @@ export function createApp(options: CreateAppOptions): Express {
   app.use((_req, _res, next) => {
     next(HttpError.notFound("route not found"));
   });
+
+  if (isSentryEnabled()) {
+    Sentry.setupExpressErrorHandler(app, {
+      shouldHandleError: (err) => {
+        if (err instanceof HttpError) return err.status >= 500;
+        return true;
+      },
+    });
+  }
 
   app.use(errorHandler);
 
