@@ -1,0 +1,152 @@
+---
+title: "Shopify integration"
+description: "Embed a USDC checkout button in any Shopify store via the ZettaPay app + Liquid snippet."
+---
+
+ZettaPay ships a hosted Shopify app that installs in two clicks and a
+Liquid snippet that drops anywhere a theme can render Liquid. The buyer
+keeps using your existing cart; the snippet adds a "Pagar com USDC"
+button that opens a hosted checkout signed by the buyer's wallet.
+
+## What this tutorial covers
+
+- Installing the ZettaPay Shopify app on a store via OAuth
+- Rendering the checkout button in the cart template
+- Reconciling the on-chain payment back to the Shopify order via webhooks
+
+The store keeps its existing payment processors. ZettaPay is an
+additional wallet-native option, not a replacement for Shop Pay.
+
+## 1. Register your merchant
+
+If you have not already, create a ZettaPay merchant. Save the merchant
+id — Shopify will be linked against it during install.
+
+```ts
+import { ZettaPayClient } from "@zettapay/sdk";
+
+const tmp = new ZettaPayClient({ baseURL: "https://api.zettapay.io" });
+
+const merchant = await tmp.registerMerchant({
+  name: "Acme Store",
+  email: "ops@acme.shop",
+  walletAddress: process.env.MERCHANT_WALLET_ADDRESS!,
+  webhookUrl: "https://acme.shop/webhooks/zettapay",
+});
+
+console.log("merchantId =", merchant.id);
+```
+
+## 2. Install the app on a Shopify store
+
+The store admin opens the install URL with the target shop domain and
+the ZettaPay merchant id:
+
+```
+https://api.zettapay.io/shopify/install
+  ?shop=acme.myshopify.com
+  &merchant_id=42
+```
+
+ZettaPay validates the shop domain, persists install state, and
+redirects to Shopify's OAuth screen with the requested scopes. Shopify
+calls back into `GET /shopify/callback`, which exchanges the code for
+an offline token and persists the installation row:
+
+```json
+{
+  "ok": true,
+  "installation": {
+    "id": "shop_inst_01J9VV...",
+    "shopDomain": "acme.myshopify.com",
+    "merchantId": "42",
+    "status": "active",
+    "installedAt": "2026-05-10T19:14:02.000Z"
+  }
+}
+```
+
+You can inspect installation state at any time:
+
+```bash
+curl https://api.zettapay.io/shopify/installations/acme.myshopify.com
+```
+
+## 3. Embed the checkout button in the theme
+
+ZettaPay serves a per-merchant Liquid snippet at:
+
+```
+GET /shopify/snippet/:merchantId.liquid
+```
+
+Save the response as `snippets/zettapay-button.liquid` in the theme,
+then render it from the cart template (or anywhere you want the
+button):
+
+```liquid
+{% render 'zettapay-button' %}
+```
+
+The snippet posts the cart total and currency to the ZettaPay
+storefront pay URL. The cart token is forwarded as `order_ref`, which
+is what you pivot against in webhook reconciliation.
+
+```liquid
+href="https://pay.zettapay.io/pay/checkout
+  ?merchant=42
+  &amount={{ cart.total_price | divided_by: 100.0 }}
+  &currency={{ cart.currency.iso_code }}
+  &order_ref={{ cart.token }}"
+```
+
+The snippet is cache-friendly (`Cache-Control: public, max-age=300`)
+so re-fetching it on every theme render is fine.
+
+## 4. Reconcile the payment
+
+When the buyer signs the transaction, ZettaPay submits it on-chain and
+fires `payment.succeeded` to your webhook URL. The metadata you
+attached to the snippet flows back unchanged:
+
+```ts
+app.post("/webhooks/zettapay", express.raw({ type: "*/*" }), async (req, res) => {
+  if (!verifyZettaPayWebhook(req, process.env.WEBHOOK_SECRET!)) {
+    return res.status(400).send("invalid signature");
+  }
+
+  const event = JSON.parse(req.body.toString());
+  const eventId = req.headers["x-zettapay-event-id"] as string;
+  if (await db.eventSeen(eventId)) return res.status(200).send("ok");
+
+  if (event.type === "payment.succeeded") {
+    const { order_ref } = event.data.metadata;
+    await shopify.markOrderPaid(order_ref, {
+      gateway: "zettapay",
+      txSignature: event.data.txSignature,
+    });
+  }
+
+  res.status(200).send("ok");
+});
+```
+
+`order_ref` is the Shopify cart token, so `shopify.markOrderPaid` can
+look up the draft order and transition it to `paid`. Use the
+`X-ZettaPay-Event-Id` header as the dedup key — Shopify Admin API
+mutations are not idempotent on retry.
+
+## What can go wrong
+
+| Symptom | Likely cause |
+| --- | --- |
+| `503 config_error` on install | Shopify app credentials missing in ZettaPay env. Ask support to provision your tenant. |
+| Snippet renders amount as `0.00` | Cart is empty when the theme renders. Conditionally render the button only when `cart.item_count > 0`. |
+| Order stuck in `pending` after payment | Webhook unreachable or returned non-2xx. Check deliveries in the dashboard and retry. |
+| Button missing in cart | Theme uses a sectioned cart drawer — render the snippet in `sections/cart-drawer.liquid` too. |
+
+## Reference
+
+- [Accept payments](/guides/accept-payments) — base merchant integration
+- [Webhooks](/concepts/webhooks) — signature verification + idempotency
+- [Native AI integrations](/concepts/native-integrations) — Anthropic, OpenAI, HuggingFace

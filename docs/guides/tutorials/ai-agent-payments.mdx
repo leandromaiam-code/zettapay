@@ -1,0 +1,196 @@
+---
+title: "AI agent payments with x402"
+description: "Give an AI agent a Solana wallet and let it pay for tools, APIs, and content via x402 + ZettaPay."
+---
+
+This tutorial walks through wiring an AI agent — Claude, GPT, or any
+LLM you control — so it can pay for a `402 Payment Required` resource
+without holding your merchant API key. The agent signs the transaction
+with its own wallet; ZettaPay submits it on-chain; the merchant gets
+USDC.
+
+The end-to-end flow is:
+
+<Steps>
+  <Step title="Quote">
+    The merchant's API returns `402 Payment Required` with a JSON body
+    describing the merchant id, amount, and target ATA.
+  </Step>
+  <Step title="Build">
+    The agent constructs a `transferChecked` USDC instruction
+    payer → merchant ATA and signs it with its wallet.
+  </Step>
+  <Step title="Submit">
+    The agent re-issues the request with `x-402-payment: <base64 tx>`.
+    ZettaPay validates, submits, and confirms on-chain.
+  </Step>
+  <Step title="Serve">
+    The merchant verifies the payment via webhook and returns the
+    purchased resource.
+  </Step>
+</Steps>
+
+## 1. Provision the agent wallet
+
+The agent needs a Solana keypair and a USDC balance. In production,
+load the secret from a KMS — never bake it into the prompt or commit
+it to source control.
+
+```ts
+import { Keypair } from "@solana/web3.js";
+
+const agentKey = Keypair.fromSecretKey(
+  Uint8Array.from(JSON.parse(process.env.AGENT_WALLET_SECRET!)),
+);
+console.log("Agent address:", agentKey.publicKey.toBase58());
+```
+
+Fund the wallet via [MoonPay onramp](/concepts/onramp) or any USDC
+faucet on devnet for testing.
+
+## 2. Implement the quote endpoint (merchant side)
+
+The merchant returns `402` when an unauthenticated request hits a paid
+resource. The body is the contract the agent has to satisfy:
+
+```ts
+app.get("/api/research/:topic", async (req, res, next) => {
+  if (!req.headers["x-402-payment"]) {
+    return res.status(402).json({
+      error: "payment_required",
+      merchantId: 42,
+      amount: "0.10",
+      currency: "USDC",
+      targetAta: process.env.MERCHANT_USDC_ATA,
+      memo: `research:${req.params.topic}`,
+    });
+  }
+
+  // Forwarded to ZettaPay — see step 4.
+  next();
+});
+```
+
+## 3. Build and sign the transaction (agent side)
+
+When the agent receives `402`, it constructs the transfer, signs it,
+and base64-encodes the serialized bytes:
+
+```ts
+import { Connection, PublicKey, Transaction } from "@solana/web3.js";
+import { createTransferCheckedInstruction } from "@solana/spl-token";
+
+const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+
+async function buildPaymentBlob(quote: PaymentQuote): Promise<string> {
+  const conn = new Connection("https://api.mainnet-beta.solana.com");
+  const tx = new Transaction({
+    feePayer: agentKey.publicKey,
+    recentBlockhash: (await conn.getLatestBlockhash()).blockhash,
+  });
+
+  tx.add(
+    createTransferCheckedInstruction(
+      agentUsdcAta,
+      USDC_MINT,
+      new PublicKey(quote.targetAta),
+      agentKey.publicKey,
+      BigInt(Math.round(parseFloat(quote.amount) * 1_000_000)),
+      6,
+    ),
+  );
+
+  tx.sign(agentKey);
+  return tx.serialize().toString("base64");
+}
+```
+
+The transaction is **already signed by the payer** before it leaves
+the agent. Even a hostile relay cannot redirect funds.
+
+## 4. Submit via x402
+
+The agent re-issues the original request with the signed blob in the
+`x-402-payment` header:
+
+```ts
+const blob = await buildPaymentBlob(quote);
+
+const result = await fetch(`https://acme.com/api/research/${topic}`, {
+  headers: {
+    "x-402-payment": blob,
+  },
+});
+```
+
+Behind the scenes the merchant proxies the header to ZettaPay:
+
+```ts
+const payment = await fetch("https://api.zettapay.io/pay", {
+  method: "POST",
+  headers: {
+    "x-zettapay-api-key": process.env.ZETTAPAY_API_KEY!,
+    "x-402-payment": req.headers["x-402-payment"] as string,
+    "content-type": "application/json",
+    "idempotency-key": req.headers["x-request-id"] as string,
+  },
+  body: JSON.stringify({ merchantId: 42, amount: "0.10" }),
+});
+```
+
+ZettaPay validates the signature, submits, blocks until confirmation,
+and returns the standard payment response — see
+[x402 protocol reference](/guides/x402-protocol) for the full
+validation matrix.
+
+## 5. Wire it into a Claude tool
+
+If you are building on top of Claude or any MCP-compatible host, the
+canonical path is to mount the
+[ZettaPay MCP server](/concepts/native-integrations) and let the agent
+discover the `pay` tool natively:
+
+```json
+{
+  "mcpServers": {
+    "zettapay": {
+      "url": "https://api.zettapay.io",
+      "headers": { "x-zettapay-api-key": "zp_live_..." }
+    }
+  }
+}
+```
+
+The host application — not the agent — holds the merchant API key.
+The agent submits an already-signed transaction; ZettaPay relays it on
+the host's behalf.
+
+## 6. Cap the agent's spend
+
+ZettaPay supports per-agent spending limits (daily/monthly USDC
+ceilings) so a runaway loop cannot drain the wallet. Configure them
+when registering the agent identity, and ZettaPay will reject
+`429 spending_limit_exceeded` once breached.
+
+```ts
+await zetta.agentIdentities.create({
+  name: "research-claude",
+  wallet: agentKey.publicKey.toBase58(),
+  limits: { dailyUsdc: "50", monthlyUsdc: "1000" },
+});
+```
+
+## What can go wrong
+
+| Symptom | Likely cause |
+| --- | --- |
+| `400 invalid_signature` | Agent signed against a different blockhash than what was serialized. Re-fetch blockhash and sign again. |
+| `400 malformed_transaction` | Tx > 1232 bytes or versioned tx (v1+). Strip non-essential instructions, stick to legacy/v0. |
+| `429 spending_limit_exceeded` | Per-agent cap hit. Raise via `PUT /agent-identities/:id/limits` or wait for the window to roll. |
+| Agent "forgets" to retry with header | Prompt the agent explicitly: include the quote contract in the tool description, not just the runtime error. |
+
+## Reference
+
+- [x402 protocol](/guides/x402-protocol) — header spec and validation rules
+- [MCP integration](/guides/mcp-integration) — tool surface for MCP-native hosts
+- [Anthropic / OpenAI / HuggingFace](/concepts/native-integrations) — host-specific bridges
