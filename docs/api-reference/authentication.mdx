@@ -1,0 +1,57 @@
+---
+title: "Authentication"
+description: "API key authentication for ZettaPay HTTP requests."
+---
+
+ZettaPay authenticates requests with a long-lived API key. Each
+merchant receives a single key when they register, prefixed with
+`zp_live_…` (mainnet) or `zp_test_…` (devnet). The key is shown once in
+plaintext at registration time and stored hashed server-side.
+
+## Sending the key
+
+Pass the key in the `x-zettapay-api-key` header on every authenticated
+request:
+
+```bash
+curl https://api.zettapay.io/subscriptions \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+`Authorization: Bearer …` is also accepted as a fallback for clients
+that cannot send custom headers — the bearer token is treated as the
+API key value.
+
+## Endpoints that require a key
+
+| Endpoint | Required |
+| --- | --- |
+| `POST /merchants/register` | No (this is how you obtain the key) |
+| `PUT /merchants/:id/velocity` | Yes |
+| `POST /pay` | Yes |
+| `POST /subscriptions` | Yes |
+| `GET /subscriptions` | Yes |
+| `GET /subscriptions/:id` | Yes |
+| `POST /subscriptions/:id/cancel` | Yes |
+| `POST /verify-signature` | Yes |
+| `GET /verify-signature/info` | No |
+| Settlement endpoints | Yes |
+| `GET /healthz`, `/ready`, `/metrics`, `/simulate/:merchant` | No |
+
+## Key hygiene
+
+- **Never embed the key in client-side code.** All ZettaPay calls run
+  server-side. A leaked key allows an attacker to charge any payer
+  wallet that has previously authorized your merchant.
+- **Rotate from the dashboard.** Rotation invalidates the old key
+  immediately and emits a new one.
+- **Pin to the wallet binding.** A leaked key cannot redirect funds —
+  the merchant's destination wallet is bound on-chain via the memo
+  program. Rotation is still recommended on suspected compromise.
+
+## Errors
+
+| Status | Code | Meaning |
+| --- | --- | --- |
+| `401` | `unauthorized` | Missing API key. |
+| `403` | `invalid_api_key` | Key not recognized or revoked. |

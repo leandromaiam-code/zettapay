@@ -1,0 +1,61 @@
+---
+title: "Installation"
+description: "Install @zettapay/sdk in your TypeScript or JavaScript project."
+---
+
+`@zettapay/sdk` is the canonical client library. It wraps every HTTP
+endpoint and bundles Anchor-based helpers for the on-chain merchant
+binding and payment recording instructions.
+
+## Install
+
+<CodeGroup>
+
+```bash npm
+npm install @zettapay/sdk
+```
+
+```bash pnpm
+pnpm add @zettapay/sdk
+```
+
+```bash yarn
+yarn add @zettapay/sdk
+```
+
+</CodeGroup>
+
+## Requirements
+
+- Node.js ≥ 18.18 (matches the [protocol's package.json engines](https://github.com/leandromaiam-code/zettapay/blob/main/package.json))
+- TypeScript 5+ if you use TypeScript
+- A Solana RPC endpoint if you use the on-chain helpers — the HTTP
+  client does **not** require RPC access
+
+## Initialize the client
+
+```ts
+import { ZettaPayClient } from "@zettapay/sdk";
+
+export const zetta = new ZettaPayClient({
+  baseURL: "https://api.zettapay.io",
+  timeoutMs: 10_000,
+  headers: {
+    "x-zettapay-api-key": process.env.ZETTAPAY_API_KEY!,
+  },
+});
+```
+
+The constructor accepts:
+
+| Option | Type | Notes |
+| --- | --- | --- |
+| `baseURL` | `string` | Base URL of the API. Required. |
+| `timeoutMs` | `number` | Request timeout. Defaults to 10s. |
+| `headers` | `Record<string, string>` | Default headers. Set the API key here. |
+| `axiosInstance` | `AxiosInstance` | Bring your own axios instance for interceptors and tracing. |
+
+## TypeScript
+
+The package ships full type definitions. Every method returns a typed
+response — see [Reference](/sdk/reference) for the full surface.

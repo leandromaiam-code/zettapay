@@ -1,0 +1,58 @@
+---
+title: "Fiat onramp"
+description: "Card → USDC funding flow via MoonPay for first-time crypto buyers."
+---
+
+Most consumers do not have USDC on hand. ZettaPay integrates with
+[MoonPay](https://moonpay.com) so a payer can fund their wallet with a
+debit card or bank transfer, then complete the payment in a single
+checkout flow.
+
+## Why MoonPay
+
+- **KYC delegation.** ZettaPay is not a Money Services Business. MoonPay
+  handles all KYC/AML obligations for fiat → crypto conversion.
+- **Global coverage.** 160+ countries, dozens of fiat currencies.
+- **Webhook parity.** MoonPay confirms in a webhook event we relay to
+  the merchant on the same delivery infrastructure as native ZettaPay
+  events.
+
+## Flow
+
+<Steps>
+  <Step title="Merchant generates an onramp URL">
+    Call MCP tool `create_onramp_url` (or hit the equivalent HTTP
+    endpoint) with the target merchant id, fiat currency and amount.
+  </Step>
+  <Step title="Payer completes KYC + checkout">
+    The payer is redirected to MoonPay's hosted flow. They verify
+    identity and pay with card or bank transfer.
+  </Step>
+  <Step title="MoonPay settles USDC into the payer's wallet">
+    Settlement typically completes in two to ten minutes depending on
+    payment method.
+  </Step>
+  <Step title="ZettaPay receives `payment.confirmed` from MoonPay">
+    The signature is validated against `MOONPAY_WEBHOOK_SECRET` (5-min
+    tolerance window). The event is recorded and a corresponding
+    `onramp.completed` webhook fires to the merchant.
+  </Step>
+  <Step title="Merchant flow continues">
+    The merchant can now invoke `POST /pay` to debit the freshly funded
+    wallet, or wait for the payer to retry the original action.
+  </Step>
+</Steps>
+
+## Configuration
+
+The MoonPay integration is driven by environment variables on the
+ZettaPay backend:
+
+| Variable | Description |
+| --- | --- |
+| `MOONPAY_API_KEY` | MoonPay API key. |
+| `MOONPAY_WEBHOOK_SECRET` | HMAC secret for incoming webhook validation. |
+| `MOONPAY_ENV` | `sandbox` or `production`. |
+
+Merchants do not configure MoonPay directly. The protocol owns the
+MoonPay relationship and forwards confirmation events.

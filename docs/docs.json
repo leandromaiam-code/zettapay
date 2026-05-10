@@ -1,0 +1,200 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "ZettaPay",
+  "description": "Solana USDC payment protocol for humans and AI agents. 0.30% fees, instant settlement, native x402 + MCP support.",
+  "colors": {
+    "primary": "#4F6BFF",
+    "light": "#6B82FF",
+    "dark": "#3A52CC"
+  },
+  "favicon": "/logo/symbol-light.png",
+  "logo": {
+    "light": "/logo/wordmark-light.png",
+    "dark": "/logo/wordmark-dark.png",
+    "href": "https://zettapay.io"
+  },
+  "appearance": {
+    "default": "system",
+    "strict": false
+  },
+  "background": {
+    "decoration": "gradient"
+  },
+  "fonts": {
+    "family": "Inter"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": [
+              "introduction",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/architecture",
+              "concepts/ai-agents",
+              "concepts/webhooks",
+              "concepts/onramp"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/accept-payments",
+              "guides/x402-protocol",
+              "guides/mcp-integration",
+              "guides/handling-webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/errors",
+              "api-reference/idempotency",
+              "api-reference/rate-limits"
+            ]
+          },
+          {
+            "group": "Merchants",
+            "pages": [
+              "api-reference/merchants/register",
+              "api-reference/merchants/velocity"
+            ]
+          },
+          {
+            "group": "Payments",
+            "pages": [
+              "api-reference/payments/pay"
+            ]
+          },
+          {
+            "group": "Subscriptions",
+            "pages": [
+              "api-reference/subscriptions/create",
+              "api-reference/subscriptions/list",
+              "api-reference/subscriptions/retrieve",
+              "api-reference/subscriptions/cancel"
+            ]
+          },
+          {
+            "group": "Settlement",
+            "pages": [
+              "api-reference/settlement/coinflow"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/verify-signature",
+              "api-reference/webhooks/onramp"
+            ]
+          },
+          {
+            "group": "System",
+            "pages": [
+              "api-reference/meta/health",
+              "api-reference/meta/simulate"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "SDK",
+        "groups": [
+          {
+            "group": "TypeScript",
+            "pages": [
+              "sdk/installation",
+              "sdk/client",
+              "sdk/on-chain",
+              "sdk/reference"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Status",
+          "href": "https://status.zettapay.io",
+          "icon": "signal-stream"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/leandromaiam-code/zettapay",
+          "icon": "github"
+        }
+      ]
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Dashboard",
+        "href": "https://zettapay.io/dashboard"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get API key",
+      "href": "https://zettapay.io/signup"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/leandromaiam-code/zettapay",
+      "x": "https://x.com/zettapay",
+      "website": "https://zettapay.io"
+    },
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          { "label": "Pricing", "href": "https://zettapay.io/pricing" },
+          { "label": "Status", "href": "https://status.zettapay.io" },
+          { "label": "Changelog", "href": "https://zettapay.io/changelog" }
+        ]
+      },
+      {
+        "header": "Resources",
+        "items": [
+          { "label": "GitHub", "href": "https://github.com/leandromaiam-code/zettapay" },
+          { "label": "SDK", "href": "https://www.npmjs.com/package/@zettapay/sdk" },
+          { "label": "x402 spec", "href": "/guides/x402-protocol" }
+        ]
+      }
+    ]
+  },
+  "search": {
+    "prompt": "Search the ZettaPay docs"
+  },
+  "integrations": {
+    "algolia": {
+      "appId": "ZETTAPAY_ALGOLIA_APP_ID",
+      "apiKey": "ZETTAPAY_ALGOLIA_PUBLIC_KEY",
+      "indexName": "zettapay"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/api",
+      "destination": "/api-reference/introduction"
+    }
+  ]
+}

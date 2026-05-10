@@ -1,0 +1,46 @@
+---
+title: "List subscriptions"
+description: "Paginated list of the merchant's subscriptions."
+api: "GET https://api.zettapay.io/subscriptions"
+---
+
+Returns the merchant's subscriptions, most recent first.
+
+## Headers
+
+| Header | Required |
+| --- | --- |
+| `x-zettapay-api-key` | Yes |
+
+## Query parameters
+
+| Param | Type | Default | Range |
+| --- | --- | --- | --- |
+| `limit` | integer | 50 | 1 – 200 |
+
+## Example request
+
+```bash
+curl https://api.zettapay.io/subscriptions?limit=100 \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+## Response — `200 OK`
+
+```json
+{
+  "subscriptions": [
+    {
+      "id": "sub_01J9VV...",
+      "merchantId": 42,
+      "customerWallet": "...",
+      "amount": "19.99",
+      "currency": "USDC",
+      "interval": "monthly",
+      "status": "active",
+      "nextChargeAt": "2026-06-10T19:14:02.000Z",
+      "createdAt": "2026-05-10T19:14:02.111Z"
+    }
+  ]
+}
+```

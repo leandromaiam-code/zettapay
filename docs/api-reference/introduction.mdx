@@ -1,0 +1,45 @@
+---
+title: "API reference"
+description: "REST API surface, conventions and base URLs."
+---
+
+ZettaPay exposes a JSON REST API. All requests are made over TLS to the
+following base URLs:
+
+| Environment | Base URL |
+| --- | --- |
+| Production | `https://api.zettapay.io` |
+| Public preview | `https://zettapay.vercel.app` |
+| Local development | `http://localhost:3001` |
+
+## Conventions
+
+- **Content type.** Every request and response is JSON. Set
+  `Content-Type: application/json` on writes.
+- **Identifiers.** Merchants use numeric `id`. Payments and
+  subscriptions use string IDs prefixed with the resource type
+  (e.g. `pay_…`, `sub_…`).
+- **Money.** Amounts are decimal strings of USDC (e.g. `"5.00"`),
+  not integer base units. The protocol enforces six decimals of
+  precision matching the SPL Token mint.
+- **Timestamps.** ISO-8601 UTC strings.
+- **Errors.** A consistent envelope detailed at
+  [Errors](/api-reference/errors).
+
+## Authentication
+
+All write endpoints require an API key in the `x-zettapay-api-key`
+header. Read endpoints currently follow the same convention. See
+[Authentication](/api-reference/authentication).
+
+## Resource map
+
+| Resource | Endpoints |
+| --- | --- |
+| **Merchants** | `POST /merchants/register`, `PUT /merchants/:id/velocity` |
+| **Payments** | `POST /pay` |
+| **Subscriptions** | `POST /subscriptions`, `GET /subscriptions`, `GET /subscriptions/:id`, `POST /subscriptions/:id/cancel` |
+| **Settlement** | `POST /merchants/:id/settlement/coinflow`, `GET /merchants/:id/settlement/coinflow`, `DELETE …`, `POST …/payments/:paymentId`, `GET /merchants/:id/settlements` |
+| **Webhooks** | `POST /verify-signature`, `GET /verify-signature/info`, `POST /onramp/webhook` |
+| **System** | `GET /healthz`, `GET /ready`, `GET /metrics`, `GET /simulate/:merchant` |
+| **MCP (JSON-RPC)** | `POST /` with `tools/call`: `pay`, `get_merchant`, `list_payments`, `create_onramp_url` |

@@ -1,0 +1,117 @@
+---
+title: "Accept payments"
+description: "End-to-end checkout: register a merchant, charge a payer, reconcile via webhooks."
+---
+
+This guide walks through a production-shape integration: a Node.js
+backend that accepts USDC payments from a web checkout, persists the
+payment intent, and reconciles success via signed webhooks.
+
+## 1. Register your merchant
+
+Run this once, in a setup script or in your dashboard.
+
+```ts
+import { ZettaPayClient } from "@zettapay/sdk";
+
+const tmp = new ZettaPayClient({ baseURL: "https://api.zettapay.io" });
+
+const merchant = await tmp.registerMerchant({
+  name: "Acme Books",
+  email: "ops@acmebooks.com",
+  walletAddress: process.env.MERCHANT_WALLET_ADDRESS!,
+  webhookUrl: "https://acmebooks.com/webhooks/zettapay",
+});
+
+console.log("Save these in 1Password:", {
+  apiKey: merchant.apiKey,
+  webhookSecret: merchant.webhookSecret,
+});
+```
+
+## 2. Persist the payment intent before charging
+
+A payment intent is your source of truth. Always create the row
+**before** calling `POST /pay`, using the same `Idempotency-Key` for
+both your DB write and the ZettaPay request. This makes retries safe.
+
+```ts
+const idempotencyKey = crypto.randomUUID();
+
+await db.insert("payment_intents").values({
+  id: idempotencyKey,
+  orderId: order.id,
+  amount: "19.99",
+  status: "pending",
+});
+
+const payment = await zetta.pay(
+  {
+    merchantId: 42,
+    amount: "19.99",
+    payerWallet: payer.walletAddress,
+    metadata: { orderId: order.id },
+  },
+  { idempotencyKey },
+);
+
+await db.update("payment_intents")
+  .set({
+    status: "submitted",
+    txSignature: payment.txSignature,
+  })
+  .where({ id: idempotencyKey });
+```
+
+## 3. Reconcile via webhook
+
+Do not block the `POST /pay` response on confirmation logic. Let the
+webhook drive state changes — it is signed, retried, and idempotent.
+
+```ts
+import express from "express";
+import { verifyZettaPayWebhook } from "./webhook-helper";
+
+app.post("/webhooks/zettapay", express.raw({ type: "*/*" }), (req, res) => {
+  if (!verifyZettaPayWebhook(req, process.env.WEBHOOK_SECRET!)) {
+    return res.status(400).send("invalid signature");
+  }
+
+  const event = JSON.parse(req.body.toString());
+
+  // Use X-ZettaPay-Event-Id as your dedup key.
+  if (await db.eventSeen(req.headers["x-zettapay-event-id"])) {
+    return res.status(200).send("ok");
+  }
+
+  switch (event.type) {
+    case "payment.succeeded":
+      await fulfillOrder(event.data.metadata.orderId);
+      break;
+    case "payment.failed":
+      await releaseInventory(event.data.metadata.orderId);
+      break;
+  }
+
+  res.status(200).send("ok");
+});
+```
+
+## 4. Test locally
+
+The protocol exposes [`GET /simulate/:merchant`](/api-reference/meta/simulate)
+to drive checkout flows without burning devnet SOL. Hit it from your
+test runner to verify your reconciliation path end-to-end.
+
+```bash
+curl http://localhost:3001/simulate/test-merchant
+```
+
+## What can go wrong
+
+| Symptom | Likely cause |
+| --- | --- |
+| Duplicate orders | Different idempotency keys per retry. Persist the key first, retry with the same one. |
+| Order stuck in `submitted` | Webhook unreachable or returned non-2xx. Inspect deliveries in the dashboard. |
+| `velocity_block` | Payment exceeds merchant velocity rules. Raise via [`PUT /merchants/:id/velocity`](/api-reference/merchants/velocity). |
+| `502 solana_rpc_error` | Transient RPC outage. Retry with the same idempotency key. |

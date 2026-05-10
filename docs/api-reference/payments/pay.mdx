@@ -1,0 +1,85 @@
+---
+title: "Create payment"
+description: "Charge a payer in USDC. Returns the confirmed Solana transaction signature."
+api: "POST https://api.zettapay.io/pay"
+---
+
+Build, sign and submit a single-instruction USDC `transferChecked` from
+the payer to the merchant. The endpoint blocks until Solana confirms the
+transaction, then returns the signature alongside the persisted payment
+record. AI agents can authorize the same call by attaching a signed
+transaction blob in the `x-402-payment` header — see
+[x402 protocol](/guides/x402-protocol).
+
+## Headers
+
+| Header | Required | Description |
+| --- | --- | --- |
+| `x-zettapay-api-key` | Yes | Merchant API key. |
+| `Idempotency-Key` | Recommended | Per checkout attempt. |
+| `Content-Type` | Yes | `application/json`. |
+| `x-402-payment` | Optional | Base64 signed transaction (≤ 1232 bytes) for autonomous agent payments. |
+
+## Body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `merchantId` | integer | Yes | Destination merchant. |
+| `amount` | string | Yes | Decimal USDC, e.g. `"5.00"`. The legacy field `amountUsdc` is also accepted. |
+| `currency` | string | No | Defaults to `"USDC"`. Reserved for post-PMF stablecoins. |
+| `payerWallet` | string | Conditional | Required unless an `x-402-payment` header authorizes the transfer. |
+| `metadata` | object | No | Free-form, ≤ 8 KB. Returned in webhooks. |
+
+## Example request
+
+```bash
+curl -X POST https://api.zettapay.io/pay \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Idempotency-Key: 01J9VV4FZX6Y0E9K2DZQH4N7G0" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "merchantId": 42,
+    "amount": "5.00",
+    "payerWallet": "PayerPhantomPubkey...",
+    "metadata": { "orderId": "ord_abc123" }
+  }'
+```
+
+## Response — `201 Created`
+
+```json
+{
+  "payment": {
+    "id": "pay_01J9VV...",
+    "merchantId": 42,
+    "amount": "5.00",
+    "currency": "USDC",
+    "status": "succeeded",
+    "txSignature": "5K2jX...",
+    "payerWallet": "PayerPhantomPubkey...",
+    "metadata": { "orderId": "ord_abc123" },
+    "createdAt": "2026-05-10T19:08:42.111Z"
+  },
+  "txSignature": "5K2jX..."
+}
+```
+
+## Statuses
+
+| `status` | Meaning |
+| --- | --- |
+| `pending` | Transaction submitted, awaiting confirmation. |
+| `succeeded` | Confirmed on-chain. |
+| `failed` | Reverted on-chain or signature timed out. |
+
+## Errors
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `validation_error` | Missing fields or malformed amount. |
+| `403` | `invalid_api_key` | Key does not own the merchant. |
+| `409` | `idempotency_conflict` | Idempotency key reused with a different body. |
+| `422` | `velocity_block` | Payment exceeds merchant velocity rules. |
+| `429` | `rate_limited` | Sliding-window rate limit exceeded. |
+| `502` | `solana_rpc_error` | RPC failure during build or submission. |
+| `502` | `transaction_failed` | Transaction reverted on-chain. |

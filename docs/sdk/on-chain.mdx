@@ -1,0 +1,85 @@
+---
+title: "On-chain helpers"
+description: "Anchor-based instruction builders for the ZettaPay program."
+---
+
+`@zettapay/sdk` ships Anchor-based helpers for the ZettaPay Solana
+program. These are useful when you need to:
+
+- Register a merchant on-chain from a script that already holds a
+  funded keypair (skipping the protocol fee payer entirely).
+- Record a payment on-chain from a custom flow that builds its own
+  transaction.
+- Derive merchant binding and payment PDAs deterministically.
+
+The helpers use the program id `Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS`.
+
+## PDA derivation
+
+```ts
+import {
+  deriveMerchantBindingPda,
+  derivePaymentPda,
+} from "@zettapay/sdk";
+
+const { pda: merchantBinding, bump } = deriveMerchantBindingPda(
+  "cafe-tatuape",
+  ownerPubkey,
+);
+
+const { pda: payment } = derivePaymentPda(
+  merchantBinding,
+  "pay_01J9VV...",
+);
+```
+
+## Build instructions
+
+```ts
+import {
+  buildRegisterMerchantInstruction,
+  buildRecordPaymentInstruction,
+} from "@zettapay/sdk";
+import { Transaction, PublicKey } from "@solana/web3.js";
+
+const ix = buildRegisterMerchantInstruction({
+  merchantHandle: "cafe-tatuape",
+  owner: ownerPubkey,
+  feePayer: feePayerPubkey,
+});
+
+const tx = new Transaction().add(ix);
+```
+
+## Submit transactions
+
+The high-level helpers wrap instruction building, transaction signing
+and confirmation:
+
+```ts
+import {
+  registerMerchantOnChain,
+  recordPayment,
+} from "@zettapay/sdk";
+
+const { signature, pda } = await registerMerchantOnChain({
+  connection,
+  payer: feePayerKeypair,
+  owner: ownerPubkey,
+  merchantHandle: "cafe-tatuape",
+});
+
+const result = await recordPayment({
+  connection,
+  payer: feePayerKeypair,
+  merchantBinding: pda,
+  paymentId: "pay_01J9VV...",
+  amount: 5_000_000n, // 5.00 USDC in base units (6 decimals)
+});
+```
+
+<Note>
+The on-chain helpers expect the caller to manage the keypair and pay
+SOL rent themselves. If you want ZettaPay's fee payer to cover rent,
+use the HTTP API endpoints instead.
+</Note>

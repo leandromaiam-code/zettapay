@@ -13,7 +13,9 @@
     "test": "npm run test --workspaces --if-present",
     "dev": "npm run dev --workspace @zettapay/api",
     "vercel-build": "echo 'serverless functions auto-detected from /api'",
-    "clean": "rm -rf packages/*/dist"
+    "clean": "rm -rf packages/*/dist",
+    "docs:dev": "npx -y mint@latest dev --path docs",
+    "docs:check": "npx -y mint@latest broken-links --path docs"
   },
   "devDependencies": {
     "@vercel/node": "^3.2.24"

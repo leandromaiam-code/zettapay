@@ -1,0 +1,78 @@
+---
+title: "HTTP client"
+description: "ZettaPayClient methods for the REST API."
+---
+
+The HTTP client mirrors the shape of the REST API. Each method has a
+typed input and a typed return. Errors are thrown as
+`ZettaPayError` with `code`, `status` and `details` fields preserved
+from the API envelope.
+
+## Merchants
+
+```ts
+const merchant = await zetta.registerMerchant({
+  name: "Café Tatuapé",
+  email: "owner@cafetatuape.com",
+  walletAddress: "...phantom-pubkey",
+});
+
+const fetched = await zetta.getMerchant(merchant.id);
+
+const list = await zetta.listMerchants({ limit: 50, offset: 0 });
+
+const updated = await zetta.updateMerchant(merchant.id, {
+  webhookUrl: "https://example.com/webhooks/zettapay",
+});
+
+await zetta.deleteMerchant(merchant.id);
+```
+
+## Payments
+
+```ts
+const payment = await zetta.pay({
+  merchantId: 42,
+  amount: "5.00",
+  payerWallet: "...phantom-pubkey",
+  metadata: { orderId: "ord_abc123" },
+});
+
+const fetched = await zetta.getPayment(payment.payment.id);
+
+const list = await zetta.listPayments({
+  merchantId: 42,
+  limit: 100,
+});
+```
+
+`pay()` is overloaded to also accept an x402 transaction blob directly,
+useful when proxying an autonomous agent's request:
+
+```ts
+await zetta.pay(base64TxBlob);            // string
+await zetta.pay(rawTxBytes);              // Uint8Array
+```
+
+## Health
+
+```ts
+const health = await zetta.health();
+// → { status: "ok", uptimeSec: 12345 }
+```
+
+## Errors
+
+All client methods throw `ZettaPayError` on non-2xx responses:
+
+```ts
+import { ZettaPayClient, ZettaPayError } from "@zettapay/sdk";
+
+try {
+  await zetta.pay({ merchantId: 42, amount: "5.00" });
+} catch (err) {
+  if (err instanceof ZettaPayError) {
+    console.error(err.code, err.status, err.message, err.details);
+  }
+}
+```

@@ -1,0 +1,89 @@
+---
+title: "Architecture"
+description: "How merchants, payers, the protocol fee payer and Solana fit together."
+---
+
+ZettaPay is a thin coordination layer above Solana. The protocol issues
+API keys, signs the on-chain merchant binding, builds payment
+transactions, persists state, and streams webhooks. **It never custodies
+USDC.** Funds move directly from the payer's wallet to the merchant's
+Associated Token Account (ATA) in a single `transferChecked` instruction.
+
+## The actors
+
+| Actor | Role |
+| --- | --- |
+| **Merchant** | Owns a Solana wallet (typically Phantom). Receives USDC. |
+| **Payer** | A human or an AI agent. Signs the SPL Token transfer. |
+| **Protocol fee payer** | Anchor-funded keypair that pays SOL rent for ATA creation and memo transactions. |
+| **ZettaPay API** | Coordinates merchant onboarding, builds transactions, persists records, fires webhooks. |
+| **Solana RPC** | Confirms transactions, exposes account state. |
+
+## End-to-end payment flow
+
+<Steps>
+  <Step title="Merchant registration">
+    The merchant calls `POST /merchants/register` with a wallet address.
+    ZettaPay derives or creates the merchant's USDC ATA (paying rent
+    from the protocol fee payer), then submits a memo program transaction
+    that immutably binds `merchant_id ↔ wallet` on-chain.
+  </Step>
+  <Step title="Quote">
+    The payer requests a charge. The merchant or its checkout backend
+    calls `POST /pay` with `amount` and the payer's wallet pubkey.
+  </Step>
+  <Step title="Transaction build">
+    ZettaPay returns a partially-signed Solana transaction containing
+    a single `transferChecked` instruction over the SPL Token program,
+    the recent blockhash, and the protocol fee payer signature.
+  </Step>
+  <Step title="Payer signature">
+    The payer's wallet (Phantom for humans, x402 header for agents)
+    signs the transaction and submits it to the cluster.
+  </Step>
+  <Step title="Confirmation">
+    ZettaPay observes the confirmed signature, persists the payment
+    record, and emits a `payment.succeeded` webhook to the merchant.
+  </Step>
+</Steps>
+
+## Wallet binding via memo program
+
+When a merchant registers, ZettaPay submits a transaction whose only
+instruction is a memo of the form:
+
+```json
+{
+  "ns": "zettapay:merchant_register:v1",
+  "merchantId": "42",
+  "wallet": "<phantom-pubkey>",
+  "ataAddress": "<usdc-ata>"
+}
+```
+
+The transaction is signed by the protocol fee payer and the binding is
+permanent — it cannot be revoked or rewritten. This gives every
+ZettaPay merchant a public, on-chain receipt that proves ownership of
+the wallet at registration time.
+
+## Storage model
+
+| Layer | Purpose |
+| --- | --- |
+| **Postgres (Supabase)** | Merchants, payments, subscriptions, webhook deliveries, audit journal. |
+| **Redis** | Rate-limit sliding windows and webhook delivery queue. |
+| **Solana** | Source of truth for transfers, ATA state, and merchant bindings. |
+
+Local development uses SQLite as a stand-in for Postgres. SQLite is
+explicitly **not supported in production** — see premise 13 of the
+[ZettaPay constitution](https://github.com/leandromaiam-code/zettapay/blob/main/CLAUDE.md).
+
+## What the protocol explicitly does not do
+
+- **No custody.** USDC is never held by ZettaPay. There is no ZettaPay
+  treasury wallet a payer pays into.
+- **No KYC.** KYC is delegated entirely to MoonPay during fiat onramp.
+  ZettaPay is not a Money Services Business.
+- **No multi-chain in V1.** Solana mainnet + devnet only.
+- **No streaming payments in V1.** Recurring billing exists, but
+  per-second streaming lands in a future release.

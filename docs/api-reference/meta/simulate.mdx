@@ -1,0 +1,51 @@
+---
+title: "Simulate"
+description: "Deterministic synthetic merchant + payment for demo and integration tests."
+api: "GET https://api.zettapay.io/simulate/:merchant"
+---
+
+Returns a deterministic synthetic merchant, a fake airdrop, and a fake
+payment. **No on-chain side effects.** Designed for hackathon demos,
+landing-page playgrounds, and integration tests that need a stable
+fixture.
+
+The same handler is exposed on the public preview at
+`https://zettapay.vercel.app/simulate/:merchant`.
+
+## Path parameters
+
+| Param | Description |
+| --- | --- |
+| `merchant` | Any string. The synthetic data is derived deterministically from it. |
+
+## Example
+
+```bash
+curl https://zettapay.vercel.app/simulate/test-merchant
+```
+
+## Response — `200 OK`
+
+```json
+{
+  "merchant": {
+    "id": "sim_test-merchant",
+    "name": "Synthetic Merchant",
+    "walletAddress": "Sim1...",
+    "ataAddress": "Sim2...",
+    "status": "active"
+  },
+  "airdrop": {
+    "amount": "10.00",
+    "txSignature": "SimulatedAirdropSignature..."
+  },
+  "payment": {
+    "amount": "1.00",
+    "txSignature": "SimulatedPaymentSignature...",
+    "status": "succeeded"
+  }
+}
+```
+
+The signatures are clearly marked synthetic and will not resolve on a
+Solana explorer.

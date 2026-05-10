@@ -1,0 +1,65 @@
+---
+title: "Update velocity rules"
+description: "Adjust the per-minute and per-hour limits enforced before a payment is sent on-chain."
+api: "PUT https://api.zettapay.io/merchants/:id/velocity"
+---
+
+Update the velocity ceiling for a merchant. Defaults are intentionally
+conservative (5 payments/minute, $1,000/hour) so a leaked API key cannot
+drain payer wallets before rotation.
+
+## Headers
+
+| Header | Required | Description |
+| --- | --- | --- |
+| `x-zettapay-api-key` | Yes | The merchant's API key. |
+| `Content-Type` | Yes | `application/json`. |
+
+## Path parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `id` | integer | Merchant id from `POST /merchants/register`. |
+
+## Body
+
+| Field | Type | Required | Range |
+| --- | --- | --- | --- |
+| `maxPaymentsPerMinute` | integer | One-of | 1 – 1000 |
+| `maxAmountPerHour` | string | One-of | "0.01" – "1000000" USDC |
+
+At least one field is required. Fields not present in the body are left
+unchanged.
+
+## Example request
+
+```bash
+curl -X PUT https://api.zettapay.io/merchants/42/velocity \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "maxPaymentsPerMinute": 60,
+    "maxAmountPerHour": "25000"
+  }'
+```
+
+## Response — `200 OK`
+
+```json
+{
+  "merchant": {
+    "id": 42,
+    "maxPaymentsPerMinute": 60,
+    "maxAmountPerHour": "25000",
+    "updatedAt": "2026-05-10T19:02:55.117Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code | When |
+| --- | --- | --- |
+| `400` | `validation_error` | Value out of range or no fields provided. |
+| `403` | `invalid_api_key` | Key does not own the merchant in the path. |
+| `404` | `not_found` | Merchant does not exist. |

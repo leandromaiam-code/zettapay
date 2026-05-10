@@ -1,0 +1,50 @@
+---
+title: "Retrieve subscription"
+description: "Fetch a single subscription by id."
+api: "GET https://api.zettapay.io/subscriptions/:id"
+---
+
+## Headers
+
+| Header | Required |
+| --- | --- |
+| `x-zettapay-api-key` | Yes |
+
+## Path parameters
+
+| Param | Description |
+| --- | --- |
+| `id` | Subscription id (`sub_…`). |
+
+## Example request
+
+```bash
+curl https://api.zettapay.io/subscriptions/sub_01J9VV... \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+## Response — `200 OK`
+
+```json
+{
+  "subscription": {
+    "id": "sub_01J9VV...",
+    "merchantId": 42,
+    "customerWallet": "...",
+    "amount": "19.99",
+    "currency": "USDC",
+    "interval": "monthly",
+    "status": "active",
+    "nextChargeAt": "2026-06-10T19:14:02.000Z",
+    "metadata": { "plan": "pro" },
+    "createdAt": "2026-05-10T19:14:02.111Z"
+  }
+}
+```
+
+## Errors
+
+| Status | Code |
+| --- | --- |
+| `404` | `not_found` |
+| `403` | `invalid_api_key` |

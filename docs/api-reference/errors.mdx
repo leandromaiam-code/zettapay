@@ -1,0 +1,63 @@
+---
+title: "Errors"
+description: "Standard error envelope and the codes you will see in production."
+---
+
+Every error response shares the same JSON envelope:
+
+```json
+{
+  "error": {
+    "code": "validation_error",
+    "status": 400,
+    "message": "amount must be greater than 0",
+    "details": { "field": "amount" }
+  }
+}
+```
+
+`code` is stable and machine-readable. `message` is human-friendly and
+may change between releases. `details` carries field-level context when
+applicable.
+
+## HTTP status mapping
+
+| Status | Meaning |
+| --- | --- |
+| `400` | Validation error — the request body or query parameters were rejected. |
+| `401` | Missing or malformed API key. |
+| `402` | Payment required — see [x402](/guides/x402-protocol). |
+| `403` | Forbidden — key revoked or merchant suspended. |
+| `404` | Resource not found. |
+| `409` | Idempotency-Key reuse with a different request body. |
+| `422` | Domain rule violation (e.g. velocity rule blocked a payment). |
+| `429` | Rate limited. Inspect `Retry-After`. |
+| `500` | Unexpected server error. Retry with backoff. |
+| `502` | Solana RPC upstream returned an error. Retry with backoff. |
+
+## Common error codes
+
+| `code` | When |
+| --- | --- |
+| `validation_error` | Field missing, malformed, or out of range. |
+| `unauthorized` | API key missing on a protected endpoint. |
+| `invalid_api_key` | Key not recognized. |
+| `idempotency_conflict` | Idempotency-Key reused with a different body. |
+| `rate_limited` | Sliding-window rate limit exceeded. |
+| `velocity_block` | Merchant or wallet velocity rule blocked the payment. |
+| `not_found` | Resource does not exist or is not owned by your key. |
+| `solana_rpc_error` | Solana cluster returned an error during transaction submission. |
+| `transaction_failed` | The Solana transaction reverted on-chain. |
+
+## x402 errors
+
+x402-specific failures use the same envelope with the following codes:
+
+| `code` | Meaning |
+| --- | --- |
+| `missing_header` | `x-402-payment` header absent. |
+| `invalid_encoding` | Header is not valid base64. |
+| `malformed_transaction` | Transaction bytes do not parse. |
+| `unsupported_version` | Versioned transaction format not yet supported. |
+| `missing_signatures` | Required payer signature not present. |
+| `invalid_signature` | Signature verification failed against expected pubkey. |

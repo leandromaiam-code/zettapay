@@ -1,0 +1,128 @@
+---
+title: "Quickstart"
+description: "Register a merchant and accept your first USDC payment in five minutes."
+---
+
+By the end of this page you will have:
+
+1. A registered merchant bound to your Phantom wallet.
+2. A live API key.
+3. A successful USDC payment recorded on Solana devnet.
+
+## 1. Get an API key
+
+Sign up at [zettapay.io/signup](https://zettapay.io/signup) and create
+your first merchant from the dashboard, **or** call the API directly.
+The dashboard wraps the same endpoint documented at
+[`POST /merchants/register`](/api-reference/merchants/register).
+
+```bash
+curl -X POST https://api.zettapay.io/merchants/register \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: my-first-merchant-001" \
+  -d '{
+    "name": "Café Tatuapé",
+    "email": "owner@cafetatuape.com",
+    "walletAddress": "<your-phantom-pubkey>",
+    "webhookUrl": "https://example.com/webhooks/zettapay"
+  }'
+```
+
+The response includes `apiKey` (used for authenticated calls) and
+`webhookSecret` (used to verify outbound webhook signatures). Store
+both in a secret manager — they are shown **once** in plaintext.
+
+<Warning>
+The `apiKey` and `webhookSecret` are displayed once. ZettaPay stores
+only their hashed forms server-side. If you lose them, rotate them from
+the dashboard.
+</Warning>
+
+## 2. Install the SDK
+
+<CodeGroup>
+
+```bash npm
+npm install @zettapay/sdk
+```
+
+```bash pnpm
+pnpm add @zettapay/sdk
+```
+
+```bash yarn
+yarn add @zettapay/sdk
+```
+
+</CodeGroup>
+
+## 3. Accept your first payment
+
+```ts
+import { ZettaPayClient } from "@zettapay/sdk";
+
+const client = new ZettaPayClient({
+  baseURL: "https://api.zettapay.io",
+  headers: {
+    "x-zettapay-api-key": process.env.ZETTAPAY_API_KEY!,
+  },
+});
+
+const payment = await client.pay({
+  merchantId: 42,
+  amount: "5.00",
+  currency: "USDC",
+  payerWallet: "<payer-phantom-pubkey>",
+  metadata: { orderId: "ord_abc123" },
+});
+
+console.log(payment.txSignature);
+// → 5K2jX...solana-explorer-link
+```
+
+The SDK returns the on-chain transaction signature as soon as the
+network confirms — typically under two seconds on Solana. The same
+shape is returned by [`POST /pay`](/api-reference/payments/pay) when
+calling the HTTP API directly.
+
+## 4. Listen for webhooks
+
+ZettaPay delivers signed webhook events for every payment, subscription
+and settlement state change. Verify the signature on your endpoint
+before trusting the payload:
+
+```ts
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(req) {
+  const signature = req.headers["x-zettapay-signature"];
+  const timestamp = req.headers["x-zettapay-timestamp"];
+  const expected = createHmac("sha256", process.env.WEBHOOK_SECRET!)
+    .update(`${timestamp}.${req.rawBody}`)
+    .digest("hex");
+  return timingSafeEqual(
+    Buffer.from(`sha256=${expected}`),
+    Buffer.from(signature),
+  );
+}
+```
+
+Full reference at [Handling webhooks](/guides/handling-webhooks).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Concepts" icon="diagram-project" href="/concepts/architecture">
+    Mental model: merchants, payments, the on-chain memo binding,
+    settlement.
+  </Card>
+  <Card title="x402 for AI agents" icon="robot" href="/guides/x402-protocol">
+    Let agents pay autonomously without holding private keys.
+  </Card>
+  <Card title="MoonPay onramp" icon="credit-card" href="/concepts/onramp">
+    Card → USDC funding flow for first-time crypto buyers.
+  </Card>
+  <Card title="Subscriptions" icon="repeat" href="/api-reference/subscriptions/create">
+    Recurring billing on a daily / weekly / monthly cadence.
+  </Card>
+</CardGroup>

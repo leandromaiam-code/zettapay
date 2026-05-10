@@ -1,0 +1,48 @@
+---
+title: "Idempotency"
+description: "Safely retry write requests with Idempotency-Key."
+---
+
+Network failures happen. ZettaPay write endpoints accept an
+`Idempotency-Key` header so a client can safely retry a request without
+risking a duplicate charge or duplicate merchant registration.
+
+## Behavior
+
+- The first request with a given key is processed normally and its 2xx
+  response is cached.
+- Subsequent requests with the **same key and the same body** replay the
+  cached response — same status, same payload, same `txSignature`.
+- Subsequent requests with the **same key but a different body** return
+  `409 idempotency_conflict`.
+- Idempotency scope is per-route. `POST /pay` and `POST /subscriptions`
+  share neither keys nor cached responses.
+- Cached responses live for 24 hours.
+
+## Where it applies
+
+| Endpoint | Honors `Idempotency-Key` |
+| --- | --- |
+| `POST /merchants/register` | Yes |
+| `POST /pay` | Yes |
+| `POST /subscriptions` | Yes |
+
+## Format
+
+`Idempotency-Key` must be 8 to 128 characters of `[A-Za-z0-9_-]`.
+UUIDs and ULIDs both qualify.
+
+```bash
+curl -X POST https://api.zettapay.io/pay \
+  -H "x-zettapay-api-key: zp_live_..." \
+  -H "Idempotency-Key: 01J9VV4FZX6Y0E9K2DZQH4N7G0" \
+  -H "Content-Type: application/json" \
+  -d '{ "merchantId": 42, "amount": "5.00" }'
+```
+
+## Recommended pattern
+
+Generate a fresh key per logical operation (e.g. per checkout attempt),
+not per HTTP request. Persist the key alongside the operation in your
+database before issuing the call. On retry, replay the same key against
+ZettaPay and trust the deduplicated response.

@@ -1,0 +1,40 @@
+---
+title: "Cancel subscription"
+description: "Stop future charges. Past charges are unaffected."
+api: "POST https://api.zettapay.io/subscriptions/:id/cancel"
+---
+
+Sets the subscription `status` to `canceled`. Future scheduled charges
+are skipped. Already-charged amounts are not refunded — issue a new
+payment in the opposite direction if a refund is required.
+
+## Headers
+
+| Header | Required |
+| --- | --- |
+| `x-zettapay-api-key` | Yes |
+
+## Path parameters
+
+| Param | Description |
+| --- | --- |
+| `id` | Subscription id. |
+
+## Example request
+
+```bash
+curl -X POST https://api.zettapay.io/subscriptions/sub_01J9VV.../cancel \
+  -H "x-zettapay-api-key: zp_live_..."
+```
+
+## Response — `200 OK`
+
+```json
+{
+  "subscription": {
+    "id": "sub_01J9VV...",
+    "status": "canceled",
+    "canceledAt": "2026-05-10T19:30:00.000Z"
+  }
+}
+```
