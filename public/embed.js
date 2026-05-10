@@ -146,6 +146,73 @@
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }
 
+  var USDC_MINT_ADDR = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+  var USDC_DECIMALS = 6;
+  var SOLANA_RPC = 'https://api.devnet.solana.com';
+  var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  var WEB3_URL = 'https://esm.sh/@solana/web3.js@1.95.8';
+  var SPL_URL = 'https://esm.sh/@solana/spl-token@0.4.9?deps=@solana/web3.js@1.95.8';
+
+  var solanaLibs = null;
+  function loadSolanaLibs() {
+    if (solanaLibs) return solanaLibs;
+    solanaLibs = Promise.all([
+      import(/* @vite-ignore */ WEB3_URL),
+      import(/* @vite-ignore */ SPL_URL)
+    ]).then(function (mods) {
+      return { web3: mods[0], spl: mods[1] };
+    });
+    return solanaLibs;
+  }
+
+  function resolveMerchantWallet(libs, ref, amount) {
+    if (SOLANA_ADDRESS_RE.test(ref)) {
+      return Promise.resolve(new libs.web3.PublicKey(ref));
+    }
+    var url = BASE + '/api/simulate/' + encodeURIComponent(ref) + '?amount=' + (amount || 1);
+    return fetch(url)
+      .then(function (r) {
+        if (!r.ok) throw new Error('Merchant lookup failed (' + r.status + ')');
+        return r.json();
+      })
+      .then(function (data) {
+        var wallet = data && data.merchant && data.merchant.walletAddress;
+        if (!wallet || !SOLANA_ADDRESS_RE.test(wallet)) throw new Error('Merchant has no wallet on file');
+        return new libs.web3.PublicKey(wallet);
+      });
+  }
+
+  function classifyError(err) {
+    var msg = (err && err.message) ? String(err.message) : String(err || '');
+    var code = err && (err.code || (err.error && err.error.code));
+    if (code === 4001 || /user reject|rejected|denied|cancel/i.test(msg)) {
+      return 'Payment cancelled in wallet.';
+    }
+    if (/insufficient.*fund|0x1|TokenAccountInsufficientFunds|custom program error: 0x1/i.test(msg)) {
+      return 'Insufficient USDC balance on devnet.';
+    }
+    if (/blockhash|expired/i.test(msg)) return 'Blockhash expired. Try again.';
+    if (/timeout|timed out/i.test(msg)) return 'RPC timeout. Try again.';
+    if (/fetch|network/i.test(msg)) return 'Network error. Check your connection.';
+    return msg || 'Payment failed.';
+  }
+
+  function showSuccess(modal, signature) {
+    var s = modal.querySelector('[data-zp-status]');
+    if (!s) return;
+    s.className = 'zettapay-status success show';
+    s.innerHTML = '';
+    s.appendChild(document.createTextNode('✓ Paid! Tx: '));
+    var a = document.createElement('a');
+    a.href = 'https://explorer.solana.com/tx/' + signature + '?cluster=devnet';
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.style.color = 'inherit';
+    a.style.textDecoration = 'underline';
+    a.textContent = signature.slice(0, 12) + '...' + signature.slice(-8);
+    s.appendChild(a);
+  }
+
   function handlePay(config, modal) {
     var btn = modal.querySelector('[data-zp-pay]');
     var provider = getPhantom();
@@ -162,41 +229,96 @@
       return;
     }
 
-    btn.disabled = true;
-    setStatus(modal, 'Connecting Phantom...', 'info');
+    var amount = parseFloat(config.amount || '0');
+    if (!isFinite(amount) || amount <= 0) {
+      setStatus(modal, 'Invalid amount.', 'error');
+      return;
+    }
 
-    provider.connect()
+    btn.disabled = true;
+    setStatus(modal, 'Loading Solana SDK...', 'info');
+
+    var ctx = {};
+
+    loadSolanaLibs()
+      .then(function (libs) {
+        ctx.libs = libs;
+        setStatus(modal, 'Connecting Phantom...', 'info');
+        return provider.connect();
+      })
       .then(function (resp) {
         var addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
         if (!addr) throw new Error('No public key returned');
-        setStatus(modal, 'Connected: ' + addr.slice(0, 6) + '...' + addr.slice(-4) + '. Initiating payment...', 'info');
-        return fetch(BASE + '/api/pay', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-ZettaPay-Public-Key': config.pk
-          },
-          body: JSON.stringify({
-            merchant: config.merchant,
-            payer_wallet: addr,
-            amount_usdc: parseFloat(config.amount || '0'),
-            currency: config.currency,
-            origin: window.location.origin
-          })
-        });
+        ctx.payerPubkey = new ctx.libs.web3.PublicKey(addr);
+        setStatus(modal, 'Resolving merchant...', 'info');
+        return resolveMerchantWallet(ctx.libs, config.merchant, amount);
       })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data && data.error) throw new Error(data.error.message || data.error.code || 'Payment failed');
-        setStatus(modal, '✓ Payment recorded. Tx: ' + (data.signature || data.tx || 'pending'), 'success');
-        if (config.onSuccess && typeof window[config.onSuccess] === 'function') {
-          try { window[config.onSuccess](data); } catch (e) {}
+      .then(function (merchantWallet) {
+        ctx.merchantWallet = merchantWallet;
+        setStatus(modal, 'Building transaction...', 'info');
+        var web3 = ctx.libs.web3;
+        var spl = ctx.libs.spl;
+        ctx.mint = new web3.PublicKey(USDC_MINT_ADDR);
+        ctx.connection = new web3.Connection(SOLANA_RPC, 'confirmed');
+        ctx.payerAta = spl.getAssociatedTokenAddressSync(ctx.mint, ctx.payerPubkey, false);
+        ctx.merchantAta = spl.getAssociatedTokenAddressSync(ctx.mint, ctx.merchantWallet, false);
+        return Promise.all([
+          ctx.connection.getAccountInfo(ctx.payerAta),
+          ctx.connection.getAccountInfo(ctx.merchantAta),
+          ctx.connection.getLatestBlockhash('confirmed')
+        ]);
+      })
+      .then(function (results) {
+        var payerInfo = results[0];
+        var merchantInfo = results[1];
+        var latest = results[2];
+        ctx.latest = latest;
+        var web3 = ctx.libs.web3;
+        var spl = ctx.libs.spl;
+        var tx = new web3.Transaction({ feePayer: ctx.payerPubkey, recentBlockhash: latest.blockhash });
+        if (!payerInfo) {
+          tx.add(spl.createAssociatedTokenAccountInstruction(
+            ctx.payerPubkey, ctx.payerAta, ctx.payerPubkey, ctx.mint,
+            spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID
+          ));
         }
-        window.dispatchEvent(new CustomEvent('zettapay:success', { detail: data }));
-        setTimeout(closeModal, 3000);
+        if (!merchantInfo) {
+          tx.add(spl.createAssociatedTokenAccountInstruction(
+            ctx.payerPubkey, ctx.merchantAta, ctx.merchantWallet, ctx.mint,
+            spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID
+          ));
+        }
+        var micro = BigInt(Math.round(amount * Math.pow(10, USDC_DECIMALS)));
+        tx.add(spl.createTransferCheckedInstruction(
+          ctx.payerAta, ctx.mint, ctx.merchantAta, ctx.payerPubkey,
+          micro, USDC_DECIMALS, [], spl.TOKEN_PROGRAM_ID
+        ));
+        setStatus(modal, 'Confirm in Phantom...', 'info');
+        return provider.signAndSendTransaction(tx);
+      })
+      .then(function (result) {
+        ctx.signature = result.signature;
+        setStatus(modal, 'Submitting to network...', 'info');
+        return ctx.connection.confirmTransaction({
+          signature: ctx.signature,
+          blockhash: ctx.latest.blockhash,
+          lastValidBlockHeight: ctx.latest.lastValidBlockHeight
+        }, 'confirmed');
+      })
+      .then(function (confirmation) {
+        if (confirmation && confirmation.value && confirmation.value.err) {
+          throw new Error('On-chain error: ' + JSON.stringify(confirmation.value.err));
+        }
+        showSuccess(modal, ctx.signature);
+        var payload = { signature: ctx.signature, merchant: config.merchant, amount: amount, network: 'solana-devnet' };
+        if (config.onSuccess && typeof window[config.onSuccess] === 'function') {
+          try { window[config.onSuccess](payload); } catch (e) {}
+        }
+        window.dispatchEvent(new CustomEvent('zettapay:success', { detail: payload }));
+        setTimeout(closeModal, 4000);
       })
       .catch(function (err) {
-        setStatus(modal, (err && err.message) ? err.message : 'Payment cancelled', 'error');
+        setStatus(modal, classifyError(err), 'error');
         if (config.onCancel && typeof window[config.onCancel] === 'function') {
           try { window[config.onCancel](err); } catch (e) {}
         }
@@ -207,8 +329,8 @@
 
   function init() {
     var config = loadConfig();
-    if (!config || !config.merchant || !config.pk) {
-      console.warn('[ZettaPay] embed.js: missing data-merchant or data-pk');
+    if (!config || !config.merchant) {
+      console.warn('[ZettaPay] embed.js: missing data-merchant');
       return;
     }
     injectStyles();
