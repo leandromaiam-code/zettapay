@@ -3,6 +3,7 @@ import type { Database as Db } from "better-sqlite3";
 import { merchantsRouter } from "./routes/merchants.js";
 import { payRouter } from "./routes/pay.js";
 import { settlementRouter } from "./routes/settlement.js";
+import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { errorHandler } from "./middleware/error.js";
 import { HttpError } from "./lib/errors.js";
@@ -54,6 +55,7 @@ export function createApp(options: CreateAppOptions): Express {
 
   app.use(merchantsRouter(db));
   app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
+  app.use(subscriptionsRouter(db));
   app.use(verifySignatureRouter(db));
   if (coinflow) {
     app.use(settlementRouter(db, coinflow));
