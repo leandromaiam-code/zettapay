@@ -71,11 +71,12 @@ body {
 }
 .btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(79,107,255,0.45); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.status { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-family: ui-monospace, monospace; display: none; }
+.status { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-family: ui-monospace, monospace; display: none; word-break: break-all; }
 .status.show { display: block; }
 .status.info { background: rgba(79,107,255,0.12); color: #aab6ff; }
 .status.success { background: rgba(20,241,149,0.12); color: #14F195; }
 .status.error { background: rgba(244,67,54,0.12); color: #ff7c7c; }
+.status a { color: inherit; text-decoration: underline; }
 .foot { text-align: center; margin-top: 22px; font-size: 11px; color: #555; }
 .foot a { color: #4F6BFF; text-decoration: none; }
 .error-card { text-align: center; padding: 60px 20px; }
@@ -111,90 +112,198 @@ body {
 <a href="/" class="btn" style="margin-top:24px;text-decoration:none">Voltar pra home</a>
 </div>
 </div>
-<script>
-(function(){
-  var qs = new URLSearchParams(location.search);
-  var merchant = qs.get('merchant');
-  var amount = parseFloat(qs.get('amount') || '0');
-  var label = qs.get('label') || 'Pagamento';
-  var returnUrl = qs.get('return_url') || '';
-  var pk = qs.get('pk') || '';
+<script type="module">
+import {
+  Connection,
+  PublicKey,
+  Transaction,
+} from 'https://esm.sh/@solana/web3.js@1.95.8';
+import {
+  getAssociatedTokenAddressSync,
+  createTransferCheckedInstruction,
+  createAssociatedTokenAccountInstruction,
+  TOKEN_PROGRAM_ID,
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+} from 'https://esm.sh/@solana/spl-token@0.4.9?deps=@solana/web3.js@1.95.8';
 
-  if (!merchant || !amount || amount <= 0) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('error-state').style.display = 'block';
-    return;
-  }
+const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
+const USDC_DECIMALS = 6;
+const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
+const qs = new URLSearchParams(location.search);
+const merchantRef = qs.get('merchant') || '';
+const amount = parseFloat(qs.get('amount') || '0');
+const label = qs.get('label') || 'Pagamento';
+const returnUrl = qs.get('return_url') || '';
+const rpcOverride = qs.get('rpc') || '';
+
+if (!merchantRef || !amount || amount <= 0) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-state').style.display = 'block';
+} else {
+  bootCheckout();
+}
+
+function bootCheckout() {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('checkout').style.display = 'block';
   document.getElementById('label-text').textContent = label;
   document.getElementById('amount').textContent = amount.toFixed(2);
-  document.getElementById('merchant-display').textContent = merchant.length > 20 ? merchant.slice(0,8) + '…' + merchant.slice(-6) : merchant;
+  document.getElementById('merchant-display').textContent =
+    merchantRef.length > 20 ? merchantRef.slice(0, 8) + '…' + merchantRef.slice(-6) : merchantRef;
   document.getElementById('fee').textContent = (amount * 0.003).toFixed(3) + ' USDC';
+  document.getElementById('payBtn').addEventListener('click', handlePay);
+}
 
-  function setStatus(msg, kind) {
-    var s = document.getElementById('status');
-    s.className = 'status show ' + (kind || 'info');
-    s.textContent = msg;
+function setStatus(msg, kind) {
+  const s = document.getElementById('status');
+  s.className = 'status show ' + (kind || 'info');
+  if (typeof msg === 'string') s.textContent = msg;
+  else { s.textContent = ''; s.appendChild(msg); }
+}
+
+function explorerLink(signature) {
+  const a = document.createElement('a');
+  a.href = 'https://explorer.solana.com/tx/' + signature + '?cluster=devnet';
+  a.target = '_blank';
+  a.rel = 'noopener';
+  a.textContent = signature.slice(0, 12) + '…' + signature.slice(-8);
+  return a;
+}
+
+function isMobile() {
+  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
+function getPhantom() {
+  const p = (window.phantom && window.phantom.solana) || window.solana;
+  return (p && p.isPhantom) ? p : null;
+}
+
+async function resolveMerchantWallet(ref) {
+  if (SOLANA_ADDRESS_RE.test(ref)) return new PublicKey(ref);
+  const r = await fetch('/api/simulate/' + encodeURIComponent(ref) + '?amount=' + amount);
+  if (!r.ok) throw new Error('Merchant lookup failed (' + r.status + ')');
+  const data = await r.json();
+  const wallet = data && data.merchant && data.merchant.walletAddress;
+  if (!wallet || !SOLANA_ADDRESS_RE.test(wallet)) throw new Error('Merchant has no wallet on file');
+  return new PublicKey(wallet);
+}
+
+function classifyError(err) {
+  const msg = (err && err.message) ? String(err.message) : String(err || '');
+  const code = err && (err.code || err.error?.code);
+  if (code === 4001 || /user reject|rejected|denied|cancel/i.test(msg)) {
+    return 'Pagamento cancelado na carteira.';
+  }
+  if (/insufficient.*fund|0x1|TokenAccountInsufficientFunds|custom program error: 0x1/i.test(msg)) {
+    return 'Saldo USDC insuficiente. Use /faucet pra receber USDC devnet.';
+  }
+  if (/blockhash|expired/i.test(msg)) {
+    return 'Blockhash expirou. Tente novamente.';
+  }
+  if (/timeout|timed out/i.test(msg)) {
+    return 'RPC timeout. Tente novamente em alguns segundos.';
+  }
+  if (/fetch|network/i.test(msg)) {
+    return 'Erro de rede. Verifique sua conexão.';
+  }
+  return msg || 'Falha ao processar pagamento.';
+}
+
+async function handlePay() {
+  const btn = document.getElementById('payBtn');
+  const provider = getPhantom();
+
+  if (!provider && isMobile()) {
+    setStatus('Abrindo Phantom...', 'info');
+    const ref = encodeURIComponent(location.origin);
+    location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(location.href) + '?ref=' + ref;
+    return;
+  }
+  if (!provider) {
+    setStatus('Phantom não detectado. Instale em phantom.app', 'error');
+    window.open('https://phantom.app/download', '_blank');
+    return;
   }
 
-  function isMobile() {
-    return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  }
+  btn.disabled = true;
 
-  function getPhantom() {
-    var p = (window.phantom && window.phantom.solana) || window.solana;
-    return (p && p.isPhantom) ? p : null;
-  }
-
-  document.getElementById('payBtn').addEventListener('click', function() {
-    var btn = document.getElementById('payBtn');
-    var provider = getPhantom();
-
-    if (!provider && isMobile()) {
-      setStatus('Abrindo Phantom...', 'info');
-      var ref = encodeURIComponent(location.origin);
-      location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(location.href) + '?ref=' + ref;
-      return;
-    }
-    if (!provider) {
-      setStatus('Phantom não detectado. Instale em phantom.app', 'error');
-      window.open('https://phantom.app/download', '_blank');
-      return;
-    }
-
-    btn.disabled = true;
+  try {
     setStatus('Conectando Phantom...', 'info');
+    const resp = await provider.connect();
+    const payerPubkey = new PublicKey(resp.publicKey.toString());
 
-    provider.connect()
-      .then(function(resp) {
-        var addr = resp.publicKey.toString();
-        setStatus('Conectado: ' + addr.slice(0,6) + '…' + addr.slice(-4) + '. Iniciando pagamento...', 'info');
-        return fetch('/api/pay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-ZettaPay-Public-Key': pk },
-          body: JSON.stringify({
-            merchantId: merchant,
-            payerWallet: addr,
-            amountUsdc: amount,
-            currency: 'USDC',
-            description: label
-          })
-        });
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        if (data.error) throw new Error(data.error.message || data.error.code);
-        setStatus('✓ Pagamento confirmado! Tx: ' + (data.signature || 'pending'), 'success');
-        if (returnUrl) setTimeout(function() { location.href = returnUrl; }, 2500);
-      })
-      .catch(function(err) {
-        setStatus(err.message || 'Pagamento cancelado', 'error');
-        btn.disabled = false;
-      });
-  });
-})();
+    setStatus('Buscando merchant...', 'info');
+    const merchantWallet = await resolveMerchantWallet(merchantRef);
+
+    setStatus('Montando transação...', 'info');
+    const rpcUrl = rpcOverride || 'https://api.devnet.solana.com';
+    const connection = new Connection(rpcUrl, 'confirmed');
+
+    const payerAta = getAssociatedTokenAddressSync(USDC_MINT, payerPubkey, false);
+    const merchantAta = getAssociatedTokenAddressSync(USDC_MINT, merchantWallet, false);
+
+    const [payerInfo, merchantInfo, latest] = await Promise.all([
+      connection.getAccountInfo(payerAta),
+      connection.getAccountInfo(merchantAta),
+      connection.getLatestBlockhash('confirmed'),
+    ]);
+
+    const tx = new Transaction({
+      feePayer: payerPubkey,
+      recentBlockhash: latest.blockhash,
+    });
+
+    if (!payerInfo) {
+      tx.add(createAssociatedTokenAccountInstruction(
+        payerPubkey, payerAta, payerPubkey, USDC_MINT,
+        TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID,
+      ));
+    }
+    if (!merchantInfo) {
+      tx.add(createAssociatedTokenAccountInstruction(
+        payerPubkey, merchantAta, merchantWallet, USDC_MINT,
+        TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID,
+      ));
+    }
+
+    const microAmount = BigInt(Math.round(amount * Math.pow(10, USDC_DECIMALS)));
+    tx.add(createTransferCheckedInstruction(
+      payerAta, USDC_MINT, merchantAta, payerPubkey,
+      microAmount, USDC_DECIMALS, [], TOKEN_PROGRAM_ID,
+    ));
+
+    setStatus('Confirme no Phantom...', 'info');
+    const { signature } = await provider.signAndSendTransaction(tx);
+
+    setStatus('Enviando à rede...', 'info');
+    const confirmation = await connection.confirmTransaction({
+      signature,
+      blockhash: latest.blockhash,
+      lastValidBlockHeight: latest.lastValidBlockHeight,
+    }, 'confirmed');
+
+    if (confirmation.value && confirmation.value.err) {
+      throw new Error('Transação rejeitada on-chain: ' + JSON.stringify(confirmation.value.err));
+    }
+
+    const wrap = document.createElement('span');
+    wrap.appendChild(document.createTextNode('✓ Pago! Tx: '));
+    wrap.appendChild(explorerLink(signature));
+    setStatus(wrap, 'success');
+
+    if (returnUrl) {
+      setTimeout(function () {
+        const sep = returnUrl.includes('?') ? '&' : '?';
+        location.href = returnUrl + sep + 'tx=' + encodeURIComponent(signature);
+      }, 3000);
+    }
+  } catch (err) {
+    setStatus(classifyError(err), 'error');
+    btn.disabled = false;
+  }
+}
 </script>
 </body>
 </html>
