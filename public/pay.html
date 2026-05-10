@@ -242,7 +242,7 @@ async function handlePay() {
     const connection = new Connection(rpcUrl, 'confirmed');
 
     const payerAta = getAssociatedTokenAddressSync(USDC_MINT, payerPubkey, false);
-    const merchantAta = getAssociatedTokenAddressSync(USDC_MINT, merchantWallet, false);
+    const merchantAta = getAssociatedTokenAddressSync(USDC_MINT, merchantWallet, true)  // allowOwnerOffCurve: merchant ATA may be a PDA;
 
     const [payerInfo, merchantInfo, latest] = await Promise.all([
       connection.getAccountInfo(payerAta),
