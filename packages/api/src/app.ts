@@ -14,6 +14,7 @@ import { registryRouter } from "./routes/registry.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
+import { treasuryRouter } from "./routes/treasury.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
 import { webhooksRouter } from "./routes/webhooks.js";
@@ -30,6 +31,7 @@ import type {
   ShopifyAppConfig,
   ShopifyTokenExchanger,
 } from "./services/shopify.js";
+import { TreasuryService } from "./services/treasury.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -49,6 +51,13 @@ export interface CreateAppOptions {
   /** When provided, /merchants/:id/kyc/* + /webhooks/sumsub are wired through
    * to a real KYC provider. Without it, those routes 503 with kyc_disabled. */
   kyc?: KycProviderClient;
+  /** Treasury/insurance reserve admin endpoints. When `adminKey` is omitted or
+   * shorter than 24 chars the routes are still mounted but reject every call
+   * with config_error — protects mainnet from accidental open access (Z22.3). */
+  treasury?: {
+    adminKey?: string | null;
+    reserveRatio?: number;
+  };
 }
 
 const startedAt = Date.now();
@@ -63,6 +72,7 @@ export function createApp(options: CreateAppOptions): Express {
     shopify,
     shopifyTokenExchanger,
     kyc,
+    treasury,
   } = options;
 
   const app = express();
@@ -138,6 +148,18 @@ export function createApp(options: CreateAppOptions): Express {
   if (coinflow) {
     app.use(settlementRouter(db, coinflow));
   }
+
+  const treasuryService = new TreasuryService(db, {
+    ...(treasury?.reserveRatio !== undefined
+      ? { reserveRatio: treasury.reserveRatio }
+      : {}),
+  });
+  app.use(
+    treasuryRouter(db, {
+      treasury: treasuryService,
+      adminKey: treasury?.adminKey ?? null,
+    }),
+  );
 
   app.use((_req, _res, next) => {
     next(HttpError.notFound("route not found"));

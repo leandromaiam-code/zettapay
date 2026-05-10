@@ -71,6 +71,12 @@ const app = createApp({
   coinflow,
   shopify,
   ...(kyc ? { kyc } : {}),
+  treasury: {
+    adminKey: process.env.ZETTAPAY_TREASURY_ADMIN_KEY ?? null,
+    ...(process.env.ZETTAPAY_TREASURY_RESERVE_RATIO !== undefined
+      ? { reserveRatio: Number(process.env.ZETTAPAY_TREASURY_RESERVE_RATIO) }
+      : {}),
+  },
 });
 
 const server = app.listen(port, host, () => {
