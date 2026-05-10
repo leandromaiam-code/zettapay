@@ -24,6 +24,7 @@ import { statusPageRouter } from "./routes/status-page.js";
 import { subscriptionsRouter } from "./routes/subscriptions.js";
 import { subscriptionManageRouter } from "./routes/subscription-manage.js";
 import { treasuryRouter } from "./routes/treasury.js";
+import { pixRouter, type PixClientResolver } from "./routes/pix.js";
 import { verifySignatureRouter } from "./routes/verify-signature.js";
 import { webflowRouter } from "./routes/webflow.js";
 import { webhooksAdminRouter } from "./routes/webhooks-admin.js";
@@ -47,6 +48,7 @@ import type {
   ShopifyTokenExchanger,
 } from "./services/shopify.js";
 import { TreasuryService } from "./services/treasury.js";
+import type { PixProvider } from "./pix/client.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -56,7 +58,14 @@ export interface CreateAppOptions {
    * routes are mounted and merchants with auto-settle enabled have completed
    * payments automatically swept to USD. */
   coinflow?: CoinflowClient;
-  /** Hook fired after auto-settle finishes (success or swallowed error). Test seam. */
+  /** Pix payout configuration. When `resolveClient` returns a client for the
+   * merchant's chosen provider AND the merchant has auto-settle enabled, a
+   * BRL Pix payout is fired-and-forgotten after a successful payment. */
+  pix?: {
+    resolveClient: PixClientResolver;
+    availableProviders: readonly PixProvider[];
+  };
+  /** Hook fired after Coinflow auto-settle finishes (success or swallow). Test seam. */
   onAutoSettle?: CreatePaymentDeps["onAutoSettle"];
   /** When provided, /shopify/install + /shopify/callback are mounted with
    * full OAuth handling. The /shopify/snippet route is always mounted. */
@@ -90,6 +99,8 @@ export interface CreateAppOptions {
     webhookAuthKey?: string | null;
     indexer?: OnChainPaymentIndexer;
   };
+  /** Hook fired after Pix auto-settle finishes (success or swallow). Test seam. */
+  onAutoPixSettle?: CreatePaymentDeps["onAutoPixSettle"];
 }
 
 const startedAt = Date.now();
@@ -107,6 +118,9 @@ export function createApp(options: CreateAppOptions): Express {
     treasury,
     admin,
     indexer,
+    pix,
+    onAutoSettle,
+    onAutoPixSettle,
   } = options;
   const betaConfig = options.betaConfig ?? loadBetaConfig();
 
@@ -162,6 +176,14 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));
   app.use(subscriptionManageRouter(db));
+  app.use(
+    payRouter(db, solana, {
+      coinflow,
+      onAutoSettle,
+      pix: pix?.resolveClient,
+      onAutoPixSettle,
+    }),
+  );
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
@@ -203,6 +225,9 @@ export function createApp(options: CreateAppOptions): Express {
   );
   if (coinflow) {
     app.use(settlementRouter(db, coinflow));
+  }
+  if (pix && pix.availableProviders.length > 0) {
+    app.use(pixRouter(db, pix));
   }
 
   const treasuryService = new TreasuryService(db, {

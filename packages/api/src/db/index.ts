@@ -58,6 +58,28 @@ function applyAddOnColumns(db: Db): void {
       "ALTER TABLE merchants ADD COLUMN velocity_max_amount_per_hour REAL NOT NULL DEFAULT 1000",
     );
   }
+  if (!merchantNames.has("pix_enabled")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN pix_enabled INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!merchantNames.has("pix_auto_settle")) {
+    db.exec(
+      "ALTER TABLE merchants ADD COLUMN pix_auto_settle INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!merchantNames.has("pix_provider")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN pix_provider TEXT");
+  }
+  if (!merchantNames.has("pix_provider_merchant_id")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN pix_provider_merchant_id TEXT");
+  }
+  if (!merchantNames.has("pix_key")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN pix_key TEXT");
+  }
+  if (!merchantNames.has("pix_key_type")) {
+    db.exec("ALTER TABLE merchants ADD COLUMN pix_key_type TEXT");
+  }
 
   const paymentCols = db.prepare("PRAGMA table_info(payments)").all() as Array<{
     name: string;
@@ -565,5 +587,30 @@ function applyMigrations(db: Db): void {
       ON onchain_payments(recorded_at);
     CREATE UNIQUE INDEX IF NOT EXISTS onchain_payments_binding_paymentid_uidx
       ON onchain_payments(merchant_binding, payment_id_hex);
+    CREATE TABLE IF NOT EXISTS pix_settlements (
+      id              TEXT PRIMARY KEY,
+      merchant_id     TEXT NOT NULL REFERENCES merchants(id) ON DELETE RESTRICT,
+      payment_id      TEXT REFERENCES payments(id) ON DELETE SET NULL,
+      provider        TEXT NOT NULL CHECK (provider IN ('bitpreco','transfero')),
+      amount_usdc     REAL NOT NULL,
+      fee_usdc        REAL NOT NULL,
+      net_usdc        REAL NOT NULL,
+      fee_bps         INTEGER NOT NULL,
+      pix_key         TEXT NOT NULL,
+      pix_key_type    TEXT NOT NULL CHECK (pix_key_type IN ('cpf','cnpj','email','phone','random')),
+      withdrawal_id   TEXT,
+      quoted_brl      REAL,
+      status          TEXT NOT NULL CHECK (status IN ('pending','processing','completed','failed')),
+      error_message   TEXT,
+      created_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      completed_at    TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS pix_settlements_merchant_idx
+      ON pix_settlements(merchant_id);
+    CREATE INDEX IF NOT EXISTS pix_settlements_status_idx
+      ON pix_settlements(status);
+    CREATE UNIQUE INDEX IF NOT EXISTS pix_settlements_payment_uidx
+      ON pix_settlements(payment_id) WHERE payment_id IS NOT NULL;
   `);
 }
