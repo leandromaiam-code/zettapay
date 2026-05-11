@@ -36,7 +36,8 @@ and finished inside a single sprint.
 | [`THREAT_MODEL.md`](THREAT_MODEL.md) | STRIDE-style threat catalogue + mitigations claimed. |
 | [`SECURITY_ASSUMPTIONS.md`](SECURITY_ASSUMPTIONS.md) | Trust boundaries, invariants the program relies on. |
 | [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) | Self-disclosed concerns and accepted limitations. |
-| [`BUG_BOUNTY.md`](BUG_BOUNTY.md) | Public $50k bounty terms running in parallel with the audit. |
+| [`BUG_BOUNTY.md`](BUG_BOUNTY.md) | Public $50k bounty terms running in parallel with the audit (mainnet listing, Z22.1). |
+| [`immunefi/`](immunefi/) | Immunefi submission package for the Sprint Z28 devnet validation bounty ($10k pool) and forward-reference for the Z22.1 mainnet listing. |
 | [`SUBMISSION.md`](SUBMISSION.md) | Engagement logistics, NDAs, deliverables, timeline. |
 | [`CODE_REVIEW_CHECKLIST.md`](CODE_REVIEW_CHECKLIST.md) | Off-chain pre-audit code-review gate (Z21.5). |
 | [`CRITICAL_PATHS.md`](CRITICAL_PATHS.md) | Off-chain critical paths and the path-specific review rules. |

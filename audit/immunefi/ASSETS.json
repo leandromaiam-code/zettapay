@@ -1,0 +1,217 @@
+{
+  "$schema": "https://immunefi.com/schemas/program-assets.v1.json",
+  "program": {
+    "name": "ZettaPay (devnet validation)",
+    "slug": "zettapay-devnet",
+    "type": "smart-contract",
+    "chain": "solana",
+    "cluster": "devnet",
+    "rewardCurrency": "USDC",
+    "rewardChain": "solana-mainnet",
+    "totalPoolUsdMax": 10000,
+    "effectiveFrom": null,
+    "effectiveFromNote": "Set to the date the Immunefi listing is approved, in Sprint Z28.",
+    "ownerEmail": "security@zettapay.io",
+    "submissionIntake": "immunefi.com",
+    "documentation": {
+      "programOverview": "audit/immunefi/PROGRAM.md",
+      "scope": "audit/immunefi/SCOPE.md",
+      "severity": "audit/immunefi/SEVERITY.md",
+      "rewards": "audit/immunefi/REWARDS.md",
+      "rules": "audit/immunefi/RULES.md",
+      "threatModel": "audit/THREAT_MODEL.md",
+      "knownIssues": "audit/KNOWN_ISSUES.md"
+    }
+  },
+  "inScope": [
+    {
+      "type": "solana-program",
+      "programId": "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS",
+      "cluster": "devnet",
+      "source": {
+        "repo": "https://github.com/leandromaiam-code/zettapay",
+        "branch": "main",
+        "commitPin": null,
+        "commitPinNote": "Set to the main HEAD commit on the day the Immunefi listing is approved.",
+        "paths": [
+          "programs/zettapay/src/lib.rs",
+          "programs/zettapay/Cargo.toml",
+          "Cargo.toml",
+          "Anchor.toml"
+        ]
+      },
+      "toolchain": {
+        "anchor": "0.30.1",
+        "solana": "1.18.26",
+        "buildProfile": "release",
+        "releaseFlags": ["overflow-checks=true", "lto=fat", "codegen-units=1"]
+      },
+      "instructions": [
+        {
+          "name": "register_merchant",
+          "args": ["merchant_handle", "usdc_token_account"],
+          "pdaSeeds": "[merchant_handle.as_bytes(), owner.key()]",
+          "signerConstraints": ["owner", "payer"]
+        },
+        {
+          "name": "record_payment",
+          "args": ["payment_id", "amount", "tx_signature"],
+          "pdaSeeds": "[merchant_binding.key(), payment_id]",
+          "signerConstraints": ["payer"]
+        }
+      ],
+      "accountTypes": ["MerchantBinding", "Payment"],
+      "impactsInScope": [
+        "direct-theft-of-user-funds",
+        "permanent-freeze-of-merchant-payouts",
+        "arbitrary-mutation-of-merchant-binding-or-payment",
+        "theft-of-unclaimed-rent",
+        "spoofing-of-merchant-binding",
+        "forgery-of-receipt-pda",
+        "denial-of-registration"
+      ]
+    }
+  ],
+  "outOfScope": [
+    {
+      "type": "package",
+      "path": "packages/api/",
+      "reason": "Off-chain code; triaged at security@zettapay.io outside Immunefi."
+    },
+    {
+      "type": "package",
+      "path": "packages/sdk/",
+      "reason": "Off-chain client library."
+    },
+    {
+      "type": "package",
+      "path": "packages/sdk-go/",
+      "reason": "Off-chain client library."
+    },
+    {
+      "type": "package",
+      "path": "packages/sdk-php/",
+      "reason": "Off-chain client library."
+    },
+    {
+      "type": "package",
+      "path": "packages/sdk-python/",
+      "reason": "Off-chain client library."
+    },
+    {
+      "type": "package",
+      "path": "packages/sdk-rust/",
+      "reason": "Off-chain client library."
+    },
+    {
+      "type": "package",
+      "path": "packages/widget/",
+      "reason": "Off-chain embed widget."
+    },
+    {
+      "type": "package",
+      "path": "src/",
+      "reason": "Off-chain merchant dashboard."
+    },
+    {
+      "type": "package",
+      "path": "plugins/",
+      "reason": "Off-chain commerce platform integrations."
+    },
+    {
+      "type": "upstream-dependency",
+      "name": "spl-token",
+      "reason": "Audited by Solana Labs and the Solana Foundation; out of our control."
+    },
+    {
+      "type": "upstream-dependency",
+      "name": "anchor",
+      "reason": "Framework; report to coral-xyz/anchor upstream."
+    },
+    {
+      "type": "upstream-dependency",
+      "name": "solana-runtime",
+      "reason": "Out of our trust boundary."
+    },
+    {
+      "type": "upstream-dependency",
+      "name": "usdc-mint",
+      "reason": "Maintained by Circle; out of our trust boundary."
+    },
+    {
+      "type": "external-service",
+      "name": "rpc-providers",
+      "reason": "Helius, Triton, public devnet RPC — operational concerns, not protocol bugs."
+    },
+    {
+      "type": "external-service",
+      "name": "wallet-adapters",
+      "reason": "Phantom, x402 signers — client-side."
+    },
+    {
+      "type": "operational",
+      "name": "deployer-keypair-opsec",
+      "reason": "Procedural; covered by Z22.1 launch checklist."
+    },
+    {
+      "type": "attack-class",
+      "name": "phishing",
+      "reason": "Out of protocol trust boundary."
+    },
+    {
+      "type": "attack-class",
+      "name": "social-engineering",
+      "reason": "Out of protocol trust boundary."
+    },
+    {
+      "type": "attack-class",
+      "name": "dos-by-spending-sol",
+      "reason": "Not a protocol-level bug; permissionless writes carry a SOL cost by design."
+    }
+  ],
+  "severity": {
+    "scheme": "immunefi-v2.3",
+    "tiers": [
+      {
+        "name": "Critical",
+        "payoutUsdMax": 5000,
+        "summary": "On-chain bypass that would steal funds, freeze payouts, or break immutability on mainnet."
+      },
+      {
+        "name": "High",
+        "payoutUsdMax": 1500,
+        "summary": "Rent theft, binding spoofing, receipt forgery with harder preconditions, denial of registration."
+      },
+      {
+        "name": "Medium",
+        "payoutUsdMax": 500,
+        "summary": "Information disclosure beyond public PDA; griefing that raises merchant operational cost."
+      },
+      {
+        "name": "Low",
+        "payoutUsdMax": 100,
+        "summary": "Documented-invariant violation with negligible economic impact."
+      }
+    ]
+  },
+  "rules": {
+    "testEnvironment": "devnet + local solana-test-validator",
+    "publicDisclosureWindowDays": 90,
+    "acknowledgmentSlaBusinessDays": 2,
+    "triageSlaBusinessDays": 10,
+    "fixEtaSlaBusinessDays": 20,
+    "payoutSlaCalendarDaysFromFixShip": 30,
+    "pocRequired": true,
+    "kycRequired": false,
+    "kycNote": "KYC not required for payouts; sanctioned jurisdictions may have settlement withheld with hall-of-fame credit."
+  },
+  "linkedListings": [
+    {
+      "name": "ZettaPay (mainnet)",
+      "status": "planned",
+      "filedAt": "Z22.1 mainnet deploy",
+      "poolUsdMax": 50000,
+      "referenceFile": "audit/BUG_BOUNTY.md"
+    }
+  ]
+}
