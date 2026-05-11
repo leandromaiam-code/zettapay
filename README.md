@@ -95,6 +95,16 @@ curl https://zettapay.vercel.app/simulate/test-merchant
 - MCP endpoint for AI agents
 - Native integration recipes for Anthropic Claude, OpenAI, and Hugging Face — see [docs/concepts/native-integrations](docs/concepts/native-integrations.mdx)
 
+## Protocol spec
+
+The public wire-level specification — URI schemes, instruction
+discriminators, PDA seeds, account layouts, error codes, and proof
+formats — lives in [`protocol/`](./protocol/README.md). This is the
+mirror of what will be published at
+[`github.com/zettapay/protocol`](https://github.com/zettapay/protocol)
+for SDK authors, wallet integrators, and indexers building against
+ZettaPay.
+
 ## Vercel deployment
 
 The project ships with a thin `/api/*` serverless layer that mirrors the
