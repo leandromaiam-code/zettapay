@@ -11,6 +11,12 @@ This program is intended to be hosted on **Immunefi** at
 deploy. The terms below are the canonical version; the Immunefi
 listing is a mirror.
 
+A **separate, smaller Immunefi listing** runs during Sprint Z28
+(devnet validation, four weeks, $10k pool) — its submission package
+lives in [`immunefi/`](immunefi/). The two listings share scope
+boundaries and rules; the mainnet listing differs only in pool size,
+program ID, and effective date.
+
 ## Scope
 
 | In scope | Out of scope |
