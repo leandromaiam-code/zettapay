@@ -24,6 +24,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@solana/spl-token": "^0.4.9",
     "@solana/web3.js": "^1.95.4",
     "axios": "^1.7.9"
   },
