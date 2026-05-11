@@ -2,12 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
 import { createHash, randomBytes } from 'node:crypto';
 import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  INVOICE_INDEX_SEED_LEN,
+  TOKEN_PROGRAM_ID,
+  USDC_MINT,
   ZETTAPAY_IDL,
   ZETTAPAY_PROGRAM_ID,
   PAYMENT_ID_LEN,
   TX_SIGNATURE_LEN,
   buildRecordPaymentInstruction,
   buildRegisterMerchantInstruction,
+  deriveAssociatedTokenAddress,
+  deriveInvoicePda,
+  deriveInvoiceUsdcAddress,
   deriveMerchantBindingPda,
   derivePaymentPda,
   isValidMerchantHandle,
@@ -241,5 +248,107 @@ describe('buildRecordPaymentInstruction', () => {
         txSignature: new Uint8Array(TX_SIGNATURE_LEN),
       }),
     ).toThrow(/strictly greater than zero/);
+  });
+});
+
+describe('deriveInvoicePda', () => {
+  const master = Keypair.generate().publicKey;
+
+  it('is deterministic, off-curve, and uses [master, u64-le(index)] seeds', () => {
+    const index = 42n;
+    const indexSeed = Buffer.alloc(INVOICE_INDEX_SEED_LEN);
+    indexSeed.writeBigUInt64LE(index, 0);
+    const expected = PublicKey.findProgramAddressSync(
+      [master.toBuffer(), indexSeed],
+      ZETTAPAY_PROGRAM_ID,
+    );
+    const got = deriveInvoicePda(master, index);
+    expect(got.pda.equals(expected[0])).toBe(true);
+    expect(got.bump).toBe(expected[1]);
+    expect(PublicKey.isOnCurve(got.pda.toBytes())).toBe(false);
+    expect(deriveInvoicePda(master, index).pda.equals(got.pda)).toBe(true);
+  });
+
+  it('accepts number and bigint inputs interchangeably', () => {
+    const a = deriveInvoicePda(master, 7);
+    const b = deriveInvoicePda(master, 7n);
+    expect(a.pda.equals(b.pda)).toBe(true);
+  });
+
+  it('different indices and masters produce distinct addresses', () => {
+    const a = deriveInvoicePda(master, 0n);
+    const b = deriveInvoicePda(master, 1n);
+    expect(a.pda.equals(b.pda)).toBe(false);
+    const otherMaster = Keypair.generate().publicKey;
+    const c = deriveInvoicePda(otherMaster, 0n);
+    expect(a.pda.equals(c.pda)).toBe(false);
+  });
+
+  it('rejects negative and out-of-range indices', () => {
+    expect(() => deriveInvoicePda(master, -1n)).toThrow(/non-negative/);
+    expect(() => deriveInvoicePda(master, 0x1_0000_0000_0000_0000n)).toThrow(/2\^64/);
+  });
+
+  it('honours a custom programId', () => {
+    const altProgram = Keypair.generate().publicKey;
+    const defaultPda = deriveInvoicePda(master, 1n);
+    const altPda = deriveInvoicePda(master, 1n, altProgram);
+    expect(defaultPda.pda.equals(altPda.pda)).toBe(false);
+  });
+});
+
+describe('deriveAssociatedTokenAddress', () => {
+  it('matches the canonical [owner, TOKEN_PROGRAM_ID, mint] ATA seeds', () => {
+    const owner = Keypair.generate().publicKey;
+    const mint = Keypair.generate().publicKey;
+    const expected = PublicKey.findProgramAddressSync(
+      [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+      ASSOCIATED_TOKEN_PROGRAM_ID,
+    );
+    const ata = deriveAssociatedTokenAddress(owner, mint);
+    expect(ata.equals(expected[0])).toBe(true);
+  });
+
+  it('works for off-curve owners (PDAs)', () => {
+    const master = Keypair.generate().publicKey;
+    const { pda } = deriveInvoicePda(master, 1n);
+    expect(PublicKey.isOnCurve(pda.toBytes())).toBe(false);
+    const ata = deriveAssociatedTokenAddress(pda, USDC_MINT.devnet);
+    expect(PublicKey.isOnCurve(ata.toBytes())).toBe(false);
+  });
+});
+
+describe('deriveInvoiceUsdcAddress', () => {
+  const master = Keypair.generate().publicKey;
+
+  it('defaults to mainnet USDC and ties the ATA to the invoice PDA', () => {
+    const got = deriveInvoiceUsdcAddress({ masterPubkey: master, invoiceIndex: 1n });
+    const { pda, bump } = deriveInvoicePda(master, 1n);
+    expect(got.invoicePda.equals(pda)).toBe(true);
+    expect(got.invoiceBump).toBe(bump);
+    expect(got.usdcMint.equals(USDC_MINT['mainnet-beta'])).toBe(true);
+    expect(got.usdcAta.equals(deriveAssociatedTokenAddress(pda, USDC_MINT['mainnet-beta']))).toBe(
+      true,
+    );
+  });
+
+  it('resolves devnet USDC when requested', () => {
+    const got = deriveInvoiceUsdcAddress({
+      masterPubkey: master,
+      invoiceIndex: 0n,
+      cluster: 'devnet',
+    });
+    expect(got.usdcMint.equals(USDC_MINT.devnet)).toBe(true);
+  });
+
+  it('lets an explicit mint override the cluster default', () => {
+    const altMint = Keypair.generate().publicKey;
+    const got = deriveInvoiceUsdcAddress({
+      masterPubkey: master,
+      invoiceIndex: 0n,
+      cluster: 'devnet',
+      mint: altMint,
+    });
+    expect(got.usdcMint.equals(altMint)).toBe(true);
   });
 });
