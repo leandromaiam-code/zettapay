@@ -50,6 +50,43 @@ export {
 } from './onchain.js';
 export { ZETTAPAY_IDL, type ZettaPayErrorCode } from './idl/zettapay.js';
 export {
+  HARDENED_OFFSET,
+  XPUB_VERSIONS,
+  parseXpub,
+  serializeXpub,
+  deriveChildPub,
+  derivePath,
+  parsePath,
+  fingerprintOf,
+  uncompressedPubKey,
+  base58Encode,
+  base58Decode,
+  base58CheckEncode,
+  base58CheckDecode,
+  sha256d,
+  hash160,
+  type ExtendedPublicKey,
+  type Bip32Network,
+} from './bip32.js';
+export {
+  USDC_EVM_CONTRACTS,
+  BIP44_COIN,
+  BTC_P2PKH_VERSION,
+  toEip55,
+  compressedPubKeyToBtcAddress,
+  compressedPubKeyToEthAddress,
+  deriveBitcoinAddress,
+  deriveEthereumAddress,
+  deriveUsdcEvmAddress,
+  type EvmChain,
+  type BtcNetwork,
+  type DeriveOptions,
+  type UsdcDeriveOptions,
+  type BitcoinDerivation,
+  type EthereumDerivation,
+  type UsdcEvmDerivation,
+} from './crosschain.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,
