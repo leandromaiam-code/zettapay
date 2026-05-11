@@ -166,6 +166,7 @@
           {
             "group": "Other languages",
             "pages": [
+              "sdk/community-sdks",
               "sdk/multi-language"
             ]
           }

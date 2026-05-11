@@ -1,0 +1,133 @@
+---
+title: "Community SDKs"
+description: "Hand-tuned Python and Rust clients alongside the canonical TypeScript SDK — built and maintained with the community."
+---
+
+The TypeScript SDK at [`@zettapay/sdk`](/sdk/installation) is the
+canonical client. Two community-maintained SDKs ship in the same
+monorepo, vendored as small skeletons that mirror the TS surface and are
+designed to be **easy to extend with a PR**:
+
+| Language | Crate / package | Source | Install |
+| --- | --- | --- | --- |
+| Python | `zettapay` | [`packages/sdk-python`](https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-python) | `pip install zettapay` |
+| Rust | `zettapay` | [`packages/sdk-rust`](https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-rust) | `cargo add zettapay` |
+
+Both ship a working `examples/quickstart` that walks the full happy
+path: health probe → register merchant → read / list / patch → submit a
+base64-encoded x402 payment → clean up.
+
+## Python — at a glance
+
+```python
+from zettapay import RetryPolicy, ZettaPayClient
+
+client = ZettaPayClient(
+    "https://api.zettapay.dev",
+    api_key="zp_live_...",
+    retry=RetryPolicy.default(),
+)
+
+merchant = client.register_merchant(
+    name="Acme Coffee",
+    wallet_pubkey="7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT",
+    usdc_ata="EhpbDdUDKv2Ah6yyhyqz7n9zUQqvmW1qzPKNaqgQ4kZK",
+)
+receipt = client.pay(signed_solana_tx_bytes)
+```
+
+- Sync **and** async clients sharing the same surface.
+- **Zero runtime dependencies** — standard library only.
+- Works with mypy `--strict` and pyright `strict` out of the box.
+- Python 3.9 → 3.13.
+
+Run the example:
+
+```bash
+cd packages/sdk-python
+pip install -e ".[test]"
+python examples/quickstart.py
+```
+
+Full guide: [`packages/sdk-python/CONTRIBUTING.md`](https://github.com/leandromaiam-code/zettapay/blob/main/packages/sdk-python/CONTRIBUTING.md).
+
+## Rust — at a glance
+
+```rust
+use std::time::Duration;
+use zettapay::{Client, RegisterMerchantInput, RetryPolicy};
+
+#[tokio::main]
+async fn main() -> Result<(), zettapay::Error> {
+    let client = Client::builder()
+        .base_url("https://api.zettapay.dev")
+        .api_key("zp_live_...")
+        .timeout(Duration::from_secs(10))
+        .retry(RetryPolicy::default_policy())
+        .build()?;
+
+    let merchant = client
+        .register_merchant(RegisterMerchantInput {
+            name: "Acme Coffee".into(),
+            wallet_pubkey: "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT".into(),
+            usdc_ata: "EhpbDdUDKv2Ah6yyhyqz7n9zUQqvmW1qzPKNaqgQ4kZK".into(),
+        })
+        .await?;
+    Ok(())
+}
+```
+
+- Async-first via `tokio` + `reqwest` (rustls).
+- Builder pattern, strongly-typed `serde` models.
+- MSRV **1.75**.
+- Lean dep tree — no `anyhow`, no `thiserror`.
+
+Run the example:
+
+```bash
+cd packages/sdk-rust
+cargo run --example quickstart
+```
+
+Full guide: [`packages/sdk-rust/CONTRIBUTING.md`](https://github.com/leandromaiam-code/zettapay/blob/main/packages/sdk-rust/CONTRIBUTING.md).
+
+## How to contribute
+
+Both SDKs accept community contributions for any endpoint that already
+exists on the API. Every PR follows the same shape:
+
+1. Read the SDK's `CONTRIBUTING.md`.
+2. Run `pip install -e ".[test]" && pytest` (Python) or `cargo test`
+   (Rust) locally.
+3. Mirror the canonical TS surface — naming, retry behavior, error
+   envelope.
+4. Add a regression test (real HTTP server for Python, `mockito` for
+   Rust).
+5. Open a PR with a conventional commit subject:
+   `feat(sdk-python): …` or `feat(sdk-rust): …`.
+
+Things we will **not** merge: new runtime dependencies without a
+maintainer +1, alternative retry/backoff schemes, transaction signing
+(out of scope — sign with your wallet tooling, hand the SDK a base64
+blob), or endpoints that don't exist server-side yet.
+
+## What about Go and PHP?
+
+Skeletons exist at [`packages/sdk-go`](https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-go)
+and [`packages/sdk-php`](https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-php).
+Either treat them like Python/Rust (PR-driven, hand-tuned), or generate
+a fresh client from the [OpenAPI spec](/sdk/multi-language) — both are
+supported.
+
+## Release & versioning
+
+The TS SDK is the version-of-record. Python and Rust ship independently
+and follow semver against their **own public surface** — they do not
+guarantee version alignment with `@zettapay/sdk`. Pin to an exact
+version in production.
+
+## Get help
+
+- **GitHub issues:** [`leandromaiam-code/zettapay`](https://github.com/leandromaiam-code/zettapay/issues)
+- **Discord:** [`#sdk-python`](https://discord.gg/zettapay), [`#sdk-rust`](https://discord.gg/zettapay)
+- **Security:** `security@zettapay.io`
