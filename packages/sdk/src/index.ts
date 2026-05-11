@@ -50,6 +50,29 @@ export {
 } from './onchain.js';
 export { ZETTAPAY_IDL, type ZettaPayErrorCode } from './idl/zettapay.js';
 export {
+  USDC_MAINNET_MINT,
+  USDC_DEVNET_MINT,
+  USDC_DECIMALS,
+  createMerchant,
+  createInvoice,
+  getInvoiceStatus,
+  listenPaymentEvents,
+  sweep,
+  type CreateMerchantParams,
+  type CreateMerchantResult,
+  type CreateInvoiceParams,
+  type Invoice,
+  type InvoiceStatus,
+  type InvoiceStatusReceipt,
+  type InvoiceStatusResult,
+  type GetInvoiceStatusParams,
+  type ListenPaymentEventsParams,
+  type PaymentEvent,
+  type PaymentSubscription,
+  type SweepParams,
+  type SweepResult,
+} from './helpers.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,
