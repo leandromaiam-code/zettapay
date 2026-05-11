@@ -26,6 +26,8 @@ jobs:
             path: packages/sdk
           - name: '@zettapay/widget'
             path: packages/widget
+          - name: '@zettapay/embed'
+            path: packages/embed
     steps:
       - uses: actions/checkout@v4
 
