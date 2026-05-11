@@ -52,6 +52,7 @@
             "group": "Guides",
             "pages": [
               "guides/accept-payments",
+              "guides/drop-in-integrations",
               "guides/devnet-faucet",
               "guides/x402-protocol",
               "guides/mcp-integration",

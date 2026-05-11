@@ -1,0 +1,263 @@
+---
+title: "Drop-in integrations"
+description: "Add a Pay-with-USDC button to Shopify, Webflow, plain HTML, React, or Vue in under five minutes."
+---
+
+ZettaPay ships two front-end packages so you can accept USDC without
+running a backend:
+
+- [`@zettapay/widget`](https://www.npmjs.com/package/@zettapay/widget) — a
+  full **Pay X USDC** button + modal with QR + Phantom deeplink (~30 KB gz).
+- [`@zettapay/embed`](https://www.npmjs.com/package/@zettapay/embed) — a
+  minimal QR + address embed that polls Solana directly (~5 KB gz, no
+  backend dependency).
+
+Both packages auto-discover their own `<script>` tag and read
+configuration from `data-*` attributes, which makes them trivial to drop
+into a no-code site builder, a static HTML page, or a framework
+component. This page collects the five most common starts.
+
+## Live preview
+
+The button below is a real widget pointed at the ZettaPay demo merchant
+on Solana devnet. Click it to see the modal, QR, and Phantom deeplink
+flow your buyers will see.
+
+<iframe
+  src="https://zettapay.io/docs/widget-demo?cluster=devnet&amount=1"
+  title="ZettaPay widget — live preview (devnet)"
+  loading="lazy"
+  style={{
+    width: "100%",
+    minHeight: "420px",
+    border: "1px solid rgba(79,107,255,0.2)",
+    borderRadius: "12px",
+    background: "transparent",
+  }}
+/>
+
+<Note>
+Every example below uses devnet so you can paste and test without real
+funds. Swap `data-cluster="devnet"` for `mainnet-beta` (the default) and
+swap `pay.zettapay.dev` for `pay.zettapay.io` when going live.
+</Note>
+
+## Shopify
+
+Install the [ZettaPay Shopify app](https://apps.shopify.com/zettapay)
+from the App Store, paste your merchant id during OAuth, then add
+`{% render 'zettapay-button' %}` to your cart template (or any Liquid
+section). The app installs a per-store snippet that posts the live cart
+total to the hosted checkout and forwards the Shopify cart token as
+`order_ref` so you can reconcile via webhook. Full walkthrough:
+[Shopify integration tutorial](/guides/tutorials/shopify).
+
+## Webflow
+
+Webflow's **Embed** element accepts arbitrary HTML. Drag an Embed block
+into the page, paste the script below, and publish — the widget
+auto-mounts in place.
+
+```html Webflow Embed
+<script
+  src="https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"
+  data-merchant="@yourshop"
+  data-amount="10"
+  data-currency="USDC"
+  data-theme="dark"
+  async
+></script>
+```
+
+Bind `data-amount` to a Webflow CMS field by switching the Embed to
+**Add Field** when editing a Collection template. To capture the
+purchase server-side, point your Webflow Logic flow at a webhook
+endpoint and verify the signature using
+[`/guides/handling-webhooks`](/guides/handling-webhooks).
+
+<Tip>
+Webflow's free plan strips third-party `<script>` tags in the published
+preview. Upgrade the project to **Basic** or higher (or publish to a
+custom domain) for the embed to render.
+</Tip>
+
+## Plain HTML
+
+Paste a single tag anywhere in your markup. The widget mounts itself
+right after the script element, so you can place multiple buttons on
+the same page.
+
+```html
+<!doctype html>
+<html lang="en">
+  <body>
+    <h1>Tip the developer</h1>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"
+      data-merchant="@yourshop"
+      data-amount="5"
+      data-currency="USDC"
+      data-metadata='{"source":"blog","post":"hello-world"}'
+      async
+    ></script>
+  </body>
+</html>
+```
+
+Want the leanest possible payload (no modal, no Phantom deeplink, just
+a QR pointed at your ATA)? Swap in `@zettapay/embed`:
+
+```html
+<div id="checkout"></div>
+<script
+  src="https://cdn.jsdelivr.net/npm/@zettapay/embed@latest/dist/embed.js"
+  data-recipient="<your-merchant-ATA>"
+  data-amount="5"
+  data-cluster="devnet"
+  async
+></script>
+```
+
+## React
+
+In a React app, install the package and inject the upstream script once
+when the component mounts. The widget exposes a `mount(el, opts)`
+function so you can render into a ref instead of relying on the
+auto-discovery behavior.
+
+```bash
+npm install @zettapay/widget
+```
+
+```tsx ZettaPayButton.tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import { mount, type MountHandle } from "@zettapay/widget";
+
+type Props = {
+  merchantId: string;
+  amount: number;
+  metadata?: Record<string, unknown>;
+  onSuccess?: (event: { paymentId: string; txSignature: string }) => void;
+};
+
+export function ZettaPayButton({ merchantId, amount, metadata, onSuccess }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<MountHandle | null>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    handleRef.current = mount(containerRef.current, {
+      merchantId,
+      amount,
+      metadata,
+      onSuccess,
+    });
+    return () => {
+      handleRef.current?.destroy();
+      handleRef.current = null;
+    };
+  }, [merchantId, amount, metadata, onSuccess]);
+
+  return <div ref={containerRef} />;
+}
+```
+
+Usage:
+
+```tsx
+<ZettaPayButton
+  merchantId="@yourshop"
+  amount={24.99}
+  metadata={{ orderId: "ord_123" }}
+  onSuccess={({ txSignature }) => router.push(`/thanks?tx=${txSignature}`)}
+/>
+```
+
+The component is server-component safe — the `"use client"` directive
+keeps the `mount` call out of the SSR bundle, and Next.js will tree-shake
+the widget from server routes.
+
+## Vue
+
+Vue 3 mirrors the React pattern — call `mount` from `onMounted` and
+clean up in `onBeforeUnmount` so navigations don't leak modals.
+
+```bash
+npm install @zettapay/widget
+```
+
+```vue ZettaPayButton.vue
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import { mount, type MountHandle } from "@zettapay/widget";
+
+const props = defineProps<{
+  merchantId: string;
+  amount: number;
+  metadata?: Record<string, unknown>;
+}>();
+
+const emit = defineEmits<{
+  success: [event: { paymentId: string; txSignature: string }];
+}>();
+
+const container = ref<HTMLDivElement | null>(null);
+let handle: MountHandle | null = null;
+
+onMounted(() => {
+  if (!container.value) return;
+  handle = mount(container.value, {
+    merchantId: props.merchantId,
+    amount: props.amount,
+    metadata: props.metadata,
+    onSuccess: (event) => emit("success", event),
+  });
+});
+
+onBeforeUnmount(() => {
+  handle?.destroy();
+  handle = null;
+});
+</script>
+
+<template>
+  <div ref="container" />
+</template>
+```
+
+Usage:
+
+```vue
+<ZettaPayButton
+  merchant-id="@yourshop"
+  :amount="24.99"
+  :metadata="{ orderId: 'ord_123' }"
+  @success="({ txSignature }) => navigateTo(`/thanks?tx=${txSignature}`)"
+/>
+```
+
+Nuxt 3 users should wrap the component in `<ClientOnly>` so the widget
+script is never evaluated during SSR.
+
+## After the payment lands
+
+Every integration above shares the same settlement path: the widget
+opens a hosted checkout that signs an SPL `transferChecked` against the
+buyer's wallet, submits it to Solana, and fires
+`payment.succeeded` to the `webhookUrl` you registered for the
+merchant.
+
+- **Reconcile orders** → [Handling webhooks](/guides/handling-webhooks)
+- **Verify signatures** → [Webhook signing examples](/guides/webhooks/signing-examples)
+- **Build a custom UI** → [Accept payments (server-side)](/guides/accept-payments)
+- **Native AI flows** → [Anthropic](/guides/integrations/anthropic) · [OpenAI](/guides/integrations/openai) · [HuggingFace](/guides/integrations/huggingface)
+
+## Browser support
+
+The widget and embed support Chrome 88+, Firefox 86+, Safari 14+, and
+Edge 88+. Both packages gracefully degrade when `clipboard.writeText` is
+unavailable, so users on locked-down corporate browsers still see the
+QR fallback.
