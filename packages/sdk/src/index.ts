@@ -73,6 +73,20 @@ export {
   type SweepResult,
 } from './helpers.js';
 export {
+  ZETTAPAY_URI_SCHEME,
+  SOLANA_PAY_URI_SCHEME,
+  DEFAULT_CURRENCY,
+  buildZettaPayUri,
+  parseZettaPayUri,
+  buildSolanaPayUri,
+  generateInvoiceQrSvg,
+  generateInvoiceQrDataUrl,
+  type BuildZettaPayUriParams,
+  type ParsedZettaPayUri,
+  type BuildSolanaPayUriParams,
+  type InvoiceQrOptions,
+} from './solana-pay.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,
