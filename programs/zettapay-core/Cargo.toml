@@ -1,0 +1,22 @@
+[package]
+name = "zettapay-core"
+version = "0.1.0"
+description = "ZettaPay native Solana program (Z25 core) — register_merchant, create_invoice, sweep. No Anchor."
+edition = "2021"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "zettapay_core"
+
+[features]
+no-entrypoint = []
+test-sbf = []
+
+[dependencies]
+# solana-program 1.18.x exports BorshSerialize/BorshDeserialize impls for
+# Pubkey under borsh 0.10. Bumping to borsh 1.x without bumping the runtime
+# strips those impls and breaks state serialization, so pin both together.
+solana-program = "1.18.26"
+borsh = "0.10.3"
+thiserror = "1.0"
