@@ -17,10 +17,45 @@
 //! an invoice's address — and therefore its USDC ATA — without first
 //! resolving the merchant PDA. Drift here silently breaks the SDK.
 //!
+//! Module map (Z25.2 refactor):
+//!
+//!   * `state`        — Merchant + Invoice structs, manual Borsh,
+//!                      fixed account sizes, tag/status/currency/chain
+//!                      constants.
+//!   * `pda`          — Merchant + Invoice PDA derivation.
+//!   * `validation`   — Manual owner / signer / system-program / tag
+//!                      assertions replacing what Anchor's `#[account]`
+//!                      macro would generate.
+//!   * `instructions` — `InstructionTag` discriminator + Borsh-encoded
+//!                      argument types per variant.
+//!   * `error`        — `ZpError` mapped to `ProgramError::Custom(u32)`.
+//!
 //! Premise alignment:
 //!   1. Solana-only V1 → RegisterMerchant requires `CHAIN_SOLANA` in chains
 //!   2. USDC-only V1   → CreateInvoice rejects `currency != CURRENCY_USDC`
 //!  14. No custody     → Sweep flips status only; it never moves USDC
+
+#![allow(clippy::result_large_err)]
+
+pub mod error;
+pub mod instructions;
+pub mod pda;
+pub mod state;
+pub mod validation;
+
+// Crate-root re-exports preserve the public surface from before the Z25.2
+// modular split — existing callers that did
+// `use zettapay_core::{Merchant, MERCHANT_SEED, ZpError, ...}` resolve
+// unchanged.
+pub use error::ZpError;
+pub use instructions::{CreateInvoiceArgs, InstructionTag, RegisterMerchantArgs, SweepArgs};
+pub use pda::{find_invoice_pda, find_merchant_pda, INVOICE_INDEX_SEED_LEN, MERCHANT_SEED};
+pub use state::{
+    Invoice, Merchant, CHAIN_ARBITRUM, CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM, CHAIN_POLYGON,
+    CHAIN_SOLANA, CURRENCY_USDC, INVOICE_STATUS_OPEN, INVOICE_STATUS_SWEPT, INVOICE_TAG,
+    MAX_CHAINS, MERCHANT_TAG,
+};
+pub use validation::{assert_owned_by_program, assert_signer, assert_system_program, assert_tag};
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::{
@@ -29,159 +64,16 @@ use solana_program::{
     entrypoint::ProgramResult,
     msg,
     program::invoke_signed,
-    program_error::ProgramError,
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
-    system_program,
     sysvar::Sysvar,
 };
-use thiserror::Error;
 
 // Placeholder program id. The on-chain key is established at `solana program
 // deploy` time and is independent of this compile-time constant. Replace
 // before mainnet (Z21/Z22 launch checklist).
 solana_program::declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
-
-pub const MERCHANT_SEED: &[u8] = b"merchant";
-
-// Account type tags. First byte of every owned account so a wrong-type
-// account passed to an instruction can be rejected without Anchor's 8-byte
-// discriminator.
-pub const MERCHANT_TAG: u8 = 1;
-pub const INVOICE_TAG: u8 = 2;
-
-// Currency tags. Premise 2 keeps V1 USDC-only; reserve the byte so adding
-// stablecoins in Z11 doesn't force an account-layout migration.
-pub const CURRENCY_USDC: u8 = 0;
-
-// Chain tags. Premise 1 keeps V1 Solana-only; we still record the merchant's
-// declared chain set so the off-chain index can route Z11 multi-chain
-// settlement without re-registering.
-pub const CHAIN_SOLANA: u8 = 0;
-pub const CHAIN_ETHEREUM: u8 = 1;
-pub const CHAIN_BASE: u8 = 2;
-pub const CHAIN_POLYGON: u8 = 3;
-pub const CHAIN_ARBITRUM: u8 = 4;
-pub const CHAIN_AVALANCHE: u8 = 5;
-
-pub const INVOICE_STATUS_OPEN: u8 = 0;
-pub const INVOICE_STATUS_SWEPT: u8 = 1;
-
-// Bound the chains list so the merchant PDA size is fixed at registration.
-pub const MAX_CHAINS: usize = 16;
-
-#[repr(u8)]
-pub enum InstructionTag {
-    RegisterMerchant = 0,
-    CreateInvoice = 1,
-    Sweep = 2,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct RegisterMerchantArgs {
-    pub master_pubkey: Pubkey,
-    pub chains: Vec<u8>,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct CreateInvoiceArgs {
-    pub amount: u64,
-    pub currency: u8,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct SweepArgs {
-    pub invoice_indexes: Vec<u64>,
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct Merchant {
-    pub tag: u8,
-    pub bump: u8,
-    pub master_pubkey: Pubkey,
-    pub chains: Vec<u8>,
-    pub invoice_count: u64,
-    pub registered_at: i64,
-}
-
-impl Merchant {
-    pub const SIZE: usize = 1     // tag
-        + 1                       // bump
-        + 32                      // master_pubkey
-        + 4 + MAX_CHAINS          // borsh Vec<u8>: u32 len + bytes
-        + 8                       // invoice_count
-        + 8;                      // registered_at
-}
-
-#[derive(BorshSerialize, BorshDeserialize, Debug)]
-pub struct Invoice {
-    pub tag: u8,
-    pub bump: u8,
-    pub merchant: Pubkey,
-    pub invoice_index: u64,
-    pub amount: u64,
-    pub currency: u8,
-    pub status: u8,
-    pub created_at: i64,
-    pub swept_at: i64,
-}
-
-impl Invoice {
-    pub const SIZE: usize = 1     // tag
-        + 1                       // bump
-        + 32                      // merchant
-        + 8                       // invoice_index
-        + 8                       // amount
-        + 1                       // currency
-        + 1                       // status
-        + 8                       // created_at
-        + 8;                      // swept_at
-}
-
-#[derive(Error, Debug, Copy, Clone)]
-pub enum ZpError {
-    #[error("Invalid instruction discriminator or payload")]
-    InvalidInstruction,
-    #[error("Master signer does not match master_pubkey")]
-    MasterMismatch,
-    #[error("Merchant PDA does not match seeds")]
-    MerchantPdaMismatch,
-    #[error("Invoice PDA does not match seeds")]
-    InvoicePdaMismatch,
-    #[error("Chains list must be non-empty")]
-    ChainsEmpty,
-    #[error("Chains list exceeds MAX_CHAINS")]
-    ChainsTooLong,
-    #[error("Solana chain required in V1 (premise 1)")]
-    SolanaChainRequired,
-    #[error("Unknown chain tag")]
-    UnknownChain,
-    #[error("Currency not supported in V1 (premise 2: USDC only)")]
-    CurrencyUnsupported,
-    #[error("Amount must be greater than zero")]
-    AmountZero,
-    #[error("Account is not a Merchant")]
-    NotMerchantAccount,
-    #[error("Account is not an Invoice")]
-    NotInvoiceAccount,
-    #[error("Invoice does not belong to this merchant")]
-    InvoiceMerchantMismatch,
-    #[error("Invoice is not in Open status")]
-    InvoiceNotOpen,
-    #[error("Invoice index list must be non-empty")]
-    NoInvoices,
-    #[error("Account count does not match invoice index count")]
-    AccountInvoiceCountMismatch,
-    #[error("Numeric overflow")]
-    Overflow,
-}
-
-impl From<ZpError> for ProgramError {
-    fn from(e: ZpError) -> Self {
-        ProgramError::Custom(e as u32)
-    }
-}
 
 #[cfg(not(feature = "no-entrypoint"))]
 solana_program::entrypoint!(process_instruction);
@@ -234,23 +126,14 @@ fn process_register_merchant(
     let payer_ai = next_account_info(iter)?;
     let system_ai = next_account_info(iter)?;
 
-    if !master_ai.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
+    assert_signer(master_ai)?;
     if master_ai.key != &args.master_pubkey {
         return Err(ZpError::MasterMismatch.into());
     }
-    if !payer_ai.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-    if system_ai.key != &system_program::ID {
-        return Err(ProgramError::IncorrectProgramId);
-    }
+    assert_signer(payer_ai)?;
+    assert_system_program(system_ai)?;
 
-    let (expected_pda, bump) = Pubkey::find_program_address(
-        &[MERCHANT_SEED, args.master_pubkey.as_ref()],
-        program_id,
-    );
+    let (expected_pda, bump) = find_merchant_pda(&args.master_pubkey, program_id);
     if merchant_ai.key != &expected_pda {
         return Err(ZpError::MerchantPdaMismatch.into());
     }
@@ -306,18 +189,10 @@ fn process_create_invoice(
     let payer_ai = next_account_info(iter)?;
     let system_ai = next_account_info(iter)?;
 
-    if merchant_ai.owner != program_id {
-        return Err(ProgramError::IllegalOwner);
-    }
-    if !master_ai.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-    if !payer_ai.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
-    if system_ai.key != &system_program::ID {
-        return Err(ProgramError::IncorrectProgramId);
-    }
+    assert_owned_by_program(merchant_ai, program_id)?;
+    assert_signer(master_ai)?;
+    assert_signer(payer_ai)?;
+    assert_system_program(system_ai)?;
 
     let mut merchant = Merchant::try_from_slice(&merchant_ai.data.borrow())
         .map_err(|_| ZpError::NotMerchantAccount)?;
@@ -330,13 +205,7 @@ fn process_create_invoice(
 
     let invoice_index = merchant.invoice_count;
 
-    let (expected_pda, bump) = Pubkey::find_program_address(
-        &[
-            master_ai.key.as_ref(),
-            &invoice_index.to_le_bytes(),
-        ],
-        program_id,
-    );
+    let (expected_pda, bump) = find_invoice_pda(master_ai.key, invoice_index, program_id);
     if invoice_ai.key != &expected_pda {
         return Err(ZpError::InvoicePdaMismatch.into());
     }
@@ -400,12 +269,8 @@ fn process_sweep(
     let merchant_ai = next_account_info(iter)?;
     let master_ai = next_account_info(iter)?;
 
-    if merchant_ai.owner != program_id {
-        return Err(ProgramError::IllegalOwner);
-    }
-    if !master_ai.is_signer {
-        return Err(ProgramError::MissingRequiredSignature);
-    }
+    assert_owned_by_program(merchant_ai, program_id)?;
+    assert_signer(master_ai)?;
 
     let merchant = Merchant::try_from_slice(&merchant_ai.data.borrow())
         .map_err(|_| ZpError::NotMerchantAccount)?;
@@ -426,14 +291,9 @@ fn process_sweep(
     }
 
     for (invoice_ai, idx) in invoice_accounts.iter().zip(args.invoice_indexes.iter()) {
-        if invoice_ai.owner != program_id {
-            return Err(ProgramError::IllegalOwner);
-        }
+        assert_owned_by_program(invoice_ai, program_id)?;
 
-        let (expected_pda, _bump) = Pubkey::find_program_address(
-            &[master_ai.key.as_ref(), &idx.to_le_bytes()],
-            program_id,
-        );
+        let (expected_pda, _bump) = find_invoice_pda(master_ai.key, *idx, program_id);
         if invoice_ai.key != &expected_pda {
             return Err(ZpError::InvoicePdaMismatch.into());
         }
@@ -460,114 +320,43 @@ fn process_sweep(
 }
 
 #[cfg(test)]
-mod tests {
+mod integration_tests {
+    //! Cross-module sanity checks. Per-module unit tests live next to the
+    //! code they cover; this module is reserved for invariants that span
+    //! more than one of `state`, `pda`, or `validation`.
+
     use super::*;
 
     #[test]
-    fn merchant_size_within_pda_max() {
-        assert!(Merchant::SIZE < 10_240);
+    fn merchant_pda_seeds_match_module_constant() {
+        // The dispatcher signs `create_account` with seeds reconstructed
+        // from `MERCHANT_SEED` and the master pubkey. If `MERCHANT_SEED`
+        // drifts from what `find_merchant_pda` uses internally, the
+        // signed seeds won't match the discovered PDA and `invoke_signed`
+        // will fail at run-time. Pin them here.
+        let master = Pubkey::new_from_array([7u8; 32]);
+        let program_id = Pubkey::new_from_array([42u8; 32]);
+        let (a, _) = find_merchant_pda(&master, &program_id);
+        let (b, _) = Pubkey::find_program_address(
+            &[MERCHANT_SEED, master.as_ref()],
+            &program_id,
+        );
+        assert_eq!(a, b);
     }
 
     #[test]
-    fn invoice_size_within_pda_max() {
-        assert!(Invoice::SIZE < 10_240);
-    }
-
-    #[test]
-    fn merchant_size_layout() {
-        assert_eq!(Merchant::SIZE, 1 + 1 + 32 + (4 + MAX_CHAINS) + 8 + 8);
-    }
-
-    #[test]
-    fn invoice_size_layout() {
-        assert_eq!(Invoice::SIZE, 1 + 1 + 32 + 8 + 8 + 1 + 1 + 8 + 8);
-    }
-
-    #[test]
-    fn instruction_discriminators_are_distinct() {
-        assert_eq!(InstructionTag::RegisterMerchant as u8, 0);
-        assert_eq!(InstructionTag::CreateInvoice as u8, 1);
-        assert_eq!(InstructionTag::Sweep as u8, 2);
-    }
-
-    #[test]
-    fn register_merchant_args_roundtrip() {
-        let args = RegisterMerchantArgs {
-            master_pubkey: Pubkey::new_from_array([7u8; 32]),
-            chains: vec![CHAIN_SOLANA, CHAIN_BASE],
-        };
-        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
-        let decoded = RegisterMerchantArgs::try_from_slice(&bytes).unwrap();
-        assert_eq!(decoded.master_pubkey, args.master_pubkey);
-        assert_eq!(decoded.chains, args.chains);
-    }
-
-    #[test]
-    fn create_invoice_args_roundtrip() {
-        let args = CreateInvoiceArgs {
-            amount: 1_000_000,
-            currency: CURRENCY_USDC,
-        };
-        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
-        let decoded = CreateInvoiceArgs::try_from_slice(&bytes).unwrap();
-        assert_eq!(decoded.amount, args.amount);
-        assert_eq!(decoded.currency, args.currency);
-    }
-
-    #[test]
-    fn sweep_args_roundtrip() {
-        let args = SweepArgs {
-            invoice_indexes: vec![0, 1, 2, 3, 42],
-        };
-        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
-        let decoded = SweepArgs::try_from_slice(&bytes).unwrap();
-        assert_eq!(decoded.invoice_indexes, args.invoice_indexes);
-    }
-
-    #[test]
-    fn merchant_state_roundtrip() {
-        let m = Merchant {
-            tag: MERCHANT_TAG,
-            bump: 254,
-            master_pubkey: Pubkey::new_from_array([3u8; 32]),
-            chains: vec![CHAIN_SOLANA],
-            invoice_count: 7,
-            registered_at: 1_700_000_000,
-        };
-        let bytes = BorshSerialize::try_to_vec(&m).unwrap();
-        let decoded = Merchant::try_from_slice(&bytes).unwrap();
-        assert_eq!(decoded.tag, m.tag);
-        assert_eq!(decoded.bump, m.bump);
-        assert_eq!(decoded.master_pubkey, m.master_pubkey);
-        assert_eq!(decoded.chains, m.chains);
-        assert_eq!(decoded.invoice_count, m.invoice_count);
-        assert_eq!(decoded.registered_at, m.registered_at);
-    }
-
-    #[test]
-    fn invoice_state_roundtrip() {
-        let inv = Invoice {
-            tag: INVOICE_TAG,
-            bump: 253,
-            merchant: Pubkey::new_from_array([9u8; 32]),
-            invoice_index: 41,
-            amount: 5_000_000,
-            currency: CURRENCY_USDC,
-            status: INVOICE_STATUS_OPEN,
-            created_at: 1_700_000_000,
-            swept_at: 0,
-        };
-        let bytes = BorshSerialize::try_to_vec(&inv).unwrap();
-        let decoded = Invoice::try_from_slice(&bytes).unwrap();
-        assert_eq!(decoded.invoice_index, inv.invoice_index);
-        assert_eq!(decoded.amount, inv.amount);
-        assert_eq!(decoded.status, inv.status);
-    }
-
-    #[test]
-    fn error_codes_distinct() {
-        let a: ProgramError = ZpError::InvalidInstruction.into();
-        let b: ProgramError = ZpError::MasterMismatch.into();
-        assert_ne!(a, b);
+    fn invoice_pda_seeds_match_le_u64_encoding() {
+        // Same drift guard for the invoice PDA: the dispatcher signs
+        // `create_account` with `idx.to_le_bytes()`, which must agree
+        // with `find_invoice_pda`'s internal seed construction.
+        let master = Pubkey::new_from_array([7u8; 32]);
+        let program_id = Pubkey::new_from_array([42u8; 32]);
+        let idx: u64 = 17;
+        let (a, _) = find_invoice_pda(&master, idx, &program_id);
+        let (b, _) = Pubkey::find_program_address(
+            &[master.as_ref(), &idx.to_le_bytes()],
+            &program_id,
+        );
+        assert_eq!(a, b);
     }
 }
