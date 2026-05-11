@@ -1,0 +1,290 @@
+---
+title: "Wallet outreach runbook"
+description: "Operator playbook for asking Phantom, Solflare, and Backpack to natively recognize the zettapay: URI scheme — contact paths, email templates, and Twitter DM scripts."
+---
+
+The `zettapay:` URI scheme (see [protocol/01-uri-scheme.md](https://github.com/leandromaiam-code/zettapay/blob/main/protocol/01-uri-scheme.md))
+is the canonical way to encode an invoice for a ZettaPay payment. Today,
+wallets that do **not** recognize the scheme fall back to the
+`solana:` flavour we emit alongside it. That fallback works, but it
+costs us the invoice-PDA round-trip and gives a worse signal to wallet
+UI ("unknown URI → are you sure?" prompts).
+
+This runbook is the manual flow the BD / devrel operator follows to ask
+the three reference Solana wallets — **Phantom, Solflare, Backpack** —
+to recognize `zettapay:invoice/<pda>?…` natively. Premissa **I.5** names
+Phantom the reference human wallet; the other two follow because their
+combined user base covers >90% of Solana non-custodial volume.
+
+## When to use this runbook
+
+Run it **once per wallet, per release cycle**. The early outreach
+landed in Sprint Z31 alongside the public protocol spec; subsequent
+runs happen when:
+
+- A wallet ships a new release notes channel or partnerships email.
+- The `zettapay:` spec changes in a way that breaks a previously
+  reviewed integration (e.g. parameters added, PDA derivation
+  rotated).
+- We mint a new program ID on mainnet and need to update the wallet
+  team's allow-list reference.
+
+If a wallet has already shipped native support and we are not asking
+for a change, **do not re-send**. Use `#showcase` on Discord instead.
+
+<Note>
+Outreach is a trust signal, not a contract. We do not pay for wallet
+listings (premissa **VII.25** — DevRel + open SDK > paid marketing).
+If a wallet team replies asking for a commercial arrangement, escalate
+to the founders rather than negotiating in-thread.
+</Note>
+
+## Prerequisites
+
+| Item | Why |
+| --- | --- |
+| Public protocol spec live at [`/protocol`](https://github.com/leandromaiam-code/zettapay/tree/main/protocol) | The wallet engineer reading the email needs to verify the URI grammar without an NDA. |
+| SDK published on npm as `@zettapay/sdk` | Demonstrates we are not vapourware; integrators can `npm install` and try the parser. |
+| Devnet program ID stable (Anchor `idl.json` checked in) | The wallet team will paste it into their devnet allow-list during evaluation. |
+| ZettaPay Twitter `@zettapay` claimed and posting | DMs from a 0-tweet account get filtered. |
+| A reachable reply address (`bd@zettapay.io` or operator's email) | Wallet teams reply via email even when contacted on Twitter. |
+
+## What we are asking for (one-pager)
+
+Attach this paragraph to every first-contact email. It is the
+**ask** distilled to what a wallet engineer needs to decide whether to
+take a meeting.
+
+> **Ask:** Add `zettapay:` to the wallet's URI handler allow-list so
+> scanning a ZettaPay QR opens the wallet directly, the same way
+> `solana:` does today. The scheme is a thin superset of Solana Pay
+> keyed on the invoice PDA — full ABNF grammar and parser semantics
+> live at [github.com/leandromaiam-code/zettapay/blob/main/protocol/01-uri-scheme.md](https://github.com/leandromaiam-code/zettapay/blob/main/protocol/01-uri-scheme.md).
+> Reference parser in TS is ~80 LOC and MIT-licensed. We are not asking
+> for branding, a logo placement, or a partnership announcement — just
+> the URI handler.
+
+## Contact paths
+
+The table below lists the public contact paths we have verified at the
+time of writing. **Re-verify before sending** — wallet teams rotate
+support addresses and Twitter handles often. Cross-check by clicking
+through from the wallet's own `.com` / `.app` site, not from a search
+result.
+
+| Wallet | Primary path | Secondary path | Public Twitter / X |
+| --- | --- | --- | --- |
+| Phantom | `support@phantom.app` (support routes BD inquiries internally) | Partnerships form linked from [phantom.com](https://phantom.com) footer | [`@phantom`](https://x.com/phantom) |
+| Solflare | `support@solflare.com` | [solflare.com](https://solflare.com) contact form | [`@solflare_wallet`](https://x.com/solflare_wallet) |
+| Backpack | Backpack support form at [backpack.app/support](https://backpack.app) | Public team handles on Twitter (Armani Ferrante and team are reachable in DMs) | [`@xNFT_Backpack`](https://x.com/xNFT_Backpack) |
+
+<Warning>
+Do **not** scrape personal emails from LinkedIn or use leaked contact
+lists. Stick to addresses the wallet publishes itself. Anything else
+risks spam-flagging our domain — once `zettapay.io` lands in a
+Microsoft / Google spam classifier, every wallet integration email
+after that gets buried.
+</Warning>
+
+## Email template — first contact
+
+Subject line variants (rotate per wallet; A/B is fine):
+
+- `ZettaPay (Solana USDC payment protocol) — adding zettapay: URI handler`
+- `URI scheme handler request — ZettaPay protocol spec`
+- `Solana-native payment URI — 80 LOC integration ask`
+
+Body template (English; mirror to Portuguese only if the operator
+confirms the wallet team operates in PT):
+
+```text
+Hi <wallet team>,
+
+I'm <operator name> from ZettaPay — we are building a Solana-native
+USDC payment protocol focused on AI-agent and human checkout flows
+(0.30% fee, instant settlement, x402 + MCP for agents).
+
+We just published the public protocol spec, including a URI scheme
+designed to slot in beside Solana Pay:
+
+  zettapay:invoice/<pda>?amount=29.00&currency=USDC&label=Acme
+
+Full grammar + parser semantics (MIT):
+  https://github.com/leandromaiam-code/zettapay/blob/main/protocol/01-uri-scheme.md
+
+The ask is small and concrete: add `zettapay:` to <Wallet>'s URI
+handler allow-list so a user scanning a ZettaPay QR lands inside
+<Wallet> the same way `solana:` URIs do today. The reference parser
+is ~80 LOC, has no runtime dependencies, and we ship it under MIT in
+@zettapay/sdk.
+
+Why it matters for <Wallet>:
+
+  • Merchants on ZettaPay already pin <Wallet> as a recommended
+    checkout option. Native scheme handling removes the "unknown
+    URI" prompt their users see today.
+  • The scheme is keyed on the invoice PDA, so settlement state can
+    be confirmed on-chain without trusting our API — pure read,
+    no RPC quota required from <Wallet>.
+  • We are open-source (MIT for spec + SDKs) and not asking for a
+    partnership announcement, branding, or commercial arrangement.
+
+Happy to send the 1-pager, jump on a 15-min call with your engineer,
+or open a PR against your URI handler if the codepath is public.
+
+Repo: https://github.com/leandromaiam-code/zettapay
+SDK:  https://www.npmjs.com/package/@zettapay/sdk
+Docs: https://docs.zettapay.io
+
+Thanks,
+<operator name>
+<operator title> · ZettaPay
+<reply email> · @zettapay on X
+```
+
+## Email template — follow-up (day 7)
+
+Send **only once**, exactly seven days after the first contact, if
+there has been no reply. If there is a reply — even a one-liner — the
+follow-up has done its job; do not send.
+
+```text
+Hi <wallet team>,
+
+Bumping this in case it slipped — quick recap of the ask:
+
+  • Add `zettapay:` to <Wallet>'s URI handler allow-list.
+  • Scheme is documented and MIT-licensed:
+    https://github.com/leandromaiam-code/zettapay/blob/main/protocol/01-uri-scheme.md
+  • Reference parser is ~80 LOC, zero runtime deps.
+
+If <Wallet> is not the right team for this and there is a better
+inbox or maintainer to talk to, a redirect is the only reply we need.
+
+Thanks,
+<operator name>
+```
+
+If still no reply after the follow-up, do **not** send a third email.
+Move to the Twitter DM path below; if that also goes cold, mark the
+wallet **paused** in the tracker and re-attempt next sprint.
+
+## Twitter / X DM template
+
+DMs work when the email path is cold. Keep them under 280 characters
+so the recipient can read them without expanding. The DM is **not** a
+shortened version of the email — it is a pointer back to it.
+
+For an unfollowed account, the request will land in the DM request
+queue. Do not multi-DM the wallet's engineers individually; pick the
+official handle and stop.
+
+```text
+Hi <wallet handle> — ZettaPay (Solana USDC payment protocol) just
+published a public URI scheme (zettapay:invoice/<pda>?...) and we are
+asking the major Solana wallets to add it to their URI handler allow-
+list. Spec is MIT, parser is ~80 LOC. Where is the best inbox to
+send the brief? Repo: github.com/leandromaiam-code/zettapay
+```
+
+Variant if Twitter is the **only** reachable surface (no public email
+listed and no contact form), open with the same paragraph but append:
+
+```text
+Happy to do this entirely on GitHub if you prefer — link an issue and
+I will mirror the proposal there.
+```
+
+## Twitter / X public thread (optional, post-outreach only)
+
+Once the **private** outreach to all three wallets has been sent,
+ZettaPay's own account may post a single public thread inviting wallet
+teams to join. This is a one-shot — do not repeat weekly.
+
+```text
+1/ ZettaPay protocol spec is now public — including a `zettapay:`
+URI scheme designed to slot beside Solana Pay, keyed on the invoice
+PDA so settlement is verifiable on-chain with zero off-chain trust.
+
+2/ We are inviting Solana wallet teams to add `zettapay:` to their
+URI handler allow-list. The scheme is MIT, the reference parser is
+~80 LOC, and we are not asking for branding or a partnership — just
+the handler.
+
+3/ Spec, parser, and SDK live at:
+github.com/leandromaiam-code/zettapay
+
+If you maintain a Solana wallet and want a 15-min walkthrough, DM
+@zettapay or open an issue on the repo.
+```
+
+Do **not** name specific wallets in the public thread. Public
+naming-and-shaming reads as pressure; we are asking for a favour, not
+a vendor commitment.
+
+## What to log per contact
+
+Open a row in the outreach tracker (Notion, Linear, or a private
+GitHub issue — operator's call) for **every** message sent. The
+minimum schema:
+
+| Field | Example |
+| --- | --- |
+| `wallet` | `Phantom` / `Solflare` / `Backpack` |
+| `surface` | `email-primary` / `email-followup` / `twitter-dm` / `partnerships-form` |
+| `sent_at` | `2026-05-11T14:22:00Z` |
+| `recipient` | `support@phantom.app` (verbatim — do **not** anonymise) |
+| `subject_or_handle` | Subject line or `@handle` |
+| `reply_at` | timestamp or `null` |
+| `outcome` | `replied` / `redirected` / `declined` / `silent` / `paused` |
+| `next_action` | `Send 1-pager` / `Schedule call` / `Re-attempt next sprint` |
+
+The tracker is the system of record — Slack threads and inboxes are
+not. The on-call BD operator audits the tracker at the start of each
+sprint to decide which wallets to re-approach.
+
+## Cadence
+
+| Step | Timing | Notes |
+| --- | --- | --- |
+| Primary email | T+0 | One per wallet, sent from a non-noreply address. |
+| Twitter DM | T+1 day | Only if email bounced or the wallet has no listed inbox. |
+| Follow-up email | T+7 days | Send **once**, only if no reply. |
+| Public thread | T+8 days | One thread on `@zettapay`, no wallet names. |
+| Pause and re-attempt | T+30 days | If still silent, mark `paused` and try again next sprint. |
+
+The total active window per wallet, per cycle, is **30 days**. Beyond
+that, repeated outreach turns into spam-pattern signal and damages our
+domain reputation.
+
+## What success looks like
+
+We are not optimising for "yes" replies. We are optimising for
+**signal**:
+
+- A redirect to the right maintainer is a success.
+- A "not now, ping us after mainnet launch" is a success — log it and
+  re-attempt after Z22.
+- A public response on Twitter from a wallet engineer is a success
+  whether or not it leads to integration.
+- Silence is not failure on the first attempt; silence after the
+  follow-up + DM is a signal to pause.
+
+The on-chain integration itself, when it lands, ships through the
+wallet's normal release channel — not through ours. ZettaPay does not
+announce a wallet integration before the wallet team announces it,
+even if we wrote the PR.
+
+## Brand discipline
+
+Outreach copy follows the project's brand rules (premissa **VII.25**):
+
+- No "revolution", "disruption", "synergy", "game-changer".
+- No comparisons that disparage competing wallets or payment rails.
+- No claims about timelines we do not control — never say "Phantom
+  ships zettapay: in Q3" until Phantom itself says so.
+- Sign as the human operator, not as "ZettaPay team" or "the bot".
+
+Outreach that violates these rules gets retracted, not edited in
+place — send a follow-up correcting the record and update the
+tracker.

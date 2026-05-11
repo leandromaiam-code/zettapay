@@ -89,7 +89,8 @@
             "pages": [
               "operations/incident-runbook",
               "operations/mainnet-deploy",
-              "operations/fund-deployer-wallet"
+              "operations/fund-deployer-wallet",
+              "operations/wallet-outreach"
             ]
           }
         ]
