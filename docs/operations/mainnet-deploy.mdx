@@ -1,0 +1,154 @@
+---
+title: "Mainnet deploy runbook"
+description: "Semi-manual mainnet deploy: Fabric builds the bytecode, a human signs the deploy transaction with Phantom."
+---
+
+The ZettaPay Anchor program goes live on Solana mainnet-beta through a
+**semi-manual** flow. Fabric (the autodev system) compiles a reproducible,
+verifiable artifact and pings the operator on WhatsApp; a human signs and
+broadcasts the actual `solana program deploy` transaction with a wallet
+that Fabric never touches.
+
+This split is deliberate. Premissa **V.16** gates mainnet behind the
+Fabric build, the OtterSec audit (Z21), and the launch checklist (Z22).
+Premissa **III.9** + **IV.14** plus the no-custody stance forbid Fabric
+from ever holding a key that can sign mainnet transactions.
+
+## Roles
+
+| Step | Actor | Tool |
+| --- | --- | --- |
+| Build BPF bytecode | Fabric | `scripts/build-mainnet.sh` |
+| Notify operator | Fabric | `scripts/notify-mainnet-ready.sh` |
+| Inspect artifact + sha256 | Operator | manual |
+| Broadcast deploy tx | Operator | `scripts/deploy-mainnet.sh` (Phantom/keypair signed) |
+| Publish IDL on-chain | Operator | same script, `anchor idl init/upgrade` |
+| Update status page | Operator | manual |
+
+## End-to-end flow
+
+### 1. Fabric prepares the artifact
+
+```bash
+bash scripts/prepare-mainnet.sh
+```
+
+This runs `anchor build` against the workspace release profile
+(`lto=fat`, `codegen-units=1`, `overflow-checks=on`) and produces:
+
+- `target/deploy/zettapay.so` — the BPF bytecode
+- `target/idl/zettapay.json` — the on-chain IDL
+- `target/deploy/zettapay.mainnet.json` — metadata bundle with sha256,
+  size, toolchain versions, and git sha for reproducibility audits
+
+After the build, the orchestrator POSTs a notification to
+`WHATSAPP_WEBHOOK_URL` so the operator knows it is ready to sign. The
+notification carries the short sha256, size, and the git commit so the
+operator can cross-check before paying rent.
+
+### 2. Operator inspects the artifact
+
+Before broadcasting anything, the operator confirms:
+
+- The git sha matches the audited, merged PR.
+- The sha256 matches what Fabric posted on WhatsApp.
+- The size is within the expected envelope (~150-250 KB).
+- The toolchain versions match what audit (Z21) signed off on.
+
+If anything is off, abort and re-investigate.
+
+### 3. Operator signs and broadcasts
+
+On the deployer machine (an isolated host that holds the deployer
+keypair — never Fabric's box):
+
+```bash
+export MAINNET_DEPLOYER_KEYPAIR=/secure/path/to/keypair.json
+# Optional: when registering a fresh mainnet program ID (recommended on
+# first deploy so it isn't shared with the devnet placeholder)
+export MAINNET_PROGRAM_KEYPAIR=/secure/path/to/program-keypair.json
+export MAINNET_PROGRAM_ID=$(solana address -k "$MAINNET_PROGRAM_KEYPAIR")
+
+bash scripts/deploy-mainnet.sh
+```
+
+The script:
+
+1. Pins solana-cli to mainnet-beta and verifies the cluster.
+2. Confirms the deployer balance is at least 6 SOL (rent for ~200 KB of
+   SBF storage). No airdrop fallback — mainnet doesn't airdrop.
+3. Prints artifact size, sha256, and target program ID.
+4. **Prompts for a literal `DEPLOY` confirmation** before broadcasting.
+5. Calls `solana program deploy` with `--keypair $MAINNET_DEPLOYER_KEYPAIR`.
+6. Publishes the IDL on-chain via `anchor idl init` (or `idl upgrade` on
+   redeploy).
+
+Phantom users can swap `--keypair` for a Ledger or Phantom-signed flow
+by exporting the keypair file beforehand; the placeholder is intentional.
+
+### 4. Post-deploy
+
+After the broadcast settles:
+
+- Cross-verify `solana program show <program-id>` returns the new
+  bytecode hash.
+- Cross-verify `anchor idl fetch --provider.cluster mainnet <program-id>`
+  resolves to the freshly published IDL.
+- Update the status page (Z18) and announce in the operator channel.
+- File the toolchain manifest (`target/deploy/zettapay.mainnet.json`)
+  into the audit journal — premissa V.4 (`audit_journal` append-only).
+
+## WhatsApp webhook contract
+
+`scripts/notify-mainnet-ready.sh` POSTs a JSON body shaped like the
+WhatsApp Cloud API "text message" envelope:
+
+```json
+{
+  "messaging_product": "whatsapp",
+  "to": "+5511999999999",
+  "type": "text",
+  "text": {
+    "preview_url": false,
+    "body": "ZettaPay mainnet bytecode pronto. ..."
+  }
+}
+```
+
+Operators using Twilio, Z-API, or Evolution API should put a tiny
+shim webhook in front that re-shapes the payload to the provider's
+schema. The shim approach keeps this repo free of provider-specific
+SDKs and credentials.
+
+### Env vars
+
+| Var | Required | Purpose |
+| --- | --- | --- |
+| `WHATSAPP_WEBHOOK_URL` | yes | Where to POST the notification |
+| `WHATSAPP_OPERATOR_NUMBER` | yes | Recipient, E.164 format |
+| `WHATSAPP_WEBHOOK_TOKEN` | optional | Sent as `Authorization: Bearer …` |
+| `WHATSAPP_FROM_NUMBER` | optional | Sender ID for Meta Cloud API |
+
+If either of the two required vars is unset, the orchestrator skips the
+notification step and exits cleanly — useful for dry-run rehearsals
+where the operator triggers `prepare-mainnet.sh` locally without
+pinging the production channel.
+
+## Rollback
+
+A mainnet program is **not** rollback-able by Fabric. If the freshly
+deployed program is broken:
+
+1. Trigger the kill switch on `/admin/incidents` (premissa III.9, Z22.4).
+2. Schedule a re-deploy with the previous bytecode via the same flow
+   (the `target/deploy/zettapay.mainnet.json` manifest of the prior
+   release lives in the audit journal).
+3. Cross-link the incident in the runbook
+   ([Incident response](/operations/incident-runbook)).
+
+## Costs
+
+A fresh ~200 KB program deploy costs roughly **5.5 SOL** in
+rent-exempt storage. A redeploy (program upgrade) costs only the
+transaction fee (sub-cent) because rent is already paid. Keep the
+deployer wallet topped up to **6 SOL** at all times.
