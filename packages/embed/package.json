@@ -1,0 +1,56 @@
+{
+  "name": "@zettapay/embed",
+  "version": "0.1.0",
+  "description": "ZettaPay lean embed.js — ~5KB vanilla drop-in that reads Solana on-chain invoices via public RPC and detects payment with zero runtime dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/embed.esm.js",
+  "module": "./dist/embed.esm.js",
+  "browser": "./dist/embed.js",
+  "unpkg": "./dist/embed.js",
+  "jsdelivr": "./dist/embed.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/embed.esm.js",
+      "browser": "./dist/embed.js",
+      "default": "./dist/embed.esm.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build.mjs && tsc -p tsconfig.types.json",
+    "typecheck": "tsc -p tsconfig.types.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.24.0",
+    "happy-dom": "^15.11.7",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "zettapay",
+    "solana",
+    "usdc",
+    "embed",
+    "checkout",
+    "qr",
+    "solana-pay",
+    "on-chain",
+    "rpc",
+    "vanilla"
+  ]
+}
