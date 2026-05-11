@@ -28,6 +28,28 @@ export const MERCHANT_HANDLE_MIN_LEN = 3;
 export const MERCHANT_HANDLE_MAX_LEN = 32;
 export const PAYMENT_ID_LEN = 32;
 export const TX_SIGNATURE_LEN = 64;
+/** Width of the `invoice_index` PDA seed (u64-le, matching the on-chain expectation). */
+export const INVOICE_INDEX_SEED_LEN = 8;
+
+/** SPL Token program id (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA). */
+export const TOKEN_PROGRAM_ID = new PublicKey(
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+);
+/** Associated Token Account program id (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL). */
+export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
+  'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+);
+
+/**
+ * Canonical USDC mint addresses per Solana cluster. Mirrors the
+ * server-side registry in `packages/api/src/lib/currencies.ts` so the SDK
+ * can resolve a mint without round-tripping to the API.
+ */
+export const USDC_MINT = {
+  'mainnet-beta': new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
+  devnet: new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'),
+} as const;
+export type UsdcCluster = keyof typeof USDC_MINT;
 
 const HANDLE_FIRST = /^[a-z0-9]$/;
 const HANDLE_TAIL = /^[a-z0-9_-]+$/;
@@ -86,6 +108,115 @@ export function derivePaymentPda(
     programId,
   );
   return { pda, bump };
+}
+
+/**
+ * Derive the deterministic invoice PDA from a merchant master pubkey and a
+ * u64 invoice index. Seeds are `[master_pubkey, u64-le(invoice_index)]` —
+ * the canonical Z26 cross-chain derivation scheme so an invoice address
+ * can be computed off-chain by any SDK before the first payment lands.
+ *
+ * The returned PDA is off-curve and acts as the *owner* of the invoice's
+ * SPL token account. The Associated Token Account itself is created
+ * on-demand by the first payer (or facilitator) via
+ * `createAssociatedTokenAccountIdempotentInstruction` server-side — this
+ * helper is purely deterministic and performs no RPC.
+ */
+export function deriveInvoicePda(
+  masterPubkey: PublicKey,
+  invoiceIndex: bigint | number,
+  programId: PublicKey = ZETTAPAY_PROGRAM_ID,
+): PdaAddress {
+  const idx = typeof invoiceIndex === 'bigint' ? invoiceIndex : BigInt(invoiceIndex);
+  if (idx < 0n) {
+    throw new Error('invoice_index must be non-negative');
+  }
+  if (idx > 0xffffffffffffffffn) {
+    throw new Error('invoice_index exceeds 2^64-1');
+  }
+  const indexSeed = Buffer.alloc(INVOICE_INDEX_SEED_LEN);
+  indexSeed.writeBigUInt64LE(idx, 0);
+  const [pda, bump] = PublicKey.findProgramAddressSync(
+    [masterPubkey.toBuffer(), indexSeed],
+    programId,
+  );
+  return { pda, bump };
+}
+
+/**
+ * Derive the Associated Token Account address for an SPL mint owned by
+ * `owner`. Allows off-curve owners (PDAs) by construction — the ATA
+ * itself is always off-curve, so curve-checks belong on the owner only
+ * when the caller intends to require a user wallet.
+ *
+ * Hand-rolled to avoid pulling `@solana/spl-token` into the SDK runtime;
+ * the seeds and program id are canonical and stable.
+ */
+export function deriveAssociatedTokenAddress(
+  owner: PublicKey,
+  mint: PublicKey,
+  tokenProgramId: PublicKey = TOKEN_PROGRAM_ID,
+): PublicKey {
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), tokenProgramId.toBuffer(), mint.toBuffer()],
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+  );
+  return ata;
+}
+
+export interface DeriveInvoiceUsdcAddressParams {
+  /** Merchant master pubkey — first seed of the invoice PDA. */
+  masterPubkey: PublicKey;
+  /** Per-merchant monotonic invoice counter. */
+  invoiceIndex: bigint | number;
+  /**
+   * Cluster used to resolve the canonical USDC mint when `mint` is
+   * omitted. Defaults to `mainnet-beta`.
+   */
+  cluster?: UsdcCluster;
+  /**
+   * Explicit USDC mint override — wins over `cluster`. Use this for
+   * localnet/testnet bytecode forks or when the merchant has opted into a
+   * non-canonical mint.
+   */
+  mint?: PublicKey;
+  /** Override for non-default ZettaPay program deployments. */
+  programId?: PublicKey;
+}
+
+export interface InvoiceUsdcAddress {
+  /** The invoice PDA — owner of the ATA, used as the seed-bearing identity. */
+  invoicePda: PublicKey;
+  /** PDA bump for the invoice PDA. */
+  invoiceBump: number;
+  /**
+   * The USDC Associated Token Account address payers should send funds
+   * to. Always off-curve. Created on-demand at first-payment time — this
+   * helper does not check on-chain existence.
+   */
+  usdcAta: PublicKey;
+  /** The USDC mint that resolves the ATA. */
+  usdcMint: PublicKey;
+}
+
+/**
+ * One-shot helper used by the SDK to show an invoice's deposit address
+ * before any on-chain state exists. Combines `deriveInvoicePda` (the
+ * owner identity) and `deriveAssociatedTokenAddress` (the SPL token
+ * account that will hold the deposited USDC).
+ */
+export function deriveInvoiceUsdcAddress(
+  params: DeriveInvoiceUsdcAddressParams,
+): InvoiceUsdcAddress {
+  const cluster = params.cluster ?? 'mainnet-beta';
+  const mint = params.mint ?? USDC_MINT[cluster];
+  const { pda, bump } = deriveInvoicePda(
+    params.masterPubkey,
+    params.invoiceIndex,
+    params.programId,
+  );
+  const usdcAta = deriveAssociatedTokenAddress(pda, mint);
+  return { invoicePda: pda, invoiceBump: bump, usdcAta, usdcMint: mint };
 }
 
 function encodeBorshString(value: string): Buffer {
