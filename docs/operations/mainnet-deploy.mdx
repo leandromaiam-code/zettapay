@@ -76,7 +76,10 @@ The script:
 
 1. Pins solana-cli to mainnet-beta and verifies the cluster.
 2. Confirms the deployer balance is at least 6 SOL (rent for ~200 KB of
-   SBF storage). No airdrop fallback — mainnet doesn't airdrop.
+   SBF storage). No airdrop fallback — mainnet doesn't airdrop. If the
+   wallet is unfunded, run the
+   [Fund the mainnet deployer wallet](/operations/fund-deployer-wallet)
+   runbook first.
 3. Prints artifact size, sha256, and target program ID.
 4. **Prompts for a literal `DEPLOY` confirmation** before broadcasting.
 5. Calls `solana program deploy` with `--keypair $MAINNET_DEPLOYER_KEYPAIR`.
@@ -151,4 +154,7 @@ deployed program is broken:
 A fresh ~200 KB program deploy costs roughly **5.5 SOL** in
 rent-exempt storage. A redeploy (program upgrade) costs only the
 transaction fee (sub-cent) because rent is already paid. Keep the
-deployer wallet topped up to **6 SOL** at all times.
+deployer wallet topped up to **6 SOL** at all times — the
+[Fund the mainnet deployer wallet](/operations/fund-deployer-wallet)
+runbook documents the Coinbase → Phantom flow Fabric uses to put SOL
+on the deployer wallet for the first time.

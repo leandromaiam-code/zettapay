@@ -1,0 +1,283 @@
+---
+title: "Fund the mainnet deployer wallet"
+description: "Manual operator runbook: buy ~$200 of SOL on Coinbase and withdraw to a Phantom mainnet wallet to cover the program deploy rent."
+---
+
+The mainnet program deploy described in
+[Mainnet deploy runbook](/operations/mainnet-deploy) requires the
+deployer wallet to hold **at least 6 SOL** before the
+`solana program deploy` transaction is broadcast. A fresh ~200 KB
+program costs roughly **5.5 SOL** in rent-exempt storage, plus a thin
+margin for the IDL publish transaction and any redeploy attempts.
+
+This runbook is the manual flow the human operator follows to put those
+6 SOL in the right wallet, using Coinbase as the fiat onramp and
+Phantom as the destination wallet. Fabric never touches money, never
+sees the seed phrase, and never holds a key that can sign on mainnet
+(premissa **IV.14** — no custody — and **V.16** — mainnet gating).
+
+## When to use this runbook
+
+Run this **once**, before the first mainnet deploy. After the initial
+~5.5 SOL rent is paid, redeploys (program upgrades) cost only the
+transaction fee, so the same wallet stays funded for the lifetime of the
+program — top it up periodically rather than re-running the full flow.
+
+You are doing this if:
+
+- The operator WhatsApp ping from `scripts/notify-mainnet-ready.sh`
+  fired and you do not yet have a Phantom wallet with ≥ 6 SOL on
+  mainnet-beta.
+- You are rehearsing the launch checklist (Z22) end-to-end on a clean
+  wallet.
+- The original deployer wallet was rotated post-incident and the new
+  wallet needs initial funding.
+
+If the deployer wallet already shows ≥ 6 SOL on
+[solscan.io](https://solscan.io), skip this runbook and proceed straight
+to `bash scripts/deploy-mainnet.sh`.
+
+<Note>
+The screenshot slots in each step (📸 markers) are intentional. The
+operator captures them on the next live run and drops the PNGs under
+`docs/operations/img/` — Fabric's autodev squad cannot record a real
+Coinbase or Phantom session and refuses to publish synthetic UI
+mockups that would mislead a future reader.
+</Note>
+
+## Prerequisites
+
+| Item | Why |
+| --- | --- |
+| Coinbase account, KYC complete | Premissa **V.17** — KYC stays at the onramp, not on us |
+| ~$200 USD available (card, ACH, or PIX via Coinbase BR) | Covers ~6 SOL at typical mainnet pricing plus the network fee |
+| Phantom mobile or browser extension installed | Premissa **I.5** — Phantom is the reference human wallet |
+| A fresh, dedicated wallet inside Phantom | Do **not** reuse a personal wallet; the deployer key only ever signs deploys |
+| 10 minutes uninterrupted | Coinbase 2FA, withdraw screen, and confirmation can stall a non-focused session |
+
+<Warning>
+The deployer wallet's seed phrase **never leaves the operator's
+machine**. Do not paste it into Fabric, do not store it in 1Password
+shared vaults, do not screenshot it. Premissa **IV.14** assumes Fabric
+genuinely cannot sign — that assumption breaks if the seed is anywhere
+Fabric can read.
+</Warning>
+
+## Step 1 — Create the dedicated Phantom wallet
+
+Open Phantom and create a brand-new wallet **only for mainnet
+deploys**. Keeping deploy-signing isolated from any personal balance
+means a compromised browser session on your day-to-day wallet cannot
+sign a malicious upgrade.
+
+1. Open the Phantom extension (or mobile app).
+2. Click the account avatar in the top-left → **Add / Connect Wallet**
+   → **Create new wallet**.
+3. Name it `zettapay-deployer-mainnet` so it shows up unambiguously in
+   the account switcher.
+4. Confirm the network selector reads **Solana** and the cluster reads
+   **Mainnet** — not Devnet (Phantom defaults to Mainnet; verify
+   anyway).
+5. Write the 12-word seed phrase on paper, in a sealed envelope, in a
+   physical safe. No cloud. No photo. No password manager unless it is
+   a hardware-only vault.
+6. Reveal the wallet's **Solana address** by tapping the account name
+   at the top of the Phantom home screen → **Copy address**.
+
+📸 *Screenshot to capture: Phantom home screen for the new
+`zettapay-deployer-mainnet` account, with the **Copy address** button
+visible. Save as `docs/operations/img/phantom-new-wallet.png`.*
+
+You should now have a string that starts with a base58 character and is
+~44 characters long. Paste it into a scratch note — you will need it
+in Step 4. The address is public and safe to share.
+
+## Step 2 — Sign in to Coinbase and pick the SOL market
+
+1. Sign in at [coinbase.com](https://www.coinbase.com) on the same
+   machine you will withdraw from. (Mobile works too, but the desktop
+   view shows the withdraw fee more clearly.)
+2. Complete any pending 2FA / device verification prompts. Coinbase
+   sometimes blocks first-time large withdrawals; surfacing the prompt
+   now avoids stalling at the withdraw screen.
+3. In the top search bar type `SOL` and pick **Solana (SOL)**.
+4. Confirm the price chart resolves and the **Buy / Sell** panel is
+   visible on the right.
+
+📸 *Screenshot to capture: Coinbase Solana market page with the
+**Buy / Sell** panel on the right. Save as
+`docs/operations/img/coinbase-sol-market.png`.*
+
+## Step 3 — Buy ~$200 of SOL
+
+1. Click **Buy**.
+2. In the amount field type `200` (USD). Confirm the secondary line
+   shows roughly the SOL amount you expect — at typical mainnet
+   pricing this should be **5.5 – 7 SOL**. If the conversion shows
+   less than 5 SOL, the SOL price has spiked; buy more (target 6 SOL
+   net of fees) or wait.
+3. Pick the payment method:
+   - **Card** — instant, ~3.99% fee. Fine for one-off launch funding.
+   - **ACH bank transfer** — cheaper, 1-3 days. Use only if you are
+     pre-funding more than a week ahead of deploy.
+   - **PIX (Coinbase Brasil)** — instant, low fee. Preferred for
+     BR-based operators.
+4. Review the **fees** line on the order preview. Coinbase will show
+   a "you receive" amount that is **net** of fees. Confirm the
+   **net SOL** is at least **6.0** — if not, increase the USD amount.
+5. Click **Preview buy** → **Buy now**.
+6. Wait for the order to fill. Card orders fill in seconds; ACH orders
+   sit in `pending` until the transfer clears.
+
+📸 *Screenshot to capture: Coinbase buy preview with the **net SOL**
+line and the **fees** line both visible. Save as
+`docs/operations/img/coinbase-buy-preview.png`.*
+
+After the fill, the SOL balance on your Coinbase account page should
+match the previewed net amount. If Coinbase shows it as `pending`,
+**stop here** until the row clears to `completed` — Coinbase will not
+let you withdraw a pending balance.
+
+## Step 4 — Withdraw SOL to the Phantom wallet
+
+1. From the SOL asset page on Coinbase, click **Send / receive** (top
+   right) → **Send**.
+2. In the destination field paste the Phantom address you copied in
+   Step 1.6.
+3. **Network** must be **Solana** — not "Solana on Ethereum" or any
+   bridged variant. Premissa **I.1** — Solana is the chain; any other
+   network at this step is wrong and the funds will land somewhere the
+   deployer cannot reach.
+4. In the amount field type the **full balance minus 0.05 SOL** (the
+   margin covers Coinbase's network fee plus rounding). For a 6.3 SOL
+   balance, send `6.25`.
+5. Coinbase shows a confirmation screen with:
+   - **Recipient address** — verify the first 4 and last 4 characters
+     match what Phantom displayed. Coinbase will autocomplete an
+     address book entry; do not trust the label, verify the raw bytes.
+   - **Network fee** — typically ~0.000005 SOL on Solana mainnet.
+     Coinbase passes the network fee through; their own fee should be
+     `$0`.
+   - **You will send** vs **Recipient will receive** — these should
+     match within rounding.
+6. Click **Send now**. Approve the 2FA prompt.
+
+📸 *Screenshot to capture: Coinbase send-SOL confirmation screen with
+the Phantom address, **Network: Solana**, and the 2FA prompt visible.
+Save as `docs/operations/img/coinbase-send-confirm.png`.*
+
+<Warning>
+Address re-verification is the single highest-leverage step in this
+runbook. A wrong address on Solana is **irreversible** — there is no
+chargeback, no support escalation, no recovery. Always verify the
+first 4 and last 4 characters of the destination address against
+Phantom's display before approving the 2FA.
+</Warning>
+
+## Step 5 — Confirm the funds landed on-chain
+
+Solana mainnet finality is sub-second, so the withdraw typically
+appears in Phantom within **30 – 90 seconds**.
+
+1. Open Phantom on the `zettapay-deployer-mainnet` wallet. The SOL
+   balance should now match the withdrawn amount.
+2. Cross-check on a block explorer in case Phantom is stale:
+
+   ```bash
+   solana balance <phantom-address> --url https://api.mainnet-beta.solana.com
+   ```
+
+   Or open
+   `https://solscan.io/account/<phantom-address>` in a browser and
+   confirm:
+   - The latest transaction is the inbound transfer from Coinbase.
+   - The post-balance is ≥ 6 SOL.
+3. If after 5 minutes the funds have not arrived, check
+   [status.solana.com](https://status.solana.com) — mainnet validator
+   congestion can delay confirmation. Coinbase shows a transaction
+   signature on the withdraw history page; paste it into
+   `https://solscan.io/tx/<signature>` to see exactly where it is.
+
+📸 *Screenshot to capture: Phantom home screen on the deployer wallet
+showing the **≥ 6 SOL** balance on mainnet. Save as
+`docs/operations/img/phantom-funded.png`.*
+
+## Step 6 — Export the keypair for the deploy script
+
+`scripts/deploy-mainnet.sh` consumes a filesystem keypair (per the
+script's `MAINNET_DEPLOYER_KEYPAIR` env var). Phantom can export the
+private key for an account in a format the `solana-cli` accepts.
+
+1. In Phantom, click the account avatar → **Account details** →
+   **Show private key**. Authenticate with the wallet password.
+2. Copy the base58 private key string.
+3. On the deployer machine (the isolated host that holds nothing else
+   sensitive — **not your laptop**), run:
+
+   ```bash
+   solana-keygen recover prompt:// --outfile /secure/path/keypair.json
+   ```
+
+   When prompted for the seed phrase, paste the 12-word phrase
+   instead — `solana-keygen` writes a JSON keypair file that
+   `solana program deploy` and Anchor both accept.
+4. `chmod 600 /secure/path/keypair.json` and store the directory on
+   an encrypted volume.
+5. Export `MAINNET_DEPLOYER_KEYPAIR=/secure/path/keypair.json` and
+   proceed to [Mainnet deploy runbook §3](/operations/mainnet-deploy).
+
+<Note>
+If the deployer machine has a Ledger or another hardware wallet, prefer
+that over an on-disk keypair. The Anchor and `solana-cli` flags accept
+`usb://ledger?key=0` in place of `--keypair`. The on-disk keypair flow
+documented above is the **minimum-viable** path for a one-off launch;
+upgrade to hardware before any subsequent redeploy.
+</Note>
+
+## Cost & timing summary
+
+| Item | Cost | Time |
+| --- | --- | --- |
+| Coinbase buy fee (card) | ~$8 on a $200 order (3.99%) | &lt;1 min |
+| Coinbase withdraw fee | $0 platform + ~0.000005 SOL network | &lt;1 min |
+| Solana mainnet confirmation | sub-second to ~90s under load | up to 5 min worst case |
+| Total wall-clock | — | **~10 min** |
+
+A successful run leaves ~6 SOL in the Phantom deployer wallet, a
+`/secure/path/keypair.json` ready for `solana program deploy`, and a
+Coinbase transaction history row that doubles as the audit trail for
+the funding event.
+
+## Troubleshooting
+
+**Coinbase blocks the withdraw with "address not verified".** Coinbase
+sometimes requires whitelisting a destination address for 48 hours
+before withdrawing large amounts. Add the Phantom address to
+**Settings → Address book** at least 2 days before deploy day, or
+withdraw in two halves (the first half unlocks the address for the
+second).
+
+**Withdraw confirmation never arrives in Phantom.** Open the Coinbase
+withdraw history page, grab the transaction signature, and inspect it
+at `https://solscan.io/tx/<signature>`. If the signature shows
+`Success` but Phantom does not update, Phantom is stale — pull to
+refresh, or switch to a different account and back.
+
+**Phantom shows a much lower SOL price than Coinbase.** Phantom uses
+its own price feed (Pyth). Small drifts are normal; large drifts
+(> 5%) usually mean Phantom is on an RPC endpoint that is lagging.
+Switch RPC under **Settings → Developer Settings → Solana RPC URL**
+to `https://api.mainnet-beta.solana.com` and re-open the wallet.
+
+**Order is stuck on `pending` for hours (ACH).** ACH transfers can
+take 1-3 business days to clear; SOL itself is held by Coinbase but
+not withdrawable until the fiat side settles. Plan ACH funding at
+least 5 business days ahead of the deploy slot.
+
+## Cross-references
+
+- [Mainnet deploy runbook](/operations/mainnet-deploy) — the runbook
+  this funding event unblocks.
+- [Incident response runbook](/operations/incident-runbook) — file a
+  funding mishap as a sev2 if the wrong address received the
+  withdraw (it is non-recoverable, but the postmortem still happens).
