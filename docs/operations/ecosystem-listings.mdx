@@ -1,0 +1,75 @@
+---
+title: "Solana ecosystem listings"
+description: "Five public-surface listings — Anza grants, Solana Pay registry, awesome-solana, RPC provider partner pages, and the Solana Foundation directory — with submission-ready drafts kept in-repo."
+---
+
+ZettaPay needs to be findable on the five canonical Solana ecosystem
+discovery surfaces. This page is the operator runbook for keeping those
+listings current. The submission drafts themselves live in
+[`community/listings/`](https://github.com/leandromaiam-code/zettapay/tree/main/community/listings)
+so they version-control alongside the rest of the protocol.
+
+## The five surfaces
+
+| # | Target | Surface | Draft |
+| - | ------ | ------- | ----- |
+| 1 | Anza grants | <https://www.anza.xyz/grants> form | `community/listings/anza-grants.md` |
+| 2 | Solana Pay registry | PR to `anza-xyz/solana-pay` | `community/listings/solana-pay-registry.md` |
+| 3 | awesome-solana | PR to the most-active fork | `community/listings/awesome-solana.md` |
+| 4 | RPC provider partner pages | Helius, Triton, QuickNode, Alchemy, Chainstack | `community/listings/rpc-providers.md` |
+| 5 | solana.com/ecosystem + Superteam | <https://solana.com/ecosystem>, Superteam Earn + directory | `community/listings/solana-ecosystem.md` |
+
+## Submission cadence
+
+| Cadence | Action |
+| ------- | ------ |
+| Quarterly | Re-verify each surface URL and form schema. They drift — solana.com restructured twice in 2025. |
+| Quarterly | Re-rank RPC providers by current devnet/mainnet latency and update the fallback list ordering in `RPC_URL_FALLBACK`. |
+| On audit completion (Z21) | Update every draft's "Audited" line and resubmit if previously rejected for being unaudited. |
+| On mainnet launch (Z29) | Switch every draft from "Devnet" to "Mainnet" in one batched edit. |
+| On taxonomy rename | If solana.com renames "Payments" → "Commerce" (or similar), update all five drafts — keep category language consistent across surfaces. |
+
+## What you need before submitting
+
+- **Brand kit**: `public/brand/` — wordmark light + dark, symbol PNG at
+  256×256.
+- **Demo video**: ≤ 3 min Loom of the checkout flow from invoice
+  generation through on-chain confirmation. Re-record after every major
+  UI change.
+- **Audit artifact link**: `audit/devnet-bug-bounty/` for now;
+  swap in the OtterSec/Halborn report once Z21 lands.
+- **Founder identity**: KYC'd wallet, LinkedIn, GitHub —
+  several of these surfaces filter on identity verification.
+
+## What changes when ZettaPay graduates from devnet
+
+Three of the five drafts have a "Status" line that reads "Devnet" today.
+At mainnet:
+
+1. Anza grants — re-submit as "production traction" rather than "infra
+   buildout" if the first application is still pending. Ask amount can
+   shift toward DevRel + RPC infra and away from audit funding.
+2. Solana Pay registry — open a follow-up PR moving the entry from any
+   "testnet" subsection to "production".
+3. solana.com/ecosystem — update the `Status` field via the directory's
+   edit flow (don't re-submit; that creates duplicates).
+
+awesome-solana and RPC provider listings do not gate on devnet vs.
+mainnet, so no action needed.
+
+## Why we keep the drafts in-repo
+
+- **Reviewable**: every change to a listing payload goes through the
+  same PR pipeline as code.
+- **Auditable**: when a listing claim is challenged ("you said you were
+  audited"), the in-repo draft is the source of truth showing exactly
+  what was promised when.
+- **Re-submittable**: when a registry restructures and asks every
+  listed project to re-submit, we re-export from the same drafts
+  rather than rewriting from scratch.
+
+## Related
+
+- [Mainnet deploy runbook](/operations/mainnet-deploy)
+- [Incident runbook](/operations/incident-runbook)
+- [Community contribution paths (SDKs)](/sdk/community-sdks)
