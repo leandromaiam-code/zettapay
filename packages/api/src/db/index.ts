@@ -79,6 +79,7 @@ function applyAddOnColumns(db: Db): void {
   }
   if (!merchantNames.has("pix_key_type")) {
     db.exec("ALTER TABLE merchants ADD COLUMN pix_key_type TEXT");
+  }
   if (!merchantNames.has("deleted_at")) {
     // Z21.4: timestamp set when LGPD/GDPR right-to-erasure redacts the row.
     // Presence is the canonical signal that PII fields have been anonymized;
@@ -92,6 +93,8 @@ function applyAddOnColumns(db: Db): void {
     // so existing merchants opt in deliberately. Score range 0-100.
     db.exec(
       "ALTER TABLE merchants ADD COLUMN fraud_block_threshold INTEGER NOT NULL DEFAULT 0",
+    );
+  }
   // Z13.4: per-merchant fraud-score threshold. Score > threshold queues the
   // attempt for manual review (rejected at runtime, surfaced in /risk/queue).
   if (!merchantNames.has("fraud_review_threshold")) {
