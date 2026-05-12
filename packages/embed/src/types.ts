@@ -93,3 +93,31 @@ export type EmbedPostMessage =
   | { source: 'zettapay-embed'; type: 'ready'; recipient: string; amount: string }
   | { source: 'zettapay-embed'; type: 'success'; signature: string; blockTime: number | null }
   | { source: 'zettapay-embed'; type: 'error'; code: EmbedErrorEvent['code']; message: string };
+
+/**
+ * Identifiers for the wallets the embed knows how to surface adaptive
+ * affordances for. Detection is read-only; ZettaPay never calls `connect`.
+ */
+export type WalletId =
+  | 'phantom'
+  | 'solflare'
+  | 'backpack'
+  | 'glow'
+  | 'trust'
+  | 'coinbase';
+
+export interface WalletMeta {
+  id: WalletId;
+  name: string;
+  /** Public install/download URL — surfaced when no wallet is detected. */
+  installUrl: string;
+  /** Hex color used for the wallet badge / pill in the UI. */
+  brand: string;
+}
+
+export interface WalletDetection {
+  /** Wallet ids whose provider is present on `window`. Order matches `WALLETS`. */
+  installed: WalletId[];
+  /** True when the user agent looks like a touch/mobile device. */
+  isMobile: boolean;
+}

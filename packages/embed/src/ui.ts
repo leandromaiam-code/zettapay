@@ -7,7 +7,8 @@
  * the host page's cascade or pulls in a `<style>` block that conscious
  * merchants would have to allowlist via CSP.
  */
-import type { Cluster } from './types.js';
+import { buildWalletDeeplink, detectWallets, getWalletMeta, WALLETS } from './wallets.js';
+import type { Cluster, WalletDetection } from './types.js';
 
 const BRAND = {
   // Veridian brand tokens — Forest / Brass / Parchment.
@@ -35,6 +36,8 @@ export interface RenderParams {
 export interface RenderHandle {
   root: HTMLElement;
   setStatus(text: string, kind: 'pending' | 'success' | 'error'): void;
+  /** Wallet detection snapshot taken at render time. Exposed for tests. */
+  detection: WalletDetection;
 }
 
 export function render(target: HTMLElement, params: RenderParams): RenderHandle {
@@ -162,6 +165,15 @@ export function render(target: HTMLElement, params: RenderParams): RenderHandle 
   addrRow.appendChild(addrText);
   addrRow.appendChild(copyBtn);
 
+  const detection = detectWallets();
+  const walletSection = renderWalletSection({
+    detection,
+    payUri: params.payUri,
+    accent,
+    border,
+    dark,
+  });
+
   const status = document.createElement('div');
   status.setAttribute('aria-live', 'polite');
   status.style.cssText = [
@@ -188,6 +200,7 @@ export function render(target: HTMLElement, params: RenderParams): RenderHandle 
   root.appendChild(eyebrow);
   root.appendChild(amountEl);
   root.appendChild(qrWrap);
+  if (walletSection) root.appendChild(walletSection);
   root.appendChild(addrLabel);
   root.appendChild(addrRow);
   root.appendChild(status);
@@ -195,6 +208,7 @@ export function render(target: HTMLElement, params: RenderParams): RenderHandle 
 
   return {
     root,
+    detection,
     setStatus(text, kind) {
       statusText.textContent = text;
       const color =
@@ -203,4 +217,109 @@ export function render(target: HTMLElement, params: RenderParams): RenderHandle 
       dot.style.boxShadow = `0 0 8px ${color}`;
     },
   };
+}
+
+interface WalletSectionParams {
+  detection: WalletDetection;
+  payUri: string;
+  accent: string;
+  border: string;
+  dark: boolean;
+}
+
+/**
+ * Renders the adaptive wallet hint band.
+ *
+ *   - Mobile: emit a horizontal list of "Open in <Wallet>" universal links
+ *     for every supported wallet. The OS routes the deep link to whichever
+ *     wallet the customer actually has installed.
+ *
+ *   - Desktop with at least one extension detected: badge the installed
+ *     wallet(s) and surface a "Scan with <wallet>" hint pointing at the QR
+ *     code above. We never call `connect()` — the customer scans the QR
+ *     from inside their own wallet.
+ *
+ *   - Desktop with no extension detected: render nothing. The QR + copy
+ *     row already cover this case and we don't want to add chrome the
+ *     merchant didn't ask for.
+ */
+function renderWalletSection(params: WalletSectionParams): HTMLElement | null {
+  const { detection, payUri, accent, border, dark } = params;
+
+  if (detection.isMobile) {
+    const list = document.createElement('div');
+    list.setAttribute('data-zettapay-wallets', 'mobile');
+    list.style.cssText = [
+      'display:flex',
+      'flex-wrap:wrap',
+      'gap:6px',
+      'padding-top:4px',
+    ].join(';');
+    for (const meta of WALLETS) {
+      const link = document.createElement('a');
+      link.setAttribute('data-wallet', meta.id);
+      link.href = buildWalletDeeplink(meta.id, payUri);
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.textContent = meta.name;
+      link.style.cssText = [
+        'flex:1 1 calc(33% - 6px)',
+        'min-width:90px',
+        'text-align:center',
+        'padding:8px 10px',
+        `background:${dark ? 'rgba(245,230,200,0.06)' : 'rgba(10,22,18,0.04)'}`,
+        `border:1px solid ${border}`,
+        'border-radius:8px',
+        'font-size:12px',
+        'font-weight:600',
+        `color:${accent}`,
+        'text-decoration:none',
+        'box-sizing:border-box',
+      ].join(';');
+      list.appendChild(link);
+    }
+    return list;
+  }
+
+  if (detection.installed.length === 0) return null;
+
+  const wrap = document.createElement('div');
+  wrap.setAttribute('data-zettapay-wallets', 'desktop');
+  wrap.style.cssText = [
+    'display:flex',
+    'flex-wrap:wrap',
+    'gap:6px',
+    'align-items:center',
+    'font-size:12px',
+    'opacity:0.92',
+  ].join(';');
+
+  const hint = document.createElement('span');
+  hint.style.cssText = 'opacity:0.78';
+  hint.textContent = 'Scan QR with';
+  wrap.appendChild(hint);
+
+  for (const id of detection.installed) {
+    const meta = getWalletMeta(id);
+    if (!meta) continue;
+    const pill = document.createElement('span');
+    pill.setAttribute('data-wallet', meta.id);
+    pill.textContent = meta.name;
+    pill.style.cssText = [
+      'display:inline-flex',
+      'align-items:center',
+      'gap:6px',
+      'padding:4px 8px',
+      `border:1px solid ${meta.brand}`,
+      `color:${meta.brand}`,
+      'border-radius:999px',
+      'font-weight:600',
+      'font-size:11px',
+      'letter-spacing:0.02em',
+      'background:transparent',
+    ].join(';');
+    wrap.appendChild(pill);
+  }
+
+  return wrap;
 }
