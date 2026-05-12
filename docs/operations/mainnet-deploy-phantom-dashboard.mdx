@@ -1,0 +1,208 @@
+---
+title: "Phantom dashboard deploy"
+description: "Semi-manual mainnet deploy where the operator signs the deploy transaction from the Fabric dashboard with Phantom, while Fabric watches the tx confirm on-chain."
+---
+
+This runbook is the **dashboard variant** of the mainnet deploy flow.
+Instead of running `scripts/deploy-mainnet.sh` against a local keypair file,
+the operator signs the deploy transaction from the Fabric autodev
+dashboard with Phantom — Phantom pops up, the operator approves, the
+transaction broadcasts, and Fabric polls Solana RPC until the tx is
+finalized.
+
+The other variant (`scripts/deploy-mainnet.sh` with a keypair JSON) is
+documented in [Mainnet deploy runbook](/operations/mainnet-deploy). The
+two flows produce the same on-chain effect; the difference is purely
+how the deploy transaction gets signed.
+
+<Note>
+The ZettaPay **product** (merchant + customer UX) is wallet-less by
+canon — checkouts use copy-pasted Solana Pay URIs, signup uses pasted
+pubkeys, and there is never a "Connect Phantom" button in the merchant
+or customer flow. The dashboard described here is **operator tooling**
+in the Fabric autodev repo (not in `leandromaiam-code/zettapay`); the
+Phantom popup is the operator's own wallet signing a deploy from a
+machine Fabric does not control. The no-custody premissa (IV.14) and
+the no-connect product rule both hold.
+</Note>
+
+## When to use this flow
+
+Pick the **dashboard + Phantom** flow when:
+
+- The operator does not want to keep a long-lived deployer keypair JSON
+  on a host filesystem. The keypair lives in Phantom (browser extension
+  or hardware-backed) and never lands on disk in plaintext.
+- The deployer wallet is a **Ledger** behind Phantom. Phantom's hardware
+  signing path is the canonical way to sign with a hardware-isolated
+  key on Solana; the CLI flow with `--keypair` does not work with a
+  Ledger sitting behind the Phantom extension.
+- The operator is already in the Fabric dashboard (reviewing the build,
+  the audit checklist, the launch gate) and prefers to keep the deploy
+  step in the same UI.
+
+Pick the **CLI keypair** flow (`scripts/deploy-mainnet.sh`) when:
+
+- Running on an isolated, air-gapped machine that has no browser.
+- The deployer key is already an encrypted keypair JSON on a secure
+  USB drive and the operator wants the deploy to be fully scriptable
+  (CI rehearsal, replayable on a hot-spare machine).
+
+## Pre-reqs
+
+| Item | Why |
+| --- | --- |
+| Mainnet bytecode ready (`scripts/build-mainnet.sh` ran on Fabric and `target/deploy/zettapay.so` is published as an artifact) | Phantom signs an `solana program deploy`-equivalent transaction that references this artifact's sha256 |
+| Audit sign-off (premissa V.16 — Z21) | Mainnet is gated by OtterSec/Halborn approval |
+| Launch checklist (Z22) green in the dashboard | Bug bounty live, kill switch wired, status page armed |
+| Phantom wallet with ≥ 6 SOL on mainnet-beta | Rent for the ~200 KB program (see [Fund the deployer wallet](/operations/fund-deployer-wallet)) |
+| Operator is the only person logged into the Fabric dashboard | One signer at a time; concurrent signing requests race for nonce |
+| `WHATSAPP_WEBHOOK_URL` configured | Notification fires after broadcast so the on-call channel sees the tx signature in real time |
+
+## End-to-end flow
+
+### 1. Fabric prepares the artifact and the unsigned tx
+
+The dashboard backend runs `scripts/prepare-mainnet.sh` (which chains
+`build-mainnet.sh` + `notify-mainnet-ready.sh`) and then assembles the
+unsigned `solana program deploy` transaction. The unsigned tx carries:
+
+- The fee payer (the operator's Phantom pubkey, supplied by the
+  dashboard during wallet selection).
+- The program account write instructions, sized for the new bytecode.
+- A recent blockhash (refetched within 60 seconds of signing — Solana
+  rejects stale blockhashes).
+
+The dashboard never signs anything; it serializes the unsigned tx as
+base64 and hands it to the browser.
+
+### 2. Operator inspects the artifact
+
+Before clicking **Deploy mainnet**, confirm in the dashboard:
+
+- Git sha of the build matches the audited, merged PR (premissa V.16).
+- sha256 of `target/deploy/zettapay.so` matches the WhatsApp
+  notification body (`notify-mainnet-ready.sh` posts both).
+- Bytecode size is within the expected envelope (~150–250 KB).
+- Anchor / Solana / rustc toolchain versions match what the audit
+  signed off on.
+- Phantom is connected on **mainnet-beta** (not devnet, not testnet).
+  The dashboard exposes the active cluster on the wallet badge — if it
+  says anything other than "Mainnet-beta", abort.
+
+If anything is off, click **Cancel** and re-run `prepare-mainnet.sh`.
+
+### 3. Operator clicks "Deploy mainnet"
+
+The dashboard calls
+`window.solana.signAndSendTransaction(unsignedTx)` against the operator's
+Phantom session. Phantom shows the usual signing popup:
+
+- **Action:** Program deploy
+- **Program ID:** the mainnet program ID (newly registered or the
+  upgrade target — confirm both match the dashboard preview)
+- **Fee payer:** the operator's pubkey
+- **Estimated SOL cost:** ~5.5 SOL for a fresh deploy, < 0.01 SOL for an
+  upgrade (rent already paid)
+
+The operator reads the popup, confirms the SOL cost is sane, and clicks
+**Approve**. If the popup shows a different program ID, a different fee
+payer, or an outrageous SOL cost, click **Reject** and escalate — the
+dashboard backend may have been compromised or stale.
+
+If the operator uses a Ledger, Phantom forwards the unsigned tx to the
+device; the operator approves on the hardware device's screen and the
+signature flows back through Phantom. Same UX from the dashboard's
+perspective.
+
+### 4. Fabric monitors the transaction
+
+The dashboard captures the tx signature returned by
+`signAndSendTransaction` and starts polling Solana RPC's
+`getSignatureStatuses` with `searchTransactionHistory: true`. It moves
+through three states:
+
+| Status | What it means | Dashboard action |
+| --- | --- | --- |
+| `pending` | Tx broadcasted, not yet confirmed | Show spinner, poll every 2 s |
+| `confirmed` | Cluster majority saw the tx | Show "Confirmed (1 cluster)" badge, keep polling for `finalized` |
+| `finalized` | 32+ slots since confirmation, irreversible | Show "Finalized" badge, fire success webhook, write to `audit_journal` |
+
+The polling loop also handles two failure modes:
+
+- **`null` status after 90 seconds.** The tx never landed (blockhash
+  expired or RPC ate it). The dashboard prompts the operator to
+  re-broadcast with a fresh blockhash. Phantom popup fires again; SOL
+  cost the second time is just a tx fee (the rent payment only
+  succeeds once).
+- **`err: <non-null>` in the status.** The cluster accepted the tx but
+  it reverted. The dashboard surfaces the on-chain error, links to
+  Solscan for the failed signature, and pauses — re-deploying a
+  reverted program tx usually requires diagnosing the root cause first
+  (premissa **III.9** — webhooks Stripe-grade, no silent retry on
+  programmatic errors).
+
+A standalone polling helper, `scripts/monitor-mainnet-deploy.sh`, is
+shipped in this repo so the operator can re-run the same monitor from
+the terminal if the dashboard session drops mid-flight. Usage:
+
+```bash
+bash scripts/monitor-mainnet-deploy.sh <tx-signature>
+```
+
+It pings `https://api.mainnet-beta.solana.com` with
+`getSignatureStatuses`, prints `pending` / `confirmed` / `finalized`
+transitions to stdout, and exits 0 once the tx is finalized (or non-zero
+if it reverts or times out after 5 minutes). The same code path the
+dashboard uses, in a shape on-call can run from anywhere.
+
+### 5. Post-deploy
+
+Once the tx finalizes, the dashboard:
+
+- Calls `solana program show <program-id>` (via RPC) and asserts the
+  on-chain bytecode hash matches the artifact sha256.
+- Calls `anchor idl fetch --provider.cluster mainnet <program-id>` (via
+  RPC) and asserts the on-chain IDL matches `target/idl/zettapay.json`.
+- POSTs a success notification to `WHATSAPP_WEBHOOK_URL` with the
+  finalized signature and the program ID.
+- Appends a `mainnet_deploy` row to `audit_journal` (premissa **V.4**
+  append-only) with the signature, sha256, toolchain manifest, and the
+  operator's pubkey as the signer of record.
+- Bumps the status page (Z18) from "mainnet pending" to "mainnet live".
+
+The operator manually:
+
+- Cross-verifies the same `solana program show` and `anchor idl fetch`
+  from a fresh terminal session (independent of the dashboard's RPC) —
+  premissa **IV.14** trust-but-verify.
+- Announces in the operator channel + on the public X account.
+
+## Rollback
+
+A mainnet program is **not** rollback-able by Fabric. If the freshly
+deployed program is broken:
+
+1. Trigger the kill switch on `/admin/incidents` (premissa **III.9**,
+   Z22.4). This pauses the API from accepting new `/pay` requests
+   against the broken program ID.
+2. Schedule a re-deploy with the previous bytecode through the same
+   dashboard flow — the prior release's toolchain manifest lives in the
+   `audit_journal`, so the operator can re-build it deterministically.
+3. Cross-link the incident in
+   [Incident response](/operations/incident-runbook).
+
+## Security notes
+
+- **Phantom never sees the keypair file.** The dashboard hands Phantom
+  an unsigned tx; Phantom signs in-extension (or forwards to a Ledger);
+  the signature comes back. Fabric's box never reads the key.
+- **The dashboard only knows the operator's pubkey.** It cannot
+  reconstruct the keypair from the signature, cannot front-run the
+  operator, cannot sign anything itself. If the Fabric backend is
+  compromised, the worst case is a malicious unsigned tx — which
+  Phantom shows in the popup and the operator rejects (step 3 above).
+- **The runbook applies only to the deploy transaction.** Day-to-day
+  operations (`/pay` calls, webhook delivery, RLS queries) never need
+  the deployer key and never invoke a wallet popup. The deployer key
+  is used once per program-version bump and then sits cold.
