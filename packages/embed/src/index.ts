@@ -21,6 +21,13 @@ export { mount };
 export { buildSolanaPayUri, toBaseUnits } from './embed.js';
 export { matchesTransfer } from './poll.js';
 export { RPC_URL, USDC_MINT } from './rpc.js';
+export {
+  WALLETS,
+  buildWalletDeeplink,
+  detectWallets,
+  getWalletMeta,
+  isMobile,
+} from './wallets.js';
 export type {
   Cluster,
   EmbedConfig,
@@ -28,6 +35,9 @@ export type {
   EmbedErrorEvent,
   EmbedHandle,
   EmbedPostMessage,
+  WalletDetection,
+  WalletId,
+  WalletMeta,
 } from './types.js';
 export const version = VERSION;
 
