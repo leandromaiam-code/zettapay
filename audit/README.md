@@ -39,6 +39,7 @@ and finished inside a single sprint.
 | [`BUG_BOUNTY.md`](BUG_BOUNTY.md) | Public $50k bounty terms running in parallel with the audit (mainnet listing, Z22.1). |
 | [`immunefi/`](immunefi/) | Immunefi submission package for the Sprint Z28 devnet validation bounty ($10k pool) and forward-reference for the Z22.1 mainnet listing. |
 | [`SUBMISSION.md`](SUBMISSION.md) | Engagement logistics, NDAs, deliverables, timeline. |
+| [`STATIC_ANALYSIS.md`](STATIC_ANALYSIS.md) | Sec3 X-ray + Soteria static-analysis sweep (Z28.3): 14 check classes mapped 1:1 to source, plus the offline `scripts/static-analysis-rust.sh` that re-runs them on every PR. |
 | [`CODE_REVIEW_CHECKLIST.md`](CODE_REVIEW_CHECKLIST.md) | Off-chain pre-audit code-review gate (Z21.5). |
 | [`CRITICAL_PATHS.md`](CRITICAL_PATHS.md) | Off-chain critical paths and the path-specific review rules. |
 | [`OWASP_TOP_10.md`](OWASP_TOP_10.md) | OWASP 2021 Top 10 mapped to off-chain mitigations + tests. |
