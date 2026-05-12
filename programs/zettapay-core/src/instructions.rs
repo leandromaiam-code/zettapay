@@ -3,12 +3,20 @@
 //! Dispatch is discriminator-based on the leading byte of
 //! `instruction_data`:
 //!
-//!   0 = RegisterMerchant { master_pubkey, chains[] }
-//!   1 = CreateInvoice    { amount, currency }
-//!   2 = Sweep            { invoice_indexes[] }
+//!   0 = RegisterMerchant     { master_pubkey, chains[] }
+//!   1 = CreateInvoice        { amount, currency }
+//!   2 = Sweep                { invoice_indexes[] }
+//!   3 = SubmitBtcProofPart1  { tx_data, merkle_path[], merkle_index }
+//!   4 = SubmitBtcProofPart2  { block_header (80 bytes) }
+//!   5 = FinalizeBtcPayment   {}
 //!
 //! The remainder of `instruction_data` is the variant's Borsh payload,
 //! deserialized in the handler.
+//!
+//! The three SPV variants split a single Bitcoin payment proof into
+//! three transactions so each one stays inside Solana's per-instruction
+//! compute-unit budget (~200k CU): merkle inclusion in part 1, PoW
+//! validation in part 2, invoice settlement in finalize.
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::pubkey::Pubkey;
@@ -18,6 +26,9 @@ pub enum InstructionTag {
     RegisterMerchant = 0,
     CreateInvoice = 1,
     Sweep = 2,
+    SubmitBtcProofPart1 = 3,
+    SubmitBtcProofPart2 = 4,
+    FinalizeBtcPayment = 5,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -37,6 +48,42 @@ pub struct SweepArgs {
     pub invoice_indexes: Vec<u64>,
 }
 
+/// Arguments for `submit_btc_proof_part_1`.
+///
+/// `tx_data` is the serialized Bitcoin transaction in wire format; the
+/// program double-SHA256s it to derive the txid. `merkle_path` is the
+/// authentication path from that txid up to the block's merkle root.
+/// `merkle_index` is the leaf's position in the block — its low bits
+/// drive the left/right ordering at each merkle level.
+///
+/// `tx_data` is deliberately not stored on-chain: only the committed
+/// txid + merkle root carry forward, so the account size is bounded
+/// regardless of how large a transaction the caller submitted.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct SubmitBtcProofPart1Args {
+    pub tx_data: Vec<u8>,
+    pub merkle_path: Vec<[u8; 32]>,
+    pub merkle_index: u32,
+}
+
+/// Arguments for `submit_btc_proof_part_2`.
+///
+/// `block_header` is the raw 80-byte Bitcoin block header that purports
+/// to contain the part_1 transaction. We use `Vec<u8>` rather than
+/// `[u8; 80]` because borsh 0.10 does not derive serializers for
+/// arrays past `[T; 32]`. The length is enforced at run time so a
+/// caller cannot smuggle a non-standard header.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct SubmitBtcProofPart2Args {
+    pub block_header: Vec<u8>,
+}
+
+/// Arguments for `finalize_btc_payment`. There are none: every value
+/// finalisation needs is already on the SPV proof account, the matching
+/// invoice account, and the merchant's master signature.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Default)]
+pub struct FinalizeBtcPaymentArgs {}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -47,6 +94,9 @@ mod tests {
         assert_eq!(InstructionTag::RegisterMerchant as u8, 0);
         assert_eq!(InstructionTag::CreateInvoice as u8, 1);
         assert_eq!(InstructionTag::Sweep as u8, 2);
+        assert_eq!(InstructionTag::SubmitBtcProofPart1 as u8, 3);
+        assert_eq!(InstructionTag::SubmitBtcProofPart2 as u8, 4);
+        assert_eq!(InstructionTag::FinalizeBtcPayment as u8, 5);
     }
 
     #[test]
@@ -81,5 +131,38 @@ mod tests {
         let bytes = BorshSerialize::try_to_vec(&args).unwrap();
         let decoded = SweepArgs::try_from_slice(&bytes).unwrap();
         assert_eq!(decoded.invoice_indexes, args.invoice_indexes);
+    }
+
+    #[test]
+    fn submit_btc_proof_part_1_args_roundtrip() {
+        let args = SubmitBtcProofPart1Args {
+            tx_data: vec![0x01, 0x02, 0x03, 0x04],
+            merkle_path: vec![[7u8; 32], [8u8; 32], [9u8; 32]],
+            merkle_index: 0b101,
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = SubmitBtcProofPart1Args::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.tx_data, args.tx_data);
+        assert_eq!(decoded.merkle_path, args.merkle_path);
+        assert_eq!(decoded.merkle_index, args.merkle_index);
+    }
+
+    #[test]
+    fn submit_btc_proof_part_2_args_roundtrip() {
+        let args = SubmitBtcProofPart2Args {
+            block_header: vec![0xab; 80],
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = SubmitBtcProofPart2Args::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.block_header, args.block_header);
+    }
+
+    #[test]
+    fn finalize_btc_payment_args_roundtrip() {
+        let args = FinalizeBtcPaymentArgs::default();
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        // No fields → zero-byte payload.
+        assert!(bytes.is_empty());
+        let _decoded = FinalizeBtcPaymentArgs::try_from_slice(&bytes).unwrap();
     }
 }
