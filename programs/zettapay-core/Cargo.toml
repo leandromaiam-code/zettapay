@@ -20,3 +20,12 @@ test-sbf = []
 solana-program = "1.18.26"
 borsh = "0.10.3"
 thiserror = "1.0"
+
+# Dev-only — exercised exclusively by `tests/integration.rs` (Z25.3).
+# Versions are pinned in lockstep with `solana-program` so the in-process
+# Banks harness deserializes account data with the same borsh impls the
+# on-chain program writes.
+[dev-dependencies]
+solana-program-test = "1.18.26"
+solana-sdk = "1.18.26"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
