@@ -19,6 +19,11 @@ use solana_program::pubkey::Pubkey;
 
 pub const MERCHANT_SEED: &[u8] = b"merchant";
 
+/// Seed prefix for the Bitcoin SPV payment proof PDA (Z26.3). Distinct
+/// ASCII bytes ensure no collision with the `[master, invoice_index_le]`
+/// invoice seeds — the prefix cannot be the first 8 bytes of any pubkey.
+pub const SPV_PROOF_BTC_SEED: &[u8] = b"spv-btc";
+
 /// Width of the `invoice_index` PDA seed. Matches `INVOICE_INDEX_SEED_LEN`
 /// in `packages/sdk/src/onchain.ts`.
 pub const INVOICE_INDEX_SEED_LEN: usize = 8;
@@ -46,6 +51,17 @@ pub fn find_invoice_pda(
     let index_seed = invoice_index.to_le_bytes();
     Pubkey::find_program_address(
         &[master_pubkey.as_ref(), &index_seed],
+        program_id,
+    )
+}
+
+/// Derive the Bitcoin SPV proof PDA for an invoice. One proof account
+/// per invoice — the seed scheme rejects a second part_1 against the
+/// same invoice through the `system_instruction::create_account`
+/// already-allocated error.
+pub fn find_spv_proof_btc_pda(invoice: &Pubkey, program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[SPV_PROOF_BTC_SEED, invoice.as_ref()],
         program_id,
     )
 }
@@ -136,6 +152,34 @@ mod tests {
         let (merchant_pda, _) = find_merchant_pda(&master, &program_id);
         let (invoice_pda, _) = find_invoice_pda(&master, 0, &program_id);
         assert_ne!(merchant_pda, invoice_pda);
+    }
+
+    #[test]
+    fn spv_proof_btc_pda_is_deterministic_and_invoice_specific() {
+        let program_id = fixed_program_id();
+        let inv1 = Pubkey::new_from_array([21u8; 32]);
+        let inv2 = Pubkey::new_from_array([22u8; 32]);
+        let (a1, bump1) = find_spv_proof_btc_pda(&inv1, &program_id);
+        let (a2, bump2) = find_spv_proof_btc_pda(&inv1, &program_id);
+        let (b, _) = find_spv_proof_btc_pda(&inv2, &program_id);
+        assert_eq!(a1, a2);
+        assert_eq!(bump1, bump2);
+        assert_ne!(a1, b);
+    }
+
+    #[test]
+    fn spv_proof_btc_seed_cannot_collide_with_other_prefixes() {
+        // The `b"spv-btc"` ASCII bytes cannot be the first 7 bytes of any
+        // Solana pubkey (which is what would be needed to collide with
+        // `[master, invoice_index_le]` invoice seeds or `[b"merchant",
+        // master]` merchant seeds). Spot-check explicit collisions.
+        let program_id = fixed_program_id();
+        let inv = Pubkey::new_from_array([23u8; 32]);
+        let (spv_pda, _) = find_spv_proof_btc_pda(&inv, &program_id);
+        let (merchant_pda, _) = find_merchant_pda(&inv, &program_id);
+        let (invoice_pda, _) = find_invoice_pda(&inv, 0, &program_id);
+        assert_ne!(spv_pda, merchant_pda);
+        assert_ne!(spv_pda, invoice_pda);
     }
 
     #[test]

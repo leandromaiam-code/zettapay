@@ -15,6 +15,12 @@ use solana_program::pubkey::Pubkey;
 // Account type tags. First byte of every owned account.
 pub const MERCHANT_TAG: u8 = 1;
 pub const INVOICE_TAG: u8 = 2;
+/// Bitcoin SPV payment proof. Z26.3 added a cross-chain settlement path
+/// where a merchant accepts a Bitcoin payment that satisfies a USDC-
+/// denominated invoice; the proof account records the multi-step SPV
+/// verification so `submit_btc_proof_part_*` can stay under the per-
+/// instruction compute-unit budget.
+pub const SPV_PROOF_BTC_TAG: u8 = 3;
 
 // Currency tags. Premise 2 keeps V1 USDC-only; the tag byte exists so Z11
 // can add stablecoins without an account-layout migration.
@@ -32,6 +38,17 @@ pub const CHAIN_AVALANCHE: u8 = 5;
 
 pub const INVOICE_STATUS_OPEN: u8 = 0;
 pub const INVOICE_STATUS_SWEPT: u8 = 1;
+/// Invoice was settled by a finalised Bitcoin SPV proof (Z26.3). The
+/// status is distinct from `SWEPT` because the on-chain settlement
+/// rail is different — there is no USDC transfer to follow, and
+/// downstream indexers route disputes through the BTC chain instead.
+pub const INVOICE_STATUS_PAID_BTC: u8 = 2;
+
+/// SPV proof account lifecycle. Each step is a separate transaction so
+/// the per-instruction CU budget stays under Solana's 200k chunk.
+pub const SPV_STATUS_PART1_DONE: u8 = 0;
+pub const SPV_STATUS_PART2_DONE: u8 = 1;
+pub const SPV_STATUS_FINALIZED: u8 = 2;
 
 /// Cap on the merchant's declared chain set. Bounding this fixes the
 /// merchant PDA size at registration time so rent calculations are stable.
@@ -85,6 +102,56 @@ impl Invoice {
         + 1                       // status
         + 8                       // created_at
         + 8;                      // swept_at
+}
+
+/// Bitcoin SPV payment proof PDA. Seeds: see
+/// [`crate::pda::find_spv_proof_btc_pda`].
+///
+/// The account is initialised in `submit_btc_proof_part_1` with the
+/// merkle inclusion result, updated in `submit_btc_proof_part_2` with
+/// the validated block-header hash, and finalised in
+/// `finalize_btc_payment` where it flips the matching `Invoice` to
+/// `INVOICE_STATUS_PAID_BTC`. The `submitter` field binds part 2 and
+/// finalisation back to the same signer that paid the rent on part 1,
+/// closing the door on a third party hijacking an in-flight proof.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SpvProofBtc {
+    pub tag: u8,
+    pub bump: u8,
+    /// Invoice this proof settles. Bound at part_1 — the PDA seeds
+    /// already pin the relationship; storing it lets finalize verify
+    /// without re-deriving.
+    pub invoice: Pubkey,
+    /// Wallet that funded the proof account and signed part_1. Part_2
+    /// and finalize require this same signer to prevent griefing.
+    pub submitter: Pubkey,
+    /// Bitcoin txid in internal byte order (the order SHA256d emits).
+    pub txid: [u8; 32],
+    /// Merkle root computed from `txid` + part_1 proof path; must match
+    /// the block header's merkle_root field in part_2.
+    pub merkle_root: [u8; 32],
+    /// Block hash committed in part_2, internal byte order. Stays
+    /// `[0u8; 32]` until part_2 runs.
+    pub block_hash: [u8; 32],
+    /// One of `SPV_STATUS_PART1_DONE | SPV_STATUS_PART2_DONE |
+    /// SPV_STATUS_FINALIZED`.
+    pub status: u8,
+    pub created_at: i64,
+    /// 0 until `finalize_btc_payment` flips it.
+    pub finalized_at: i64,
+}
+
+impl SpvProofBtc {
+    pub const SIZE: usize = 1     // tag
+        + 1                       // bump
+        + 32                      // invoice
+        + 32                      // submitter
+        + 32                      // txid
+        + 32                      // merkle_root
+        + 32                      // block_hash
+        + 1                       // status
+        + 8                       // created_at
+        + 8;                      // finalized_at
 }
 
 #[cfg(test)]
@@ -161,6 +228,39 @@ mod tests {
         };
         let bytes = m.try_to_vec().unwrap();
         assert_eq!(bytes.len(), Merchant::SIZE);
+    }
+
+    #[test]
+    fn spv_proof_btc_size_within_pda_max() {
+        assert!(SpvProofBtc::SIZE < 10_240);
+    }
+
+    #[test]
+    fn spv_proof_btc_size_matches_field_layout() {
+        assert_eq!(
+            SpvProofBtc::SIZE,
+            1 + 1 + 32 + 32 + 32 + 32 + 32 + 1 + 8 + 8
+        );
+    }
+
+    #[test]
+    fn spv_proof_btc_roundtrip_via_borsh() {
+        let proof = SpvProofBtc {
+            tag: SPV_PROOF_BTC_TAG,
+            bump: 255,
+            invoice: Pubkey::new_from_array([4u8; 32]),
+            submitter: Pubkey::new_from_array([5u8; 32]),
+            txid: [6u8; 32],
+            merkle_root: [7u8; 32],
+            block_hash: [8u8; 32],
+            status: SPV_STATUS_PART2_DONE,
+            created_at: 1_700_000_002,
+            finalized_at: 0,
+        };
+        let bytes = proof.try_to_vec().unwrap();
+        assert_eq!(bytes.len(), SpvProofBtc::SIZE);
+        let decoded = SpvProofBtc::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded, proof);
     }
 
     #[test]

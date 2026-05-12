@@ -45,6 +45,31 @@ pub enum ZpError {
     AccountInvoiceCountMismatch,
     #[error("Numeric overflow")]
     Overflow,
+    // --- Z26.3: Bitcoin SPV verifier ---------------------------------
+    // Variants appended at the bottom only. Reordering shifts every
+    // downstream Custom(u32) code and breaks the wire contract.
+    #[error("SPV proof PDA does not match seeds")]
+    SpvProofPdaMismatch,
+    #[error("SPV proof account already initialized")]
+    SpvAlreadyInitialized,
+    #[error("SPV proof is not in the expected status")]
+    SpvWrongStatus,
+    #[error("SPV proof does not belong to this invoice")]
+    SpvInvoiceMismatch,
+    #[error("SPV proof submitter does not match original")]
+    SpvSubmitterMismatch,
+    #[error("Bitcoin transaction data is empty")]
+    BtcTxDataEmpty,
+    #[error("Merkle proof path exceeds maximum depth")]
+    MerkleProofTooLong,
+    #[error("Computed merkle root does not match block header")]
+    MerkleRootMismatch,
+    #[error("Block header has invalid length or encoding")]
+    BlockHeaderInvalid,
+    #[error("Block header does not satisfy proof-of-work target")]
+    PoWInsufficient,
+    #[error("Invoice has already been settled")]
+    InvoiceAlreadyPaid,
 }
 
 impl From<ZpError> for ProgramError {
@@ -74,5 +99,9 @@ mod tests {
         assert_eq!(ZpError::MerchantPdaMismatch as u32, 2);
         assert_eq!(ZpError::InvoicePdaMismatch as u32, 3);
         assert_eq!(ZpError::Overflow as u32, 16);
+        // Z26.3 appended block — pin the first SPV variant and last to
+        // catch accidental insertions in the middle.
+        assert_eq!(ZpError::SpvProofPdaMismatch as u32, 17);
+        assert_eq!(ZpError::InvoiceAlreadyPaid as u32, 27);
     }
 }
