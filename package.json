@@ -17,7 +17,8 @@
     "docs:dev": "npx -y mint@latest dev --path docs",
     "docs:check": "npx -y mint@latest broken-links --path docs",
     "openapi:export": "npm run -w @zettapay/api build && node scripts/export-openapi.mjs",
-    "sdk:generate": "npm run openapi:export && bash scripts/generate-sdks.sh"
+    "sdk:generate": "npm run openapi:export && bash scripts/generate-sdks.sh",
+    "audit:static-rust": "bash scripts/static-analysis-rust.sh"
   },
   "devDependencies": {
     "@vercel/node": "^3.2.24"
