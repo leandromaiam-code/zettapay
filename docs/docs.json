@@ -89,6 +89,7 @@
             "pages": [
               "operations/incident-runbook",
               "operations/mainnet-deploy",
+              "operations/mainnet-deploy-phantom-dashboard",
               "operations/fund-deployer-wallet",
               "operations/ecosystem-listings"
             ]
