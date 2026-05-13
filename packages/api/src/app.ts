@@ -152,19 +152,16 @@ export function createApp(options: CreateAppOptions): Express {
     admin,
     indexer,
     pix,
-    onAutoSettle,
     onAutoPixSettle,
-  } = options;
-  const betaConfig = options.betaConfig ?? loadBetaConfig();
-  const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
-  const { db, solana, shutdown, coinflow, onAutoSettle, evm } = options;
+    attestation,
+    evm,
     amlConfig,
     onAmlEvaluated,
-  } = options;
-  const resolvedAmlConfig: AmlMonitorConfig | null =
-    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
     incidents: incidentOptions,
   } = options;
+  const betaConfig = options.betaConfig ?? loadBetaConfig();
+  const resolvedAmlConfig: AmlMonitorConfig | null =
+    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
   const incidentService = new IncidentService(db);
 
   const app = express();
@@ -292,6 +289,7 @@ export function createApp(options: CreateAppOptions): Express {
   }
   if (pix && pix.availableProviders.length > 0) {
     app.use(pixRouter(db, pix));
+  }
   if (attestation) {
     app.use(bridgeRouter(db, { attestation, solana }));
   }

@@ -18,6 +18,7 @@ import {
   type PixEnvironment,
   type PixProvider,
 } from "./pix/client.js";
+import {
   HttpAttestationClient,
   type AttestationClient,
   type AttestationEnvironment,
@@ -78,6 +79,8 @@ const coinflow = loadCoinflow();
 const shopify = loadShopify();
 const kyc = loadKyc();
 const pix = loadPix();
+const attestation = loadAttestation();
+const evm = loadEvm();
 
 const app = createApp({
   db,
@@ -96,13 +99,9 @@ const app = createApp({
     adminKey: process.env.ZETTAPAY_ADMIN_KEY ?? null,
   },
   ...(pix ? { pix } : {}),
+  ...(attestation ? { attestation } : {}),
+  ...(evm ? { evm } : {}),
 });
-const attestation = loadAttestation();
-
-const app = createApp({ db, solana, shutdown, coinflow, attestation });
-const evm = loadEvm();
-
-const app = createApp({ db, solana, shutdown, coinflow, evm });
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -134,6 +133,8 @@ function loadKyc(): KycProviderClient | undefined {
     webhookSecret,
     ...(baseUrl ? { baseUrl } : {}),
   });
+}
+
 function loadEvm(): EvmService | undefined {
   const key = process.env.EVM_PAYER_PRIVATE_KEY?.trim();
   if (!key) return undefined;
@@ -201,6 +202,8 @@ function loadPix(): PixServerConfig | undefined {
     resolveClient: (provider) => clients.get(provider),
     availableProviders: Array.from(clients.keys()),
   };
+}
+
 function loadAttestation(): AttestationClient | undefined {
   // Bridge support is opt-in: setting BRIDGE_ATTESTATION_ENV mounts /bridge/*.
   // Defaults to off so dev environments without a CCTP setup don't expose
