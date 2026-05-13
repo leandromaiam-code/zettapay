@@ -12,7 +12,11 @@ export interface BetaLaunchConfig {
   enabled: boolean;
   /** Merchants permitted to transact while beta is active. Empty when disabled. */
   allowlist: ReadonlySet<string>;
-  /** Cap on total non-failed payment volume per merchant during the beta window (USD). */
+  /**
+   * Cap on total non-failed payment volume per merchant during the beta
+   * window (USD). `0` is the sentinel for "no cap" — the allowlist and
+   * window-expiry gates still run, but the per-merchant ceiling is lifted.
+   */
   merchantCapUsd: number;
   /** Hard ceiling on the allowlist size — prevents accidentally widening beta. */
   maxMerchants: number;
@@ -34,11 +38,16 @@ function readBoolean(name: string, fallback: boolean): boolean {
   throw new ConfigurationError(`Invalid boolean env var ${name}=${raw}`);
 }
 
-function readNumber(name: string, fallback: number): number {
+function readNumber(
+  name: string,
+  fallback: number,
+  options: { allowZero?: boolean } = {},
+): number {
   const raw = process.env[name];
   if (raw === undefined || raw === "") return fallback;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  const lowerBoundOk = options.allowZero ? parsed >= 0 : parsed > 0;
+  if (!Number.isFinite(parsed) || !lowerBoundOk) {
     throw new ConfigurationError(`Invalid numeric env var ${name}=${raw}`);
   }
   return parsed;
@@ -67,9 +76,13 @@ function readCsv(name: string): string[] {
 
 export function loadBetaConfig(): BetaLaunchConfig {
   const enabled = readBoolean("BETA_MODE_ENABLED", false);
+  // Z30.5 — `BETA_MERCHANT_CAP_USDC=0` is the cap-removal sentinel applied
+  // after the beta window closes cleanly. Allowlist + window gates remain
+  // enforced; only the per-merchant volume ceiling is lifted.
   const merchantCapUsd = readNumber(
     "BETA_MERCHANT_CAP_USDC",
     DEFAULT_MERCHANT_CAP_USD,
+    { allowZero: true },
   );
   const maxMerchants = readNumber("BETA_MAX_MERCHANTS", DEFAULT_MAX_MERCHANTS);
   const durationDays = readNumber("BETA_DURATION_DAYS", DEFAULT_DURATION_DAYS);
@@ -105,4 +118,9 @@ export function isBetaExpired(config: BetaLaunchConfig, now: Date = new Date()):
   const ends = betaEndsAt(config);
   if (!ends) return false;
   return now.getTime() >= Date.parse(ends);
+}
+
+/** True when the per-merchant volume cap has been removed (cap=0 sentinel). */
+export function isMerchantCapUnlimited(config: BetaLaunchConfig): boolean {
+  return config.merchantCapUsd === 0;
 }

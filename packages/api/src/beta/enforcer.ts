@@ -5,6 +5,7 @@ import { HttpError } from "../lib/errors.js";
 import {
   betaEndsAt,
   isBetaExpired,
+  isMerchantCapUnlimited,
   type BetaLaunchConfig,
 } from "./config.js";
 
@@ -37,7 +38,9 @@ export interface BetaCheckTelemetry {
  *     `BETA_MODE_ENABLED=false` to graduate to GA.
  *  3. Merchant cap — cumulative non-failed payment volume since `launchAt`
  *     must stay below `merchantCapUsd` ($10k). Crossing the cap returns
- *     429 with `beta:merchant_cap`.
+ *     429 with `beta:merchant_cap`. Z30.5 introduced the `merchantCapUsd=0`
+ *     sentinel which disables this third gate (allowlist + window stay on)
+ *     so cap removal is a config flip with no code changes.
  *
  * No-op when `config.enabled=false`, which is the default in dev/test and
  * after the beta period closes.
@@ -84,6 +87,16 @@ export function enforceBetaLimits(
     sinceIso,
   );
   const capUsd = config.merchantCapUsd;
+
+  if (isMerchantCapUnlimited(config)) {
+    return {
+      enforced: true,
+      cumulativeUsd,
+      capUsd,
+      remainingUsd: Number.POSITIVE_INFINITY,
+    };
+  }
+
   const remainingUsd = capUsd - cumulativeUsd;
 
   if (cumulativeUsd + amount > capUsd) {

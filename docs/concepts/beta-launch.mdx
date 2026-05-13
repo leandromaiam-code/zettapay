@@ -35,7 +35,7 @@ server. No DB migrations, no per-merchant flags.
 | `BETA_MODE_ENABLED` | `false` | Master switch. Disabled in dev/test. |
 | `BETA_ALLOWED_MERCHANTS` | _empty_ | Comma-separated merchant ids permitted to transact. |
 | `BETA_MAX_MERCHANTS` | `10` | Hard ceiling on the allowlist size. Config error if exceeded. |
-| `BETA_MERCHANT_CAP_USDC` | `10000` | Per-merchant cumulative non-failed volume cap (USD). |
+| `BETA_MERCHANT_CAP_USDC` | `10000` | Per-merchant cumulative non-failed volume cap (USD). Set to `0` to remove the cap entirely once the beta has run cleanly (see Z30.5 runbook below). |
 | `BETA_LAUNCH_AT` | _none_ | ISO-8601 timestamp when the beta window opened. Spend predating this is ignored. |
 | `BETA_DURATION_DAYS` | `30` | Length of the beta window in days. |
 
@@ -154,6 +154,26 @@ When `zettapay_beta_merchants_exhausted` pages:
      `BETA_MODE_ENABLED=false`) and rely on per-merchant velocity
      limits. Only do this when post-beta operational gates are met.
 4. Update the audit journal with the action taken.
+
+## Runbook: cap removal (Z30.5)
+
+At D+60 of the public beta, once 24/7 monitoring shows zero critical bugs
+and `zettapay_beta_merchants_exhausted` has stayed at `0` across the
+window, the per-merchant volume cap is removed in place:
+
+1. Set `BETA_MERCHANT_CAP_USDC=0` and redeploy.
+2. The `beta:merchant_cap` gate short-circuits — payments no longer count
+   against any ceiling. The allowlist and window-expiry gates remain
+   armed.
+3. `GET /beta/status` reports `capUsd: 0`, `utilizationPct: 0`,
+   `exhausted: false`, and `remainingUsd` serializes as `null` (the
+   server-side value is `+Infinity`).
+4. The Prometheus alert `ZettaPayBetaMerchantExhausted` becomes
+   permanently quiet — leave the rule in place; it will re-arm if the cap
+   is ever reset to a positive value.
+
+Cap removal is reversible: setting `BETA_MERCHANT_CAP_USDC` back to a
+positive value restores the cap immediately at the next deploy.
 
 ## Runbook: graduation to GA
 
