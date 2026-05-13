@@ -31,10 +31,7 @@ import {
   evaluatePayment,
   type AmlMonitorConfig,
 } from "./aml.js";
-import { appendAudit } from "../db/audit_journal.js";
 import { evaluatePaymentAnomalies } from "./anomaly.js";
-import { enforceBetaLimits } from "../beta/enforcer.js";
-import { loadBetaConfig, type BetaLaunchConfig } from "../beta/config.js";
 import { noopGeoIpResolver, type GeoIpResolver } from "../lib/geoip.js";
 
 export interface CreatePaymentInput {
@@ -231,6 +228,26 @@ export async function createPayment(
             });
         }
 
+        if (
+          deps.pix &&
+          merchant.pix.enabled &&
+          merchant.pix.autoSettle &&
+          merchant.pix.provider
+        ) {
+          const pixClient = deps.pix(merchant.pix.provider);
+          if (pixClient) {
+            void settlePaymentToPix(db, pixClient, {
+              merchantId: merchant.id,
+              paymentId,
+            })
+              .then(() => deps.onAutoPixSettle?.(paymentId, null))
+              .catch((err: unknown) => {
+                const error = err instanceof Error ? err : new Error(String(err));
+                deps.onAutoPixSettle?.(paymentId, error);
+              });
+          }
+        }
+
         const finalPayment = getPayment(db, paymentId);
 
         // Z21.2 AML monitoring — run synchronously after settlement is dispatched
@@ -285,32 +302,4 @@ export async function createPayment(
       }
     },
   );
-    if (
-      deps.pix &&
-      merchant.pix.enabled &&
-      merchant.pix.autoSettle &&
-      merchant.pix.provider
-    ) {
-      const pixClient = deps.pix(merchant.pix.provider);
-      if (pixClient) {
-        void settlePaymentToPix(db, pixClient, {
-          merchantId: merchant.id,
-          paymentId,
-        })
-          .then(() => deps.onAutoPixSettle?.(paymentId, null))
-          .catch((err: unknown) => {
-            const error = err instanceof Error ? err : new Error(String(err));
-            deps.onAutoPixSettle?.(paymentId, error);
-          });
-      }
-    }
-
-    return { payment: getPayment(db, paymentId) };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "unknown transfer error";
-    markPaymentFailed(db, paymentId, message);
-    if (err instanceof HttpError) throw err;
-    throw HttpError.paymentFailed(`${currency} transfer failed: ${message}`);
-  }
 }
