@@ -2,10 +2,13 @@
 import { initTracing } from "./lib/tracing.js";
 const tracing = initTracing("zettapay-cron-worker");
 
+import { loadBetaConfig } from "./beta/config.js";
+import { noopCapBroadcaster } from "./beta/cap_upgrade.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
 import { GracefulShutdown } from "./lib/shutdown.js";
+import { startCapUpgradeCron } from "./services/cap_upgrade_cron.js";
 import { SolanaService } from "./services/solana.js";
 import { startSubscriptionCron } from "./services/subscription_cron.js";
 import {
@@ -108,6 +111,26 @@ async function main(): Promise<void> {
   } else {
     logger.info("synthetic_monitor.disabled", {
       reason: synthetic.targetUrl ? "explicit_disable" : "no_target_url",
+    });
+  }
+
+  const betaConfig = loadBetaConfig();
+  if (betaConfig.enabled && betaConfig.launchAt) {
+    const capUpgradeIntervalMs = Number.parseInt(
+      process.env.CAP_UPGRADE_CRON_INTERVAL_MS ?? "3600000",
+      10,
+    );
+    const capCron = startCapUpgradeCron({
+      db,
+      betaConfig,
+      broadcaster: noopCapBroadcaster(),
+      intervalMs: capUpgradeIntervalMs,
+      logger,
+    });
+    shutdown.register("cap_upgrade_cron", () => capCron.close());
+  } else {
+    logger.info("cap_upgrade_cron.disabled", {
+      reason: betaConfig.enabled ? "no_launch_date" : "beta_mode_off",
     });
   }
 

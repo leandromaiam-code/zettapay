@@ -85,6 +85,8 @@
     "src/beta/config.ts",
     "src/beta/enforcer.ts",
     "src/beta/monitoring.ts",
+    "src/beta/cap_upgrade.ts",
+    "src/services/cap_upgrade_cron.ts",
     "src/coinflow/client.ts",
     "src/coinflow/fee.ts",
     "src/coinflow/service.ts",
