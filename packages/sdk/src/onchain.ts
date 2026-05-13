@@ -51,6 +51,37 @@ export const USDC_MINT = {
 } as const;
 export type UsdcCluster = keyof typeof USDC_MINT;
 
+/**
+ * Canonical Solana JSON-RPC endpoints. The SDK defaults to mainnet-beta
+ * — devnet must be opted into explicitly. Merchants who want a paid RPC
+ * (Helius, Triton, QuickNode) pass that URL directly to
+ * `new Connection(...)` and bypass this map entirely.
+ */
+export const SOLANA_RPC_URL = {
+  'mainnet-beta': 'https://api.mainnet-beta.solana.com',
+  devnet: 'https://api.devnet.solana.com',
+} as const;
+
+/** Default cluster for the SDK and embed (Z29: mainnet live). */
+export const DEFAULT_CLUSTER: UsdcCluster = 'mainnet-beta';
+
+/** Default RPC endpoint — mainnet-beta. */
+export const DEFAULT_SOLANA_RPC_URL = SOLANA_RPC_URL[DEFAULT_CLUSTER];
+
+/**
+ * Resolve the cluster from an explicit value or a `testnet` flag. The
+ * embed exposes the same logic via `data-testnet="true"`; both
+ * surfaces stay in sync by routing through this helper.
+ */
+export function resolveCluster(opts?: {
+  cluster?: UsdcCluster;
+  testnet?: boolean;
+}): UsdcCluster {
+  if (opts?.cluster) return opts.cluster;
+  if (opts?.testnet) return 'devnet';
+  return DEFAULT_CLUSTER;
+}
+
 const HANDLE_FIRST = /^[a-z0-9]$/;
 const HANDLE_TAIL = /^[a-z0-9_-]+$/;
 

@@ -18,7 +18,7 @@ const DEFAULT_DECIMALS = 6;
 const DEFAULT_INTERVAL_MS = 30_000;
 
 export function mount(target: HTMLElement, config: EmbedConfig): EmbedHandle {
-  const cluster: Cluster = config.cluster === 'devnet' ? 'devnet' : 'mainnet-beta';
+  const cluster: Cluster = resolveCluster(config);
   const decimals = config.decimals ?? DEFAULT_DECIMALS;
   const mint = config.mint ?? USDC_MINT[cluster];
   const rpcUrl = config.rpcUrl ?? RPC_URL[cluster];
@@ -123,6 +123,27 @@ interface PayUriParams {
   mint: string;
   reference?: string;
   label?: string;
+}
+
+/**
+ * Resolve the target Solana cluster from the user-supplied config.
+ *
+ * Priority:
+ *   1. Explicit `cluster` always wins.
+ *   2. `testnet: true` flips to devnet.
+ *   3. Default is mainnet-beta (Z29: program live on mainnet).
+ *
+ * Kept in sync with `@zettapay/sdk`'s `resolveCluster` so both surfaces
+ * answer the same way when given the same inputs.
+ */
+export function resolveCluster(
+  opts: { cluster?: Cluster; testnet?: boolean } = {},
+): Cluster {
+  if (opts.cluster === 'devnet' || opts.cluster === 'mainnet-beta') {
+    return opts.cluster;
+  }
+  if (opts.testnet === true) return 'devnet';
+  return 'mainnet-beta';
 }
 
 /**

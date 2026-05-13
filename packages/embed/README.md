@@ -39,7 +39,8 @@ its own embed.
 | `data-reference`      | no       | —                                         | Solana Pay reference key — preferred watch address                       |
 | `data-mint`           | no       | USDC for cluster                          | SPL mint base58                                                          |
 | `data-decimals`       | no       | `6`                                       | Token decimals                                                           |
-| `data-cluster`        | no       | `mainnet-beta`                            | `mainnet-beta` or `devnet`                                               |
+| `data-cluster`        | no       | `mainnet-beta`                            | `mainnet-beta` or `devnet`. Explicit cluster wins over `data-testnet`.   |
+| `data-testnet`        | no       | absent (mainnet)                          | Shortcut flag — `data-testnet="true"` flips the embed to devnet.         |
 | `data-rpc-url`        | no       | Public Solana RPC for cluster             | Explicit RPC endpoint                                                    |
 | `data-qr-renderer`    | no       | `https://api.qrserver.com/v1/create-qr-code/?size=440x440&data=` | URL prefix the embed appends the encoded payload to            |
 | `data-theme`          | no       | `dark`                                    | `dark` or `light`                                                        |

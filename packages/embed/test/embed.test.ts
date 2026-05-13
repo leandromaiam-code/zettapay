@@ -1,9 +1,33 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSolanaPayUri, matchesTransfer, mount, toBaseUnits } from '../src/index.js';
+import {
+  buildSolanaPayUri,
+  matchesTransfer,
+  mount,
+  resolveCluster,
+  toBaseUnits,
+} from '../src/index.js';
 
 const RECIPIENT = '7vYAYP6sH5DEKpzCRYAYn5dShGE1LdgqHCT9KuExJgWY';
 const REFERENCE = 'D8jU5sZ6hbVQHBhAJW9D2yh3sDWg7XHnH9Cx8GxKDDax';
 const USDC = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+
+describe('resolveCluster', () => {
+  it('defaults to mainnet-beta', () => {
+    expect(resolveCluster()).toBe('mainnet-beta');
+    expect(resolveCluster({})).toBe('mainnet-beta');
+  });
+
+  it('flips to devnet when testnet flag is true', () => {
+    expect(resolveCluster({ testnet: true })).toBe('devnet');
+  });
+
+  it('honors explicit cluster over testnet flag', () => {
+    expect(resolveCluster({ cluster: 'mainnet-beta', testnet: true })).toBe(
+      'mainnet-beta',
+    );
+    expect(resolveCluster({ cluster: 'devnet' })).toBe('devnet');
+  });
+});
 
 describe('toBaseUnits', () => {
   it('converts integer USDC amounts', () => {

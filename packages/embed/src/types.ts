@@ -38,9 +38,18 @@ export interface EmbedConfig {
 
   /**
    * Solana cluster. Drives the default RPC endpoint and the default
-   * USDC mint. Ignored if `rpcUrl` is explicit.
+   * USDC mint. Defaults to `mainnet-beta` (Z29: program live on mainnet).
+   * Ignored if `rpcUrl` is explicit. Takes precedence over `testnet`.
    */
   cluster?: Cluster;
+
+  /**
+   * Shortcut: when `true` and `cluster` is omitted, the embed targets
+   * Solana devnet (USDC test mint + devnet RPC). When `false` or omitted,
+   * the embed runs against mainnet-beta. Surfaced as `data-testnet="true"`
+   * in the script-tag auto-init path.
+   */
+  testnet?: boolean;
 
   /** Explicit RPC endpoint. Overrides the cluster default. */
   rpcUrl?: string;
