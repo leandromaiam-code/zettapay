@@ -123,6 +123,22 @@ describe("loadBetaConfig", () => {
     process.env.BETA_LAUNCH_AT = "not-a-date";
     expect(() => loadBetaConfig()).toThrow(ConfigurationError);
   });
+
+  it("accepts BETA_MERCHANT_CAP_USDC=0 as the cap-removal sentinel", () => {
+    process.env.BETA_MERCHANT_CAP_USDC = "0";
+    const cfg = loadBetaConfig();
+    expect(cfg.merchantCapUsd).toBe(0);
+  });
+
+  it("still rejects negative BETA_MERCHANT_CAP_USDC", () => {
+    process.env.BETA_MERCHANT_CAP_USDC = "-1";
+    expect(() => loadBetaConfig()).toThrow(ConfigurationError);
+  });
+
+  it("still rejects BETA_MAX_MERCHANTS=0 (only the cap accepts 0)", () => {
+    process.env.BETA_MAX_MERCHANTS = "0";
+    expect(() => loadBetaConfig()).toThrow(ConfigurationError);
+  });
 });
 
 describe("betaEndsAt / isBetaExpired", () => {
@@ -283,6 +299,71 @@ describe("enforceBetaLimits", () => {
     expect(details.scope).toBe("beta:window_expired");
   });
 
+  it("treats merchantCapUsd=0 as unlimited — allowlist + window stay enforced", () => {
+    const merchant = findMerchantById(db, merchantId)!;
+    // Seed $50k of completed spend — well over any previous beta cap.
+    for (let i = 0; i < 50; i += 1) {
+      const id = `pay_huge_${i}`;
+      insertPayment(db, {
+        id,
+        merchantId,
+        amountUsdc: 1_000,
+        payerWallet: Keypair.generate().publicKey.toBase58(),
+        metadata: null,
+      });
+      markPaymentCompleted(db, id, `sig_huge_${i}`);
+    }
+    const cfg = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+    });
+    const result = enforceBetaLimits(db, cfg, { merchant, amount: 25_000 });
+    expect(result.enforced).toBe(true);
+    expect(result.capUsd).toBe(0);
+    expect(result.cumulativeUsd).toBe(50_000);
+    expect(result.remainingUsd).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("still blocks non-allowlisted merchants when cap=0", () => {
+    const merchant = findMerchantById(db, merchantId)!;
+    const cfg = buildBetaConfig({
+      allowlist: new Set(["someone_else"]),
+      merchantCapUsd: 0,
+    });
+    let caught: HttpError | null = null;
+    try {
+      enforceBetaLimits(db, cfg, { merchant, amount: 1 });
+    } catch (err) {
+      caught = err as HttpError;
+    }
+    expect(caught?.status).toBe(403);
+    const details = caught?.details as { scope: string };
+    expect(details.scope).toBe("beta:allowlist");
+  });
+
+  it("still blocks expired-window payments when cap=0", () => {
+    const merchant = findMerchantById(db, merchantId)!;
+    const cfg = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+      launchAt: "2026-01-01T00:00:00.000Z",
+      durationDays: 30,
+    });
+    let caught: HttpError | null = null;
+    try {
+      enforceBetaLimits(db, cfg, {
+        merchant,
+        amount: 1,
+        now: new Date("2026-03-15T00:00:00Z"),
+      });
+    } catch (err) {
+      caught = err as HttpError;
+    }
+    expect(caught?.status).toBe(403);
+    const details = caught?.details as { scope: string };
+    expect(details.scope).toBe("beta:window_expired");
+  });
+
   it("does not count failed payments toward the cap", () => {
     const merchant = findMerchantById(db, merchantId)!;
     for (let i = 0; i < 20; i += 1) {
@@ -360,6 +441,32 @@ describe("betaStatusSnapshot", () => {
     expect(snap.endsAt).toBe("2026-05-31T00:00:00.000Z");
     expect(snap.daysRemaining).toBe(16);
     expect(snap.expired).toBe(false);
+  });
+
+  it("reports unlimited cap (Z30.5) without marking merchants exhausted", () => {
+    // Seed $50k of completed spend — far beyond any previous beta cap.
+    for (let i = 0; i < 100; i += 1) {
+      const id = `pay_unl_${i}`;
+      insertPayment(db, {
+        id,
+        merchantId,
+        amountUsdc: 500,
+        payerWallet: Keypair.generate().publicKey.toBase58(),
+        metadata: null,
+      });
+      markPaymentCompleted(db, id, `sig_unl_${i}`);
+    }
+    const cfg = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+    });
+    const snap = betaStatusSnapshot(db, cfg);
+    expect(snap.capUsd).toBe(0);
+    expect(snap.utilization[0]?.cumulativeUsd).toBe(50_000);
+    expect(snap.utilization[0]?.exhausted).toBe(false);
+    expect(snap.utilization[0]?.utilizationPct).toBe(0);
+    expect(snap.utilization[0]?.remainingUsd).toBe(Number.POSITIVE_INFINITY);
+    expect(snap.totals.merchantsExhausted).toBe(0);
   });
 
   it("flips exhausted/expired correctly past the cap and end date", () => {
@@ -518,6 +625,30 @@ describe("POST /pay beta enforcement", () => {
     };
     expect(body.error.code).toBe("rate_limited");
     expect(body.error.details.scope).toBe("beta:merchant_cap");
+  });
+
+  it("permits payments beyond any prior cap when merchantCapUsd=0 (Z30.5)", async () => {
+    const solana = makeFakeSolana(payerKp);
+    const app = createApp({
+      db,
+      solana,
+      betaConfig: buildBetaConfig({
+        allowlist: new Set([merchantId]),
+        merchantCapUsd: 0,
+      }),
+    });
+    server = await startApp(app);
+    // A single payment well above the old $10k beta ceiling must succeed.
+    const res = await fetch(`${server.url}/pay`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        merchantId,
+        amount: 25_000,
+        payerWallet: Keypair.generate().publicKey.toBase58(),
+      }),
+    });
+    expect(res.status).toBe(201);
   });
 
   it("permits payments when beta mode is disabled", async () => {

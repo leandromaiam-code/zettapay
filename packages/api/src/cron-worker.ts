@@ -3,7 +3,11 @@ import { initTracing } from "./lib/tracing.js";
 const tracing = initTracing("zettapay-cron-worker");
 
 import { loadBetaConfig } from "./beta/config.js";
-import { noopCapBroadcaster } from "./beta/cap_upgrade.js";
+import {
+  D30_500_USDC_SCHEDULE,
+  D60_REMOVE_CAP_SCHEDULE,
+  noopCapBroadcaster,
+} from "./beta/cap_upgrade.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
@@ -120,14 +124,27 @@ async function main(): Promise<void> {
       process.env.CAP_UPGRADE_CRON_INTERVAL_MS ?? "3600000",
       10,
     );
-    const capCron = startCapUpgradeCron({
+    const broadcaster = noopCapBroadcaster();
+    // Z30.4 — D+30 step-up to $500 cap.
+    const d30Cron = startCapUpgradeCron({
       db,
       betaConfig,
-      broadcaster: noopCapBroadcaster(),
+      broadcaster,
+      schedule: D30_500_USDC_SCHEDULE,
       intervalMs: capUpgradeIntervalMs,
       logger,
     });
-    shutdown.register("cap_upgrade_cron", () => capCron.close());
+    shutdown.register("cap_upgrade_cron_d30", () => d30Cron.close());
+    // Z30.5 — D+60 cap removal (set_max_invoice_amount(0) = no limit).
+    const d60Cron = startCapUpgradeCron({
+      db,
+      betaConfig,
+      broadcaster,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      intervalMs: capUpgradeIntervalMs,
+      logger,
+    });
+    shutdown.register("cap_upgrade_cron_d60", () => d60Cron.close());
   } else {
     logger.info("cap_upgrade_cron.disabled", {
       reason: betaConfig.enabled ? "no_launch_date" : "beta_mode_off",

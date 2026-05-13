@@ -1,6 +1,11 @@
 import type { Database as Db } from "better-sqlite3";
 import { sumPaymentAmountByMerchantSince } from "../db/payments.js";
-import { betaEndsAt, isBetaExpired, type BetaLaunchConfig } from "./config.js";
+import {
+  betaEndsAt,
+  isBetaExpired,
+  isMerchantCapUnlimited,
+  type BetaLaunchConfig,
+} from "./config.js";
 
 const EPOCH_ISO = "1970-01-01T00:00:00.000Z";
 
@@ -48,6 +53,11 @@ function utilizationPct(used: number, cap: number): number {
   return Math.min(100, Math.round((used / cap) * 1000) / 10);
 }
 
+function remainingForMerchant(cap: number, cumulative: number): number {
+  if (cap <= 0) return Number.POSITIVE_INFINITY;
+  return Math.max(0, cap - cumulative);
+}
+
 /**
  * Computes a snapshot of beta-launch utilization for the operator console
  * and Prometheus exporter. Cheap to call (single SUM per allowlisted
@@ -61,6 +71,7 @@ export function betaStatusSnapshot(
   const sinceIso = config.launchAt ?? EPOCH_ISO;
   const endsAt = betaEndsAt(config);
   const allowlistIds = Array.from(config.allowlist);
+  const capRemoved = isMerchantCapUnlimited(config);
 
   const utilization: MerchantBetaUtilization[] = allowlistIds.map(
     (merchantId) => {
@@ -69,14 +80,13 @@ export function betaStatusSnapshot(
         merchantId,
         sinceIso,
       );
-      const remainingUsd = Math.max(0, config.merchantCapUsd - cumulativeUsd);
       return {
         merchantId,
         cumulativeUsd,
         capUsd: config.merchantCapUsd,
         utilizationPct: utilizationPct(cumulativeUsd, config.merchantCapUsd),
-        remainingUsd,
-        exhausted: cumulativeUsd >= config.merchantCapUsd,
+        remainingUsd: remainingForMerchant(config.merchantCapUsd, cumulativeUsd),
+        exhausted: capRemoved ? false : cumulativeUsd >= config.merchantCapUsd,
       };
     },
   );

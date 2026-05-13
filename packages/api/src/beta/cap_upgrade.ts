@@ -55,6 +55,26 @@ export const D30_500_USDC_SCHEDULE: CapUpgradeSchedule = {
   eventName: "cap_upgrade.set_max_invoice_amount.d30",
 };
 
+/**
+ * Z30.5 — D+60 cap removal. Calling `set_max_invoice_amount(0)` is the on-chain
+ * convention for "no per-invoice ceiling": once the program-health monitor
+ * has reported zero critical bugs through the full 60-day beta window, this
+ * schedule lands and ZettaPay goes public.
+ *
+ * The orchestrator already gates on `evaluateProgramHealth` (Z30.3), so
+ * "sem bugs" is enforced fail-closed without any special-casing here.
+ */
+export const D60_REMOVE_CAP_SCHEDULE: CapUpgradeSchedule = {
+  triggerAfterDays: 60,
+  maxInvoiceBaseUnits: 0n,
+  eventName: "cap_upgrade.set_max_invoice_amount.d60_remove",
+};
+
+/** True when the schedule represents a cap removal (target = 0). */
+export function isCapRemovalSchedule(schedule: CapUpgradeSchedule): boolean {
+  return schedule.maxInvoiceBaseUnits === 0n;
+}
+
 export type CapBroadcastResult =
   | { kind: "ok"; signature: string }
   | { kind: "skipped"; reason: string };
@@ -297,6 +317,7 @@ export async function runCapUpgrade(
       amountUsd: Number(
         schedule.maxInvoiceBaseUnits / USDC_BASE_UNITS_PER_USD,
       ),
+      capRemoved: isCapRemovalSchedule(schedule),
       signature,
       broadcastSkipped,
       launchAt,
