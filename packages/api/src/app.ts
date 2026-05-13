@@ -39,7 +39,7 @@ import { webhooksRouter } from "./routes/webhooks.js";
 import { wixRouter } from "./routes/wix.js";
 import { woocommerceRouter } from "./routes/woocommerce.js";
 import { wordpressRouter } from "./routes/wordpress.js";
-import { errorHandler } from "./middleware/error.js";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
 import { metricsMiddleware } from "./middleware/metrics.js";
 import { securityHeaders } from "./middleware/security-headers.js";
 import { incidentGuard } from "./middleware/incident-guard.js";
@@ -53,6 +53,7 @@ import type { CoinflowClient } from "./coinflow/client.js";
 import type { OnChainPaymentIndexer } from "./services/onchain_indexer.js";
 import type { KycProviderClient } from "./services/kyc/provider.js";
 import { loadAmlConfigFromEnv, type AmlMonitorConfig } from "./services/aml.js";
+import { getServiceInfo } from "./lib/version.js";
 import type {
   ShopifyAppConfig,
   ShopifyTokenExchanger,
@@ -152,19 +153,16 @@ export function createApp(options: CreateAppOptions): Express {
     admin,
     indexer,
     pix,
-    onAutoSettle,
     onAutoPixSettle,
-  } = options;
-  const betaConfig = options.betaConfig ?? loadBetaConfig();
-  const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
-  const { db, solana, shutdown, coinflow, onAutoSettle, evm } = options;
+    attestation,
+    evm,
     amlConfig,
     onAmlEvaluated,
-  } = options;
-  const resolvedAmlConfig: AmlMonitorConfig | null =
-    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
     incidents: incidentOptions,
   } = options;
+  const betaConfig = options.betaConfig ?? loadBetaConfig();
+  const resolvedAmlConfig: AmlMonitorConfig | null =
+    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
   const incidentService = new IncidentService(db);
 
   const app = express();
@@ -185,10 +183,14 @@ export function createApp(options: CreateAppOptions): Express {
     }),
   );
 
+  const serviceInfo = getServiceInfo();
+  const commitSha = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7) || null;
   app.get("/", (_req: Request, res: Response) => {
     res.json({
       status: "ok",
-      service: "@zettapay/api",
+      service: serviceInfo.name,
+      version: serviceInfo.version,
+      commit: commitSha,
       uptimeSec: Math.round((Date.now() - startedAt) / 1000),
       now: new Date().toISOString(),
     });
@@ -216,18 +218,19 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(agentToAgentRouter(db, solana));
   app.use(betaRouter(db, betaConfig));
   app.use(merchantsRouter(db));
-  app.use(payRouter(db, solana, { coinflow, onAutoSettle, betaConfig }));
-  app.use(paymentRouter(db));
-  app.use(refundRouter(db, solana));
   app.use(
     payRouter(db, solana, {
       coinflow,
       onAutoSettle,
+      betaConfig,
       amlConfig: resolvedAmlConfig,
       onAmlEvaluated,
+      ...(pix ? { pix: pix.resolveClient } : {}),
+      onAutoPixSettle,
     }),
   );
-  app.use(payRouter(db, solana, { coinflow, onAutoSettle }));
+  app.use(paymentRouter(db));
+  app.use(refundRouter(db, solana));
   app.use(privacyRouter(db));
   app.use(kycRouter(db, kyc ? { provider: kyc } : {}));
   app.use(amlRouter(db));
@@ -236,14 +239,6 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(mcpRegistryRouter(db));
   app.use(subscriptionsRouter(db));
   app.use(subscriptionManageRouter(db));
-  app.use(
-    payRouter(db, solana, {
-      coinflow,
-      onAutoSettle,
-      pix: pix?.resolveClient,
-      onAutoPixSettle,
-    }),
-  );
   if (evm) {
     app.use(payEvmRouter(db, evm));
   }
@@ -292,6 +287,7 @@ export function createApp(options: CreateAppOptions): Express {
   }
   if (pix && pix.availableProviders.length > 0) {
     app.use(pixRouter(db, pix));
+  }
   if (attestation) {
     app.use(bridgeRouter(db, { attestation, solana }));
   }
@@ -315,9 +311,7 @@ export function createApp(options: CreateAppOptions): Express {
     }),
   );
 
-  app.use((_req, _res, next) => {
-    next(HttpError.notFound("route not found"));
-  });
+  app.use(notFoundHandler);
 
   if (isSentryEnabled()) {
     Sentry.setupExpressErrorHandler(app, {

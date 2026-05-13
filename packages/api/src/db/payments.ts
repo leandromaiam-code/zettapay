@@ -124,17 +124,13 @@ export function insertPayment(db: Db, input: CreatePaymentInput): Payment {
       string | null,
       string,
       string | null,
+      string,
       string | null,
       string | null,
     ]
   >(
-    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id)
-    [string, string, number, string, string | null, string, string]
-  >(
-    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, chain)
-     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
-    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id, payer_ip, payer_country)
-     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+    `INSERT INTO payments (id, merchant_id, amount_usdc, payer_wallet, status, metadata_json, currency, agent_identity_id, chain, payer_ip, payer_country)
+     VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)`,
   );
   stmt.run(
     input.id,
