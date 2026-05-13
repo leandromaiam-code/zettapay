@@ -154,6 +154,20 @@ pub fn hash_le_meets_target_le(hash: &[u8; 32], target: &[u8; 32]) -> bool {
     true
 }
 
+/// Read the `prev_block_hash` field (bytes 4..36) from an 80-byte Bitcoin
+/// block header. Bytes are emitted in *internal* (SHA256-output) byte
+/// order, matching how `sha256d` produces block hashes — so the result
+/// can be compared byte-for-byte against a stored chain-tip hash without
+/// any reordering. Returns `None` for wrong-length headers.
+pub fn header_prev_block_hash(header: &[u8]) -> Option<[u8; 32]> {
+    if header.len() != BLOCK_HEADER_LEN {
+        return None;
+    }
+    let mut out = [0u8; 32];
+    out.copy_from_slice(&header[4..36]);
+    Some(out)
+}
+
 /// Read the `merkle_root` field (bytes 36..68) from an 80-byte Bitcoin
 /// block header. Returns `None` if `header` is the wrong length so the
 /// caller surfaces `BlockHeaderInvalid` instead of panicking on a slice.
@@ -361,6 +375,24 @@ mod tests {
         assert!(header_merkle_root(&[0u8; 79]).is_none());
         assert!(header_merkle_root(&[0u8; 81]).is_none());
         assert!(header_n_bits(&[0u8; 79]).is_none());
+        assert!(header_prev_block_hash(&[0u8; 79]).is_none());
+        assert!(header_prev_block_hash(&[0u8; 81]).is_none());
+    }
+
+    #[test]
+    fn header_prev_block_hash_reads_bytes_4_to_36() {
+        // The chain-continuity check in Z26.5 reads this field on every
+        // update and compares it byte-for-byte against the stored chain
+        // tip. A drift in the slice indices would silently break the
+        // continuity guard.
+        let mut header = [0u8; BLOCK_HEADER_LEN];
+        for i in 0..32 {
+            header[4 + i] = (i as u8).wrapping_add(0xa0);
+        }
+        let prev = header_prev_block_hash(&header).unwrap();
+        for i in 0..32 {
+            assert_eq!(prev[i], (i as u8).wrapping_add(0xa0));
+        }
     }
 
     #[test]

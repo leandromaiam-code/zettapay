@@ -70,6 +70,19 @@ pub enum ZpError {
     PoWInsufficient,
     #[error("Invoice has already been settled")]
     InvoiceAlreadyPaid,
+    // --- Z26.5: Bitcoin header chain (singleton PDA) ----------------
+    // Variants appended at the bottom only. Reordering shifts every
+    // downstream Custom(u32) code and breaks the wire contract.
+    #[error("Bitcoin header chain PDA does not match seeds")]
+    HeaderChainPdaMismatch,
+    #[error("Bitcoin header chain account already initialised")]
+    HeaderChainAlreadyInitialized,
+    #[error("Bitcoin header chain account is not initialised")]
+    HeaderChainNotInitialized,
+    #[error("New header's prev_block_hash does not match chain tip")]
+    HeaderChainDiscontinuous,
+    #[error("Bitcoin header chain account is corrupted (bad buffer length)")]
+    HeaderChainCorrupted,
 }
 
 impl From<ZpError> for ProgramError {
@@ -103,5 +116,9 @@ mod tests {
         // catch accidental insertions in the middle.
         assert_eq!(ZpError::SpvProofPdaMismatch as u32, 17);
         assert_eq!(ZpError::InvoiceAlreadyPaid as u32, 27);
+        // Z26.5 appended block — pin the first header-chain variant
+        // and last.
+        assert_eq!(ZpError::HeaderChainPdaMismatch as u32, 28);
+        assert_eq!(ZpError::HeaderChainCorrupted as u32, 32);
     }
 }

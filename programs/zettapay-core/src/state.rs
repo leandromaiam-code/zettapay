@@ -21,6 +21,11 @@ pub const INVOICE_TAG: u8 = 2;
 /// verification so `submit_btc_proof_part_*` can stay under the per-
 /// instruction compute-unit budget.
 pub const SPV_PROOF_BTC_TAG: u8 = 3;
+/// Singleton global Bitcoin header chain. Z26.5 added a rolling window
+/// of the most-recent Bitcoin block headers, validated for PoW +
+/// continuity on every update. SPV proofs (Z26.3) and any future cross-
+/// chain settlement logic anchor their block-hash references here.
+pub const BTC_HEADER_CHAIN_TAG: u8 = 4;
 
 // Currency tags. Premise 2 keeps V1 USDC-only; the tag byte exists so Z11
 // can add stablecoins without an account-layout migration.
@@ -154,6 +159,90 @@ impl SpvProofBtc {
         + 8;                      // finalized_at
 }
 
+// --- Z26.5: Bitcoin header chain (singleton PDA) --------------------------
+//
+// One global account tracks the most-recent `BTC_HEADER_CHAIN_WINDOW`
+// Bitcoin block headers as a flat ring buffer. Each entry is the raw
+// 80-byte block header in wire format. `update_btc_header` advances the
+// ring by one slot, validating PoW + continuity against `latest_hash`
+// before accepting the new tip.
+//
+// The chain is callable by any wallet — keeping it permissionless lets
+// an off-chain cron (Z30.x program-health) refresh the tip without
+// holding a privileged key on chain. Replay protection comes for free
+// from the continuity check: a tx submitted twice would fail on the
+// second attempt because the chain's `latest_hash` already advanced.
+
+/// Rolling window size: the most-recent N Bitcoin block headers are
+/// retained. 144 ≈ one day of Bitcoin blocks at the 10-minute target —
+/// enough lookback for SPV finality (Bitcoin's de-facto 6-confirmation
+/// rule) without paying rent on a deeper archive.
+pub const BTC_HEADER_CHAIN_WINDOW: usize = 144;
+
+/// Width of a raw Bitcoin block header in wire format. Fixed at consensus.
+/// Duplicated as a compile-time constant alongside `spv::BLOCK_HEADER_LEN`
+/// to keep `state.rs` self-contained for the `SIZE` calculation below.
+pub const BTC_HEADER_LEN: usize = 80;
+
+/// Total byte length of the headers ring buffer.
+pub const BTC_HEADER_CHAIN_BUFFER_LEN: usize = BTC_HEADER_CHAIN_WINDOW * BTC_HEADER_LEN;
+
+/// Singleton global PDA. Seeds: see [`crate::pda::find_btc_header_chain_pda`].
+///
+/// `headers_data` is borsh-encoded as a `Vec<u8>` (4-byte length prefix
+/// followed by bytes) because borsh 0.10 cannot derive serializers for
+/// `[u8; N]` with `N > 32`. The Vec is allocated full-size at init time
+/// and its length is verified to stay at exactly
+/// `BTC_HEADER_CHAIN_BUFFER_LEN` on every load — drift would corrupt the
+/// ring-buffer indexing.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq, Eq)]
+pub struct BitcoinHeaderChain {
+    pub tag: u8,
+    pub bump: u8,
+    /// Ring-buffer position of the newest (chain tip) header. Wraps mod
+    /// `BTC_HEADER_CHAIN_WINDOW`. Meaningful only while `count > 0`.
+    pub head_index: u16,
+    /// Number of headers populated in the ring. Saturates at the window
+    /// size; once full the buffer evicts the oldest slot on every update.
+    pub count: u16,
+    /// Block height at chain tip. Advisory: Bitcoin block headers do not
+    /// self-attest height (BIP34 moved it into the coinbase, not the
+    /// header). Initialised from the anchor caller's value, then
+    /// monotonically incremented by one per `update_btc_header`.
+    pub latest_height: u64,
+    /// Solana unix timestamp at which the chain tip was last advanced.
+    /// Used by Z30.x program-health monitoring to alarm when the cron
+    /// updater falls behind.
+    pub last_updated_at: i64,
+    /// Block height at chain anchor (init time). Immutable; documents
+    /// the chain instance's starting reference.
+    pub anchor_height: u64,
+    /// SHA256d of the anchor header. Immutable; off-chain auditors can
+    /// reconstruct the chain instance's identity from this single value.
+    pub anchor_hash: [u8; 32],
+    /// SHA256d of the chain-tip header. Compared byte-for-byte against
+    /// the supplied new header's `prev_block_hash` field on every update.
+    pub latest_hash: [u8; 32],
+    /// Flat byte buffer holding `BTC_HEADER_CHAIN_WINDOW` × 80-byte
+    /// headers in ring-buffer order. Slot `i` lives at
+    /// `headers_data[i*80 .. (i+1)*80]`.
+    pub headers_data: Vec<u8>,
+}
+
+impl BitcoinHeaderChain {
+    pub const SIZE: usize = 1     // tag
+        + 1                        // bump
+        + 2                        // head_index
+        + 2                        // count
+        + 8                        // latest_height
+        + 8                        // last_updated_at
+        + 8                        // anchor_height
+        + 32                       // anchor_hash
+        + 32                       // latest_hash
+        + 4                        // borsh Vec<u8> length prefix
+        + BTC_HEADER_CHAIN_BUFFER_LEN; // headers ring buffer
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,6 +350,43 @@ mod tests {
         assert_eq!(bytes.len(), SpvProofBtc::SIZE);
         let decoded = SpvProofBtc::try_from_slice(&bytes).unwrap();
         assert_eq!(decoded, proof);
+    }
+
+    #[test]
+    fn btc_header_chain_buffer_len_is_144_x_80() {
+        assert_eq!(BTC_HEADER_CHAIN_BUFFER_LEN, 11_520);
+    }
+
+    #[test]
+    fn btc_header_chain_size_matches_field_layout() {
+        // Pin the byte budget. The mission spec calls for a ~11.5 KB
+        // singleton; the actual on-chain footprint is the ring buffer
+        // plus a handful of header fields plus the 4-byte borsh Vec
+        // length prefix.
+        assert_eq!(
+            BitcoinHeaderChain::SIZE,
+            1 + 1 + 2 + 2 + 8 + 8 + 8 + 32 + 32 + 4 + BTC_HEADER_CHAIN_BUFFER_LEN
+        );
+    }
+
+    #[test]
+    fn btc_header_chain_roundtrip_via_borsh() {
+        let chain = BitcoinHeaderChain {
+            tag: BTC_HEADER_CHAIN_TAG,
+            bump: 254,
+            head_index: 7,
+            count: 8,
+            latest_height: 850_007,
+            last_updated_at: 1_700_000_500,
+            anchor_height: 850_000,
+            anchor_hash: [9u8; 32],
+            latest_hash: [10u8; 32],
+            headers_data: vec![0u8; BTC_HEADER_CHAIN_BUFFER_LEN],
+        };
+        let bytes = chain.try_to_vec().unwrap();
+        assert_eq!(bytes.len(), BitcoinHeaderChain::SIZE);
+        let decoded = BitcoinHeaderChain::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded, chain);
     }
 
     #[test]

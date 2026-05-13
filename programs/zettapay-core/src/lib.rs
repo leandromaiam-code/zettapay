@@ -1,6 +1,6 @@
 //! ZettaPay Core — native Solana program (no Anchor).
 //!
-//! Six instructions, discriminator-based dispatch on the leading byte of
+//! Eight instructions, discriminator-based dispatch on the leading byte of
 //! `instruction_data`:
 //!
 //!   0 = RegisterMerchant     { master_pubkey, chains[] }
@@ -9,12 +9,15 @@
 //!   3 = SubmitBtcProofPart1  { tx_data, merkle_path, merkle_index } (Z26.3)
 //!   4 = SubmitBtcProofPart2  { block_header (80 bytes) }            (Z26.3)
 //!   5 = FinalizeBtcPayment   {}                                     (Z26.3)
+//!   6 = InitBtcHeaderChain   { anchor_header, anchor_height }       (Z26.5)
+//!   7 = UpdateBtcHeader      { new_header (80 bytes) }              (Z26.5)
 //!
 //! State accounts (PDAs):
 //!
-//!   Merchant:    seeds = [b"merchant", master_pubkey]
-//!   Invoice:     seeds = [master_pubkey, invoice_index_le]
-//!   SpvProofBtc: seeds = [b"spv-btc",  invoice_pubkey]              (Z26.3)
+//!   Merchant:           seeds = [b"merchant", master_pubkey]
+//!   Invoice:            seeds = [master_pubkey, invoice_index_le]
+//!   SpvProofBtc:        seeds = [b"spv-btc",  invoice_pubkey]       (Z26.3)
+//!   BitcoinHeaderChain: seeds = [b"btc-header-chain"]   (singleton, Z26.5)
 //!
 //! Invoice seeds intentionally match `deriveInvoicePda` in
 //! `packages/sdk/src/onchain.ts` (Z26.1) so the off-chain SDK can predict
@@ -65,22 +68,25 @@ pub mod validation;
 // unchanged.
 pub use error::ZpError;
 pub use instructions::{
-    CreateInvoiceArgs, FinalizeBtcPaymentArgs, InstructionTag, RegisterMerchantArgs,
-    SubmitBtcProofPart1Args, SubmitBtcProofPart2Args, SweepArgs,
+    CreateInvoiceArgs, FinalizeBtcPaymentArgs, InitBtcHeaderChainArgs, InstructionTag,
+    RegisterMerchantArgs, SubmitBtcProofPart1Args, SubmitBtcProofPart2Args, SweepArgs,
+    UpdateBtcHeaderArgs,
 };
 pub use pda::{
-    find_invoice_pda, find_merchant_pda, find_spv_proof_btc_pda, INVOICE_INDEX_SEED_LEN,
-    MERCHANT_SEED, SPV_PROOF_BTC_SEED,
+    find_btc_header_chain_pda, find_invoice_pda, find_merchant_pda, find_spv_proof_btc_pda,
+    BTC_HEADER_CHAIN_SEED, INVOICE_INDEX_SEED_LEN, MERCHANT_SEED, SPV_PROOF_BTC_SEED,
 };
 pub use spv::{
     compute_merkle_root_from_proof, hash_le_meets_target_le, header_merkle_root, header_n_bits,
-    n_bits_to_target, sha256d, BLOCK_HEADER_LEN, MAX_MERKLE_PROOF_DEPTH,
+    header_prev_block_hash, n_bits_to_target, sha256d, BLOCK_HEADER_LEN, MAX_MERKLE_PROOF_DEPTH,
 };
 pub use state::{
-    Invoice, Merchant, SpvProofBtc, CHAIN_ARBITRUM, CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM,
-    CHAIN_POLYGON, CHAIN_SOLANA, CURRENCY_USDC, INVOICE_STATUS_OPEN, INVOICE_STATUS_PAID_BTC,
-    INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS, MERCHANT_TAG, SPV_PROOF_BTC_TAG,
-    SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE, SPV_STATUS_PART2_DONE,
+    BitcoinHeaderChain, Invoice, Merchant, SpvProofBtc, BTC_HEADER_CHAIN_BUFFER_LEN,
+    BTC_HEADER_CHAIN_TAG, BTC_HEADER_CHAIN_WINDOW, BTC_HEADER_LEN, CHAIN_ARBITRUM,
+    CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM, CHAIN_POLYGON, CHAIN_SOLANA, CURRENCY_USDC,
+    INVOICE_STATUS_OPEN, INVOICE_STATUS_PAID_BTC, INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS,
+    MERCHANT_TAG, SPV_PROOF_BTC_TAG, SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE,
+    SPV_STATUS_PART2_DONE,
 };
 pub use validation::{assert_owned_by_program, assert_signer, assert_system_program, assert_tag};
 
@@ -121,6 +127,8 @@ pub fn process_instruction(
         3 => process_submit_btc_proof_part_1(program_id, accounts, payload),
         4 => process_submit_btc_proof_part_2(program_id, accounts, payload),
         5 => process_finalize_btc_payment(program_id, accounts, payload),
+        6 => process_init_btc_header_chain(program_id, accounts, payload),
+        7 => process_update_btc_header(program_id, accounts, payload),
         _ => Err(ZpError::InvalidInstruction.into()),
     }
 }
@@ -583,6 +591,179 @@ fn process_finalize_btc_payment(
     Ok(())
 }
 
+// --- Z26.5: Bitcoin header chain (singleton PDA) --------------------------
+//
+// One global account, ~11.5 KB, tracks the most-recent 144 Bitcoin block
+// headers. `init` bootstraps it from an anchor header (PoW-checked). After
+// that, `update_btc_header` is callable by any wallet — replay protection
+// comes for free from the continuity check, since the chain's
+// `latest_hash` advances on every successful update.
+//
+// The instructions never move USDC and never touch any merchant or
+// invoice account. They exist purely to maintain an on-chain reference
+// chain that downstream verifiers (Z26.3 SPV proofs, future cross-chain
+// settlement) can anchor their block-hash assertions against.
+
+/// Run the standalone PoW check on an 80-byte Bitcoin block header, and
+/// return its `sha256d` hash on success. Used by both `init` (validates
+/// the anchor header) and `update` (validates each rolling tip).
+fn validate_btc_header_pow(header: &[u8]) -> Result<[u8; 32], ZpError> {
+    if header.len() != BLOCK_HEADER_LEN {
+        return Err(ZpError::BlockHeaderInvalid);
+    }
+    let n_bits = spv::header_n_bits(header).ok_or(ZpError::BlockHeaderInvalid)?;
+    let target = spv::n_bits_to_target(n_bits).ok_or(ZpError::BlockHeaderInvalid)?;
+    let hash = spv::sha256d(header);
+    if !spv::hash_le_meets_target_le(&hash, &target) {
+        return Err(ZpError::PoWInsufficient);
+    }
+    Ok(hash)
+}
+
+fn process_init_btc_header_chain(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = InitBtcHeaderChainArgs::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    let iter = &mut accounts.iter();
+    let chain_ai = next_account_info(iter)?;
+    let payer_ai = next_account_info(iter)?;
+    let system_ai = next_account_info(iter)?;
+
+    assert_signer(payer_ai)?;
+    assert_system_program(system_ai)?;
+
+    let (expected_pda, bump) = find_btc_header_chain_pda(program_id);
+    if chain_ai.key != &expected_pda {
+        return Err(ZpError::HeaderChainPdaMismatch.into());
+    }
+    // Reject re-init: a populated header-chain account must be left to
+    // its existing tip. Surface the precise code instead of leaking the
+    // SystemProgram "already in use" error.
+    if chain_ai.owner == program_id || !chain_ai.data.borrow().is_empty() {
+        return Err(ZpError::HeaderChainAlreadyInitialized.into());
+    }
+
+    // Crypto first, allocation second — refuse to pay rent on a forged
+    // anchor header.
+    let anchor_hash = validate_btc_header_pow(&args.anchor_header)?;
+
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(BitcoinHeaderChain::SIZE);
+
+    invoke_signed(
+        &system_instruction::create_account(
+            payer_ai.key,
+            chain_ai.key,
+            lamports,
+            BitcoinHeaderChain::SIZE as u64,
+            program_id,
+        ),
+        &[payer_ai.clone(), chain_ai.clone(), system_ai.clone()],
+        &[&[BTC_HEADER_CHAIN_SEED, &[bump]]],
+    )?;
+
+    // Allocate the ring buffer at full size up front. Subsequent updates
+    // overwrite in place — the Vec's length never changes after init,
+    // which keeps the borsh-serialized account size stable at SIZE.
+    let mut headers_data = vec![0u8; BTC_HEADER_CHAIN_BUFFER_LEN];
+    headers_data[..BTC_HEADER_LEN].copy_from_slice(&args.anchor_header);
+
+    let chain = BitcoinHeaderChain {
+        tag: BTC_HEADER_CHAIN_TAG,
+        bump,
+        head_index: 0,
+        count: 1,
+        latest_height: args.anchor_height,
+        last_updated_at: Clock::get()?.unix_timestamp,
+        anchor_height: args.anchor_height,
+        anchor_hash,
+        latest_hash: anchor_hash,
+        headers_data,
+    };
+    chain.serialize(&mut &mut chain_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: btc header chain initialised");
+    Ok(())
+}
+
+fn process_update_btc_header(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = UpdateBtcHeaderArgs::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    let iter = &mut accounts.iter();
+    let chain_ai = next_account_info(iter)?;
+
+    assert_owned_by_program(chain_ai, program_id)?;
+
+    let mut chain = BitcoinHeaderChain::try_from_slice(&chain_ai.data.borrow())
+        .map_err(|_| ZpError::HeaderChainNotInitialized)?;
+    if chain.tag != BTC_HEADER_CHAIN_TAG {
+        return Err(ZpError::HeaderChainNotInitialized.into());
+    }
+    // The ring buffer's storage length is a load-bearing invariant —
+    // every index math operation below assumes it. A wrong-length Vec
+    // could only arise from manual account-data corruption, but failing
+    // fast keeps that path off the happy path.
+    if chain.headers_data.len() != BTC_HEADER_CHAIN_BUFFER_LEN {
+        return Err(ZpError::HeaderChainCorrupted.into());
+    }
+
+    // Continuity: the supplied header must extend the chain tip. Check
+    // before PoW so a wrong-fork submission gets the precise
+    // HeaderChainDiscontinuous error rather than the more generic
+    // PoWInsufficient (which would also fire on the same header against
+    // a different tip).
+    let prev_hash = spv::header_prev_block_hash(&args.new_header)
+        .ok_or(ZpError::BlockHeaderInvalid)?;
+    if prev_hash != chain.latest_hash {
+        return Err(ZpError::HeaderChainDiscontinuous.into());
+    }
+
+    // PoW second. Returns the new block's sha256d for the chain tip
+    // update below — `validate_btc_header_pow` already validates length.
+    let new_hash = validate_btc_header_pow(&args.new_header)?;
+
+    // Ring-buffer advance. The newest header always lands at
+    // `(head_index + 1) mod WINDOW`; when `count` is at the window cap,
+    // that slot is currently the oldest header, which is correctly
+    // evicted by the overwrite. The widening through u32 keeps the
+    // arithmetic safe under `overflow-checks = true` even on the
+    // (program-unreachable) corruption case where `head_index` were
+    // somehow at `u16::MAX`.
+    let next_index = ((chain.head_index as u32 + 1)
+        % BTC_HEADER_CHAIN_WINDOW as u32) as u16;
+    let slot_start = (next_index as usize) * BTC_HEADER_LEN;
+    chain.headers_data[slot_start..slot_start + BTC_HEADER_LEN]
+        .copy_from_slice(&args.new_header);
+
+    chain.head_index = next_index;
+    if (chain.count as usize) < BTC_HEADER_CHAIN_WINDOW {
+        chain.count = chain
+            .count
+            .checked_add(1)
+            .ok_or(ZpError::Overflow)?;
+    }
+    chain.latest_hash = new_hash;
+    chain.latest_height = chain
+        .latest_height
+        .checked_add(1)
+        .ok_or(ZpError::Overflow)?;
+    chain.last_updated_at = Clock::get()?.unix_timestamp;
+
+    chain.serialize(&mut &mut chain_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: btc header chain advanced");
+    Ok(())
+}
+
 #[cfg(test)]
 mod integration_tests {
     //! Cross-module sanity checks. Per-module unit tests live next to the
@@ -619,6 +800,21 @@ mod integration_tests {
         let (a, _) = find_invoice_pda(&master, idx, &program_id);
         let (b, _) = Pubkey::find_program_address(
             &[master.as_ref(), &idx.to_le_bytes()],
+            &program_id,
+        );
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn btc_header_chain_pda_seeds_match_module_constant() {
+        // The Z26.5 init handler signs `create_account` with seeds
+        // reconstructed from `BTC_HEADER_CHAIN_SEED`. Drift between
+        // that constant and what `find_btc_header_chain_pda` uses
+        // internally would make `invoke_signed` fail at run time.
+        let program_id = Pubkey::new_from_array([42u8; 32]);
+        let (a, _) = find_btc_header_chain_pda(&program_id);
+        let (b, _) = Pubkey::find_program_address(
+            &[BTC_HEADER_CHAIN_SEED],
             &program_id,
         );
         assert_eq!(a, b);
