@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/widget",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "ZettaPay drop-in embed widget — single <script> tag renders a Pay X USDC button that opens a modal with QR + Phantom deeplink + checkout flow.",
   "license": "MIT",
   "type": "module",

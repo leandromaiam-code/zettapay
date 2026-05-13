@@ -12,13 +12,13 @@
  *   2. Programmatic `mount(target, config)` for SPA frameworks that
  *      prefer JS wiring.
  */
-import { mount } from './embed.js';
-import type { EmbedConfig } from './types.js';
+import { mount, resolveCluster } from './embed.js';
+import type { Cluster, EmbedConfig } from './types.js';
 
 const VERSION = (globalThis.__ZETTAPAY_EMBED_VERSION__ ?? 'dev') as string;
 
 export { mount };
-export { buildSolanaPayUri, toBaseUnits } from './embed.js';
+export { buildSolanaPayUri, resolveCluster, toBaseUnits } from './embed.js';
 export { matchesTransfer } from './poll.js';
 export { RPC_URL, USDC_MINT } from './rpc.js';
 export {
@@ -46,12 +46,23 @@ function readConfigFromScript(el: HTMLScriptElement): EmbedConfig | null {
   const recipient = ds.recipient;
   const amountRaw = ds.amount;
   if (!recipient || !amountRaw) return null;
-  const cluster = ds.cluster === 'devnet' ? 'devnet' : 'mainnet-beta';
+  const explicitCluster: Cluster | undefined =
+    ds.cluster === 'devnet'
+      ? 'devnet'
+      : ds.cluster === 'mainnet-beta'
+        ? 'mainnet-beta'
+        : undefined;
+  const testnet = parseBoolFlag(ds.testnet);
+  const cluster: Cluster = resolveCluster({
+    cluster: explicitCluster,
+    testnet,
+  });
   const cfg: EmbedConfig = {
     recipient,
     amount: amountRaw,
     cluster,
   };
+  if (testnet) cfg.testnet = true;
   if (ds.reference) cfg.reference = ds.reference;
   if (ds.mint) cfg.mint = ds.mint;
   if (ds.decimals) {
@@ -67,6 +78,12 @@ function readConfigFromScript(el: HTMLScriptElement): EmbedConfig | null {
     if (Number.isFinite(ms) && ms >= 1000) cfg.pollIntervalMs = ms;
   }
   return cfg;
+}
+
+function parseBoolFlag(raw: string | undefined): boolean {
+  if (raw === undefined) return false;
+  const v = raw.trim().toLowerCase();
+  return v === '' || v === 'true' || v === '1' || v === 'yes';
 }
 
 function autoInit(): void {
