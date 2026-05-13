@@ -22,7 +22,9 @@
     "smoke:devnet": "tsx scripts/smoke-devnet.ts",
     "beta:devnet:z28-1": "tsx scripts/beta-devnet-z28-1.ts",
     "beta:mainnet:onboard": "tsx scripts/beta-mainnet-z30-2-onboard.ts",
-    "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts"
+    "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts",
+    "deploy:devnet:core": "bash scripts/deploy-devnet-core.sh",
+    "persist:program-id": "tsx scripts/persist-program-id.ts"
   },
   "devDependencies": {
     "@vercel/node": "^3.2.24"
