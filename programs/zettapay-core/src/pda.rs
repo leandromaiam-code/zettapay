@@ -24,6 +24,11 @@ pub const MERCHANT_SEED: &[u8] = b"merchant";
 /// invoice seeds — the prefix cannot be the first 8 bytes of any pubkey.
 pub const SPV_PROOF_BTC_SEED: &[u8] = b"spv-btc";
 
+/// Seed prefix for the singleton Bitcoin header chain PDA (Z26.5). One
+/// account program-wide, no per-key suffix — the address is fully
+/// determined by `(program_id, BTC_HEADER_CHAIN_SEED)`.
+pub const BTC_HEADER_CHAIN_SEED: &[u8] = b"btc-header-chain";
+
 /// Width of the `invoice_index` PDA seed. Matches `INVOICE_INDEX_SEED_LEN`
 /// in `packages/sdk/src/onchain.ts`.
 pub const INVOICE_INDEX_SEED_LEN: usize = 8;
@@ -64,6 +69,14 @@ pub fn find_spv_proof_btc_pda(invoice: &Pubkey, program_id: &Pubkey) -> (Pubkey,
         &[SPV_PROOF_BTC_SEED, invoice.as_ref()],
         program_id,
     )
+}
+
+/// Derive the singleton Bitcoin header chain PDA. Z26.5 — one account
+/// program-wide. The address is fully determined by `(program_id,
+/// BTC_HEADER_CHAIN_SEED)`, so the off-chain SDK can compute it without
+/// any inputs from chain state.
+pub fn find_btc_header_chain_pda(program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[BTC_HEADER_CHAIN_SEED], program_id)
 }
 
 #[cfg(test)]
@@ -180,6 +193,41 @@ mod tests {
         let (invoice_pda, _) = find_invoice_pda(&inv, 0, &program_id);
         assert_ne!(spv_pda, merchant_pda);
         assert_ne!(spv_pda, invoice_pda);
+    }
+
+    #[test]
+    fn btc_header_chain_pda_is_singleton_and_deterministic() {
+        // No per-key suffix — every call with the same program id must
+        // return the same address. Off-chain SDKs depend on this being
+        // a single global pubkey across the program's lifetime.
+        let program_id = fixed_program_id();
+        let (a, bump_a) = find_btc_header_chain_pda(&program_id);
+        let (b, bump_b) = find_btc_header_chain_pda(&program_id);
+        assert_eq!(a, b);
+        assert_eq!(bump_a, bump_b);
+    }
+
+    #[test]
+    fn btc_header_chain_pda_changes_per_program_id() {
+        // Different deployments (devnet vs mainnet) get different PDAs.
+        let p1 = Pubkey::new_from_array([42u8; 32]);
+        let p2 = Pubkey::new_from_array([43u8; 32]);
+        let (a, _) = find_btc_header_chain_pda(&p1);
+        let (b, _) = find_btc_header_chain_pda(&p2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn btc_header_chain_seed_cannot_collide_with_other_prefixes() {
+        let program_id = fixed_program_id();
+        let inv = Pubkey::new_from_array([23u8; 32]);
+        let (chain_pda, _) = find_btc_header_chain_pda(&program_id);
+        let (merchant_pda, _) = find_merchant_pda(&inv, &program_id);
+        let (invoice_pda, _) = find_invoice_pda(&inv, 0, &program_id);
+        let (spv_pda, _) = find_spv_proof_btc_pda(&inv, &program_id);
+        assert_ne!(chain_pda, merchant_pda);
+        assert_ne!(chain_pda, invoice_pda);
+        assert_ne!(chain_pda, spv_pda);
     }
 
     #[test]

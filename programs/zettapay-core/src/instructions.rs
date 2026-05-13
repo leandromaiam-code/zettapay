@@ -9,6 +9,8 @@
 //!   3 = SubmitBtcProofPart1  { tx_data, merkle_path[], merkle_index }
 //!   4 = SubmitBtcProofPart2  { block_header (80 bytes) }
 //!   5 = FinalizeBtcPayment   {}
+//!   6 = InitBtcHeaderChain   { anchor_header (80 bytes), anchor_height }
+//!   7 = UpdateBtcHeader      { new_header (80 bytes) }
 //!
 //! The remainder of `instruction_data` is the variant's Borsh payload,
 //! deserialized in the handler.
@@ -29,6 +31,8 @@ pub enum InstructionTag {
     SubmitBtcProofPart1 = 3,
     SubmitBtcProofPart2 = 4,
     FinalizeBtcPayment = 5,
+    InitBtcHeaderChain = 6,
+    UpdateBtcHeader = 7,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -84,6 +88,35 @@ pub struct SubmitBtcProofPart2Args {
 #[derive(BorshSerialize, BorshDeserialize, Debug, Default)]
 pub struct FinalizeBtcPaymentArgs {}
 
+/// Arguments for `init_btc_header_chain` (Z26.5).
+///
+/// One-time bootstrap of the singleton `BitcoinHeaderChain` account. The
+/// caller supplies an anchor: the 80-byte block header that the rolling
+/// window will be seeded from, plus its block height (advisory — Bitcoin
+/// headers do not self-attest height). The anchor header is validated
+/// for PoW before being written; without that check, init could seed
+/// the chain with garbage that subsequent `update_btc_header` calls
+/// would then trust.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct InitBtcHeaderChainArgs {
+    pub anchor_header: Vec<u8>,
+    pub anchor_height: u64,
+}
+
+/// Arguments for `update_btc_header` (Z26.5).
+///
+/// Advances the chain tip by one block. The caller supplies the next
+/// 80-byte block header; the program validates it against the current
+/// `latest_hash` (continuity) and the header's own `nBits` field (PoW)
+/// before writing it into the ring buffer. The instruction is callable
+/// by any wallet — replay protection comes for free from the continuity
+/// check, since the chain's `latest_hash` advances on every successful
+/// update.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct UpdateBtcHeaderArgs {
+    pub new_header: Vec<u8>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -97,6 +130,8 @@ mod tests {
         assert_eq!(InstructionTag::SubmitBtcProofPart1 as u8, 3);
         assert_eq!(InstructionTag::SubmitBtcProofPart2 as u8, 4);
         assert_eq!(InstructionTag::FinalizeBtcPayment as u8, 5);
+        assert_eq!(InstructionTag::InitBtcHeaderChain as u8, 6);
+        assert_eq!(InstructionTag::UpdateBtcHeader as u8, 7);
     }
 
     #[test]
@@ -164,5 +199,27 @@ mod tests {
         // No fields → zero-byte payload.
         assert!(bytes.is_empty());
         let _decoded = FinalizeBtcPaymentArgs::try_from_slice(&bytes).unwrap();
+    }
+
+    #[test]
+    fn init_btc_header_chain_args_roundtrip() {
+        let args = InitBtcHeaderChainArgs {
+            anchor_header: vec![0xcd; 80],
+            anchor_height: 850_000,
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = InitBtcHeaderChainArgs::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.anchor_header, args.anchor_header);
+        assert_eq!(decoded.anchor_height, args.anchor_height);
+    }
+
+    #[test]
+    fn update_btc_header_args_roundtrip() {
+        let args = UpdateBtcHeaderArgs {
+            new_header: vec![0xef; 80],
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = UpdateBtcHeaderArgs::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.new_header, args.new_header);
     }
 }
