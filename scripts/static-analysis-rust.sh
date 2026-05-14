@@ -112,7 +112,16 @@ nontest_lines() {
 }
 
 rust_sources() {
-    find "$PROGRAMS_DIR" -name '*.rs' -type f | sort
+    # Excludes Rust integration-test files: by Cargo convention, every
+    # `.rs` file directly under a crate's `tests/` directory is an entire
+    # test crate compiled only by `cargo test`. The `nontest_lines` filter
+    # below only strips `#[cfg(test)]` *modules*; an integration-test file
+    # has no such guard because the whole file is test-only, so we must
+    # exclude it at the file-listing layer or X-011 (no `.unwrap` in
+    # production) trips on every test assertion.
+    find "$PROGRAMS_DIR" -name '*.rs' -type f \
+        -not -path "$PROGRAMS_DIR/*/tests/*" \
+        | sort
 }
 
 count_matches() {
