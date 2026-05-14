@@ -3,14 +3,16 @@
 //! Dispatch is discriminator-based on the leading byte of
 //! `instruction_data`:
 //!
-//!   0 = RegisterMerchant     { master_pubkey, chains[] }
-//!   1 = CreateInvoice        { amount, currency }
-//!   2 = Sweep                { invoice_indexes[] }
-//!   3 = SubmitBtcProofPart1  { tx_data, merkle_path[], merkle_index }
-//!   4 = SubmitBtcProofPart2  { block_header (80 bytes) }
-//!   5 = FinalizeBtcPayment   {}
-//!   6 = InitBtcHeaderChain   { anchor_header (80 bytes), anchor_height }
-//!   7 = UpdateBtcHeader      { new_header (80 bytes) }
+//!   0 = RegisterMerchant      { master_pubkey, chains[] }
+//!   1 = CreateInvoice         { amount, currency }
+//!   2 = Sweep                 { invoice_indexes[] }
+//!   3 = SubmitBtcProofPart1   { tx_data, merkle_path[], merkle_index }
+//!   4 = SubmitBtcProofPart2   { block_header (80 bytes) }
+//!   5 = FinalizeBtcPayment    {}
+//!   6 = InitBtcHeaderChain    { anchor_header (80 bytes), anchor_height }
+//!   7 = UpdateBtcHeader       { new_header (80 bytes) }
+//!   8 = InitProgramConfig     { max_invoice_amount }                   (Z30.1)
+//!   9 = SetMaxInvoiceAmount   { max_invoice_amount }                   (Z30.1)
 //!
 //! The remainder of `instruction_data` is the variant's Borsh payload,
 //! deserialized in the handler.
@@ -33,6 +35,8 @@ pub enum InstructionTag {
     FinalizeBtcPayment = 5,
     InitBtcHeaderChain = 6,
     UpdateBtcHeader = 7,
+    InitProgramConfig = 8,
+    SetMaxInvoiceAmount = 9,
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -103,6 +107,30 @@ pub struct InitBtcHeaderChainArgs {
     pub anchor_height: u64,
 }
 
+/// Arguments for `init_program_config` (Z30.1).
+///
+/// One-time bootstrap of the singleton `ProgramConfig` account. The
+/// signer that pays for the init becomes the recorded `authority`; only
+/// that signer can subsequently call `set_max_invoice_amount`. Beta
+/// mainnet launches with `max_invoice_amount = 100_000_000` (100 USDC
+/// at 6 decimals) — see `state::DEFAULT_MAX_INVOICE_AMOUNT`. The Sprint
+/// Z30 cap-upgrade orchestrator (Z30.4 / Z30.5) raises the value
+/// off-chain by re-broadcasting `set_max_invoice_amount`.
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct InitProgramConfigArgs {
+    pub max_invoice_amount: u64,
+}
+
+/// Arguments for `set_max_invoice_amount` (Z30.1).
+///
+/// Update the per-invoice USDC cap. Callable only by the authority
+/// recorded at `init_program_config` time. A value of `0` disables cap
+/// enforcement entirely (Z30.5 D+60 removal sentinel).
+#[derive(BorshSerialize, BorshDeserialize, Debug)]
+pub struct SetMaxInvoiceAmountArgs {
+    pub max_invoice_amount: u64,
+}
+
 /// Arguments for `update_btc_header` (Z26.5).
 ///
 /// Advances the chain tip by one block. The caller supplies the next
@@ -132,6 +160,28 @@ mod tests {
         assert_eq!(InstructionTag::FinalizeBtcPayment as u8, 5);
         assert_eq!(InstructionTag::InitBtcHeaderChain as u8, 6);
         assert_eq!(InstructionTag::UpdateBtcHeader as u8, 7);
+        assert_eq!(InstructionTag::InitProgramConfig as u8, 8);
+        assert_eq!(InstructionTag::SetMaxInvoiceAmount as u8, 9);
+    }
+
+    #[test]
+    fn init_program_config_args_roundtrip() {
+        let args = InitProgramConfigArgs {
+            max_invoice_amount: 100_000_000,
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = InitProgramConfigArgs::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.max_invoice_amount, args.max_invoice_amount);
+    }
+
+    #[test]
+    fn set_max_invoice_amount_args_roundtrip() {
+        let args = SetMaxInvoiceAmountArgs {
+            max_invoice_amount: 500_000_000,
+        };
+        let bytes = BorshSerialize::try_to_vec(&args).unwrap();
+        let decoded = SetMaxInvoiceAmountArgs::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded.max_invoice_amount, args.max_invoice_amount);
     }
 
     #[test]

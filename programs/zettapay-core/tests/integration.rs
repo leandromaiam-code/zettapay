@@ -33,10 +33,11 @@ use solana_sdk::{
 use solana_sdk::instruction::InstructionError;
 
 use zettapay_core::{
-    find_invoice_pda, find_merchant_pda, process_instruction, CreateInvoiceArgs, Invoice,
-    InstructionTag, Merchant, RegisterMerchantArgs, SweepArgs, CHAIN_BASE, CHAIN_ETHEREUM,
-    CHAIN_SOLANA, CURRENCY_USDC, INVOICE_STATUS_OPEN, INVOICE_STATUS_SWEPT, INVOICE_TAG,
-    MAX_CHAINS, MERCHANT_TAG, ZpError,
+    find_invoice_pda, find_merchant_pda, find_program_config_pda, process_instruction,
+    CreateInvoiceArgs, InitProgramConfigArgs, Invoice, InstructionTag, Merchant, ProgramConfig,
+    RegisterMerchantArgs, SetMaxInvoiceAmountArgs, SweepArgs, CHAIN_BASE, CHAIN_ETHEREUM,
+    CHAIN_SOLANA, CURRENCY_USDC, DEFAULT_MAX_INVOICE_AMOUNT, INVOICE_STATUS_OPEN,
+    INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS, MERCHANT_TAG, PROGRAM_CONFIG_TAG, ZpError,
 };
 
 // Program id baked into `declare_id!` at compile time. Tests reuse it so
@@ -89,6 +90,7 @@ fn ix_create_invoice(
 ) -> Instruction {
     let (merchant_pda, _) = find_merchant_pda(master, &program_id());
     let (invoice_pda, _) = find_invoice_pda(master, invoice_index, &program_id());
+    let (config_pda, _) = find_program_config_pda(&program_id());
     let args = CreateInvoiceArgs { amount, currency };
     let mut data = vec![InstructionTag::CreateInvoice as u8];
     args.serialize(&mut data).unwrap();
@@ -100,6 +102,43 @@ fn ix_create_invoice(
             AccountMeta::new(invoice_pda, false),
             AccountMeta::new(*payer, true),
             AccountMeta::new_readonly(system_program::ID, false),
+            AccountMeta::new_readonly(config_pda, false),
+        ],
+        data,
+    }
+}
+
+fn ix_init_program_config(
+    authority: &Pubkey,
+    payer: &Pubkey,
+    max_invoice_amount: u64,
+) -> Instruction {
+    let (config_pda, _) = find_program_config_pda(&program_id());
+    let args = InitProgramConfigArgs { max_invoice_amount };
+    let mut data = vec![InstructionTag::InitProgramConfig as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(config_pda, false),
+            AccountMeta::new_readonly(*authority, true),
+            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data,
+    }
+}
+
+fn ix_set_max_invoice_amount(authority: &Pubkey, max_invoice_amount: u64) -> Instruction {
+    let (config_pda, _) = find_program_config_pda(&program_id());
+    let args = SetMaxInvoiceAmountArgs { max_invoice_amount };
+    let mut data = vec![InstructionTag::SetMaxInvoiceAmount as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(config_pda, false),
+            AccountMeta::new_readonly(*authority, true),
         ],
         data,
     }
@@ -149,6 +188,37 @@ async fn send(
         .process_transaction(tx)
         .await
         .map_err(|e| e.unwrap())
+}
+
+/// Run `init_program_config` so the `create_invoice` cap-enforcement path
+/// has a singleton config to read. Tests that don't touch `create_invoice`
+/// can skip this — they will fail on the missing config_ai account if
+/// they do exercise `create_invoice` without it.
+async fn init_default_config(banks: &mut BanksClient, payer: &Keypair) {
+    let authority = payer; // tests reuse the payer as the bound authority
+    send(
+        banks,
+        payer,
+        &[authority],
+        &[ix_init_program_config(
+            &authority.pubkey(),
+            &payer.pubkey(),
+            DEFAULT_MAX_INVOICE_AMOUNT,
+        )],
+    )
+    .await
+    .expect("init_program_config should succeed in test bootstrap");
+}
+
+async fn fetch_program_config(banks: &mut BanksClient) -> ProgramConfig {
+    let (pda, _) = find_program_config_pda(&program_id());
+    let acc: Account = banks
+        .get_account(pda)
+        .await
+        .unwrap()
+        .expect("program config account");
+    assert_eq!(acc.owner, program_id());
+    ProgramConfig::try_from_slice(&acc.data).expect("program config decodes")
 }
 
 async fn fetch_merchant(banks: &mut BanksClient, master: &Pubkey) -> Merchant {
@@ -255,6 +325,8 @@ async fn create_invoice_writes_open_account_and_bumps_count() {
     let (mut banks, payer, _) = program_test().start().await;
     let master = Keypair::new();
 
+    init_default_config(&mut banks, &payer).await;
+
     send(
         &mut banks,
         &payer,
@@ -301,6 +373,8 @@ async fn create_invoice_writes_open_account_and_bumps_count() {
 async fn sweep_flips_status_to_swept() {
     let (mut banks, payer, _) = program_test().start().await;
     let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
 
     send(
         &mut banks,
@@ -367,6 +441,8 @@ async fn sweep_with_wrong_master_signer_is_rejected() {
     let (mut banks, payer, _) = program_test().start().await;
     let master = Keypair::new();
     let attacker = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
 
     send(
         &mut banks,
@@ -609,6 +685,8 @@ async fn sweep_of_already_swept_invoice_is_rejected() {
     let (mut banks, payer, _) = program_test().start().await;
     let master = Keypair::new();
 
+    init_default_config(&mut banks, &payer).await;
+
     send(
         &mut banks,
         &payer,
@@ -655,4 +733,248 @@ async fn sweep_of_already_swept_invoice_is_rejected() {
     .await
     .expect_err("re-sweep of a Swept invoice must be rejected");
     assert_eq!(extract_custom(&err), Some(ZpError::InvoiceNotOpen as u32));
+}
+
+// --- 7. Z30.1: per-invoice cap + program config -------------------------
+
+#[tokio::test]
+async fn init_program_config_writes_authority_and_cap() {
+    let (mut banks, payer, _) = program_test().start().await;
+    let authority = Keypair::new();
+
+    send(
+        &mut banks,
+        &payer,
+        &[&authority],
+        &[ix_init_program_config(
+            &authority.pubkey(),
+            &payer.pubkey(),
+            DEFAULT_MAX_INVOICE_AMOUNT,
+        )],
+    )
+    .await
+    .expect("init_program_config should succeed");
+
+    let cfg = fetch_program_config(&mut banks).await;
+    assert_eq!(cfg.tag, PROGRAM_CONFIG_TAG);
+    assert_eq!(cfg.authority, authority.pubkey());
+    assert_eq!(cfg.max_invoice_amount, DEFAULT_MAX_INVOICE_AMOUNT);
+}
+
+#[tokio::test]
+async fn init_program_config_twice_is_rejected() {
+    let (mut banks, payer, _) = program_test().start().await;
+
+    init_default_config(&mut banks, &payer).await;
+
+    // Second init must error — re-init would silently replace the
+    // captured authority and the beta cap, which is the exact privilege-
+    // escalation path the program config exists to close.
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&payer],
+        &[ix_init_program_config(
+            &payer.pubkey(),
+            &payer.pubkey(),
+            500_000_000,
+        )],
+    )
+    .await
+    .expect_err("second init must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::ProgramConfigAlreadyInitialized as u32)
+    );
+}
+
+#[tokio::test]
+async fn create_invoice_amount_at_cap_succeeds() {
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+
+    // Boundary check: amount == cap is allowed. Strictly-greater-than
+    // rule is the documented contract; an off-by-one would either
+    // sandbag legitimate $100 invoices or leak a $100.000_001 escape.
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            DEFAULT_MAX_INVOICE_AMOUNT,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .expect("amount equal to cap should succeed");
+
+    let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
+    assert_eq!(inv.amount, DEFAULT_MAX_INVOICE_AMOUNT);
+}
+
+#[tokio::test]
+async fn create_invoice_amount_above_cap_is_rejected() {
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+
+    // One base unit above the cap (100_000_001). Rejection must surface
+    // the precise `InvoiceAmountExceedsCap` so the off-chain orchestrator
+    // can distinguish a cap denial from a generic invoice failure.
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            DEFAULT_MAX_INVOICE_AMOUNT + 1,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .expect_err("amount above cap must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::InvoiceAmountExceedsCap as u32)
+    );
+
+    // Merchant invoice_count must not advance on a rejected create.
+    let m = fetch_merchant(&mut banks, &master.pubkey()).await;
+    assert_eq!(m.invoice_count, 0);
+}
+
+#[tokio::test]
+async fn set_max_invoice_amount_by_authority_succeeds() {
+    let (mut banks, payer, _) = program_test().start().await;
+
+    init_default_config(&mut banks, &payer).await;
+
+    // Z30.4 cap upgrade: lift from $100 to $500. Authority == payer
+    // because `init_default_config` binds the payer as authority.
+    let new_cap = 500_000_000u64;
+    send(
+        &mut banks,
+        &payer,
+        &[&payer],
+        &[ix_set_max_invoice_amount(&payer.pubkey(), new_cap)],
+    )
+    .await
+    .expect("authority-signed set_max_invoice_amount should succeed");
+
+    let cfg = fetch_program_config(&mut banks).await;
+    assert_eq!(cfg.max_invoice_amount, new_cap);
+}
+
+#[tokio::test]
+async fn set_max_invoice_amount_by_non_authority_is_rejected() {
+    let (mut banks, payer, _) = program_test().start().await;
+    let attacker = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+
+    // The cap-setter is the captured authority, not just any signer.
+    // An attacker that signs the tx but doesn't match the stored
+    // authority must be rejected with `AuthorityMismatch` so the
+    // off-chain monitor can alert on the attempt.
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&attacker],
+        &[ix_set_max_invoice_amount(&attacker.pubkey(), 999_999_999)],
+    )
+    .await
+    .expect_err("non-authority set must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::AuthorityMismatch as u32)
+    );
+
+    // Cap must remain at the original value.
+    let cfg = fetch_program_config(&mut banks).await;
+    assert_eq!(cfg.max_invoice_amount, DEFAULT_MAX_INVOICE_AMOUNT);
+}
+
+#[tokio::test]
+async fn create_invoice_after_cap_disabled_allows_any_amount() {
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+
+    // Z30.5 D+60 removal: authority sets cap to 0 (sentinel for
+    // unlimited). Subsequent invoices of any size must clear.
+    send(
+        &mut banks,
+        &payer,
+        &[&payer],
+        &[ix_set_max_invoice_amount(&payer.pubkey(), 0)],
+    )
+    .await
+    .expect("disabling cap should succeed");
+
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+
+    let huge = 10_000_000_000u64; // 10_000 USDC, well above the original cap
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            huge,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .expect("amount above original cap must succeed once cap is disabled");
+
+    let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
+    assert_eq!(inv.amount, huge);
 }

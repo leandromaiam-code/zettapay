@@ -29,6 +29,11 @@ pub const SPV_PROOF_BTC_SEED: &[u8] = b"spv-btc";
 /// determined by `(program_id, BTC_HEADER_CHAIN_SEED)`.
 pub const BTC_HEADER_CHAIN_SEED: &[u8] = b"btc-header-chain";
 
+/// Seed prefix for the singleton program-config PDA (Z30.1). One account
+/// program-wide, no per-key suffix — the address is fully determined by
+/// `(program_id, PROGRAM_CONFIG_SEED)`.
+pub const PROGRAM_CONFIG_SEED: &[u8] = b"program-config";
+
 /// Width of the `invoice_index` PDA seed. Matches `INVOICE_INDEX_SEED_LEN`
 /// in `packages/sdk/src/onchain.ts`.
 pub const INVOICE_INDEX_SEED_LEN: usize = 8;
@@ -77,6 +82,12 @@ pub fn find_spv_proof_btc_pda(invoice: &Pubkey, program_id: &Pubkey) -> (Pubkey,
 /// any inputs from chain state.
 pub fn find_btc_header_chain_pda(program_id: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[BTC_HEADER_CHAIN_SEED], program_id)
+}
+
+/// Derive the singleton program-config PDA. Z30.1 — one account
+/// program-wide. Holds the operator authority + the per-invoice USDC cap.
+pub fn find_program_config_pda(program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[PROGRAM_CONFIG_SEED], program_id)
 }
 
 #[cfg(test)]
@@ -228,6 +239,39 @@ mod tests {
         assert_ne!(chain_pda, merchant_pda);
         assert_ne!(chain_pda, invoice_pda);
         assert_ne!(chain_pda, spv_pda);
+    }
+
+    #[test]
+    fn program_config_pda_is_singleton_and_deterministic() {
+        let program_id = fixed_program_id();
+        let (a, bump_a) = find_program_config_pda(&program_id);
+        let (b, bump_b) = find_program_config_pda(&program_id);
+        assert_eq!(a, b);
+        assert_eq!(bump_a, bump_b);
+    }
+
+    #[test]
+    fn program_config_pda_changes_per_program_id() {
+        let p1 = Pubkey::new_from_array([42u8; 32]);
+        let p2 = Pubkey::new_from_array([43u8; 32]);
+        let (a, _) = find_program_config_pda(&p1);
+        let (b, _) = find_program_config_pda(&p2);
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn program_config_seed_cannot_collide_with_other_prefixes() {
+        let program_id = fixed_program_id();
+        let inv = Pubkey::new_from_array([23u8; 32]);
+        let (cfg_pda, _) = find_program_config_pda(&program_id);
+        let (merchant_pda, _) = find_merchant_pda(&inv, &program_id);
+        let (invoice_pda, _) = find_invoice_pda(&inv, 0, &program_id);
+        let (spv_pda, _) = find_spv_proof_btc_pda(&inv, &program_id);
+        let (chain_pda, _) = find_btc_header_chain_pda(&program_id);
+        assert_ne!(cfg_pda, merchant_pda);
+        assert_ne!(cfg_pda, invoice_pda);
+        assert_ne!(cfg_pda, spv_pda);
+        assert_ne!(cfg_pda, chain_pda);
     }
 
     #[test]

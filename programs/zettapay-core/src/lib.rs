@@ -1,6 +1,6 @@
 //! ZettaPay Core — native Solana program (no Anchor).
 //!
-//! Eight instructions, discriminator-based dispatch on the leading byte of
+//! Ten instructions, discriminator-based dispatch on the leading byte of
 //! `instruction_data`:
 //!
 //!   0 = RegisterMerchant     { master_pubkey, chains[] }
@@ -11,6 +11,8 @@
 //!   5 = FinalizeBtcPayment   {}                                     (Z26.3)
 //!   6 = InitBtcHeaderChain   { anchor_header, anchor_height }       (Z26.5)
 //!   7 = UpdateBtcHeader      { new_header (80 bytes) }              (Z26.5)
+//!   8 = InitProgramConfig    { max_invoice_amount }                 (Z30.1)
+//!   9 = SetMaxInvoiceAmount  { max_invoice_amount }                 (Z30.1)
 //!
 //! State accounts (PDAs):
 //!
@@ -18,6 +20,7 @@
 //!   Invoice:            seeds = [master_pubkey, invoice_index_le]
 //!   SpvProofBtc:        seeds = [b"spv-btc",  invoice_pubkey]       (Z26.3)
 //!   BitcoinHeaderChain: seeds = [b"btc-header-chain"]   (singleton, Z26.5)
+//!   ProgramConfig:      seeds = [b"program-config"]     (singleton, Z30.1)
 //!
 //! Invoice seeds intentionally match `deriveInvoicePda` in
 //! `packages/sdk/src/onchain.ts` (Z26.1) so the off-chain SDK can predict
@@ -68,24 +71,26 @@ pub mod validation;
 // unchanged.
 pub use error::ZpError;
 pub use instructions::{
-    CreateInvoiceArgs, FinalizeBtcPaymentArgs, InitBtcHeaderChainArgs, InstructionTag,
-    RegisterMerchantArgs, SubmitBtcProofPart1Args, SubmitBtcProofPart2Args, SweepArgs,
-    UpdateBtcHeaderArgs,
+    CreateInvoiceArgs, FinalizeBtcPaymentArgs, InitBtcHeaderChainArgs, InitProgramConfigArgs,
+    InstructionTag, RegisterMerchantArgs, SetMaxInvoiceAmountArgs, SubmitBtcProofPart1Args,
+    SubmitBtcProofPart2Args, SweepArgs, UpdateBtcHeaderArgs,
 };
 pub use pda::{
-    find_btc_header_chain_pda, find_invoice_pda, find_merchant_pda, find_spv_proof_btc_pda,
-    BTC_HEADER_CHAIN_SEED, INVOICE_INDEX_SEED_LEN, MERCHANT_SEED, SPV_PROOF_BTC_SEED,
+    find_btc_header_chain_pda, find_invoice_pda, find_merchant_pda, find_program_config_pda,
+    find_spv_proof_btc_pda, BTC_HEADER_CHAIN_SEED, INVOICE_INDEX_SEED_LEN, MERCHANT_SEED,
+    PROGRAM_CONFIG_SEED, SPV_PROOF_BTC_SEED,
 };
 pub use spv::{
     compute_merkle_root_from_proof, hash_le_meets_target_le, header_merkle_root, header_n_bits,
     header_prev_block_hash, n_bits_to_target, sha256d, BLOCK_HEADER_LEN, MAX_MERKLE_PROOF_DEPTH,
 };
 pub use state::{
-    BitcoinHeaderChain, Invoice, Merchant, SpvProofBtc, BTC_HEADER_CHAIN_BUFFER_LEN,
-    BTC_HEADER_CHAIN_TAG, BTC_HEADER_CHAIN_WINDOW, BTC_HEADER_LEN, CHAIN_ARBITRUM,
-    CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM, CHAIN_POLYGON, CHAIN_SOLANA, CURRENCY_USDC,
-    INVOICE_STATUS_OPEN, INVOICE_STATUS_PAID_BTC, INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS,
-    MERCHANT_TAG, SPV_PROOF_BTC_TAG, SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE,
+    BitcoinHeaderChain, Invoice, Merchant, ProgramConfig, SpvProofBtc,
+    BTC_HEADER_CHAIN_BUFFER_LEN, BTC_HEADER_CHAIN_TAG, BTC_HEADER_CHAIN_WINDOW, BTC_HEADER_LEN,
+    CHAIN_ARBITRUM, CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM, CHAIN_POLYGON, CHAIN_SOLANA,
+    CURRENCY_USDC, DEFAULT_MAX_INVOICE_AMOUNT, INVOICE_STATUS_OPEN, INVOICE_STATUS_PAID_BTC,
+    INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS, MAX_INVOICE_AMOUNT_UNLIMITED, MERCHANT_TAG,
+    PROGRAM_CONFIG_TAG, SPV_PROOF_BTC_TAG, SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE,
     SPV_STATUS_PART2_DONE,
 };
 pub use validation::{assert_owned_by_program, assert_signer, assert_system_program, assert_tag};
@@ -129,6 +134,8 @@ pub fn process_instruction(
         5 => process_finalize_btc_payment(program_id, accounts, payload),
         6 => process_init_btc_header_chain(program_id, accounts, payload),
         7 => process_update_btc_header(program_id, accounts, payload),
+        8 => process_init_program_config(program_id, accounts, payload),
+        9 => process_set_max_invoice_amount(program_id, accounts, payload),
         _ => Err(ZpError::InvalidInstruction.into()),
     }
 }
@@ -226,11 +233,33 @@ fn process_create_invoice(
     let invoice_ai = next_account_info(iter)?;
     let payer_ai = next_account_info(iter)?;
     let system_ai = next_account_info(iter)?;
+    // Z30.1: config account is mandatory so the cap is enforced fail-
+    // closed — a caller cannot opt out by omitting the account. Read
+    // first, before any account creation, so an over-cap amount aborts
+    // the transaction before paying rent.
+    let program_config_ai = next_account_info(iter)?;
 
     assert_owned_by_program(merchant_ai, program_id)?;
     assert_signer(master_ai)?;
     assert_signer(payer_ai)?;
     assert_system_program(system_ai)?;
+
+    assert_owned_by_program(program_config_ai, program_id)?;
+    let (expected_config_pda, _) = find_program_config_pda(program_id);
+    if program_config_ai.key != &expected_config_pda {
+        return Err(ZpError::ProgramConfigPdaMismatch.into());
+    }
+    let config = ProgramConfig::try_from_slice(&program_config_ai.data.borrow())
+        .map_err(|_| ZpError::NotProgramConfigAccount)?;
+    if config.tag != PROGRAM_CONFIG_TAG {
+        return Err(ZpError::NotProgramConfigAccount.into());
+    }
+    // Sentinel `0` disables enforcement (Z30.5 D+60 removal).
+    if config.max_invoice_amount != MAX_INVOICE_AMOUNT_UNLIMITED
+        && args.amount > config.max_invoice_amount
+    {
+        return Err(ZpError::InvoiceAmountExceedsCap.into());
+    }
 
     let mut merchant = Merchant::try_from_slice(&merchant_ai.data.borrow())
         .map_err(|_| ZpError::NotMerchantAccount)?;
@@ -764,6 +793,112 @@ fn process_update_btc_header(
     Ok(())
 }
 
+// --- Z30.1: per-invoice cap + program config ----------------------------
+//
+// A singleton `ProgramConfig` account holds the per-invoice USDC cap that
+// `process_create_invoice` enforces. The cap is updated by the operator
+// via `set_max_invoice_amount` — gated on the authority recorded at
+// `init_program_config` time, so a third party that knows the PDA cannot
+// raise or remove the cap.
+//
+// Sprint Z30 expects the operator to call `init_program_config` once,
+// immediately after the program is deployed, with the launch cap of
+// 100 USDC. The cap-upgrade orchestrator (Z30.4 / Z30.5, see
+// `packages/api/src/beta/cap_upgrade.ts`) re-broadcasts
+// `set_max_invoice_amount` at D+30 ($500) and D+60 (cap removed, 0).
+
+fn process_init_program_config(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = InitProgramConfigArgs::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    let iter = &mut accounts.iter();
+    let config_ai = next_account_info(iter)?;
+    let authority_ai = next_account_info(iter)?;
+    let payer_ai = next_account_info(iter)?;
+    let system_ai = next_account_info(iter)?;
+
+    assert_signer(authority_ai)?;
+    assert_signer(payer_ai)?;
+    assert_system_program(system_ai)?;
+
+    let (expected_pda, bump) = find_program_config_pda(program_id);
+    if config_ai.key != &expected_pda {
+        return Err(ZpError::ProgramConfigPdaMismatch.into());
+    }
+    // Reject re-init: an already-populated config must keep its existing
+    // authority + cap. Surface the precise code instead of leaking the
+    // SystemProgram "already in use" error.
+    if config_ai.owner == program_id || !config_ai.data.borrow().is_empty() {
+        return Err(ZpError::ProgramConfigAlreadyInitialized.into());
+    }
+
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(ProgramConfig::SIZE);
+
+    invoke_signed(
+        &system_instruction::create_account(
+            payer_ai.key,
+            config_ai.key,
+            lamports,
+            ProgramConfig::SIZE as u64,
+            program_id,
+        ),
+        &[payer_ai.clone(), config_ai.clone(), system_ai.clone()],
+        &[&[PROGRAM_CONFIG_SEED, &[bump]]],
+    )?;
+
+    let config = ProgramConfig {
+        tag: PROGRAM_CONFIG_TAG,
+        bump,
+        authority: *authority_ai.key,
+        max_invoice_amount: args.max_invoice_amount,
+    };
+    config.serialize(&mut &mut config_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: program config initialised");
+    Ok(())
+}
+
+fn process_set_max_invoice_amount(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = SetMaxInvoiceAmountArgs::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    let iter = &mut accounts.iter();
+    let config_ai = next_account_info(iter)?;
+    let authority_ai = next_account_info(iter)?;
+
+    assert_owned_by_program(config_ai, program_id)?;
+    assert_signer(authority_ai)?;
+
+    let (expected_pda, _) = find_program_config_pda(program_id);
+    if config_ai.key != &expected_pda {
+        return Err(ZpError::ProgramConfigPdaMismatch.into());
+    }
+
+    let mut config = ProgramConfig::try_from_slice(&config_ai.data.borrow())
+        .map_err(|_| ZpError::ProgramConfigNotInitialized)?;
+    if config.tag != PROGRAM_CONFIG_TAG {
+        return Err(ZpError::NotProgramConfigAccount.into());
+    }
+    if config.authority != *authority_ai.key {
+        return Err(ZpError::AuthorityMismatch.into());
+    }
+
+    config.max_invoice_amount = args.max_invoice_amount;
+    config.serialize(&mut &mut config_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: max invoice amount updated");
+    Ok(())
+}
+
 #[cfg(test)]
 mod integration_tests {
     //! Cross-module sanity checks. Per-module unit tests live next to the
@@ -817,6 +952,19 @@ mod integration_tests {
             &[BTC_HEADER_CHAIN_SEED],
             &program_id,
         );
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn program_config_pda_seeds_match_module_constant() {
+        // The Z30.1 init handler signs `create_account` with seeds
+        // reconstructed from `PROGRAM_CONFIG_SEED`. Drift between this
+        // constant and what `find_program_config_pda` uses internally
+        // would make `invoke_signed` fail at run time.
+        let program_id = Pubkey::new_from_array([42u8; 32]);
+        let (a, _) = find_program_config_pda(&program_id);
+        let (b, _) =
+            Pubkey::find_program_address(&[PROGRAM_CONFIG_SEED], &program_id);
         assert_eq!(a, b);
     }
 
