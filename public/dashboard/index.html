@@ -13,6 +13,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/tweetnacl@1.0.3/nacl.min.js"></script>
+  <!-- Recharts (UMD) powers the analytics charts — TPV trend, conversion gauge, top customers. -->
+  <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+  <script crossorigin src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -261,6 +266,86 @@
             <span class="text-muted text-sm">tx</span>
           </div>
           <div id="stat-failed-sub" class="text-xs text-muted mt-2">—</div>
+        </div>
+      </div>
+
+      <!-- Real-time analytics — TPV / MRR / conversion / top customers -->
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="glass rounded-2xl p-5">
+            <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · Today</div>
+            <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-today">—</div>
+            <div class="text-xs text-muted mt-1" id="tpv-today-sub">—</div>
+          </div>
+          <div class="glass rounded-2xl p-5">
+            <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · 7d</div>
+            <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-week">—</div>
+            <div class="text-xs text-muted mt-1" id="tpv-week-sub">—</div>
+          </div>
+          <div class="glass rounded-2xl p-5">
+            <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">TPV · 30d</div>
+            <div class="stat-num text-2xl md:text-3xl font-bold" id="tpv-month">—</div>
+            <div class="text-xs text-muted mt-1" id="tpv-month-sub">—</div>
+          </div>
+          <div class="glass rounded-2xl p-5">
+            <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">MRR (active subs)</div>
+            <div class="stat-num text-2xl md:text-3xl font-bold" id="mrr-num">—</div>
+            <div class="text-xs text-muted mt-1" id="mrr-sub">—</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="glass rounded-2xl p-5 md:p-6 lg:col-span-2">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <div class="text-xs font-mono uppercase tracking-widest text-muted">TPV · last 30 days</div>
+                <h2 class="text-xl font-bold mt-1">Volume trend</h2>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="analytics-source" class="badge badge-muted">demo</span>
+                <button id="analytics-refresh" class="btn-ghost px-3 py-1.5 rounded-full text-xs">Refresh</button>
+              </div>
+            </div>
+            <div id="tpv-chart" style="width: 100%; height: 260px;">
+              <div class="skeleton w-full h-full rounded-xl"></div>
+            </div>
+          </div>
+          <div class="glass rounded-2xl p-5 md:p-6">
+            <div class="text-xs font-mono uppercase tracking-widest text-muted">Conversion rate</div>
+            <h2 class="text-xl font-bold mt-1">Completed vs failed</h2>
+            <div id="conversion-chart" style="width: 100%; height: 200px;" class="mt-2">
+              <div class="skeleton w-full h-full rounded-xl"></div>
+            </div>
+            <div class="mt-2 grid grid-cols-3 text-center text-xs gap-2">
+              <div>
+                <div class="stat-num text-mint font-bold text-base" id="conv-completed">—</div>
+                <div class="text-muted mono">completed</div>
+              </div>
+              <div>
+                <div class="stat-num text-rose font-bold text-base" id="conv-failed">—</div>
+                <div class="text-muted mono">failed</div>
+              </div>
+              <div>
+                <div class="stat-num text-amber font-bold text-base" id="conv-pending">—</div>
+                <div class="text-muted mono">pending</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-5 md:p-6">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <div class="text-xs font-mono uppercase tracking-widest text-muted">Top customers · 30d</div>
+              <h2 class="text-xl font-bold mt-1">Highest spenders</h2>
+            </div>
+          </div>
+          <div id="top-customers-chart" style="width: 100%; height: 240px;">
+            <div class="skeleton w-full h-full rounded-xl"></div>
+          </div>
+          <div id="top-customers-empty" class="hidden-init text-center py-4 text-muted text-sm">
+            No completed payments yet — top spenders will appear here once customers start paying.
+          </div>
         </div>
       </div>
 
@@ -895,6 +980,289 @@
       }
     }
 
+    // -----------------------------------------------------------------------
+    // Real-time analytics — TPV / MRR / conversion / top customers (Recharts)
+    // -----------------------------------------------------------------------
+
+    const rechartsRoots = {};
+
+    function rechartsReady() {
+      return !!(window.React && window.ReactDOM && window.Recharts);
+    }
+
+    function getRoot(elementId) {
+      if (!rechartsRoots[elementId]) {
+        const node = $(elementId);
+        if (!node) return null;
+        node.innerHTML = '';
+        rechartsRoots[elementId] = window.ReactDOM.createRoot(node);
+      }
+      return rechartsRoots[elementId];
+    }
+
+    function setTpvCard(numId, subId, amount, count) {
+      $(numId).textContent = formatUsdc(amount || 0);
+      const txt = (count === 1 ? '1 tx' : (count || 0) + ' txs');
+      $(subId).textContent = txt + ' · USDC';
+    }
+
+    function clearAnalytics() {
+      ['tpv-today', 'tpv-week', 'tpv-month', 'mrr-num'].forEach((id) => {
+        if ($(id)) $(id).textContent = '—';
+      });
+      ['tpv-today-sub', 'tpv-week-sub', 'tpv-month-sub', 'mrr-sub'].forEach((id) => {
+        if ($(id)) $(id).textContent = '—';
+      });
+      ['conv-completed', 'conv-failed', 'conv-pending'].forEach((id) => {
+        if ($(id)) $(id).textContent = '—';
+      });
+    }
+
+    function renderTpvChart(series) {
+      const root = getRoot('tpv-chart');
+      if (!root || !rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const data = (series || []).map((p) => ({
+        date: String(p.date || '').slice(5),
+        amount: Number(p.amount || 0),
+        count: Number(p.count || 0),
+      }));
+
+      const tooltipFormatter = (value, name) => {
+        if (name === 'amount') return [formatUsdc(value) + ' USDC', 'Volume'];
+        if (name === 'count') return [String(value), 'Payments'];
+        return [String(value), name];
+      };
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.AreaChart,
+          { data, margin: { top: 8, right: 12, left: 0, bottom: 0 } },
+          h('defs', null,
+            h('linearGradient', { id: 'tpv-gradient', x1: 0, y1: 0, x2: 0, y2: 1 },
+              h('stop', { offset: '0%', stopColor: '#4F6BFF', stopOpacity: 0.55 }),
+              h('stop', { offset: '100%', stopColor: '#4F6BFF', stopOpacity: 0 })
+            )
+          ),
+          h(R.CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(148,163,184,0.12)', vertical: false }),
+          h(R.XAxis, {
+            dataKey: 'date',
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            interval: 'preserveStartEnd',
+            minTickGap: 24,
+            stroke: 'rgba(148,163,184,0.2)',
+          }),
+          h(R.YAxis, {
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            stroke: 'rgba(148,163,184,0.2)',
+            tickFormatter: (v) => '$' + Math.round(Number(v)).toLocaleString('en-US'),
+            width: 60,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            labelStyle: { color: '#94A3B8' },
+            itemStyle: { color: '#FFFFFF' },
+            formatter: tooltipFormatter,
+          }),
+          h(R.Area, {
+            type: 'monotone',
+            dataKey: 'amount',
+            stroke: '#4F6BFF',
+            strokeWidth: 2,
+            fill: 'url(#tpv-gradient)',
+            isAnimationActive: false,
+          })
+        )
+      );
+      root.render(chart);
+    }
+
+    function renderConversionChart(conv) {
+      const root = getRoot('conversion-chart');
+      if (!root || !rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const completed = Number(conv.completed || 0);
+      const failed = Number(conv.failed || 0);
+      const ratePct = Math.round(Number(conv.rate || 0) * 1000) / 10;
+      const data = (completed + failed) === 0
+        ? [{ name: 'No data', value: 1, fill: 'rgba(148,163,184,0.3)' }]
+        : [
+            { name: 'Completed', value: completed, fill: '#14F195' },
+            { name: 'Failed', value: failed, fill: '#fb7185' },
+          ];
+
+      const labelText = (completed + failed) === 0 ? '—' : ratePct.toFixed(1) + '%';
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.PieChart,
+          null,
+          h(R.Pie, {
+            data,
+            dataKey: 'value',
+            nameKey: 'name',
+            cx: '50%',
+            cy: '50%',
+            innerRadius: 52,
+            outerRadius: 76,
+            paddingAngle: 2,
+            stroke: 'transparent',
+            isAnimationActive: false,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            itemStyle: { color: '#FFFFFF' },
+          }),
+          h('text', {
+            x: '50%',
+            y: '50%',
+            textAnchor: 'middle',
+            dominantBaseline: 'central',
+            fill: '#FFFFFF',
+            fontSize: 22,
+            fontWeight: 700,
+          }, labelText)
+        )
+      );
+      root.render(chart);
+    }
+
+    function renderTopCustomers(customers) {
+      const empty = $('top-customers-empty');
+      const root = getRoot('top-customers-chart');
+      if (!root) return;
+      if (!Array.isArray(customers) || customers.length === 0) {
+        if (empty) empty.classList.remove('hidden-init');
+        root.render(null);
+        return;
+      }
+      if (empty) empty.classList.add('hidden-init');
+      if (!rechartsReady()) return;
+      const R = window.Recharts;
+      const h = window.React.createElement;
+      const data = customers.map((c) => ({
+        wallet: shortAddr(c.payerWallet),
+        full: c.payerWallet,
+        total: Number(c.totalUsdc || 0),
+        txCount: Number(c.txCount || 0),
+      }));
+
+      const chart = h(
+        R.ResponsiveContainer,
+        { width: '100%', height: '100%' },
+        h(
+          R.BarChart,
+          { data, layout: 'vertical', margin: { top: 8, right: 24, left: 0, bottom: 8 } },
+          h(R.CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(148,163,184,0.12)', horizontal: false }),
+          h(R.XAxis, {
+            type: 'number',
+            tick: { fill: '#94A3B8', fontSize: 11 },
+            stroke: 'rgba(148,163,184,0.2)',
+            tickFormatter: (v) => '$' + Math.round(Number(v)).toLocaleString('en-US'),
+          }),
+          h(R.YAxis, {
+            type: 'category',
+            dataKey: 'wallet',
+            tick: { fill: '#FFFFFF', fontSize: 12, fontFamily: 'JetBrains Mono, ui-monospace, monospace' },
+            stroke: 'rgba(148,163,184,0.2)',
+            width: 110,
+          }),
+          h(R.Tooltip, {
+            contentStyle: {
+              background: 'rgba(17,17,17,0.95)',
+              border: '1px solid rgba(79,107,255,0.3)',
+              borderRadius: 8,
+              fontSize: 12,
+            },
+            itemStyle: { color: '#FFFFFF' },
+            formatter: (value, name, ctx) => {
+              if (name === 'total') {
+                const tx = (ctx && ctx.payload && ctx.payload.txCount) || 0;
+                return [formatUsdc(value) + ' USDC · ' + tx + ' tx', 'Spent'];
+              }
+              return [String(value), name];
+            },
+            labelFormatter: (label, payload) => {
+              const full = payload && payload[0] && payload[0].payload && payload[0].payload.full;
+              return full ? full : label;
+            },
+          }),
+          h(R.Bar, {
+            dataKey: 'total',
+            fill: '#d4a961',
+            radius: [0, 8, 8, 0],
+            isAnimationActive: false,
+          })
+        )
+      );
+      root.render(chart);
+    }
+
+    function renderAnalytics(analytics) {
+      if (!analytics) {
+        clearAnalytics();
+        return;
+      }
+      const tpv = analytics.tpv || { today: {}, week: {}, month: {} };
+      setTpvCard('tpv-today', 'tpv-today-sub', tpv.today.amount, tpv.today.count);
+      setTpvCard('tpv-week', 'tpv-week-sub', tpv.week.amount, tpv.week.count);
+      setTpvCard('tpv-month', 'tpv-month-sub', tpv.month.amount, tpv.month.count);
+
+      $('mrr-num').textContent = formatUsdc(analytics.mrr || 0);
+      $('mrr-sub').textContent = (Number(analytics.mrr) || 0) > 0
+        ? 'normalized monthly · USDC'
+        : 'No active subscriptions';
+
+      const conv = analytics.conversion || { completed: 0, failed: 0, pending: 0, rate: 0 };
+      $('conv-completed').textContent = conv.completed || 0;
+      $('conv-failed').textContent = conv.failed || 0;
+      $('conv-pending').textContent = conv.pending || 0;
+
+      renderTpvChart(analytics.tpvSeries || []);
+      renderConversionChart(conv);
+      renderTopCustomers(analytics.topCustomers || []);
+    }
+
+    async function loadAnalytics() {
+      const badge = $('analytics-source');
+      try {
+        const res = await authedFetch('/api/merchants/' + encodeURIComponent(CURRENT_MERCHANT) + '/analytics');
+        if (!res.ok) throw new Error('Analytics ' + res.status);
+        const json = await res.json();
+        if (!json.analytics) throw new Error('Analytics payload missing');
+        if (badge) {
+          badge.textContent = json.simulated ? 'demo' : 'live';
+          badge.className = 'badge ' + (json.simulated ? 'badge-muted' : 'badge-mint');
+        }
+        renderAnalytics(json.analytics);
+      } catch (err) {
+        if (err && err.message !== 'Session expired') {
+          clearAnalytics();
+          if (badge) {
+            badge.textContent = 'unavailable';
+            badge.className = 'badge badge-rose';
+          }
+          toast('Failed to load analytics — ' + (err && err.message || err), 'error');
+        }
+      }
+    }
+
     let SECRET_REVEALED = false;
 
     async function loadKeys(reveal) {
@@ -1031,7 +1399,7 @@
       const exp = new Date(session.expiresAt);
       $('sig-expires').textContent = exp.toLocaleTimeString();
       hideLogin();
-      await Promise.all([loadPayments(), loadAgents(), loadKeys(false), loadSettings()]);
+      await Promise.all([loadPayments(), loadAnalytics(), loadAgents(), loadKeys(false), loadSettings()]);
     }
 
     async function onConnect() {
@@ -1100,6 +1468,8 @@
       $('disconnect-btn').addEventListener('click', onDisconnect);
       $('payments-refresh').addEventListener('click', () => loadPayments());
       $('agents-refresh').addEventListener('click', () => loadAgents());
+      const analyticsBtn = $('analytics-refresh');
+      if (analyticsBtn) analyticsBtn.addEventListener('click', () => loadAnalytics());
       $('copy-wallet').addEventListener('click', () => CURRENT_SESSION && copy(CURRENT_SESSION.wallet));
       $('secret-reveal').addEventListener('click', () => loadKeys(!SECRET_REVEALED));
       $('keys-rotate').addEventListener('click', () => setVisible('rotate-modal', true));
