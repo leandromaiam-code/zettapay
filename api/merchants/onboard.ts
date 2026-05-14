@@ -41,7 +41,7 @@ function buildChecklist(merchantRef: string | null): Array<{
   completed: boolean;
 }> {
   return [
-    { id: 'connect_wallet', title: 'Conecte sua wallet Phantom', completed: false },
+    { id: 'paste_pubkey', title: 'Cole sua chave pública Solana', completed: false },
     { id: 'register_merchant', title: 'Registre seu merchant', completed: Boolean(merchantRef) },
     { id: 'copy_embed_code', title: 'Copie o snippet de embed', completed: false },
     { id: 'first_payment', title: 'Receba seu primeiro pagamento USDC', completed: false },
@@ -151,7 +151,7 @@ function handlePost(req: VercelRequest, res: VercelResponse): void {
       note: 'USDC ATA + memo binding tx are processed by the long-running registration worker. Poll /api/merchants/register or the dashboard for confirmation.',
     },
     checklist: buildChecklist(merchantId).map((step) =>
-      step.id === 'connect_wallet' || step.id === 'register_merchant'
+      step.id === 'paste_pubkey' || step.id === 'register_merchant'
         ? { ...step, completed: true }
         : step,
     ),

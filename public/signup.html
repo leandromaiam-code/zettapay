@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay onboarding wizard — connect Phantom, name your shop, and copy your embed snippet in three guided steps." />
+  <meta name="description" content="ZettaPay onboarding wizard — paste your Solana address, name your shop, and copy your embed snippet in three guided steps." />
   <meta property="og:title" content="ZettaPay — Onboarding" />
   <meta name="robots" content="noindex, nofollow" />
   <title>ZettaPay — Get started</title>
@@ -281,7 +281,7 @@
           Get paid in <span class="gradient-text">USDC</span>, in minutes
         </h1>
         <p class="text-muted text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-          Connect your Phantom wallet, pick a handle, and copy your embed snippet. No backend, no KYC for devnet, no surprises.
+          Paste your Solana address, pick a handle, and copy your embed snippet. No wallet connect, no backend, no KYC for devnet.
         </p>
       </div>
 
@@ -291,7 +291,7 @@
           <span class="font-mono uppercase tracking-widest text-muted">
             Step <span id="progressCurrent">1</span> of 3
           </span>
-          <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Connect</span>
+          <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Address</span>
         </div>
         <div class="progress-track">
           <div id="progressBar" class="progress-bar" style="width: 33.333%;"></div>
@@ -299,7 +299,7 @@
         <div class="flex items-center justify-between mt-4">
           <div class="flex items-center gap-2">
             <span id="dot1" class="step-dot active">1</span>
-            <span id="lbl1" class="step-label active hidden sm:inline">Wallet</span>
+            <span id="lbl1" class="step-label active hidden sm:inline">Address</span>
           </div>
           <div class="flex-1 h-px bg-royal/15 mx-3"></div>
           <div class="flex items-center gap-2">
@@ -317,39 +317,50 @@
       <!-- WIZARD CARD -->
       <div class="glass rounded-3xl p-6 md:p-10 animate-fade-up" style="animation-delay: 0.08s; animation-fill-mode: both;">
 
-        <!-- STEP 1 — CONNECT WALLET -->
+        <!-- STEP 1 — PASTE PUBKEY -->
         <section id="panel1" class="panel active" aria-labelledby="panel1-title">
           <div class="text-center mb-6">
             <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
-              <svg class="w-7 h-7 text-royal-bright" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
+              <svg class="w-7 h-7 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
             </div>
-            <h2 id="panel1-title" class="text-2xl md:text-3xl font-bold tracking-tight">Connect your wallet</h2>
+            <h2 id="panel1-title" class="text-2xl md:text-3xl font-bold tracking-tight">Paste your Solana address</h2>
             <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
-              We bind your Phantom address on-chain via memo. Your private keys never leave your wallet.
+              Copy your public address from Phantom, Solflare, a hardware wallet, an exchange — anywhere it lives. We never ask to connect.
             </p>
           </div>
 
-          <div id="walletConnectedBlock" class="hidden glass rounded-2xl p-4 mb-4">
+          <div>
+            <label for="pubkeyInput" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Public address (base58)</label>
+            <input
+              type="text"
+              id="pubkeyInput"
+              name="pubkey"
+              maxlength="44"
+              placeholder="e.g. 4Nd1mYG6X9wQ…ZkR2"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              class="input"
+              style="font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: -0.01em;"
+            />
+            <div id="pubkeyErr" class="hidden text-xs text-rose mt-2 font-mono"></div>
+            <p class="text-xs text-muted mt-2 leading-relaxed">
+              In Phantom: tap your address at the top of the wallet to copy. In Solflare: tap your account name. Hardware wallets expose the address in the device companion app.
+            </p>
+          </div>
+
+          <div id="pubkeyPreview" class="hidden glass rounded-2xl p-4 mt-4">
             <div class="flex items-center justify-between gap-4">
               <div class="min-w-0 flex items-center gap-3">
                 <span class="w-2 h-2 rounded-full bg-mint animate-pulse flex-shrink-0"></span>
                 <div class="min-w-0">
-                  <div class="text-[11px] text-mint font-mono uppercase tracking-widest mb-1">Phantom connected</div>
-                  <div id="walletAddrText" class="key-value text-white truncate"></div>
+                  <div class="text-[11px] text-mint font-mono uppercase tracking-widest mb-1">Address validated</div>
+                  <div id="pubkeyPreviewText" class="key-value text-white truncate"></div>
                 </div>
               </div>
-              <button type="button" id="walletDisconnect" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Disconnect</button>
+              <button type="button" id="pubkeyClear" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Clear</button>
             </div>
           </div>
-
-          <button type="button" id="walletBtn" class="w-full btn-primary px-6 py-4 rounded-xl font-semibold text-base flex items-center justify-center gap-3">
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 1.5C6.21 1.5 1.5 6.21 1.5 12S6.21 22.5 12 22.5 22.5 17.79 22.5 12 17.79 1.5 12 1.5zm5.06 11.86c-.42 1.44-1.21 2.73-2.27 3.78a8.94 8.94 0 01-3.78 2.27c-.32.09-.65-.13-.71-.46l-.36-2.16a.6.6 0 00-.59-.5H7.71a.6.6 0 01-.6-.6v-1.64a.6.6 0 01.6-.6h1.64a.6.6 0 00.6-.6V11.2a.6.6 0 01.6-.6h2.78a.6.6 0 00.51-.29l1.02-1.7a.6.6 0 01.93-.13l1.43 1.43a.6.6 0 01.13.66l-.7 1.69a.6.6 0 00.04.55l.6 1.04a.6.6 0 01-.13.71z"/></svg>
-            Connect Phantom Wallet
-          </button>
-
-          <p id="walletHint" class="text-xs text-muted mt-3 leading-relaxed text-center">
-            Don't have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>.
-          </p>
 
           <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-end">
             <button type="button" id="step1Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
@@ -554,17 +565,17 @@
         document.getElementById('lbl2'),
         document.getElementById('lbl3'),
       ];
-      const stepNames = ['Connect', 'Name your shop', 'Get your code'];
+      const stepNames = ['Address', 'Name your shop', 'Get your code'];
       const progressBar = document.getElementById('progressBar');
       const progressCurrent = document.getElementById('progressCurrent');
       const progressLabel = document.getElementById('progressLabel');
 
       // Step 1 elements
-      const walletBtn = document.getElementById('walletBtn');
-      const walletConnectedBlock = document.getElementById('walletConnectedBlock');
-      const walletAddrText = document.getElementById('walletAddrText');
-      const walletDisconnect = document.getElementById('walletDisconnect');
-      const walletHint = document.getElementById('walletHint');
+      const pubkeyInput = document.getElementById('pubkeyInput');
+      const pubkeyErr = document.getElementById('pubkeyErr');
+      const pubkeyPreview = document.getElementById('pubkeyPreview');
+      const pubkeyPreviewText = document.getElementById('pubkeyPreviewText');
+      const pubkeyClear = document.getElementById('pubkeyClear');
       const step1Next = document.getElementById('step1Next');
 
       // Step 2 elements
@@ -647,79 +658,58 @@
         if (heading) heading.setAttribute('tabindex', '-1');
       }
 
-      function getPhantom() {
-        const provider = (window.phantom && window.phantom.solana) || window.solana;
-        if (provider && provider.isPhantom) return provider;
-        return null;
+      function normalizePubkey(raw) {
+        return String(raw || '').trim().replace(/\s+/g, '');
       }
 
-      function renderConnectedWallet(addr) {
+      function applyPubkey(addr) {
         walletAddress = addr;
-        walletAddrText.textContent = addr;
-        walletConnectedBlock.classList.remove('hidden');
-        walletBtn.classList.add('hidden');
-        walletHint.textContent = 'Wallet ready. Click Continue to name your shop.';
+        pubkeyPreviewText.textContent = addr;
+        pubkeyPreview.classList.remove('hidden');
+        pubkeyInput.classList.remove('error');
+        pubkeyErr.classList.add('hidden');
         step1Next.disabled = false;
       }
 
-      function clearConnectedWallet() {
+      function clearPubkey() {
         walletAddress = null;
-        walletConnectedBlock.classList.add('hidden');
-        walletBtn.classList.remove('hidden');
-        walletHint.innerHTML = 'Don\'t have Phantom? <a href="https://phantom.app/download" target="_blank" rel="noopener" class="text-royal-bright hover:underline">Install it free</a>.';
+        pubkeyInput.value = '';
+        pubkeyPreview.classList.add('hidden');
+        pubkeyInput.classList.remove('error');
+        pubkeyErr.classList.add('hidden');
         step1Next.disabled = true;
+        pubkeyInput.focus();
       }
 
-      function isMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      }
-
-      function openPhantomMobile() {
-        // Universal deep link: opens Phantom app in-browser pointing to /signup
-        // Inside Phantom's webview, window.solana is injected and connect() works normally
-        const target = window.location.origin + '/signup?from=phantom-mobile';
-        const ref = encodeURIComponent(window.location.origin);
-        window.location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(target) + '?ref=' + ref;
-      }
-
-      async function connectPhantom() {
-        const provider = getPhantom();
-
-        // Mobile fallback: no extension API on mobile browsers — deep link into Phantom app webview
-        if (!provider && isMobile()) {
-          showToast('Opening Phantom app...');
-          openPhantomMobile();
+      function refreshPubkeyState() {
+        const raw = normalizePubkey(pubkeyInput.value);
+        if (raw.length === 0) {
+          walletAddress = null;
+          pubkeyPreview.classList.add('hidden');
+          pubkeyInput.classList.remove('error');
+          pubkeyErr.classList.add('hidden');
+          step1Next.disabled = true;
           return;
         }
-
-        if (!provider) {
-          showToast('Phantom not detected — install the extension');
-          window.open('https://phantom.app/download', '_blank', 'noopener');
+        if (raw.length < 32 || raw.length > 44) {
+          walletAddress = null;
+          pubkeyPreview.classList.add('hidden');
+          pubkeyInput.classList.add('error');
+          pubkeyErr.textContent = 'Solana addresses are 32–44 base58 characters';
+          pubkeyErr.classList.remove('hidden');
+          step1Next.disabled = true;
           return;
         }
-
-        try {
-          walletBtn.disabled = true;
-          const resp = await provider.connect();
-          const addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
-          if (!addr || !SOLANA_ADDRESS_RE.test(addr)) {
-            throw new Error('Phantom returned an invalid public key');
-          }
-          renderConnectedWallet(addr);
-        } catch (err) {
-          const msg = (err && err.message) ? err.message : 'Wallet connection rejected';
-          showToast(msg);
-        } finally {
-          walletBtn.disabled = false;
+        if (!SOLANA_ADDRESS_RE.test(raw)) {
+          walletAddress = null;
+          pubkeyPreview.classList.add('hidden');
+          pubkeyInput.classList.add('error');
+          pubkeyErr.textContent = 'Not a valid base58 address — check for typos';
+          pubkeyErr.classList.remove('hidden');
+          step1Next.disabled = true;
+          return;
         }
-      }
-
-      async function disconnectPhantom() {
-        const provider = getPhantom();
-        if (provider && typeof provider.disconnect === 'function') {
-          try { await provider.disconnect(); } catch (e) { /* ignore */ }
-        }
-        clearConnectedWallet();
+        applyPubkey(raw);
       }
 
       // ----- Handle validation -----
@@ -822,7 +812,7 @@
 
       async function submitOnboard(handleValue) {
         if (!walletAddress) {
-          showToast('Connect Phantom first');
+          showToast('Paste your Solana address first');
           setStep(1);
           return;
         }
@@ -850,8 +840,16 @@
       }
 
       // ----- Wire events -----
-      walletBtn.addEventListener('click', connectPhantom);
-      walletDisconnect.addEventListener('click', disconnectPhantom);
+      pubkeyInput.addEventListener('input', refreshPubkeyState);
+      pubkeyInput.addEventListener('paste', () => setTimeout(refreshPubkeyState, 0));
+      pubkeyInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && walletAddress) {
+          e.preventDefault();
+          setStep(2);
+          setTimeout(() => shopHandle.focus(), 50);
+        }
+      });
+      pubkeyClear.addEventListener('click', clearPubkey);
       step1Next.addEventListener('click', () => {
         if (!walletAddress) return;
         setStep(2);
@@ -901,20 +899,11 @@
         }
       });
 
-      // Auto-detect already-trusted Phantom on load
-      window.addEventListener('load', async () => {
-        const provider = getPhantom();
-        if (!provider) return;
-        try {
-          const resp = await provider.connect({ onlyIfTrusted: true });
-          const addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
-          if (addr && SOLANA_ADDRESS_RE.test(addr)) renderConnectedWallet(addr);
-        } catch (e) { /* not trusted yet — silent */ }
-      });
-
       // Initial state
       setStep(1);
       refreshHandleState();
+      refreshPubkeyState();
+      setTimeout(() => pubkeyInput.focus(), 80);
     })();
   </script>
 </body>

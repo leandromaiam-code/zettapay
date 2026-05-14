@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay merchant dashboard — Phantom login, USDC balance, real-time analytics (TPV, MRR, conversion, top customers), Coinflow settlement." />
+  <meta name="description" content="ZettaPay merchant dashboard — wallet-less offline signature login, USDC balance, real-time analytics (TPV, MRR, conversion, top customers), Coinflow settlement." />
   <meta property="og:title" content="ZettaPay Dashboard — Merchant control plane" />
   <meta name="robots" content="noindex, nofollow" />
   <title>ZettaPay — Merchant Dashboard</title>
@@ -213,31 +213,75 @@
         </div>
 
         <h1 class="text-3xl md:text-4xl font-bold mb-3 leading-tight">
-          Sign in with <span class="gradient-text">Phantom</span>
+          Sign in with an <span class="gradient-text">offline signature</span>
         </h1>
-        <p class="text-muted text-base mb-8 leading-relaxed">
-          Authenticate with a Solana signature — no passwords, no email codes. Your wallet is your identity.
-          We never custody funds.
+        <p class="text-muted text-base mb-6 leading-relaxed">
+          Prove wallet ownership without connecting anything. Paste your address, sign the challenge
+          message in whatever wallet you already use (Phantom, Solflare, hardware, mobile), and paste the
+          signature back. ZettaPay never asks for permissions and never custodies funds.
         </p>
 
-        <button id="connect-btn" class="btn-primary px-6 py-4 rounded-full font-semibold text-base w-full flex items-center justify-center gap-3">
-          <svg class="w-5 h-5" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
-            <path d="M64 0a64 64 0 1 0 64 64A64.07 64.07 0 0 0 64 0zm45.4 65.45a3.32 3.32 0 0 1-3.32 3.31h-7.81c-.85 17.34-9.91 27.62-25.26 27.62-13.66 0-23.54-9.39-23.54-22.06 0-9.85 5.71-17.07 14.78-17.07 8.01 0 13.16 4.94 13.16 12.36 0 5.34-2.46 9.69-7.31 9.69-3.16 0-5.59-1.79-5.97-4.62a6.07 6.07 0 0 1 .11-2 .59.59 0 0 0-.55-.79c-3.13 0-5.41 3.13-5.41 7.61 0 6.71 5.04 11.02 12.5 11.02 9.83 0 16.79-7.16 17.39-19.76h-26a3.32 3.32 0 0 1-3.32-3.32V46.66a3.32 3.32 0 0 1 3.32-3.32h44.59a3.32 3.32 0 0 1 3.32 3.32z"/>
-          </svg>
-          <span id="connect-label">Connect Phantom</span>
-        </button>
+        <div id="login-step-1" class="space-y-3 mb-4">
+          <label class="block">
+            <span class="text-xs font-mono uppercase tracking-widest text-muted">1 · Solana address</span>
+            <input
+              id="login-wallet"
+              type="text"
+              maxlength="44"
+              placeholder="e.g. 4Nd1mYG6X9wQ…ZkR2"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              class="mono mt-2 w-full bg-black/40 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2.5 text-sm"
+            />
+          </label>
+          <button id="login-build" type="button" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm w-full">
+            Build challenge message
+          </button>
+        </div>
 
-        <div id="connect-error" class="mt-4 text-rose text-sm hidden-init"></div>
+        <div id="login-step-2" class="hidden-init space-y-3 mb-4">
+          <div>
+            <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">2 · Sign this message in your wallet</div>
+            <div class="bg-black/40 border border-white/10 rounded-lg p-3 mono text-[11px] whitespace-pre-wrap break-words" id="login-challenge"></div>
+            <button id="login-copy-msg" type="button" class="mt-2 text-xs text-royal-bright hover:underline mono uppercase tracking-widest">Copy message</button>
+            <p class="text-xs text-muted/80 mt-3 leading-relaxed">
+              In Phantom: <em>Settings → Developer mode → Sign message → paste and sign</em>.
+              In Solflare: <em>tap your wallet name → Settings → Sign message</em>.
+              Hardware wallets: use the companion app's offline signing tool.
+            </p>
+          </div>
+          <label class="block">
+            <span class="text-xs font-mono uppercase tracking-widest text-muted">3 · Paste signature (hex or base64)</span>
+            <textarea
+              id="login-signature"
+              rows="2"
+              placeholder="e.g. 0x4b1c…  or  base64=…"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              class="mono mt-2 w-full bg-black/40 border border-white/10 focus:border-royal/60 outline-none rounded-lg px-3 py-2 text-xs"
+            ></textarea>
+          </label>
+          <div class="flex gap-2">
+            <button id="login-verify" type="button" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm flex-1">
+              Verify &amp; sign in
+            </button>
+            <button id="login-restart" type="button" class="btn-ghost px-4 py-3 rounded-full font-semibold text-sm">Restart</button>
+          </div>
+        </div>
 
-        <div class="mt-8 pt-6 border-t border-white/5">
+        <div id="connect-error" class="mt-2 text-rose text-sm hidden-init"></div>
+
+        <div class="mt-6 pt-6 border-t border-white/5">
           <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">How it works</div>
           <ol class="text-sm text-muted space-y-2 list-decimal list-inside">
-            <li>Phantom returns your wallet pubkey.</li>
-            <li>You sign a one-time challenge — proves wallet ownership.</li>
+            <li>Paste the public address of the wallet you registered.</li>
+            <li>Sign the challenge message offline — in <em>your</em> wallet, on <em>your</em> device.</li>
             <li>We verify the Ed25519 signature locally and unlock the dashboard.</li>
           </ol>
           <p class="text-xs text-muted/70 mt-4">
-            No Phantom? <a class="text-royal-bright hover:underline" href="https://phantom.app/" target="_blank" rel="noopener noreferrer">Install the wallet</a>.
+            We never request wallet permissions or open a connect prompt. Your keys never leave your wallet.
           </p>
         </div>
       </div>
@@ -560,9 +604,14 @@
     'use strict';
 
     // -----------------------------------------------------------------------
-    // ZettaPay merchant dashboard — Phantom signature login + live data view.
+    // ZettaPay merchant dashboard — wallet-less offline signature login + live data view.
     // Runs as a static page; talks to Solana RPC (balance) + ZettaPay API
     // (payments / settlement) when the merchant supplies an API key.
+    //
+    // Auth: merchant pastes their pubkey, copies a challenge message, signs it
+    // offline in whatever wallet they prefer (Phantom, Solflare, hardware, mobile),
+    // then pastes the signature back. We verify Ed25519 locally — no connect
+    // prompt, no dependency on an injected window provider.
     // -----------------------------------------------------------------------
 
     const RPC_URL = 'https://api.devnet.solana.com';
@@ -609,26 +658,59 @@
     }
 
     // -----------------------------------------------------------------------
-    // Phantom signature login
+    // Wallet-less offline signature login
     // -----------------------------------------------------------------------
 
-    function getProvider() {
-      const p = window.solana || (window.phantom && window.phantom.solana);
-      if (p && p.isPhantom) return p;
-      return null;
+    const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    let pendingChallenge = null; // { pubkey, message, encoded, nonceHex, issuedAt }
+
+    function decodeBase58(s) {
+      const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+      const map = {};
+      for (let i = 0; i < alphabet.length; i++) map[alphabet.charAt(i)] = i;
+      const bytes = [0];
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charAt(i);
+        if (!(c in map)) throw new Error('Invalid base58 character: ' + c);
+        let carry = map[c];
+        for (let j = 0; j < bytes.length; j++) {
+          carry += bytes[j] * 58;
+          bytes[j] = carry & 0xff;
+          carry >>= 8;
+        }
+        while (carry > 0) { bytes.push(carry & 0xff); carry >>= 8; }
+      }
+      for (let i = 0; i < s.length && s.charAt(i) === '1'; i++) bytes.push(0);
+      return new Uint8Array(bytes.reverse());
     }
 
-    async function connectPhantom() {
-      const provider = getProvider();
-      if (!provider) {
-        const w = window.open('https://phantom.app/', '_blank', 'noopener');
-        if (!w) toast('Install Phantom to continue.', 'error');
-        throw new Error('Phantom wallet not detected');
+    function decodeSignature(raw) {
+      const s = String(raw || '').trim();
+      if (!s) throw new Error('Signature is empty');
+      const hex = s.replace(/^0x/i, '').replace(/\s+/g, '');
+      if (/^[0-9a-fA-F]+$/.test(hex) && hex.length % 2 === 0) {
+        const out = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i * 2, 2), 16);
+        if (out.length === 64) return out;
       }
+      const b64 = s.replace(/^base64=/i, '').replace(/\s+/g, '');
+      if (/^[A-Za-z0-9+/=_-]+$/.test(b64)) {
+        try {
+          const norm = b64.replace(/-/g, '+').replace(/_/g, '/');
+          const bin = atob(norm);
+          const out = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+          if (out.length === 64) return out;
+        } catch (_e) { /* fall through */ }
+      }
+      try {
+        const out = decodeBase58(s);
+        if (out.length === 64) return out;
+      } catch (_e) { /* fall through */ }
+      throw new Error('Signature must be 64 bytes (hex, base64, or base58)');
+    }
 
-      const resp = await provider.connect();
-      const pubkey = resp.publicKey.toString();
-
+    function buildChallenge(pubkey) {
       const nonce = crypto.getRandomValues(new Uint8Array(16));
       const nonceHex = Array.from(nonce).map((b) => b.toString(16).padStart(2, '0')).join('');
       const issuedAt = new Date().toISOString();
@@ -639,31 +721,26 @@
         'Issued at: ' + issuedAt + '\n' +
         'Domain: ' + window.location.host + '\n' +
         'Network: solana-devnet';
+      return { pubkey, message, encoded: new TextEncoder().encode(message), nonceHex, issuedAt };
+    }
 
-      const encoded = new TextEncoder().encode(message);
-      const signed = await provider.signMessage(encoded, 'utf8');
-      const signature = signed.signature || signed; // Phantom returns {signature, publicKey}
-
-      const verified = verifyEd25519(signature, encoded, resp.publicKey.toBytes());
-      if (!verified) throw new Error('Signature verification failed');
-
+    function verifyOfflineSignature(signature, pubkey) {
+      if (!pendingChallenge || pendingChallenge.pubkey !== pubkey) {
+        throw new Error('Build the challenge first');
+      }
+      const pubkeyBytes = decodeBase58(pubkey);
+      if (pubkeyBytes.length !== 32) throw new Error('Invalid Solana address length');
+      const ok = window.nacl.sign.detached.verify(pendingChallenge.encoded, signature, pubkeyBytes);
+      if (!ok) throw new Error('Signature does not match this wallet + challenge');
       const session = {
         pubkey,
-        nonce: nonceHex,
-        issuedAt,
+        nonce: pendingChallenge.nonceHex,
+        issuedAt: pendingChallenge.issuedAt,
         signatureHex: Array.from(signature).map((b) => b.toString(16).padStart(2, '0')).join(''),
       };
       sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      pendingChallenge = null;
       return session;
-    }
-
-    function verifyEd25519(signature, message, pubkey) {
-      try {
-        return window.nacl.sign.detached.verify(message, signature, pubkey);
-      } catch (err) {
-        console.warn('verify failed', err);
-        return false;
-      }
     }
 
     function loadSession() {
@@ -1535,30 +1612,85 @@
       ]);
     }
 
-    function attach() {
-      $('connect-btn').addEventListener('click', async () => {
-        const btn = $('connect-btn');
-        const label = $('connect-label');
-        const errEl = $('connect-error');
+    function showLoginError(message) {
+      const errEl = $('connect-error');
+      if (!message) {
+        errEl.textContent = '';
         errEl.classList.add('hidden-init');
-        btn.disabled = true;
-        label.textContent = 'Waiting for Phantom…';
+        return;
+      }
+      errEl.textContent = message;
+      errEl.classList.remove('hidden-init');
+    }
+
+    function showLoginStep(step) {
+      if (step === 2) {
+        $('login-step-1').classList.add('hidden-init');
+        $('login-step-2').classList.remove('hidden-init');
+      } else {
+        $('login-step-1').classList.remove('hidden-init');
+        $('login-step-2').classList.add('hidden-init');
+        pendingChallenge = null;
+      }
+    }
+
+    function attach() {
+      $('login-build').addEventListener('click', () => {
+        showLoginError(null);
+        const raw = ($('login-wallet').value || '').trim();
+        if (!SOLANA_ADDRESS_RE.test(raw)) {
+          showLoginError('Paste a valid Solana address (32–44 base58 chars).');
+          return;
+        }
+        pendingChallenge = buildChallenge(raw);
+        $('login-challenge').textContent = pendingChallenge.message;
+        $('login-signature').value = '';
+        showLoginStep(2);
+      });
+
+      $('login-copy-msg').addEventListener('click', async () => {
+        if (!pendingChallenge) return;
         try {
-          const session = await connectPhantom();
+          await navigator.clipboard.writeText(pendingChallenge.message);
+          toast('Message copied — sign it in your wallet', 'ok');
+        } catch {
+          toast('Copy failed — select the message manually', 'error');
+        }
+      });
+
+      $('login-restart').addEventListener('click', () => {
+        showLoginError(null);
+        $('login-signature').value = '';
+        showLoginStep(1);
+      });
+
+      $('login-verify').addEventListener('click', async () => {
+        const btn = $('login-verify');
+        showLoginError(null);
+        if (!pendingChallenge) {
+          showLoginError('Build the challenge first.');
+          showLoginStep(1);
+          return;
+        }
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = 'Verifying…';
+        try {
+          const sigBytes = decodeSignature($('login-signature').value);
+          const session = verifyOfflineSignature(sigBytes, pendingChallenge.pubkey);
+          showLoginStep(1);
           await showDashboard(session);
         } catch (err) {
-          errEl.textContent = err.message || 'Failed to sign in';
-          errEl.classList.remove('hidden-init');
+          showLoginError((err && err.message) || 'Verification failed');
         } finally {
           btn.disabled = false;
-          label.textContent = 'Connect Phantom';
+          btn.textContent = original;
         }
       });
 
       $('disconnect-btn').addEventListener('click', () => {
         clearSession();
-        const provider = getProvider();
-        if (provider && provider.disconnect) provider.disconnect().catch(() => {});
+        showLoginStep(1);
         location.reload();
       });
 
