@@ -31,6 +31,11 @@ pub const BTC_HEADER_CHAIN_TAG: u8 = 4;
 /// One account program-wide; updates are gated on the authority's
 /// signature so the cap is operator-only.
 pub const PROGRAM_CONFIG_TAG: u8 = 5;
+/// Ethereum receipt-verifier payment proof (Z26.4). Mirrors Z26.3's
+/// `SpvProofBtc` tag — a distinct first byte keeps the verifier
+/// instruction handlers from ever deserializing the wrong proof type
+/// even if the account-data layout happened to share a prefix.
+pub const SPV_PROOF_ETH_TAG: u8 = 6;
 
 // Currency tags. Premise 2 keeps V1 USDC-only; the tag byte exists so Z11
 // can add stablecoins without an account-layout migration.
@@ -53,9 +58,18 @@ pub const INVOICE_STATUS_SWEPT: u8 = 1;
 /// rail is different — there is no USDC transfer to follow, and
 /// downstream indexers route disputes through the BTC chain instead.
 pub const INVOICE_STATUS_PAID_BTC: u8 = 2;
+/// Invoice was settled by a finalised Ethereum receipt proof (Z26.4).
+/// Distinct from `PAID_BTC` because the dispute path differs: ETH
+/// settlement disputes resolve through the Ethereum receipts trie, BTC
+/// through Bitcoin's SPV proof. Off-chain indexers fan out on this byte.
+pub const INVOICE_STATUS_PAID_ETH: u8 = 3;
 
 /// SPV proof account lifecycle. Each step is a separate transaction so
-/// the per-instruction CU budget stays under Solana's 200k chunk.
+/// the per-instruction CU budget stays under Solana's 200k chunk. The
+/// same status alphabet is shared by both Bitcoin (Z26.3) and Ethereum
+/// (Z26.4) proof accounts — keeping them unified means off-chain
+/// dashboards can render a single SPV-lifecycle pipeline regardless of
+/// the settlement chain.
 pub const SPV_STATUS_PART1_DONE: u8 = 0;
 pub const SPV_STATUS_PART2_DONE: u8 = 1;
 pub const SPV_STATUS_FINALIZED: u8 = 2;
@@ -159,6 +173,86 @@ impl SpvProofBtc {
         + 32                      // txid
         + 32                      // merkle_root
         + 32                      // block_hash
+        + 1                       // status
+        + 8                       // created_at
+        + 8;                      // finalized_at
+}
+
+/// Ethereum receipt-verifier payment proof PDA. Z26.4 — settles a USDC
+/// invoice with a USDC ERC-20 Transfer that landed on Ethereum (or any
+/// EVM chain mirroring mainnet conventions). Seeds: see
+/// [`crate::pda::find_spv_proof_eth_pda`].
+///
+/// The account is initialised in `submit_eth_receipt_part_1` with the
+/// parsed Transfer fields + merkle inclusion result, updated in
+/// `submit_eth_receipt_part_2` with the validated block-header signature,
+/// and finalised in `finalize_eth_payment` where it flips the matching
+/// `Invoice` to `INVOICE_STATUS_PAID_ETH`.
+///
+/// `submitter` binds part 2 and finalisation back to the part-1 signer
+/// the same way Z26.3's `SpvProofBtc` does — closing the door on a third
+/// party hijacking an in-flight proof.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq, Eq)]
+pub struct SpvProofEth {
+    pub tag: u8,
+    pub bump: u8,
+    /// Invoice this proof settles. Bound at part_1; the PDA seeds
+    /// already pin the relationship — storing it lets finalize verify
+    /// without re-deriving.
+    pub invoice: Pubkey,
+    /// Wallet that funded the proof account and signed part_1.
+    pub submitter: Pubkey,
+    /// USDC ERC-20 contract address the Transfer was emitted from.
+    /// Pinned at part_1 so finalize cannot be replayed against a
+    /// different token.
+    pub token: [u8; 20],
+    /// Transfer `from` (payer) address — first indexed parameter of the
+    /// ERC-20 Transfer event.
+    pub from_addr: [u8; 20],
+    /// Transfer `to` (merchant) address — second indexed parameter.
+    pub to_addr: [u8; 20],
+    /// Transfer `value` in USDC base units (6 decimals). Narrowed from
+    /// the on-chain uint256 to u64 — see `transfer_log_canonical_hash`
+    /// for the rationale.
+    pub amount: u64,
+    /// `keccak256` over the canonical Transfer-log commitment. Lets the
+    /// off-chain indexer reconstruct the log identity from the raw RLP
+    /// without re-running the parser.
+    pub log_hash: [u8; 32],
+    /// Receipts merkle root computed from part_1's merkle inclusion fold.
+    /// Compared byte-for-byte against the supplied block header's
+    /// receipts_root field in part_2.
+    pub receipts_root: [u8; 32],
+    /// Block hash committed in part_2 (`keccak256` of the full RLP-
+    /// encoded header). Stays `[0u8; 32]` until part_2 runs.
+    pub block_hash: [u8; 32],
+    /// Address recovered from the part_2 block-header secp256k1
+    /// signature. Stays `[0u8; 20]` until part_2 runs. V1 records the
+    /// signer without enforcing an authority allowlist — operator
+    /// runbooks fan out on this address to alarm on unexpected sealers
+    /// (and a future Z26.x authority-registry would enforce it on chain).
+    pub block_signer: [u8; 20],
+    /// One of `SPV_STATUS_PART1_DONE | SPV_STATUS_PART2_DONE |
+    /// SPV_STATUS_FINALIZED`. Shared alphabet with `SpvProofBtc`.
+    pub status: u8,
+    pub created_at: i64,
+    /// 0 until `finalize_eth_payment` flips it.
+    pub finalized_at: i64,
+}
+
+impl SpvProofEth {
+    pub const SIZE: usize = 1     // tag
+        + 1                       // bump
+        + 32                      // invoice
+        + 32                      // submitter
+        + 20                      // token
+        + 20                      // from_addr
+        + 20                      // to_addr
+        + 8                       // amount
+        + 32                      // log_hash
+        + 32                      // receipts_root
+        + 32                      // block_hash
+        + 20                      // block_signer
         + 1                       // status
         + 8                       // created_at
         + 8;                      // finalized_at
@@ -407,6 +501,44 @@ mod tests {
         let bytes = proof.try_to_vec().unwrap();
         assert_eq!(bytes.len(), SpvProofBtc::SIZE);
         let decoded = SpvProofBtc::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded, proof);
+    }
+
+    #[test]
+    fn spv_proof_eth_size_within_pda_max() {
+        assert!(SpvProofEth::SIZE < 10_240);
+    }
+
+    #[test]
+    fn spv_proof_eth_size_matches_field_layout() {
+        assert_eq!(
+            SpvProofEth::SIZE,
+            1 + 1 + 32 + 32 + 20 + 20 + 20 + 8 + 32 + 32 + 32 + 20 + 1 + 8 + 8
+        );
+    }
+
+    #[test]
+    fn spv_proof_eth_roundtrip_via_borsh() {
+        let proof = SpvProofEth {
+            tag: SPV_PROOF_ETH_TAG,
+            bump: 250,
+            invoice: Pubkey::new_from_array([2u8; 32]),
+            submitter: Pubkey::new_from_array([3u8; 32]),
+            token: [0x11u8; 20],
+            from_addr: [0x22u8; 20],
+            to_addr: [0x33u8; 20],
+            amount: 1_000_000,
+            log_hash: [0x44u8; 32],
+            receipts_root: [0x55u8; 32],
+            block_hash: [0x66u8; 32],
+            block_signer: [0x77u8; 20],
+            status: SPV_STATUS_PART2_DONE,
+            created_at: 1_700_000_010,
+            finalized_at: 0,
+        };
+        let bytes = proof.try_to_vec().unwrap();
+        assert_eq!(bytes.len(), SpvProofEth::SIZE);
+        let decoded = SpvProofEth::try_from_slice(&bytes).unwrap();
         assert_eq!(decoded, proof);
     }
 

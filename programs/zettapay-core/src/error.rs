@@ -98,6 +98,31 @@ pub enum ZpError {
     AuthorityMismatch,
     #[error("Invoice amount exceeds the per-invoice cap")]
     InvoiceAmountExceedsCap,
+    // --- Z26.4: Ethereum receipt verifier --------------------------
+    // Variants appended at the bottom only. Reordering shifts every
+    // downstream Custom(u32) code and breaks the wire contract.
+    #[error("ETH SPV proof PDA does not match seeds")]
+    EthSpvProofPdaMismatch,
+    #[error("ETH SPV proof account already initialised")]
+    EthSpvAlreadyInitialized,
+    #[error("ETH SPV proof is not in the expected status")]
+    EthSpvWrongStatus,
+    #[error("ETH SPV proof does not belong to this invoice")]
+    EthSpvInvoiceMismatch,
+    #[error("ETH SPV proof submitter does not match original")]
+    EthSpvSubmitterMismatch,
+    #[error("ETH token address must be non-zero")]
+    EthTokenAddressZero,
+    #[error("ETH Transfer amount must be greater than zero")]
+    EthTransferAmountZero,
+    #[error("ETH merkle proof path exceeds maximum depth")]
+    EthMerkleProofTooLong,
+    #[error("ETH block header receipts_root does not match computed root")]
+    EthReceiptsRootMismatch,
+    #[error("ETH block header is malformed (offset out of range)")]
+    EthBlockHeaderInvalid,
+    #[error("ETH block header secp256k1 signature recovery failed")]
+    EthSignatureRecoveryFailed,
 }
 
 impl From<ZpError> for ProgramError {
@@ -139,5 +164,8 @@ mod tests {
         // and last.
         assert_eq!(ZpError::ProgramConfigPdaMismatch as u32, 33);
         assert_eq!(ZpError::InvoiceAmountExceedsCap as u32, 38);
+        // Z26.4 appended block — pin the first ETH SPV variant and last.
+        assert_eq!(ZpError::EthSpvProofPdaMismatch as u32, 39);
+        assert_eq!(ZpError::EthSignatureRecoveryFailed as u32, 49);
     }
 }
