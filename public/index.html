@@ -333,12 +333,12 @@ POST /pay
             <svg class="w-6 h-6 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           </div>
           <h3 class="text-2xl font-bold mb-3 text-royal-bright">Humans</h3>
-          <p class="text-muted mb-6 leading-relaxed text-sm">Phantom wallet binding. Seamless UX. Card &rarr; USDC via MoonPay onramp built-in. No crypto knowledge required.</p>
-          <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment">// Connect Phantom &amp; pay USDC</span>
-<span class="code-keyword">const</span> <span class="code-fn">{ tx }</span> = <span class="code-keyword">await</span> zettapay.<span class="code-fn">pay</span>({
+          <p class="text-muted mb-6 leading-relaxed text-sm">Scan a QR or paste an address — no wallet connect, no extension required. Card &rarr; USDC via MoonPay onramp built-in. No crypto knowledge required.</p>
+          <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment">// Wallet-less checkout: QR + address</span>
+<span class="code-keyword">const</span> <span class="code-fn">{ checkoutUrl }</span> = <span class="code-keyword">await</span> zettapay.<span class="code-fn">invoices</span>.<span class="code-fn">create</span>({
   merchant: <span class="code-string">"@store"</span>,
   amount: <span class="code-num">42.00</span>,
-  source: <span class="code-string">"phantom"</span>
+  currency: <span class="code-string">"USDC"</span>
 });</code></pre>
         </div>
 

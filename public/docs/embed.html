@@ -328,7 +328,7 @@
           <nav class="flex flex-col gap-1" id="toc">
             <a href="#overview" class="toc-link active">Overview</a>
             <a href="#step-1" class="toc-link">1 · Visit /signup</a>
-            <a href="#step-2" class="toc-link">2 · Connect Phantom</a>
+            <a href="#step-2" class="toc-link">2 · Paste your address</a>
             <a href="#step-3" class="toc-link">3 · Copy embed code</a>
             <a href="#step-4" class="toc-link">4 · Paste in &lt;head&gt;</a>
             <a href="#step-5" class="toc-link">5 · Receive USDC</a>
@@ -353,7 +353,7 @@
             Install a <span class="gradient-text">Pay USDC</span> button in five minutes.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            Sign up, connect Phantom, copy one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag,
+            Sign up, paste your Solana address, copy one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag,
             paste it in your site's <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the
             entire integration. Settlement is sub-second, fees are 0.30%, no servers required.
           </p>
@@ -371,9 +371,9 @@
           <p class="text-muted leading-relaxed mb-4">
             The <code class="text-mint font-mono text-sm">@zettapay/widget</code> bundle is a self-mounting
             <code class="text-mint font-mono text-sm">&lt;script&gt;</code> that renders a Pay button anywhere
-            you drop the tag. Click → modal opens → payer scans a QR or taps the Phantom deeplink → USDC
-            lands in your wallet. The widget handles the wallet adapter, the QR, the polling, and the
-            success UI. You handle <em>nothing</em>.
+            you drop the tag. Click → modal opens → payer scans a Solana Pay QR or copies the merchant
+            address into their own wallet → USDC lands in your wallet. The widget never asks to connect a
+            wallet; it just renders the QR and watches the chain. You handle <em>nothing</em>.
           </p>
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
             <div class="glass rounded-xl p-4">
@@ -450,13 +450,14 @@
         <section id="step-2" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
-            <h2 class="text-2xl font-bold">Connect Phantom</h2>
+            <h2 class="text-2xl font-bold">Paste your Solana address</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Click <span class="kbd">Connect Phantom</span>. The extension prompts you to approve a single
-            transaction — a memo-program write that <strong class="text-white">binds your wallet to your
-            merchant handle on-chain, immutably</strong>. From this moment forward, every USDC payment
-            addressed to <code class="text-mint font-mono text-sm">@yourshop</code> lands in this wallet.
+            Copy the public address of <em>any</em> Solana wallet you control — Phantom, Solflare, a hardware
+            wallet, or even an exchange withdrawal address — and paste it into the form.
+            <strong class="text-white">ZettaPay never asks to connect.</strong> Your handle
+            <code class="text-mint font-mono text-sm">@yourshop</code> is bound to this address; every USDC
+            payment to it lands directly in that wallet, with zero custody on our side.
           </p>
 
           <figure class="screenshot mb-4">
@@ -464,9 +465,9 @@
               <span class="dot" style="background:#ff5f56"></span>
               <span class="dot" style="background:#ffbd2e"></span>
               <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">phantom.app · approve transaction</span>
+              <span class="screenshot-url">zettapay.io/signup · paste address</span>
             </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Phantom wallet approval prompt">
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay signup — paste Solana address">
               <defs>
                 <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0" stop-color="#0a0a0a"/>
