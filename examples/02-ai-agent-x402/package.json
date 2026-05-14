@@ -1,0 +1,15 @@
+{
+  "name": "zettapay-example-ai-agent-x402",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node agent.mjs",
+    "server": "node paywalled-server.mjs"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0",
+    "@solana/spl-token": "^0.4.8",
+    "express": "^4.19.0"
+  }
+}

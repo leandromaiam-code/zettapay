@@ -1,0 +1,13 @@
+{
+  "name": "zettapay-example-node-sdk-cli",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": { "zpay": "./cli.mjs" },
+  "scripts": {
+    "start": "node cli.mjs"
+  },
+  "dependencies": {
+    "@zettapay/sdk": "^2.0.0"
+  }
+}

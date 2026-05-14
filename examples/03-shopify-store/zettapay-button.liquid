@@ -1,0 +1,31 @@
+{% comment %}
+  ZettaPay drop-in checkout snippet for Shopify product pages.
+  Usage: {% render 'zettapay-button', product: product %}
+  Wallet-less: shows QR + address — no connect, no extension.
+{% endcomment %}
+
+<div
+  id="zettapay-checkout"
+  data-merchant-id="{{ settings.zettapay_merchant_id }}"
+  data-amount="{{ product.selected_or_first_available_variant.price | money_without_currency }}"
+  data-currency="USD"
+  data-reference="shopify-{{ product.id }}-{{ 'now' | date: '%s' }}"
+></div>
+
+<script src="https://cdn.zettapay.dev/embed.js" defer></script>
+<script>
+  document.addEventListener("zettapay:settled", function (event) {
+    fetch("/cart/update.js", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        attributes: {
+          zettapay_intent_id: event.detail.intentId,
+          zettapay_signature: event.detail.signature,
+        },
+      }),
+    }).then(function () {
+      window.location.href = "/checkout";
+    });
+  });
+</script>
