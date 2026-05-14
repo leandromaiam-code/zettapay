@@ -1,0 +1,124 @@
+---
+title: "Z28.1 — Internal devnet beta runbook"
+description: "Five friend merchants × 100 invoices × USDC devnet — execution, sweep + webhook validation, bug capture."
+---
+
+## Purpose
+
+Z28.1 is the first end-to-end beta of the ZettaPay protocol against a live
+Solana devnet program deployment, using five friend merchants (not synthetic
+fixtures). It validates: merchant registration via SDK, real on-chain USDC
+transfers, the per-merchant sweep flow, and webhook delivery. Bugs discovered
+here feed both the Immunefi bug-bounty triage (Z28.2) and the audit prep for
+Z28.3 / Z21.
+
+The mission is intentionally manual-effort: a script automates the on-chain
+phases so the operator can focus on observing failure modes that synthetic
+tests miss (timing, retries, real wallet UX with the friend cohort).
+
+## Pre-flight checklist
+
+Before running anything, confirm the following on the operator's machine
+(Leandro's laptop or a CI box with the deployer keypair):
+
+1. **Devnet program deployed** — `scripts/deploy-devnet.sh` succeeded
+   recently. Export `ZETTAPAY_PROGRAM_ID` to the deployed pubkey (default
+   placeholder will fail Phase 0).
+2. **Deployer keypair funded** — at least 5 SOL on devnet at
+   `~/.config/solana/id.json`. The script will airdrop 1 SOL if low, but
+   only once per run and faucets rate-limit. Top up via
+   <https://faucet.solana.com> if needed.
+3. **API + indexer reachable** — only required if you want the webhook
+   phase to run. Otherwise it's skipped (non-fatal).
+4. **Five friend names captured** — collect first names or codewords for
+   the cohort. They will appear in the JSON report and bug filings.
+
+## Running the on-chain beta
+
+The single command:
+
+```sh
+ZETTAPAY_PROGRAM_ID=<devnet-program-id> \
+BETA_MERCHANT_NAMES="amanda,bruno,clara,diego,eva" \
+BETA_REPORT_PATH=./reports/beta-z28-1-$(date +%Y%m%d).json \
+npm run beta:devnet:z28-1
+```
+
+What it does, in order:
+
+| Phase | Action | Expected tx count |
+|------|--------|-------------------|
+| 0    | Setup, deployer airdrop check, fresh mint | 1 (mint create) |
+| 1    | `RegisterMerchant` × 5 friend merchants | 5 |
+| 2    | `CreateInvoice` × 20 per merchant (varied amounts $0.50–$500) | 100 |
+| 3    | USDC mint to customer ATA + `transferChecked` per invoice | 101 |
+| 4    | `Sweep` batched 5 invoices per tx, per merchant | 20 |
+| 5    | Read-only on-chain validation (no tx) | 0 |
+| 6    | (optional) `GET /webhooks/events` against the API surface | 0 |
+
+Total: ~127 transactions, ≈ 8–15 minutes against a healthy devnet RPC.
+
+The report file at `BETA_REPORT_PATH` is the canonical artifact. Open it,
+attach it to the cohort retro doc, and reference it in bug filings.
+
+## Including the API + webhook surface
+
+To run Phase 6 (webhook delivery check), the API server must be reachable
+and have at least one merchant API key:
+
+```sh
+BETA_API_URL=https://api-devnet.zettapay.dev \
+BETA_API_KEY=zpk_devnet_xxx \
+npm run beta:devnet:z28-1
+```
+
+If `BETA_API_URL` is unset, Phase 6 is skipped and the report records a
+`skipped` phase row — that's expected for pure on-chain dry runs.
+
+If the API responds but returns zero webhook events, the runner files an
+auto-bug in the report (high severity) so the indexer wiring gap doesn't
+get lost.
+
+## What to record (cohort interviews)
+
+For each of the five friends, after their session, capture:
+
+- Time-to-first-payment (wall clock from "here's the QR" to first tx confirmed)
+- Wallet they used (Phantom / Solflare / hardware / mobile)
+- Failed attempts before success, and the error message verbatim
+- One sentence: would they pay a real customer through this today? Why not?
+
+Drop the raw notes into the report's `bugs[]` array as `severity: "low"`
+entries when they describe UX friction, `medium`/`high` when they describe
+funds-stuck or wrong-amount.
+
+## Severity rubric
+
+- **critical** — funds misrouted, double-sweep, or merchant unable to
+  recover. Page Leandro immediately; do not continue the cohort.
+- **high** — webhook drop or signature verification gap that would lose
+  a real merchant a reconciliation cycle.
+- **medium** — invoice stuck pending past expected TTL, UI message that
+  misleads. Surfaces in the cohort retro but doesn't block the sprint.
+- **low** — UX friction, copy bugs, missing affordances. Roll up into
+  Z32 wallet-less polish backlog.
+
+## After the run
+
+1. Commit the JSON report under `reports/` (gitignored by default; copy
+   the *anonymized* version into the Z28 sprint folder).
+2. For every `critical` / `high` bug, open a follow-up mission ticket
+   tagged `z28.1-followup`.
+3. For every `medium` UX bug, append to the Z32 wallet-less polish
+   backlog.
+4. Update the Immunefi submission package (Z28.2) with the new
+   surface-area observations.
+
+## Premise alignment
+
+This runbook + the runner script honor Layer 0 of `CLAUDE.md`:
+
+- **Premise 1 + 2** — Solana V1, USDC V1. The runner hardcodes `CHAIN_SOLANA` and `CURRENCY_USDC`.
+- **Premise 14 (no custody)** — funds land in per-invoice PDA-owned ATAs, not a vault.
+- **Premise 22 (free tier 100 tx/month)** — the cohort size is sized at the free-tier ceiling so the beta also stress-tests the rate-limit boundary.
+- **Wallet-less hard rule** — the customer keypair is generated locally and signs offline; no `wallet.connect()` anywhere in the runner.
