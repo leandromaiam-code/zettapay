@@ -21,6 +21,7 @@
     "audit:static-rust": "bash scripts/static-analysis-rust.sh",
     "smoke:devnet": "tsx scripts/smoke-devnet.ts",
     "beta:devnet:z28-1": "tsx scripts/beta-devnet-z28-1.ts",
+    "stress:devnet:z28-4": "tsx scripts/stress-devnet-z28-4.ts",
     "beta:mainnet:onboard": "tsx scripts/beta-mainnet-z30-2-onboard.ts",
     "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts"
   },

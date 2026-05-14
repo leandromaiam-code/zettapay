@@ -1,0 +1,183 @@
+---
+title: "Z28.4 — Devnet stress test runbook"
+description: "Drive 1000 invoices and 1000 USDC payments against the devnet program. Measure TPS, latency, and per-instruction compute-unit usage."
+---
+
+## Purpose
+
+Z28.4 is the load-side counterpart to the Z28.1 friend-merchant beta. Where
+Z28.1 validates **correctness** at human scale (5 merchants × 20 invoices),
+Z28.4 validates **throughput, tail latency, and on-chain compute headroom**
+at protocol scale (10 merchants × 100 invoices = 1000 invoices, 1000
+payments). The output is a single JSON report that answers four operational
+questions before mainnet:
+
+1. **What is our actual end-to-end TPS** for invoice creation, payment
+   confirmation, and sweeping against a real RPC?
+2. **What is the p95 / p99 latency** per phase, and where does it spike?
+3. **How much of the 200k Solana compute-unit budget** does each program
+   instruction consume in steady state?
+4. **What bottleneck do we hit first** — RPC rate limits, blockhash
+   expiry, customer-ATA contention, or compute pressure?
+
+The script is intentionally non-destructive (fresh keypairs, fresh test
+mint per run) so it can be re-run repeatedly without touching merchant
+state captured during Z28.1.
+
+## Pre-flight checklist
+
+1. **Devnet program deployed** — `scripts/deploy-devnet.sh` succeeded
+   recently. Export `ZETTAPAY_PROGRAM_ID` to the deployed pubkey
+   (the placeholder default will fail Phase 0).
+2. **Deployer keypair funded** — at least **8 SOL** on devnet at
+   `~/.config/solana/id.json`. The script will airdrop 1 SOL once if
+   low, but devnet faucets rate-limit; top up via
+   <https://faucet.solana.com> if a 1000-invoice run is planned.
+3. **RPC headroom** — the default `api.devnet.solana.com` will throttle
+   under sustained 25-in-flight load. For clean numbers, point
+   `SOLANA_RPC_URL` at a paid devnet RPC (Helius, QuickNode) and note
+   which provider produced the report.
+4. **Disk** — the JSON report is ~50–100 KB; not a concern, but commit
+   the *anonymized* version (no payer pubkey is sensitive on devnet) to
+   the Z28 sprint folder for trend tracking across runs.
+
+## Running the stress test
+
+The single command:
+
+```sh
+ZETTAPAY_PROGRAM_ID=<devnet-program-id> \
+SOLANA_RPC_URL=https://devnet.helius-rpc.com/?api-key=... \
+STRESS_REPORT_PATH=./reports/stress-z28-4-$(date +%Y%m%d-%H%M).json \
+npm run stress:devnet:z28-4
+```
+
+What it does, in order:
+
+| Phase | Action | Expected tx count |
+|------|--------|-------------------|
+| 0    | Load deployer, fund, generate keypairs, fresh mint | 1 (mint create) |
+| 1    | `RegisterMerchant` × 10 (sequential)               | 10 |
+| 2    | `CreateInvoice` × 1000 (concurrent, round-robin)   | 1000 |
+| 3    | Customer ATA setup + `mintTo` × 10                 | 20 (setup) |
+| 4    | `createATA` + `transferChecked` × 1000 (concurrent) | 1000 |
+| 5    | `Sweep` batched 5 indexes/tx, parallel per merchant | ~200 |
+| 6    | `getTransaction` sample for CU readout             | ~120 reads |
+
+A clean run on a paid devnet RPC takes ~15–25 minutes. The default
+public devnet endpoint usually completes Phases 1–5 successfully but
+records `rate_limit:Phase 4` in `bottlenecks[]` and inflated p99
+latency on Phase 4 — that's the expected baseline against the free
+endpoint.
+
+## Tunables
+
+All knobs are env vars; defaults are calibrated for a clean 1000-invoice
+run on paid devnet RPC.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `STRESS_INVOICE_COUNT`    | `1000` | Total invoices. Must be divisible by `STRESS_MERCHANT_COUNT`. |
+| `STRESS_MERCHANT_COUNT`   | `10`   | Merchant fan-out. Higher = more parallel customer-ATA streams in Phase 4. |
+| `STRESS_CONCURRENCY`      | `25`   | Max in-flight transactions across all phases. Drop to 5–10 on the public devnet RPC to avoid 429s. |
+| `STRESS_SWEEP_BATCH`      | `5`    | Invoice indexes per Sweep tx. Conservative under the 1232-byte tx limit. |
+| `STRESS_CU_SAMPLE_RATE`   | `10`   | Phase 6 fetches `getTransaction` for every Nth confirmed sig. Lower = more CU samples per instruction, more RPC load. |
+| `STRESS_REPORT_PATH`      | `./stress-z28-4-report.json` | Output JSON artifact. |
+| `STRESS_USDC_MINT`        | (fresh) | Reuse an existing test mint instead of creating one. |
+| `STRESS_SKIP_AIRDROP`     | `0`    | Set to `1` in CI environments where the airdrop fallback would mask under-funded keypairs. |
+
+To smoke the script in <5 minutes (bug-fix loop), drop `STRESS_INVOICE_COUNT`
+to `100` and `STRESS_MERCHANT_COUNT` to `5`.
+
+## Reading the report
+
+The JSON artifact has three sections worth reading in order:
+
+### `phases[]`
+
+One row per phase. The fields that matter most:
+
+- `tps` — successful txs per second over the whole phase wall-clock.
+  Treat the **Phase 4 (payments)** number as the protocol's user-facing
+  throughput; Phase 2 is dominated by merchant-PDA write contention and
+  sets a lower floor.
+- `latencyMs.p95` / `p99` — confirmation latency per tx. Spikes above
+  30 s (the default `sendAndConfirmTransaction` timeout) are recorded
+  as failures.
+- `failedCount` — non-zero values feed `bottlenecks[]` automatically.
+- `errorSamples[]` — first five distinct error strings; usually enough
+  to classify the failure mode (rate limit vs blockhash expiry vs
+  insufficient funds).
+
+### `cuByInstruction[]`
+
+One row per instruction kind:
+
+- `RegisterMerchant`
+- `CreateInvoice`
+- `transferChecked+createATAIdempotent` (the bundled payment tx)
+- `Sweep`
+
+Each row reports `cuMin`, `cuP50`, `cuP95`, `cuMax`, `cuAvg`, and
+`budgetHeadroomPctP95`. The headroom number is the percentage of the
+default 200k compute-unit budget left after a p95 invocation — a useful
+signal for whether the program is anywhere near needing
+`requestUnitsIx`. Headroom under 10 % auto-flags
+`compute_budget_pressure:<ix>` in `bottlenecks[]`.
+
+### `bottlenecks[]`
+
+Plain-string tags. The runner emits these patterns:
+
+| Tag | Meaning |
+|-----|---------|
+| `phase_failed:<name>`               | Every tx in the phase failed. |
+| `tx_failures:<name>:M/N (X.X%)`     | Some txs failed. |
+| `low_tps:<name>:<n>/s`              | Phase confirmed > 50 txs but TPS < 1; likely RPC-bound. |
+| `slow_confirm:<name>:p95=<ms>`      | p95 above 30 s — confirmation timeouts. |
+| `rate_limit:<name>`                 | Error samples contain 429 / "rate" / "too many". |
+| `blockhash_expiry:<name>`           | Error samples mention `blockhash` / `expired`. |
+| `compute_budget_pressure:<ix>:p95=<cu>/200000` | CU p95 above 90 % of budget. |
+| `none_observed`                     | Clean run — file the report as a baseline. |
+
+If `bottlenecks` includes anything other than `none_observed`, open a
+follow-up ticket tagged `z28.4-followup` with the report attached and
+the affected phase + tag in the title.
+
+## Triage cheatsheet
+
+- **`rate_limit:Phase 4` only** — switch RPC provider; not a protocol
+  bug. Re-run with paid RPC before drawing conclusions about TPS.
+- **`compute_budget_pressure:Sweep`** — Sweep CU scales with batch
+  size. Reduce `STRESS_SWEEP_BATCH` or split into two txs. If the
+  problem is intrinsic (single-invoice sweep > 180k CU), file a
+  Z28.4-followup against the program.
+- **`tx_failures:Phase 2:M/N` with `blockhash_expiry`** — concurrency
+  is too high for the RPC; the leader is rejecting expired blockhashes
+  faster than the pool can refresh. Lower `STRESS_CONCURRENCY`.
+- **`low_tps:Phase 4` without `rate_limit`** — customer-ATA contention.
+  Raise `STRESS_MERCHANT_COUNT` to spread payments across more customer
+  ATAs.
+
+## After the run
+
+1. Commit the JSON report under the Z28 sprint folder (gitignored from
+   the repo root by convention; copy into the sprint folder).
+2. For every non-`none_observed` bottleneck tag, open a `z28.4-followup`
+   mission ticket referencing the report path and the specific tag.
+3. Append the run row (RPC provider, invoice count, Phase 4 TPS, Phase
+   4 p95 latency, p95 CU per ix) to the rolling Z28.4 trend table so
+   we can spot regressions across program revisions.
+
+## Premise alignment
+
+This runbook + the runner script honor Layer 0 of `CLAUDE.md`:
+
+- **Premise 1 + 2** — Solana V1, USDC V1. The runner hardcodes `CHAIN_SOLANA` and `CURRENCY_USDC`.
+- **Premise 14 (no custody)** — every payment lands in a per-invoice
+  PDA-owned ATA; the script never moves funds into a vault.
+- **Premise 26 (PR per mission)** — this script + runbook are the closing
+  deliverable for Z28.4.
+- **Wallet-less hard rule** — every customer is a raw `Keypair` signing
+  locally. There is no wallet adapter, no `connect()`, no `window.solana`
+  reference anywhere in the runner.
