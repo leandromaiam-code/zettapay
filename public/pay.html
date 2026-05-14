@@ -4,9 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pagar com USDC — ZettaPay</title>
+<meta name="description" content="Pague em USDC na Solana a partir de qualquer carteira. Sem instalar extensão, sem conectar wallet." />
+<meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 :root { color-scheme: dark; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,18 +29,13 @@ body {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 24px;
-  padding: 40px 32px;
-  max-width: 440px;
+  padding: 36px 28px;
+  max-width: 460px;
   width: 100%;
   backdrop-filter: blur(20px);
   box-shadow: 0 24px 80px rgba(0,0,0,0.4);
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
-}
+.brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
 .logo {
   width: 36px; height: 36px;
   background: #4F6BFF;
@@ -47,48 +45,76 @@ body {
 }
 .brand-name { font-weight: 700; font-size: 18px; }
 .label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 6px; }
-.amount { font-size: 56px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+.amount { font-size: 48px; font-weight: 800; line-height: 1; margin-bottom: 6px; letter-spacing: -0.03em; }
 .amount-suffix { font-size: 18px; color: #888; font-weight: 500; }
-.row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 14px; }
+.row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 13px; }
 .row:last-of-type { border-bottom: none; }
 .row .k { color: #888; }
 .row .v { color: #fff; font-weight: 500; font-family: ui-monospace, monospace; }
+.qr-wrap { background: #fff; padding: 12px; border-radius: 14px; margin: 18px auto 14px; max-width: 240px; }
+.qr-wrap img, .qr-wrap canvas { display: block; width: 100%; height: auto; }
+.address-display {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  word-break: break-all;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(79,107,255,0.2);
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin: 10px 0;
+  transition: background 0.4s, border-color 0.4s;
+}
+.address-display.copied { background: rgba(20,241,149,0.14); border-color: rgba(20,241,149,0.45); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
-  width: 100%;
-  margin-top: 28px;
-  padding: 16px;
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 14px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #4F6BFF, #6B85FF);
+  background: rgba(79,107,255,0.1);
+  border: 1px solid rgba(79,107,255,0.35);
   color: #fff;
-  border: none;
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 600;
+  font-size: 13px;
   font-family: inherit;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   transition: all 0.2s;
+}
+.btn:hover { background: rgba(79,107,255,0.18); border-color: rgba(79,107,255,0.6); }
+.btn-primary {
+  background: linear-gradient(135deg, #4F6BFF, #6B85FF);
+  border-color: transparent;
   box-shadow: 0 8px 24px rgba(79,107,255,0.35);
 }
-.btn:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(79,107,255,0.45); }
-.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-.status { margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 13px; font-family: ui-monospace, monospace; display: none; word-break: break-all; }
-.status.show { display: block; }
-.status.info { background: rgba(79,107,255,0.12); color: #aab6ff; }
-.status.success { background: rgba(20,241,149,0.12); color: #14F195; }
-.status.error { background: rgba(244,67,54,0.12); color: #ff7c7c; }
-.status a { color: inherit; text-decoration: underline; }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(79,107,255,0.45); }
+.status {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(79,107,255,0.12);
+  color: #aab6ff;
+}
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: #14F195; animation: pulse 1.4s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
 .foot { text-align: center; margin-top: 22px; font-size: 11px; color: #555; }
 .foot a { color: #4F6BFF; text-decoration: none; }
-.error-card { text-align: center; padding: 60px 20px; }
+.error-card { text-align: center; padding: 50px 20px; }
 .error-card h2 { margin-bottom: 12px; }
 .error-card p { color: #888; }
+.helper { font-size: 12px; color: #888; line-height: 1.5; margin-top: 10px; }
 </style>
 </head>
 <body>
 <div class="card">
-<div id="loading" class="error-card">
-<p>Carregando...</p>
-</div>
+<div id="loading" class="error-card"><p>Carregando…</p></div>
+
 <div id="checkout" style="display:none">
 <div class="brand">
 <div class="logo">Z</div>
@@ -96,213 +122,153 @@ body {
 </div>
 <div class="label" id="label-text">Pagamento</div>
 <div class="amount"><span id="amount">0</span> <span class="amount-suffix">USDC</span></div>
-<div style="margin: 28px 0 8px;">
+
+<div style="margin: 22px 0 4px;">
 <div class="row"><span class="k">Para</span><span class="v" id="merchant-display">—</span></div>
 <div class="row"><span class="k">Rede</span><span class="v">Solana Devnet</span></div>
 <div class="row"><span class="k">Taxa</span><span class="v" id="fee">— USDC</span></div>
 <div class="row"><span class="k">Settlement</span><span class="v" style="color:#14F195">~2s</span></div>
 </div>
-<button id="payBtn" class="btn">⚡ Conectar Phantom &amp; Pagar</button>
-<div id="status" class="status"></div>
-<div class="foot">Powered by <a href="/">ZettaPay</a> · 0,30% fee</div>
+
+<div id="walletless-block" style="display:none">
+  <div class="qr-wrap"><img id="qr-img" alt="Solana Pay QR" /></div>
+  <div class="label">Endereço de destino</div>
+  <div id="address-display" class="address-display">—</div>
+  <div class="btn-row">
+    <button id="copy-btn" type="button" class="btn">Copiar endereço</button>
+    <a id="solana-link" class="btn btn-primary" href="#">Abrir na wallet</a>
+  </div>
+  <div class="status"><span class="dot"></span><span>Aguardando pagamento on-chain</span></div>
+  <p class="helper">Escaneie o QR ou cole o endereço em qualquer wallet Solana (Phantom, Solflare, hardware wallet, exchange) e envie <span id="amount-hint">0</span> USDC. Não pedimos conexão — o merchant é notificado quando a transação aparecer na rede.</p>
 </div>
+
+<div class="foot">Powered by <a href="/">ZettaPay</a> · 0,30% fee · No-connect</div>
+</div>
+
 <div id="error-state" class="error-card" style="display:none">
 <h2>Pagamento inválido</h2>
 <p id="error-msg">Faltam parâmetros: merchant + amount</p>
 <a href="/" class="btn" style="margin-top:24px;text-decoration:none">Voltar pra home</a>
 </div>
 </div>
-<script type="module">
-import {
-  Connection,
-  PublicKey,
-  Transaction,
-} from 'https://esm.sh/@solana/web3.js@1.95.8';
-import {
-  getAssociatedTokenAddressSync,
-  createTransferCheckedInstruction,
-  createAssociatedTokenAccountInstruction,
-  TOKEN_PROGRAM_ID,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-} from 'https://esm.sh/@solana/spl-token@0.4.9?deps=@solana/web3.js@1.95.8';
 
-const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
-const USDC_DECIMALS = 6;
-const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+<script>
+'use strict';
 
-const qs = new URLSearchParams(location.search);
-const merchantRef = qs.get('merchant') || '';
-const amount = parseFloat(qs.get('amount') || '0');
-const label = qs.get('label') || 'Pagamento';
-const returnUrl = qs.get('return_url') || '';
-const rpcOverride = qs.get('rpc') || '';
+var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+var USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 
-if (!merchantRef || !amount || amount <= 0) {
+var qs = new URLSearchParams(location.search);
+var merchantRef = (qs.get('merchant') || '').trim();
+var amount = parseFloat(qs.get('amount') || '0');
+var label = qs.get('label') || 'Pagamento';
+var returnUrl = qs.get('return_url') || '';
+
+if (!merchantRef || !isFinite(amount) || amount <= 0) {
   document.getElementById('loading').style.display = 'none';
   document.getElementById('error-state').style.display = 'block';
 } else {
   bootCheckout();
 }
 
-function bootCheckout() {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('checkout').style.display = 'block';
-  document.getElementById('label-text').textContent = label;
-  document.getElementById('amount').textContent = amount.toFixed(2);
-  document.getElementById('merchant-display').textContent =
-    merchantRef.length > 20 ? merchantRef.slice(0, 8) + '…' + merchantRef.slice(-6) : merchantRef;
-  document.getElementById('fee').textContent = (amount * 0.003).toFixed(3) + ' USDC';
-  document.getElementById('payBtn').addEventListener('click', handlePay);
+function shortAddr(s) {
+  if (typeof s !== 'string' || s.length < 16) return s || '';
+  return s.slice(0, 8) + '…' + s.slice(-6);
 }
 
-function setStatus(msg, kind) {
-  const s = document.getElementById('status');
-  s.className = 'status show ' + (kind || 'info');
-  if (typeof msg === 'string') s.textContent = msg;
-  else { s.textContent = ''; s.appendChild(msg); }
-}
-
-function explorerLink(signature) {
-  const a = document.createElement('a');
-  a.href = 'https://explorer.solana.com/tx/' + signature + '?cluster=devnet';
-  a.target = '_blank';
-  a.rel = 'noopener';
-  a.textContent = signature.slice(0, 12) + '…' + signature.slice(-8);
-  return a;
-}
-
-function isMobile() {
-  return /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-}
-
-function getPhantom() {
-  const p = (window.phantom && window.phantom.solana) || window.solana;
-  return (p && p.isPhantom) ? p : null;
+function formatAmount(n) {
+  if (Number.isInteger(n)) return String(n);
+  return Number(n).toFixed(Math.min(6, (String(n).split('.')[1] || '').length || 2));
 }
 
 async function resolveMerchantWallet(ref) {
-  if (SOLANA_ADDRESS_RE.test(ref)) return new PublicKey(ref);
-  const r = await fetch('/api/simulate/' + encodeURIComponent(ref) + '?amount=' + amount);
-  if (!r.ok) throw new Error('Merchant lookup failed (' + r.status + ')');
-  const data = await r.json();
-  const wallet = data && data.merchant && data.merchant.walletAddress;
-  if (!wallet || !SOLANA_ADDRESS_RE.test(wallet)) throw new Error('Merchant has no wallet on file');
-  return new PublicKey(wallet);
-}
-
-function classifyError(err) {
-  const msg = (err && err.message) ? String(err.message) : String(err || '');
-  const code = err && (err.code || err.error?.code);
-  if (code === 4001 || /user reject|rejected|denied|cancel/i.test(msg)) {
-    return 'Pagamento cancelado na carteira.';
-  }
-  if (/insufficient.*fund|0x1|TokenAccountInsufficientFunds|custom program error: 0x1/i.test(msg)) {
-    return 'Saldo USDC insuficiente. Use /faucet pra receber USDC devnet.';
-  }
-  if (/blockhash|expired/i.test(msg)) {
-    return 'Blockhash expirou. Tente novamente.';
-  }
-  if (/timeout|timed out/i.test(msg)) {
-    return 'RPC timeout. Tente novamente em alguns segundos.';
-  }
-  if (/fetch|network/i.test(msg)) {
-    return 'Erro de rede. Verifique sua conexão.';
-  }
-  return msg || 'Falha ao processar pagamento.';
-}
-
-async function handlePay() {
-  const btn = document.getElementById('payBtn');
-  const provider = getPhantom();
-
-  if (!provider && isMobile()) {
-    setStatus('Abrindo Phantom...', 'info');
-    const ref = encodeURIComponent(location.origin);
-    location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(location.href) + '?ref=' + ref;
-    return;
-  }
-  if (!provider) {
-    setStatus('Phantom não detectado. Instale em phantom.app', 'error');
-    window.open('https://phantom.app/download', '_blank');
-    return;
-  }
-
-  btn.disabled = true;
-
+  if (SOLANA_ADDRESS_RE.test(ref)) return ref;
   try {
-    setStatus('Conectando Phantom...', 'info');
-    const resp = await provider.connect();
-    const payerPubkey = new PublicKey(resp.publicKey.toString());
-
-    setStatus('Buscando merchant...', 'info');
-    const merchantWallet = await resolveMerchantWallet(merchantRef);
-
-    setStatus('Montando transação...', 'info');
-    const rpcUrl = rpcOverride || 'https://api.devnet.solana.com';
-    const connection = new Connection(rpcUrl, 'confirmed');
-
-    const payerAta = getAssociatedTokenAddressSync(USDC_MINT, payerPubkey, false);
-    const merchantAta = getAssociatedTokenAddressSync(USDC_MINT, merchantWallet, true)  // allowOwnerOffCurve: merchant ATA may be a PDA;
-
-    const [payerInfo, merchantInfo, latest] = await Promise.all([
-      connection.getAccountInfo(payerAta),
-      connection.getAccountInfo(merchantAta),
-      connection.getLatestBlockhash('confirmed'),
-    ]);
-
-    const tx = new Transaction({
-      feePayer: payerPubkey,
-      recentBlockhash: latest.blockhash,
-    });
-
-    if (!payerInfo) {
-      tx.add(createAssociatedTokenAccountInstruction(
-        payerPubkey, payerAta, payerPubkey, USDC_MINT,
-        TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID,
-      ));
-    }
-    if (!merchantInfo) {
-      tx.add(createAssociatedTokenAccountInstruction(
-        payerPubkey, merchantAta, merchantWallet, USDC_MINT,
-        TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID,
-      ));
-    }
-
-    const microAmount = BigInt(Math.round(amount * Math.pow(10, USDC_DECIMALS)));
-    tx.add(createTransferCheckedInstruction(
-      payerAta, USDC_MINT, merchantAta, payerPubkey,
-      microAmount, USDC_DECIMALS, [], TOKEN_PROGRAM_ID,
-    ));
-
-    setStatus('Confirme no Phantom...', 'info');
-    const { signature } = await provider.signAndSendTransaction(tx);
-
-    setStatus('Enviando à rede...', 'info');
-    const confirmation = await connection.confirmTransaction({
-      signature,
-      blockhash: latest.blockhash,
-      lastValidBlockHeight: latest.lastValidBlockHeight,
-    }, 'confirmed');
-
-    if (confirmation.value && confirmation.value.err) {
-      throw new Error('Transação rejeitada on-chain: ' + JSON.stringify(confirmation.value.err));
-    }
-
-    const wrap = document.createElement('span');
-    wrap.appendChild(document.createTextNode('✓ Pago! Tx: '));
-    wrap.appendChild(explorerLink(signature));
-    setStatus(wrap, 'success');
-
-    if (returnUrl) {
-      setTimeout(function () {
-        const sep = returnUrl.includes('?') ? '&' : '?';
-        location.href = returnUrl + sep + 'tx=' + encodeURIComponent(signature);
-      }, 3000);
-    }
-  } catch (err) {
-    setStatus(classifyError(err), 'error');
-    btn.disabled = false;
+    var r = await fetch('/api/simulate/' + encodeURIComponent(ref) + '?amount=' + amount);
+    if (!r.ok) return null;
+    var data = await r.json();
+    var wallet = data && data.merchant && data.merchant.walletAddress;
+    return SOLANA_ADDRESS_RE.test(wallet || '') ? wallet : null;
+  } catch (_e) {
+    return null;
   }
+}
+
+function buildSolanaPayUri(merchantWallet) {
+  var params = new URLSearchParams();
+  params.set('amount', formatAmount(amount));
+  params.set('spl-token', USDC_MINT_DEVNET);
+  params.set('label', 'ZettaPay');
+  params.set('message', label);
+  if (returnUrl) params.set('reference', returnUrl);
+  return 'solana:' + merchantWallet + '?' + params.toString();
+}
+
+function renderQr(uri) {
+  if (typeof window.QRCode === 'undefined') return;
+  window.QRCode.toDataURL(
+    uri,
+    { width: 480, margin: 1, color: { dark: '#0A0A0A', light: '#FFFFFF' } },
+    function (err, dataUrl) {
+      if (err || !dataUrl) return;
+      document.getElementById('qr-img').src = dataUrl;
+    }
+  );
+}
+
+function copyAddress(addr) {
+  var el = document.getElementById('address-display');
+  var done = function () {
+    el.classList.add('copied');
+    setTimeout(function () { el.classList.remove('copied'); }, 1200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(addr).then(done, function () { fallback(addr); done(); });
+  } else { fallback(addr); done(); }
+}
+
+function fallback(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (_e) { /* ignore */ }
+  document.body.removeChild(ta);
+}
+
+async function bootCheckout() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('checkout').style.display = 'block';
+  document.getElementById('label-text').textContent = label;
+  document.getElementById('amount').textContent = formatAmount(amount);
+  document.getElementById('amount-hint').textContent = formatAmount(amount);
+  document.getElementById('merchant-display').textContent =
+    merchantRef.length > 20 ? shortAddr(merchantRef) : merchantRef;
+  document.getElementById('fee').textContent = (amount * 0.003).toFixed(3) + ' USDC';
+
+  var wallet = await resolveMerchantWallet(merchantRef);
+  if (!wallet) {
+    document.getElementById('checkout').style.display = 'none';
+    document.getElementById('error-state').style.display = 'block';
+    document.getElementById('error-msg').textContent =
+      'Não encontramos a wallet do merchant. Verifique o ID/handle e tente novamente.';
+    return;
+  }
+
+  document.getElementById('address-display').textContent = wallet;
+  document.getElementById('merchant-display').textContent = shortAddr(wallet);
+  document.getElementById('walletless-block').style.display = 'block';
+
+  var uri = buildSolanaPayUri(wallet);
+  document.getElementById('solana-link').href = uri;
+  renderQr(uri);
+
+  document.getElementById('copy-btn').addEventListener('click', function () {
+    copyAddress(wallet);
+  });
 }
 </script>
 </body>

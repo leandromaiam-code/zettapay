@@ -1,6 +1,11 @@
 /**
  * ZettaPay Embed Widget — drop-in <script> tag for any site
  *
+ * Wallet-less by design: opens a modal showing a Solana Pay QR code + the
+ * merchant USDC address. The customer pays from their wallet of choice
+ * (Phantom, Solflare, hardware wallet, mobile, exchange) — no extension,
+ * no connect, no signature prompt from this page.
+ *
  * Usage:
  *   <script src="https://zettapay.vercel.app/embed.js"
  *           data-merchant="m_xxx"
@@ -8,7 +13,7 @@
  *           data-amount="10"        (optional, USDC)
  *           data-currency="USDC"    (optional, default USDC)
  *           data-label="Pay 10 USDC"  (optional, button text)
- *           data-mount="#zettapay-button"  (optional, CSS selector to mount; default: inserts after <script>)
+ *           data-mount="#zettapay-button"  (optional, CSS selector; default: insert after <script>)
  *           defer></script>
  */
 (function () {
@@ -21,6 +26,10 @@
     } catch (e) {}
     return 'https://zettapay.vercel.app';
   })();
+
+  var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  var USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+  var QR_CDN = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
 
   function getScriptTag() {
     return document.currentScript || document.querySelector('script[src*="zettapay"][src$="embed.js"]');
@@ -52,22 +61,32 @@
       '.zettapay-btn .zp-z{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:#fff;color:#4F6BFF;border-radius:4px;font-weight:800;font-size:11px;letter-spacing:-1px;}',
       '.zettapay-modal{position:fixed;inset:0;z-index:2147483647;display:none;align-items:center;justify-content:center;background:rgba(10,15,30,.65);backdrop-filter:blur(8px);font-family:Inter,system-ui,sans-serif;}',
       '.zettapay-modal.open{display:flex;}',
-      '.zettapay-modal-inner{background:#fff;border-radius:20px;padding:32px;max-width:440px;width:90%;box-shadow:0 24px 80px rgba(0,0,0,.4);position:relative;}',
-      '.zettapay-modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:22px;color:#666;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;}',
+      '.zettapay-modal-inner{background:#fff;border-radius:20px;padding:28px;max-width:440px;width:92%;box-shadow:0 24px 80px rgba(0,0,0,.4);position:relative;}',
+      '.zettapay-modal-close{position:absolute;top:14px;right:14px;background:none;border:none;font-size:22px;color:#666;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;}',
       '.zettapay-modal-close:hover{background:#f3f4f6;}',
-      '.zettapay-modal h3{font-size:22px;font-weight:700;color:#0a0a0a;margin:0 0 4px;}',
-      '.zettapay-modal p{font-size:13px;color:#666;margin:0 0 20px;}',
-      '.zettapay-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;}',
+      '.zettapay-modal h3{font-size:20px;font-weight:700;color:#0a0a0a;margin:0 0 4px;}',
+      '.zettapay-modal p.zp-sub{font-size:13px;color:#666;margin:0 0 16px;}',
+      '.zettapay-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f3f4f6;font-size:13px;}',
       '.zettapay-row .label{color:#666;}',
       '.zettapay-row .value{color:#0a0a0a;font-weight:600;font-family:ui-monospace,monospace;}',
-      '.zettapay-pay-btn{width:100%;margin-top:20px;padding:14px;border-radius:12px;background:linear-gradient(135deg,#4F6BFF,#6B85FF);color:#fff;border:none;font-weight:600;font-size:15px;cursor:pointer;}',
-      '.zettapay-status{margin-top:16px;padding:12px;border-radius:10px;font-size:13px;font-family:ui-monospace,monospace;display:none;}',
-      '.zettapay-status.show{display:block;}',
-      '.zettapay-status.info{background:#eef2ff;color:#3730a3;}',
-      '.zettapay-status.success{background:#d1fae5;color:#065f46;}',
-      '.zettapay-status.error{background:#fee2e2;color:#991b1b;}',
+      '.zettapay-qr{display:flex;justify-content:center;margin:16px 0 12px;}',
+      '.zettapay-qr img{background:#fff;padding:8px;border-radius:12px;width:200px;height:200px;border:1px solid #e5e7eb;}',
+      '.zettapay-addr{background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:10px 12px;font-family:ui-monospace,monospace;font-size:11px;color:#0a0a0a;word-break:break-all;margin-bottom:10px;transition:background .4s,border-color .4s;}',
+      '.zettapay-addr.zp-copied{background:#d1fae5;border-color:#34d399;}',
+      '.zettapay-actions{display:flex;gap:8px;margin-bottom:10px;}',
+      '.zettapay-actions button,.zettapay-actions a{flex:1;padding:11px 12px;border-radius:10px;font-size:13px;font-weight:600;font-family:Inter,system-ui,sans-serif;text-align:center;text-decoration:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}',
+      '.zp-btn-secondary{background:#f3f4f6;color:#0a0a0a;border:1px solid #e5e7eb;}',
+      '.zp-btn-secondary:hover{background:#e5e7eb;}',
+      '.zp-btn-primary{background:linear-gradient(135deg,#4F6BFF,#6B85FF);color:#fff;border:none;}',
+      '.zp-btn-primary:hover{transform:translateY(-1px);}',
+      '.zettapay-status{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:12px;font-family:ui-monospace,monospace;display:flex;align-items:center;gap:8px;background:#eef2ff;color:#3730a3;}',
+      '.zettapay-status .zp-dot{width:7px;height:7px;border-radius:50%;background:#14F195;animation:zpPulse 1.4s infinite;}',
+      '@keyframes zpPulse{0%,100%{opacity:.4}50%{opacity:1}}',
+      '.zettapay-helper{font-size:11px;color:#888;margin-top:10px;line-height:1.5;}',
       '.zettapay-foot{margin-top:14px;text-align:center;font-size:11px;color:#999;}',
-      '.zettapay-foot a{color:#4F6BFF;text-decoration:none;}'
+      '.zettapay-foot a{color:#4F6BFF;text-decoration:none;}',
+      '.zettapay-error{margin-top:12px;padding:10px 12px;border-radius:10px;font-size:12px;background:#fee2e2;color:#991b1b;display:none;}',
+      '.zettapay-error.show{display:block;}'
     ].join('\n');
     var style = document.createElement('style');
     style.id = 'zettapay-embed-styles';
@@ -100,29 +119,37 @@
     el.innerHTML =
       '<div class="zettapay-modal-inner">' +
       '<button type="button" class="zettapay-modal-close" data-zp-close>×</button>' +
-      '<h3>Pay with ZettaPay</h3>' +
-      '<p>Solana USDC · Settles in seconds · 0.30% fee</p>' +
+      '<h3>Pay with Solana</h3>' +
+      '<p class="zp-sub">Scan or paste — no wallet connect required.</p>' +
       '<div class="zettapay-row"><span class="label">Merchant</span><span class="value" data-zp-merchant>' + escapeHTML(config.merchant) + '</span></div>' +
       (config.amount ? '<div class="zettapay-row"><span class="label">Amount</span><span class="value">' + escapeHTML(config.amount) + ' ' + escapeHTML(config.currency) + '</span></div>' : '') +
       '<div class="zettapay-row"><span class="label">Network</span><span class="value">Solana Devnet</span></div>' +
-      '<button type="button" class="zettapay-pay-btn" data-zp-pay>Connect Phantom &amp; Pay</button>' +
-      '<div class="zettapay-status" data-zp-status></div>' +
+      '<div class="zettapay-qr"><img alt="Solana Pay QR" data-zp-qr /></div>' +
+      '<div class="zettapay-addr" data-zp-addr>Loading merchant address…</div>' +
+      '<div class="zettapay-actions">' +
+      '<button type="button" class="zp-btn-secondary" data-zp-copy>Copy address</button>' +
+      '<a class="zp-btn-primary" data-zp-open href="#" target="_blank" rel="noopener">Open in wallet</a>' +
+      '</div>' +
+      '<div class="zettapay-status"><span class="zp-dot"></span><span>Awaiting payment on-chain</span></div>' +
+      '<p class="zettapay-helper">Open any Solana wallet (Phantom, Solflare, hardware wallet, mobile, exchange), scan the QR or paste the address, then send the amount. ZettaPay watches the chain — the merchant is notified on confirmation.</p>' +
+      '<div class="zettapay-error" data-zp-error></div>' +
       '<div class="zettapay-foot">Powered by <a href="' + BASE + '" target="_blank" rel="noopener">ZettaPay</a></div>' +
       '</div>';
     document.body.appendChild(el);
     el.addEventListener('click', function (e) {
       if (e.target === el || e.target.hasAttribute('data-zp-close')) closeModal();
     });
-    var payBtn = el.querySelector('[data-zp-pay]');
-    payBtn.addEventListener('click', function () { handlePay(config, el); });
+    var copyBtn = el.querySelector('[data-zp-copy]');
+    copyBtn.addEventListener('click', function () { handleCopy(el); });
     return el;
   }
 
   function openModal(config) {
     injectStyles();
     var modal = buildModal(config);
-    setStatus(modal, '', '');
     modal.classList.add('open');
+    showError(modal, '');
+    bootPayment(config, modal);
   }
 
   function closeModal() {
@@ -130,45 +157,27 @@
     if (modal) modal.classList.remove('open');
   }
 
-  function setStatus(modal, text, kind) {
-    var s = modal.querySelector('[data-zp-status]');
-    if (!s) return;
-    s.className = 'zettapay-status' + (kind ? ' ' + kind + ' show' : '');
-    s.textContent = text || '';
+  function showError(modal, text) {
+    var el = modal.querySelector('[data-zp-error]');
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.toggle('show', Boolean(text));
   }
 
-  function getPhantom() {
-    var p = (window.phantom && window.phantom.solana) || window.solana;
-    return (p && p.isPhantom) ? p : null;
-  }
-
-  function isMobile() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  }
-
-  var USDC_MINT_ADDR = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
-  var USDC_DECIMALS = 6;
-  var SOLANA_RPC = 'https://api.devnet.solana.com';
-  var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-  var WEB3_URL = 'https://esm.sh/@solana/web3.js@1.95.8';
-  var SPL_URL = 'https://esm.sh/@solana/spl-token@0.4.9?deps=@solana/web3.js@1.95.8';
-
-  var solanaLibs = null;
-  function loadSolanaLibs() {
-    if (solanaLibs) return solanaLibs;
-    solanaLibs = Promise.all([
-      import(/* @vite-ignore */ WEB3_URL),
-      import(/* @vite-ignore */ SPL_URL)
-    ]).then(function (mods) {
-      return { web3: mods[0], spl: mods[1] };
+  function loadQrcodeLib() {
+    if (window.QRCode) return Promise.resolve(window.QRCode);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = QR_CDN;
+      s.async = true;
+      s.onload = function () { resolve(window.QRCode); };
+      s.onerror = function () { reject(new Error('Failed to load QR library')); };
+      document.head.appendChild(s);
     });
-    return solanaLibs;
   }
 
-  function resolveMerchantWallet(libs, ref, amount) {
-    if (SOLANA_ADDRESS_RE.test(ref)) {
-      return Promise.resolve(new libs.web3.PublicKey(ref));
-    }
+  function resolveMerchantWallet(ref, amount) {
+    if (SOLANA_ADDRESS_RE.test(ref)) return Promise.resolve(ref);
     var url = BASE + '/api/simulate/' + encodeURIComponent(ref) + '?amount=' + (amount || 1);
     return fetch(url)
       .then(function (r) {
@@ -177,154 +186,97 @@
       })
       .then(function (data) {
         var wallet = data && data.merchant && data.merchant.walletAddress;
-        if (!wallet || !SOLANA_ADDRESS_RE.test(wallet)) throw new Error('Merchant has no wallet on file');
-        return new libs.web3.PublicKey(wallet);
+        if (!SOLANA_ADDRESS_RE.test(wallet || '')) {
+          throw new Error('Merchant has no wallet on file');
+        }
+        return wallet;
       });
   }
 
-  function classifyError(err) {
-    var msg = (err && err.message) ? String(err.message) : String(err || '');
-    var code = err && (err.code || (err.error && err.error.code));
-    if (code === 4001 || /user reject|rejected|denied|cancel/i.test(msg)) {
-      return 'Payment cancelled in wallet.';
-    }
-    if (/insufficient.*fund|0x1|TokenAccountInsufficientFunds|custom program error: 0x1/i.test(msg)) {
-      return 'Insufficient USDC balance on devnet.';
-    }
-    if (/blockhash|expired/i.test(msg)) return 'Blockhash expired. Try again.';
-    if (/timeout|timed out/i.test(msg)) return 'RPC timeout. Try again.';
-    if (/fetch|network/i.test(msg)) return 'Network error. Check your connection.';
-    return msg || 'Payment failed.';
+  function buildSolanaPayUri(merchantWallet, amount, label, reference) {
+    var params = new URLSearchParams();
+    if (amount) params.set('amount', String(amount));
+    params.set('spl-token', USDC_MINT_DEVNET);
+    params.set('label', 'ZettaPay');
+    if (label) params.set('message', label);
+    if (reference) params.set('reference', reference);
+    return 'solana:' + merchantWallet + '?' + params.toString();
   }
 
-  function showSuccess(modal, signature) {
-    var s = modal.querySelector('[data-zp-status]');
-    if (!s) return;
-    s.className = 'zettapay-status success show';
-    s.innerHTML = '';
-    s.appendChild(document.createTextNode('✓ Paid! Tx: '));
-    var a = document.createElement('a');
-    a.href = 'https://explorer.solana.com/tx/' + signature + '?cluster=devnet';
-    a.target = '_blank';
-    a.rel = 'noopener';
-    a.style.color = 'inherit';
-    a.style.textDecoration = 'underline';
-    a.textContent = signature.slice(0, 12) + '...' + signature.slice(-8);
-    s.appendChild(a);
+  function setQr(modal, dataUrl) {
+    var img = modal.querySelector('[data-zp-qr]');
+    if (img) img.src = dataUrl;
   }
 
-  function handlePay(config, modal) {
-    var btn = modal.querySelector('[data-zp-pay]');
-    var provider = getPhantom();
+  function setAddress(modal, addr) {
+    var el = modal.querySelector('[data-zp-addr]');
+    if (el) el.textContent = addr;
+  }
 
-    if (!provider && isMobile()) {
-      setStatus(modal, 'Opening Phantom app...', 'info');
-      var ref = encodeURIComponent(window.location.origin);
-      window.location.href = 'https://phantom.app/ul/browse/' + encodeURIComponent(window.location.href) + '?ref=' + ref;
-      return;
-    }
-    if (!provider) {
-      setStatus(modal, 'Phantom not installed. Get it at phantom.app', 'error');
-      window.open('https://phantom.app/download', '_blank', 'noopener');
-      return;
-    }
+  function setOpenLink(modal, uri) {
+    var a = modal.querySelector('[data-zp-open]');
+    if (a) a.setAttribute('href', uri);
+  }
 
+  function handleCopy(modal) {
+    var el = modal.querySelector('[data-zp-addr]');
+    var addr = el ? (el.textContent || '').trim() : '';
+    if (!SOLANA_ADDRESS_RE.test(addr)) return;
+    var flash = function () {
+      el.classList.add('zp-copied');
+      setTimeout(function () { el.classList.remove('zp-copied'); }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(addr).then(flash, function () { fallbackCopy(addr); flash(); });
+    } else {
+      fallbackCopy(addr); flash();
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (_e) { /* ignore */ }
+    document.body.removeChild(ta);
+  }
+
+  function bootPayment(config, modal) {
     var amount = parseFloat(config.amount || '0');
     if (!isFinite(amount) || amount <= 0) {
-      setStatus(modal, 'Invalid amount.', 'error');
+      showError(modal, 'Invalid amount on this checkout.');
       return;
     }
 
-    btn.disabled = true;
-    setStatus(modal, 'Loading Solana SDK...', 'info');
-
-    var ctx = {};
-
-    loadSolanaLibs()
-      .then(function (libs) {
-        ctx.libs = libs;
-        setStatus(modal, 'Connecting Phantom...', 'info');
-        return provider.connect();
+    resolveMerchantWallet(config.merchant, amount)
+      .then(function (wallet) {
+        setAddress(modal, wallet);
+        var uri = buildSolanaPayUri(wallet, amount, config.label, config.merchant);
+        setOpenLink(modal, uri);
+        return loadQrcodeLib().then(function (lib) {
+          return new Promise(function (resolve, reject) {
+            lib.toDataURL(uri, { width: 400, margin: 1, color: { dark: '#0A0A0A', light: '#FFFFFF' } }, function (err, dataUrl) {
+              if (err || !dataUrl) reject(err || new Error('QR render failed'));
+              else resolve(dataUrl);
+            });
+          });
+        });
       })
-      .then(function (resp) {
-        var addr = resp && resp.publicKey ? resp.publicKey.toString() : null;
-        if (!addr) throw new Error('No public key returned');
-        ctx.payerPubkey = new ctx.libs.web3.PublicKey(addr);
-        setStatus(modal, 'Resolving merchant...', 'info');
-        return resolveMerchantWallet(ctx.libs, config.merchant, amount);
-      })
-      .then(function (merchantWallet) {
-        ctx.merchantWallet = merchantWallet;
-        setStatus(modal, 'Building transaction...', 'info');
-        var web3 = ctx.libs.web3;
-        var spl = ctx.libs.spl;
-        ctx.mint = new web3.PublicKey(USDC_MINT_ADDR);
-        ctx.connection = new web3.Connection(SOLANA_RPC, 'confirmed');
-        ctx.payerAta = spl.getAssociatedTokenAddressSync(ctx.mint, ctx.payerPubkey, false);
-        ctx.merchantAta = spl.getAssociatedTokenAddressSync(ctx.mint, ctx.merchantWallet, false);
-        return Promise.all([
-          ctx.connection.getAccountInfo(ctx.payerAta),
-          ctx.connection.getAccountInfo(ctx.merchantAta),
-          ctx.connection.getLatestBlockhash('confirmed')
-        ]);
-      })
-      .then(function (results) {
-        var payerInfo = results[0];
-        var merchantInfo = results[1];
-        var latest = results[2];
-        ctx.latest = latest;
-        var web3 = ctx.libs.web3;
-        var spl = ctx.libs.spl;
-        var tx = new web3.Transaction({ feePayer: ctx.payerPubkey, recentBlockhash: latest.blockhash });
-        if (!payerInfo) {
-          tx.add(spl.createAssociatedTokenAccountInstruction(
-            ctx.payerPubkey, ctx.payerAta, ctx.payerPubkey, ctx.mint,
-            spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID
-          ));
-        }
-        if (!merchantInfo) {
-          tx.add(spl.createAssociatedTokenAccountInstruction(
-            ctx.payerPubkey, ctx.merchantAta, ctx.merchantWallet, ctx.mint,
-            spl.TOKEN_PROGRAM_ID, spl.ASSOCIATED_TOKEN_PROGRAM_ID
-          ));
-        }
-        var micro = BigInt(Math.round(amount * Math.pow(10, USDC_DECIMALS)));
-        tx.add(spl.createTransferCheckedInstruction(
-          ctx.payerAta, ctx.mint, ctx.merchantAta, ctx.payerPubkey,
-          micro, USDC_DECIMALS, [], spl.TOKEN_PROGRAM_ID
-        ));
-        setStatus(modal, 'Confirm in Phantom...', 'info');
-        return provider.signAndSendTransaction(tx);
-      })
-      .then(function (result) {
-        ctx.signature = result.signature;
-        setStatus(modal, 'Submitting to network...', 'info');
-        return ctx.connection.confirmTransaction({
-          signature: ctx.signature,
-          blockhash: ctx.latest.blockhash,
-          lastValidBlockHeight: ctx.latest.lastValidBlockHeight
-        }, 'confirmed');
-      })
-      .then(function (confirmation) {
-        if (confirmation && confirmation.value && confirmation.value.err) {
-          throw new Error('On-chain error: ' + JSON.stringify(confirmation.value.err));
-        }
-        showSuccess(modal, ctx.signature);
-        var payload = { signature: ctx.signature, merchant: config.merchant, amount: amount, network: 'solana-devnet' };
-        if (config.onSuccess && typeof window[config.onSuccess] === 'function') {
-          try { window[config.onSuccess](payload); } catch (e) {}
-        }
-        window.dispatchEvent(new CustomEvent('zettapay:success', { detail: payload }));
-        setTimeout(closeModal, 4000);
+      .then(function (dataUrl) {
+        setQr(modal, dataUrl);
+        window.dispatchEvent(new CustomEvent('zettapay:ready', { detail: { merchant: config.merchant, amount: amount } }));
       })
       .catch(function (err) {
-        setStatus(modal, classifyError(err), 'error');
+        showError(modal, (err && err.message) ? err.message : 'Unable to prepare payment.');
         if (config.onCancel && typeof window[config.onCancel] === 'function') {
-          try { window[config.onCancel](err); } catch (e) {}
+          try { window[config.onCancel](err); } catch (_e) {}
         }
         window.dispatchEvent(new CustomEvent('zettapay:error', { detail: err }));
-      })
-      .then(function () { btn.disabled = false; });
+      });
   }
 
   function init() {
@@ -343,7 +295,6 @@
       }
       console.warn('[ZettaPay] mount target not found:', config.mount);
     }
-    // Default: insert button right after the <script> tag
     var s = config.script;
     if (s && s.parentNode) {
       s.parentNode.insertBefore(btn, s.nextSibling);
