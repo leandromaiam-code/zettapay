@@ -26,6 +26,11 @@ pub const SPV_PROOF_BTC_TAG: u8 = 3;
 /// continuity on every update. SPV proofs (Z26.3) and any future cross-
 /// chain settlement logic anchor their block-hash references here.
 pub const BTC_HEADER_CHAIN_TAG: u8 = 4;
+/// Singleton global program config (Z30.1). Holds the protocol authority
+/// pubkey and the per-invoice USDC cap enforced inside `create_invoice`.
+/// One account program-wide; updates are gated on the authority's
+/// signature so the cap is operator-only.
+pub const PROGRAM_CONFIG_TAG: u8 = 5;
 
 // Currency tags. Premise 2 keeps V1 USDC-only; the tag byte exists so Z11
 // can add stablecoins without an account-layout migration.
@@ -243,6 +248,59 @@ impl BitcoinHeaderChain {
         + BTC_HEADER_CHAIN_BUFFER_LEN; // headers ring buffer
 }
 
+// --- Z30.1: Program config (per-invoice cap) ------------------------------
+//
+// Beta mainnet launches with a $100 cap per invoice. The cap is enforced
+// inside `create_invoice` and adjusted by `set_max_invoice_amount`,
+// callable only by the authority recorded at `init_program_config` time
+// (the deploy operator). Sprint Z30 graduates the cap upward — $100 at
+// D+0, $500 at D+30 (Z30.4), removed at D+60 (Z30.5) — so the value is
+// kept on-chain rather than hard-coded into the bytecode.
+//
+// "Deploy authority" semantics: the deployment runbook calls
+// `init_program_config` in the same operator session that runs
+// `solana program deploy`, binding the captured authority to the same
+// key that holds the BPF Loader Upgradeable upgrade authority. From that
+// point on, only that key can call `set_max_invoice_amount`.
+//
+// A sentinel value of `0` means "no cap" — used at D+60 to disable
+// enforcement without re-deploying. See `process_create_invoice` for the
+// comparison logic.
+
+/// Default per-invoice cap at config init time: 100 USDC in base units
+/// (6 decimals). Matches the Z30 sprint goal: low cap at launch, raised
+/// gradually as the protocol clocks bug-free hours.
+pub const DEFAULT_MAX_INVOICE_AMOUNT: u64 = 100 * 1_000_000;
+
+/// Sentinel value that disables cap enforcement (Z30.5 D+60 removal).
+/// When `ProgramConfig.max_invoice_amount == 0`, `create_invoice` skips
+/// the cap comparison entirely.
+pub const MAX_INVOICE_AMOUNT_UNLIMITED: u64 = 0;
+
+/// Singleton global program config PDA. Seeds: see
+/// [`crate::pda::find_program_config_pda`].
+///
+/// `authority` is bound at `init_program_config` time to the signer that
+/// ran the initial deployment script; afterward, only that key can call
+/// `set_max_invoice_amount`. There is no on-chain transfer of the
+/// authority field in V1 — rotation would land as a separate instruction.
+#[derive(BorshSerialize, BorshDeserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ProgramConfig {
+    pub tag: u8,
+    pub bump: u8,
+    pub authority: Pubkey,
+    /// Per-invoice USDC cap in base units (6 decimals). `0` disables
+    /// enforcement (see `MAX_INVOICE_AMOUNT_UNLIMITED`).
+    pub max_invoice_amount: u64,
+}
+
+impl ProgramConfig {
+    pub const SIZE: usize = 1  // tag
+        + 1                    // bump
+        + 32                   // authority
+        + 8;                   // max_invoice_amount
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -387,6 +445,33 @@ mod tests {
         assert_eq!(bytes.len(), BitcoinHeaderChain::SIZE);
         let decoded = BitcoinHeaderChain::try_from_slice(&bytes).unwrap();
         assert_eq!(decoded, chain);
+    }
+
+    #[test]
+    fn program_config_size_matches_field_layout() {
+        assert_eq!(ProgramConfig::SIZE, 1 + 1 + 32 + 8);
+    }
+
+    #[test]
+    fn program_config_roundtrip_via_borsh() {
+        let cfg = ProgramConfig {
+            tag: PROGRAM_CONFIG_TAG,
+            bump: 252,
+            authority: Pubkey::new_from_array([19u8; 32]),
+            max_invoice_amount: DEFAULT_MAX_INVOICE_AMOUNT,
+        };
+        let bytes = cfg.try_to_vec().unwrap();
+        assert_eq!(bytes.len(), ProgramConfig::SIZE);
+        let decoded = ProgramConfig::try_from_slice(&bytes).unwrap();
+        assert_eq!(decoded, cfg);
+    }
+
+    #[test]
+    fn default_max_invoice_amount_is_100_usdc() {
+        // Sprint Z30 launch cap. If this changes, the off-chain
+        // orchestrator (`packages/api/src/beta/cap_upgrade.ts`) needs to
+        // be re-aligned — keep the constant pinned.
+        assert_eq!(DEFAULT_MAX_INVOICE_AMOUNT, 100_000_000);
     }
 
     #[test]

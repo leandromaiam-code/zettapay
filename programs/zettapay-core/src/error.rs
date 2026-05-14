@@ -83,6 +83,21 @@ pub enum ZpError {
     HeaderChainDiscontinuous,
     #[error("Bitcoin header chain account is corrupted (bad buffer length)")]
     HeaderChainCorrupted,
+    // --- Z30.1: per-invoice cap + program config --------------------
+    // Variants appended at the bottom only. Reordering shifts every
+    // downstream Custom(u32) code and breaks the wire contract.
+    #[error("Program config PDA does not match seeds")]
+    ProgramConfigPdaMismatch,
+    #[error("Program config account already initialised")]
+    ProgramConfigAlreadyInitialized,
+    #[error("Program config account is not initialised")]
+    ProgramConfigNotInitialized,
+    #[error("Account is not a Program Config")]
+    NotProgramConfigAccount,
+    #[error("Signer is not the program config authority")]
+    AuthorityMismatch,
+    #[error("Invoice amount exceeds the per-invoice cap")]
+    InvoiceAmountExceedsCap,
 }
 
 impl From<ZpError> for ProgramError {
@@ -120,5 +135,9 @@ mod tests {
         // and last.
         assert_eq!(ZpError::HeaderChainPdaMismatch as u32, 28);
         assert_eq!(ZpError::HeaderChainCorrupted as u32, 32);
+        // Z30.1 appended block — pin the first program-config variant
+        // and last.
+        assert_eq!(ZpError::ProgramConfigPdaMismatch as u32, 33);
+        assert_eq!(ZpError::InvoiceAmountExceedsCap as u32, 38);
     }
 }
