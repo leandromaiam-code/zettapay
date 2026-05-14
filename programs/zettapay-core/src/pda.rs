@@ -24,6 +24,14 @@ pub const MERCHANT_SEED: &[u8] = b"merchant";
 /// invoice seeds — the prefix cannot be the first 8 bytes of any pubkey.
 pub const SPV_PROOF_BTC_SEED: &[u8] = b"spv-btc";
 
+/// Seed prefix for the Ethereum receipt-verifier proof PDA (Z26.4).
+/// Distinct ASCII bytes ensure no collision with the BTC SPV proof PDA
+/// or any other prefix — one ETH proof account per invoice, derived
+/// independently of the BTC seed scheme so the same invoice can in
+/// principle carry both proof types without one address shadowing the
+/// other.
+pub const SPV_PROOF_ETH_SEED: &[u8] = b"spv-eth";
+
 /// Seed prefix for the singleton Bitcoin header chain PDA (Z26.5). One
 /// account program-wide, no per-key suffix — the address is fully
 /// determined by `(program_id, BTC_HEADER_CHAIN_SEED)`.
@@ -72,6 +80,17 @@ pub fn find_invoice_pda(
 pub fn find_spv_proof_btc_pda(invoice: &Pubkey, program_id: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(
         &[SPV_PROOF_BTC_SEED, invoice.as_ref()],
+        program_id,
+    )
+}
+
+/// Derive the Ethereum receipt-verifier proof PDA for an invoice (Z26.4).
+/// Same one-account-per-invoice constraint as the BTC SPV proof — a
+/// second part_1 against the same invoice would error on "already in
+/// use" from the System Program inside `create_account`.
+pub fn find_spv_proof_eth_pda(invoice: &Pubkey, program_id: &Pubkey) -> (Pubkey, u8) {
+    Pubkey::find_program_address(
+        &[SPV_PROOF_ETH_SEED, invoice.as_ref()],
         program_id,
     )
 }
@@ -204,6 +223,31 @@ mod tests {
         let (invoice_pda, _) = find_invoice_pda(&inv, 0, &program_id);
         assert_ne!(spv_pda, merchant_pda);
         assert_ne!(spv_pda, invoice_pda);
+    }
+
+    #[test]
+    fn spv_proof_eth_pda_is_deterministic_and_invoice_specific() {
+        let program_id = fixed_program_id();
+        let inv1 = Pubkey::new_from_array([31u8; 32]);
+        let inv2 = Pubkey::new_from_array([32u8; 32]);
+        let (a1, bump1) = find_spv_proof_eth_pda(&inv1, &program_id);
+        let (a2, bump2) = find_spv_proof_eth_pda(&inv1, &program_id);
+        let (b, _) = find_spv_proof_eth_pda(&inv2, &program_id);
+        assert_eq!(a1, a2);
+        assert_eq!(bump1, bump2);
+        assert_ne!(a1, b);
+    }
+
+    #[test]
+    fn spv_proof_eth_seed_does_not_shadow_btc_proof_for_same_invoice() {
+        // Same invoice key, different prefix bytes → different PDAs.
+        // A bug that reused the BTC seed for the ETH PDA would let
+        // either chain's finalize close the other's open proof.
+        let program_id = fixed_program_id();
+        let inv = Pubkey::new_from_array([41u8; 32]);
+        let (btc_pda, _) = find_spv_proof_btc_pda(&inv, &program_id);
+        let (eth_pda, _) = find_spv_proof_eth_pda(&inv, &program_id);
+        assert_ne!(btc_pda, eth_pda);
     }
 
     #[test]

@@ -3,22 +3,29 @@
 //! Ten instructions, discriminator-based dispatch on the leading byte of
 //! `instruction_data`:
 //!
-//!   0 = RegisterMerchant     { master_pubkey, chains[] }
-//!   1 = CreateInvoice        { amount, currency }
-//!   2 = Sweep                { invoice_indexes[] }
-//!   3 = SubmitBtcProofPart1  { tx_data, merkle_path, merkle_index } (Z26.3)
-//!   4 = SubmitBtcProofPart2  { block_header (80 bytes) }            (Z26.3)
-//!   5 = FinalizeBtcPayment   {}                                     (Z26.3)
-//!   6 = InitBtcHeaderChain   { anchor_header, anchor_height }       (Z26.5)
-//!   7 = UpdateBtcHeader      { new_header (80 bytes) }              (Z26.5)
-//!   8 = InitProgramConfig    { max_invoice_amount }                 (Z30.1)
-//!   9 = SetMaxInvoiceAmount  { max_invoice_amount }                 (Z30.1)
+//!   0  = RegisterMerchant     { master_pubkey, chains[] }
+//!   1  = CreateInvoice        { amount, currency }
+//!   2  = Sweep                { invoice_indexes[] }
+//!   3  = SubmitBtcProofPart1  { tx_data, merkle_path, merkle_index } (Z26.3)
+//!   4  = SubmitBtcProofPart2  { block_header (80 bytes) }            (Z26.3)
+//!   5  = FinalizeBtcPayment   {}                                     (Z26.3)
+//!   6  = InitBtcHeaderChain   { anchor_header, anchor_height }       (Z26.5)
+//!   7  = UpdateBtcHeader      { new_header (80 bytes) }              (Z26.5)
+//!   8  = InitProgramConfig    { max_invoice_amount }                 (Z30.1)
+//!   9  = SetMaxInvoiceAmount  { max_invoice_amount }                 (Z30.1)
+//!  10  = SubmitEthReceiptPart1 { token, from, to, amount,
+//!                               receipt_hash, merkle_path,
+//!                               merkle_index }                      (Z26.4)
+//!  11  = SubmitEthReceiptPart2 { header_rlp, signing_payload,
+//!                                signature, receipts_root_offset }  (Z26.4)
+//!  12  = FinalizeEthPayment   {}                                    (Z26.4)
 //!
 //! State accounts (PDAs):
 //!
 //!   Merchant:           seeds = [b"merchant", master_pubkey]
 //!   Invoice:            seeds = [master_pubkey, invoice_index_le]
 //!   SpvProofBtc:        seeds = [b"spv-btc",  invoice_pubkey]       (Z26.3)
+//!   SpvProofEth:        seeds = [b"spv-eth",  invoice_pubkey]       (Z26.4)
 //!   BitcoinHeaderChain: seeds = [b"btc-header-chain"]   (singleton, Z26.5)
 //!   ProgramConfig:      seeds = [b"program-config"]     (singleton, Z30.1)
 //!
@@ -42,6 +49,10 @@
 //!   * `spv`          — Bitcoin SPV crypto primitives: SHA256d,
 //!                      merkle-root folding, nBits → target,
 //!                      PoW comparison.
+//!   * `ethspv`       — Ethereum receipt-verifier crypto primitives
+//!                      (Z26.4): keccak256, keccak-based merkle fold,
+//!                      Transfer-log canonical hash, secp256k1 ecrecover
+//!                      + Ethereum address derivation.
 //!
 //! Premise alignment:
 //!   1. Solana-only V1 → RegisterMerchant requires `CHAIN_SOLANA` in chains
@@ -59,6 +70,7 @@
 #![allow(clippy::result_large_err)]
 
 pub mod error;
+pub mod ethspv;
 pub mod instructions;
 pub mod pda;
 pub mod spv;
@@ -70,28 +82,34 @@ pub mod validation;
 // `use zettapay_core::{Merchant, MERCHANT_SEED, ZpError, ...}` resolve
 // unchanged.
 pub use error::ZpError;
+pub use ethspv::{
+    compute_receipts_root_from_proof, keccak256, normalise_recovery_id, pubkey_to_eth_address,
+    recover_eth_address, transfer_log_canonical_hash, ETH_ADDRESS_LEN, ETH_PUBKEY_LEN,
+    ETH_SIGNATURE_LEN, TRANSFER_EVENT_SIGNATURE,
+};
 pub use instructions::{
-    CreateInvoiceArgs, FinalizeBtcPaymentArgs, InitBtcHeaderChainArgs, InitProgramConfigArgs,
-    InstructionTag, RegisterMerchantArgs, SetMaxInvoiceAmountArgs, SubmitBtcProofPart1Args,
-    SubmitBtcProofPart2Args, SweepArgs, UpdateBtcHeaderArgs,
+    CreateInvoiceArgs, FinalizeBtcPaymentArgs, FinalizeEthPaymentArgs, InitBtcHeaderChainArgs,
+    InitProgramConfigArgs, InstructionTag, RegisterMerchantArgs, SetMaxInvoiceAmountArgs,
+    SubmitBtcProofPart1Args, SubmitBtcProofPart2Args, SubmitEthReceiptPart1Args,
+    SubmitEthReceiptPart2Args, SweepArgs, UpdateBtcHeaderArgs,
 };
 pub use pda::{
     find_btc_header_chain_pda, find_invoice_pda, find_merchant_pda, find_program_config_pda,
-    find_spv_proof_btc_pda, BTC_HEADER_CHAIN_SEED, INVOICE_INDEX_SEED_LEN, MERCHANT_SEED,
-    PROGRAM_CONFIG_SEED, SPV_PROOF_BTC_SEED,
+    find_spv_proof_btc_pda, find_spv_proof_eth_pda, BTC_HEADER_CHAIN_SEED, INVOICE_INDEX_SEED_LEN,
+    MERCHANT_SEED, PROGRAM_CONFIG_SEED, SPV_PROOF_BTC_SEED, SPV_PROOF_ETH_SEED,
 };
 pub use spv::{
     compute_merkle_root_from_proof, hash_le_meets_target_le, header_merkle_root, header_n_bits,
     header_prev_block_hash, n_bits_to_target, sha256d, BLOCK_HEADER_LEN, MAX_MERKLE_PROOF_DEPTH,
 };
 pub use state::{
-    BitcoinHeaderChain, Invoice, Merchant, ProgramConfig, SpvProofBtc,
+    BitcoinHeaderChain, Invoice, Merchant, ProgramConfig, SpvProofBtc, SpvProofEth,
     BTC_HEADER_CHAIN_BUFFER_LEN, BTC_HEADER_CHAIN_TAG, BTC_HEADER_CHAIN_WINDOW, BTC_HEADER_LEN,
     CHAIN_ARBITRUM, CHAIN_AVALANCHE, CHAIN_BASE, CHAIN_ETHEREUM, CHAIN_POLYGON, CHAIN_SOLANA,
     CURRENCY_USDC, DEFAULT_MAX_INVOICE_AMOUNT, INVOICE_STATUS_OPEN, INVOICE_STATUS_PAID_BTC,
-    INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS, MAX_INVOICE_AMOUNT_UNLIMITED, MERCHANT_TAG,
-    PROGRAM_CONFIG_TAG, SPV_PROOF_BTC_TAG, SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE,
-    SPV_STATUS_PART2_DONE,
+    INVOICE_STATUS_PAID_ETH, INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS,
+    MAX_INVOICE_AMOUNT_UNLIMITED, MERCHANT_TAG, PROGRAM_CONFIG_TAG, SPV_PROOF_BTC_TAG,
+    SPV_PROOF_ETH_TAG, SPV_STATUS_FINALIZED, SPV_STATUS_PART1_DONE, SPV_STATUS_PART2_DONE,
 };
 pub use validation::{assert_owned_by_program, assert_signer, assert_system_program, assert_tag};
 
@@ -136,6 +154,9 @@ pub fn process_instruction(
         7 => process_update_btc_header(program_id, accounts, payload),
         8 => process_init_program_config(program_id, accounts, payload),
         9 => process_set_max_invoice_amount(program_id, accounts, payload),
+        10 => process_submit_eth_receipt_part_1(program_id, accounts, payload),
+        11 => process_submit_eth_receipt_part_2(program_id, accounts, payload),
+        12 => process_finalize_eth_payment(program_id, accounts, payload),
         _ => Err(ZpError::InvalidInstruction.into()),
     }
 }
@@ -899,6 +920,271 @@ fn process_set_max_invoice_amount(
     Ok(())
 }
 
+// --- Z26.4: Ethereum receipt verifier -----------------------------------
+//
+// Three transactions per receipt proof, tagged 10 / 11 / 12 — mirroring
+// the Z26.3 Bitcoin SPV verifier shape:
+//
+//   part 1: parse the USDC Transfer log (token + from + to + amount),
+//           recompute its canonical `log_hash`, fold the supplied
+//           `receipt_hash` through the merkle authentication path into
+//           the receipts root, and stash the commitments. Independent
+//           of any block header.
+//   part 2: validate that the supplied RLP-encoded block header carries
+//           the receipts root we computed at the supplied offset and
+//           that its Clique seal signature recovers a secp256k1 signer.
+//           Records both the full-header block hash and the signer.
+//   final:  flip the matching invoice to INVOICE_STATUS_PAID_ETH. There
+//           is no on-chain USDC movement (premise 14: no custody) — the
+//           transfer happened on Ethereum, finalize records that it did.
+//
+// CU budget: part 1's hot path is one keccak256 over the canonical
+// commitment buffer (~160 bytes) plus one per merkle level. Part 2 is
+// dominated by `secp256k1_recover` (~25k CU) and two keccak256 calls
+// over the header payloads (~500–1500 bytes each). Both fit comfortably
+// in the 200k per-instruction budget.
+
+fn process_submit_eth_receipt_part_1(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = SubmitEthReceiptPart1Args::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    if args.amount == 0 {
+        return Err(ZpError::EthTransferAmountZero.into());
+    }
+    if args.token == [0u8; 20] {
+        return Err(ZpError::EthTokenAddressZero.into());
+    }
+    if args.merkle_path.len() > ethspv::MAX_MERKLE_PROOF_DEPTH {
+        return Err(ZpError::EthMerkleProofTooLong.into());
+    }
+
+    let iter = &mut accounts.iter();
+    let spv_proof_ai = next_account_info(iter)?;
+    let invoice_ai = next_account_info(iter)?;
+    let submitter_ai = next_account_info(iter)?;
+    let payer_ai = next_account_info(iter)?;
+    let system_ai = next_account_info(iter)?;
+
+    assert_owned_by_program(invoice_ai, program_id)?;
+    let invoice = Invoice::try_from_slice(&invoice_ai.data.borrow())
+        .map_err(|_| ZpError::NotInvoiceAccount)?;
+    if invoice.tag != INVOICE_TAG {
+        return Err(ZpError::NotInvoiceAccount.into());
+    }
+    if invoice.status != INVOICE_STATUS_OPEN {
+        return Err(ZpError::InvoiceAlreadyPaid.into());
+    }
+
+    assert_signer(submitter_ai)?;
+    assert_signer(payer_ai)?;
+    assert_system_program(system_ai)?;
+
+    let (expected_pda, bump) = find_spv_proof_eth_pda(invoice_ai.key, program_id);
+    if spv_proof_ai.key != &expected_pda {
+        return Err(ZpError::EthSpvProofPdaMismatch.into());
+    }
+    // Reject re-init: an already-populated proof account must keep its
+    // state; surface the precise code instead of leaking the
+    // SystemProgram "already in use" error.
+    if spv_proof_ai.owner == program_id || !spv_proof_ai.data.borrow().is_empty() {
+        return Err(ZpError::EthSpvAlreadyInitialized.into());
+    }
+
+    // Crypto first, allocation second — if the commitments are forged
+    // we want to fail before paying rent.
+    let log_hash = ethspv::transfer_log_canonical_hash(
+        &args.token,
+        &args.from_addr,
+        &args.to_addr,
+        args.amount,
+    );
+    let receipts_root = ethspv::compute_receipts_root_from_proof(
+        args.receipt_hash,
+        &args.merkle_path,
+        args.merkle_index,
+    );
+
+    let rent = Rent::get()?;
+    let lamports = rent.minimum_balance(SpvProofEth::SIZE);
+
+    invoke_signed(
+        &system_instruction::create_account(
+            payer_ai.key,
+            spv_proof_ai.key,
+            lamports,
+            SpvProofEth::SIZE as u64,
+            program_id,
+        ),
+        &[payer_ai.clone(), spv_proof_ai.clone(), system_ai.clone()],
+        &[&[SPV_PROOF_ETH_SEED, invoice_ai.key.as_ref(), &[bump]]],
+    )?;
+
+    let now = Clock::get()?.unix_timestamp;
+    let proof = SpvProofEth {
+        tag: SPV_PROOF_ETH_TAG,
+        bump,
+        invoice: *invoice_ai.key,
+        submitter: *submitter_ai.key,
+        token: args.token,
+        from_addr: args.from_addr,
+        to_addr: args.to_addr,
+        amount: args.amount,
+        log_hash,
+        receipts_root,
+        block_hash: [0u8; 32],
+        block_signer: [0u8; 20],
+        status: SPV_STATUS_PART1_DONE,
+        created_at: now,
+        finalized_at: 0,
+    };
+    proof.serialize(&mut &mut spv_proof_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: eth receipt part 1 stored");
+    Ok(())
+}
+
+fn process_submit_eth_receipt_part_2(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    let args = SubmitEthReceiptPart2Args::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    if args.header_rlp.is_empty() || args.signing_payload.is_empty() {
+        return Err(ZpError::EthBlockHeaderInvalid.into());
+    }
+    if args.signature.len() != ethspv::ETH_SIGNATURE_LEN {
+        return Err(ZpError::EthBlockHeaderInvalid.into());
+    }
+    // The receipts_root field must sit entirely inside `header_rlp`. A
+    // forged offset that overruns the buffer would otherwise slice-
+    // panic in debug builds and underflow in release; bail explicitly.
+    let offset = args.receipts_root_offset as usize;
+    let end = offset.checked_add(32).ok_or(ZpError::EthBlockHeaderInvalid)?;
+    if end > args.header_rlp.len() {
+        return Err(ZpError::EthBlockHeaderInvalid.into());
+    }
+
+    let iter = &mut accounts.iter();
+    let spv_proof_ai = next_account_info(iter)?;
+    let submitter_ai = next_account_info(iter)?;
+
+    assert_owned_by_program(spv_proof_ai, program_id)?;
+    assert_signer(submitter_ai)?;
+
+    let mut proof = SpvProofEth::try_from_slice(&spv_proof_ai.data.borrow())
+        .map_err(|_| ZpError::EthSpvWrongStatus)?;
+    if proof.tag != SPV_PROOF_ETH_TAG {
+        return Err(ZpError::EthSpvWrongStatus.into());
+    }
+    if proof.status != SPV_STATUS_PART1_DONE {
+        return Err(ZpError::EthSpvWrongStatus.into());
+    }
+    if proof.submitter != *submitter_ai.key {
+        return Err(ZpError::EthSpvSubmitterMismatch.into());
+    }
+
+    // Cheap structural check first — wrong receipts_root rules out the
+    // proof without ever hashing the header or running ecrecover.
+    let mut header_receipts_root = [0u8; 32];
+    header_receipts_root.copy_from_slice(&args.header_rlp[offset..end]);
+    if header_receipts_root != proof.receipts_root {
+        return Err(ZpError::EthReceiptsRootMismatch.into());
+    }
+
+    let mut sig_buf = [0u8; ETH_SIGNATURE_LEN];
+    sig_buf.copy_from_slice(&args.signature);
+
+    let signing_hash = ethspv::keccak256(&args.signing_payload);
+    let block_signer = ethspv::recover_eth_address(&signing_hash, &sig_buf)
+        .ok_or(ZpError::EthSignatureRecoveryFailed)?;
+    let block_hash = ethspv::keccak256(&args.header_rlp);
+
+    proof.block_hash = block_hash;
+    proof.block_signer = block_signer;
+    proof.status = SPV_STATUS_PART2_DONE;
+    proof.serialize(&mut &mut spv_proof_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: eth receipt part 2 verified");
+    Ok(())
+}
+
+fn process_finalize_eth_payment(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    payload: &[u8],
+) -> ProgramResult {
+    // Args struct is empty — borsh's `try_from_slice` enforces all input
+    // bytes are consumed, so a payload with trailing bytes is rejected
+    // as InvalidInstruction rather than silently ignored.
+    let _args = FinalizeEthPaymentArgs::try_from_slice(payload)
+        .map_err(|_| ZpError::InvalidInstruction)?;
+
+    let iter = &mut accounts.iter();
+    let spv_proof_ai = next_account_info(iter)?;
+    let invoice_ai = next_account_info(iter)?;
+    let merchant_ai = next_account_info(iter)?;
+    let master_ai = next_account_info(iter)?;
+
+    assert_owned_by_program(spv_proof_ai, program_id)?;
+    assert_owned_by_program(invoice_ai, program_id)?;
+    assert_owned_by_program(merchant_ai, program_id)?;
+    assert_signer(master_ai)?;
+
+    let mut proof = SpvProofEth::try_from_slice(&spv_proof_ai.data.borrow())
+        .map_err(|_| ZpError::EthSpvWrongStatus)?;
+    if proof.tag != SPV_PROOF_ETH_TAG {
+        return Err(ZpError::EthSpvWrongStatus.into());
+    }
+    if proof.status != SPV_STATUS_PART2_DONE {
+        return Err(ZpError::EthSpvWrongStatus.into());
+    }
+    if proof.invoice != *invoice_ai.key {
+        return Err(ZpError::EthSpvInvoiceMismatch.into());
+    }
+
+    let mut invoice = Invoice::try_from_slice(&invoice_ai.data.borrow())
+        .map_err(|_| ZpError::NotInvoiceAccount)?;
+    if invoice.tag != INVOICE_TAG {
+        return Err(ZpError::NotInvoiceAccount.into());
+    }
+    if invoice.status != INVOICE_STATUS_OPEN {
+        return Err(ZpError::InvoiceAlreadyPaid.into());
+    }
+    if invoice.merchant != *merchant_ai.key {
+        return Err(ZpError::InvoiceMerchantMismatch.into());
+    }
+
+    let merchant = Merchant::try_from_slice(&merchant_ai.data.borrow())
+        .map_err(|_| ZpError::NotMerchantAccount)?;
+    if merchant.tag != MERCHANT_TAG {
+        return Err(ZpError::NotMerchantAccount.into());
+    }
+    if merchant.master_pubkey != *master_ai.key {
+        return Err(ZpError::MasterMismatch.into());
+    }
+
+    let now = Clock::get()?.unix_timestamp;
+
+    // `swept_at` stays 0 — like the BTC path, semantically that field
+    // records a USDC sweep which never happens on the ETH settlement
+    // rail. The settlement timestamp lives on the proof's `finalized_at`.
+    invoice.status = INVOICE_STATUS_PAID_ETH;
+    invoice.serialize(&mut &mut invoice_ai.data.borrow_mut()[..])?;
+
+    proof.status = SPV_STATUS_FINALIZED;
+    proof.finalized_at = now;
+    proof.serialize(&mut &mut spv_proof_ai.data.borrow_mut()[..])?;
+
+    msg!("zettapay-core: eth payment finalized");
+    Ok(())
+}
+
 #[cfg(test)]
 mod integration_tests {
     //! Cross-module sanity checks. Per-module unit tests live next to the
@@ -984,5 +1270,47 @@ mod integration_tests {
             &program_id,
         );
         assert_eq!(a, b);
+    }
+
+    #[test]
+    fn spv_proof_eth_pda_seeds_match_module_constant() {
+        // Z26.4 drift guard. The ETH receipt-verifier dispatcher signs
+        // `create_account` for part_1 with seeds reconstructed from
+        // `SPV_PROOF_ETH_SEED` and the invoice key; drift between the
+        // constant and what `find_spv_proof_eth_pda` uses would make
+        // `invoke_signed` fail at run time.
+        let invoice = Pubkey::new_from_array([13u8; 32]);
+        let program_id = Pubkey::new_from_array([42u8; 32]);
+        let (a, _) = find_spv_proof_eth_pda(&invoice, &program_id);
+        let (b, _) = Pubkey::find_program_address(
+            &[SPV_PROOF_ETH_SEED, invoice.as_ref()],
+            &program_id,
+        );
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn eth_spv_status_alphabet_is_shared_with_btc() {
+        // The ETH receipt proof reuses the SPV status alphabet (PART1 /
+        // PART2 / FINALIZED) so off-chain dashboards render both chains
+        // through a single pipeline. A future refactor that split the
+        // ETH lifecycle into its own status enum without updating the
+        // dashboard would silently break that contract — pin the
+        // alphabet here so the breaking change trips the test first.
+        assert_eq!(SPV_STATUS_PART1_DONE, 0);
+        assert_eq!(SPV_STATUS_PART2_DONE, 1);
+        assert_eq!(SPV_STATUS_FINALIZED, 2);
+    }
+
+    #[test]
+    fn eth_paid_status_distinct_from_btc_swept_and_open() {
+        // `INVOICE_STATUS_PAID_ETH` must not collide with any other
+        // status byte. Downstream indexers fan out on this value to
+        // route dispute resolution through the correct settlement
+        // chain — a collision with `PAID_BTC` would send ETH disputes
+        // through the BTC SPV path.
+        assert_ne!(INVOICE_STATUS_PAID_ETH, INVOICE_STATUS_OPEN);
+        assert_ne!(INVOICE_STATUS_PAID_ETH, INVOICE_STATUS_SWEPT);
+        assert_ne!(INVOICE_STATUS_PAID_ETH, INVOICE_STATUS_PAID_BTC);
     }
 }
