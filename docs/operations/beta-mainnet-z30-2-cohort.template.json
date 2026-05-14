@@ -1,0 +1,14 @@
+{
+  "id": "z30-2-mainnet-leandro-friends-2026q2",
+  "sprint": "Z30.2 — beta mainnet (60-day window)",
+  "notes": "Replace each entry below with a real friend merchant. WALLET-LESS: capture each pubkey by asking the merchant to paste their Solana address — never run wallet.connect(). Maximum 10 entries (Z22.1 enforces).",
+  "merchants": [
+    {
+      "name": "Example Merchant Ltda",
+      "email": "founder@example.com",
+      "walletAddress": "REPLACE_WITH_BASE58_SOLANA_PUBKEY",
+      "webhookUrl": null,
+      "contact": "Telegram: @example"
+    }
+  ]
+}

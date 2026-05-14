@@ -1,0 +1,268 @@
+---
+title: "Z30.2 — mainnet beta runbook"
+description: "60-day mainnet beta with Leandro plus 5–10 friend merchants processing real USDC. Operator playbook for onboarding, continuous monitoring, and graduation."
+---
+
+## Purpose
+
+Z30.2 is the first mainnet exposure of the ZettaPay protocol with **real
+money**. The objective is to validate end-to-end USDC payment flow,
+webhook delivery, and operational tooling against a tight cohort
+(Leandro + 5–10 friend merchants) under a constrained window (60 days)
+with hard per-merchant and per-invoice caps. The mission is intentionally
+manual — humans drive every step that touches mainnet — but operator-side
+tooling reduces the toil of intake and daily monitoring.
+
+This runbook composes the existing scaffolding from Sprint Z30:
+
+- **Z22.1** — beta launch protocol (allowlist + per-merchant cap +
+  window expiry enforcer at `packages/api/src/beta/`).
+- **Z30.1** — `$100` per-invoice on-chain cap.
+- **Z30.3** — 24/7 program-health monitor with WhatsApp paging.
+- **Z30.4** — D+30 cap upgrade orchestrator (`$100 → $500`,
+  health-gated).
+- **Z30.2 (this mission)** — operator tooling and playbook that
+  glues the above together for the human running the beta.
+
+## Hard rules during the beta window
+
+1. **Wallet-less.** Friend merchants paste their pubkey into the cohort
+   form. ZettaPay never calls `wallet.connect()`. See CLAUDE.md HARD RULE.
+2. **No silent cap relaxations.** Any cap change is reflected in
+   `audit_journal` (event `cap_upgrade.*` or `merchant.velocity.updated`)
+   and recorded in the daily report.
+3. **Pause beats hope.** If `npm run beta:mainnet:digest` returns
+   recommendation=`pause`, freeze new transactions before debugging.
+   Reach merchants via the contact channel captured in the cohort file.
+4. **No mainnet without Z21 + Z22.** Premissa #16 — mainnet only after
+   audit (Z21) and launch checklist (Z22). This runbook assumes those
+   are already green and signed off.
+
+## Pre-flight checklist
+
+Run through this before adding the first merchant. Treat any unchecked
+box as a `pause`.
+
+- [ ] Mainnet program deployed and pinned (`scripts/deploy-mainnet.sh`
+      output, deploy commit hash recorded).
+- [ ] API server running with `SOLANA_NETWORK=mainnet-beta` and
+      `BETA_MODE_ENABLED=false` (we flip to `true` only after the
+      allowlist is populated).
+- [ ] `BETA_LAUNCH_AT` placeholder ISO timestamp ready (do NOT set yet —
+      window starts when allowlist is in).
+- [ ] `BETA_DURATION_DAYS=60` configured (overrides the Z22.1 default of
+      30; matches sprint goal).
+- [ ] `BETA_MERCHANT_CAP_USDC=10000` confirmed.
+- [ ] `BETA_MAX_MERCHANTS=10` confirmed.
+- [ ] Treasury reserve key (`ZETTAPAY_TREASURY_ADMIN_KEY`) rotated and
+      in 1Password.
+- [ ] Z30.3 program monitor running (cron-worker uptime ≥ 24h, last
+      `monitor_ticks_total{outcome="ok"}` recent).
+- [ ] Z30.4 cap upgrade cron registered and dry-run reported in
+      audit_journal (`cap_upgrade.*.dry_run`).
+- [ ] Z18 status page populated with a "mainnet beta — restricted
+      cohort" banner.
+- [ ] Operator (Leandro) has access to: production env vars, deploy
+      pipeline, Helius dashboard, audit_journal viewer, the WhatsApp
+      paging channel for Z30.3 alerts.
+
+## Cohort intake protocol
+
+The intake is wallet-less and idempotent. The merchant gives us four
+fields; we never connect their wallet.
+
+### 1. Capture cohort fields per merchant
+
+Send each friend merchant the same form (Google Form, Notion form,
+WhatsApp template, whatever — but **never** a `connect()` button).
+Required fields:
+
+- `name` — display name shown in dashboards.
+- `email` — real email, used as the unique account key.
+- `walletAddress` — Solana pubkey (base58). They paste this from their
+  wallet's "receive" screen.
+- `webhookUrl` (optional, https) — outbound notifications.
+- `contact` (optional) — Telegram / WhatsApp handle so we can reach them
+  when an alert fires.
+
+### 2. Compose the cohort JSON
+
+Copy `docs/operations/beta-mainnet-z30-2-cohort.template.json` to a
+private path (e.g. `~/zettapay-beta-cohort.json`). Replace each entry
+with a real merchant. Limit: 10 entries (the script and Z22.1 both
+enforce).
+
+### 3. Run the onboarding script (dry run first)
+
+```sh
+BETA_API_URL=https://api.zettapay.dev \
+BETA_COHORT_PATH=~/zettapay-beta-cohort.json \
+BETA_REPORT_PATH=./reports/beta-mainnet-z30-2-onboard-$(date -u +%Y%m%d).json \
+BETA_DRY_RUN=true \
+npm run beta:mainnet:onboard
+```
+
+The dry run validates the cohort schema, normalises emails to lower
+case, asserts each pubkey matches the Solana base58 regex, and flags
+duplicate `email`/`walletAddress` collisions. **Fix any errors before
+the live run.** The report file records the planned set of merchants.
+
+### 4. Run the onboarding script for real
+
+```sh
+BETA_API_URL=https://api.zettapay.dev \
+BETA_COHORT_PATH=~/zettapay-beta-cohort.json \
+BETA_REPORT_PATH=./reports/beta-mainnet-z30-2-onboard-$(date -u +%Y%m%d).json \
+npm run beta:mainnet:onboard
+```
+
+The script:
+
+- POSTs each merchant to `/merchants/register` with an
+  `Idempotency-Key: beta-mainnet-z30-2:<cohort.id>:<email>`. Re-runs
+  are safe.
+- Treats HTTP 409 as `already_registered` (idempotency path).
+- Aggregates the returned `merchant.id` values into a CSV.
+
+### 5. Distribute api keys to merchants
+
+The script masks api keys in the JSON report (`zp_live_xxxxxxxx…XXXX`).
+The unmasked keys appear only on stdout, once. Capture them into your
+password manager **immediately** and share each via a per-merchant
+encrypted channel (1Password Sharing, Signal, etc.). Never email plain
+keys.
+
+### 6. Flip BETA_MODE_ENABLED + BETA_ALLOWED_MERCHANTS
+
+In the production env (Vercel / Render / Fly):
+
+```env
+BETA_MODE_ENABLED=true
+BETA_LAUNCH_AT=<now in ISO 8601, UTC>
+BETA_ALLOWED_MERCHANTS=<paste the CSV the script printed>
+```
+
+Redeploy. The Z22.1 enforcer activates on the new request boundary.
+
+### 7. Confirm the allowlist
+
+```sh
+curl -s https://api.zettapay.dev/beta/status | jq .
+```
+
+Assert: `enabled=true`, `allowlistSize == cohort.merchants.length`,
+`daysRemaining ≈ 60`. If anything looks wrong, flip
+`BETA_MODE_ENABLED=false` and investigate before announcing the launch
+to the cohort.
+
+## Daily continuous monitoring
+
+The cadence: one digest per day, every day, for 60 days. Operator runs
+either manually each morning or via cron / scheduled action.
+
+### Daily digest command
+
+```sh
+BETA_API_URL=https://api.zettapay.dev \
+BETA_REPORT_DIR=./reports \
+npm run beta:mainnet:digest
+```
+
+Emits two files in `reports/`:
+
+- `beta-mainnet-z30-2-YYYY-MM-DD.md` — operator-facing markdown.
+- `beta-mainnet-z30-2-YYYY-MM-DD.json` — machine-readable mirror.
+
+Exit codes feed cron failure semantics:
+
+- `0` — recommendation `continue` (nothing to do beyond reading the
+  digest and writing today's report).
+- `1` — recommendation `investigate` (a merchant is near cap, or
+  Z30.3 has alerted since launch).
+- `2` — recommendation `pause` (API not reachable, beta disabled, or
+  window expired).
+
+### Write the daily report
+
+Copy `docs/operations/beta-mainnet-z30-2-daily-report.template.md` to
+`docs/operations/reports/beta-mainnet-z30-2-YYYY-MM-DD.md`. Paste the
+digest, add human commentary, commit it to the repo (or, if it must
+stay private for cohort confidentiality, to the private operator
+journal).
+
+### What "investigate" looks like
+
+When the digest recommends `investigate`:
+
+1. Open the latest digest markdown.
+2. Identify which signal fired:
+   - **Merchant near cap** — review their day. If healthy traffic,
+     plan an explicit cap raise (via Z30.4 schedule additions, not ad
+     hoc PUTs). Document in the daily report.
+   - **Program monitor counter non-zero** — fetch
+     `audit_journal[event LIKE 'program_monitor.alert.%']`, identify
+     the breached kind (`error_rate`, `invoice_stuck`, `sweep_failed`,
+     `account_close_suspect`), and follow `incident-runbook.mdx`.
+3. Communicate with affected merchants on the contact channel.
+4. Reach `continue` again before re-opening the day.
+
+### What "pause" looks like
+
+When the digest recommends `pause`:
+
+1. Set `BETA_MODE_ENABLED=false` in production env (rejects all beta
+   txs with `beta:disabled` — fail-closed by design).
+2. Redeploy or hot-flip if the platform allows it.
+3. Open an incident (Z22.4 incident response runbook).
+4. Notify cohort via the contact channel in the cohort file.
+5. Resume only after root cause + audit_journal entry recording the
+   action and the operator who took it.
+
+## Cap upgrade gates
+
+Per-invoice caps escalate on a schedule defined in
+`packages/api/src/beta/cap_upgrade.ts`. The orchestrator only upgrades
+when zero critical alerts are firing.
+
+| Trigger | Cap | Schedule | Health gate |
+|---|---|---|---|
+| D+0 (Z30.1) | `$100` | applied at launch via on-chain instruction | n/a |
+| D+30 (Z30.4) | `$500` | `cap_upgrade.set_max_invoice_amount.d30` | Z30.3 monitor must be green |
+| D+60 (graduation) | TBD | manual graduation review, this runbook closes | full retro |
+
+The orchestrator is idempotent (audit-row keyed). The operator never
+needs to call `set_max_invoice_amount` by hand during the beta.
+
+## Beta close (D+60) checklist
+
+- [ ] Run the digest on D+60 morning — recommendation must be
+      `continue`.
+- [ ] Capture final TPV, exhausted-merchants count, and cohort retro
+      notes in `docs/operations/reports/beta-mainnet-z30-2-final.md`.
+- [ ] Confirm `audit_journal[event=cap_upgrade.set_max_invoice_amount.d30]`
+      exists (proves D+30 upgrade ran cleanly).
+- [ ] Pause `BETA_MODE_ENABLED=false` _or_ graduate by removing the
+      window (per business decision).
+- [ ] If graduating: open Z30.5 / Z31 GA mission with this report
+      linked.
+
+## Audit trail
+
+Everything destructive or material to compliance writes to
+`audit_journal`. The runbook references the following events the
+operator may encounter:
+
+- `merchant.registered` — emitted by `/merchants/register` for each
+  cohort entry.
+- `merchant.velocity.updated` — any per-merchant velocity ceiling
+  change (`PUT /merchants/:id/velocity`).
+- `cap_upgrade.set_max_invoice_amount.d30` — Z30.4 D+30 upgrade
+  applied; row carries the broadcast signature.
+- `program_monitor.alert.<kind>` — Z30.3 alerts; row carries
+  threshold + value snapshot.
+- `program_monitor.recovered.<kind>` — Z30.3 clears.
+- `merchant.paused` — operator-initiated pause via the existing
+  merchant admin path.
+
+If an event appears that this runbook doesn't list, treat it as a
+signal to investigate before the next daily report.
