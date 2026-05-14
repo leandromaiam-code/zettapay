@@ -4,6 +4,7 @@ import {
   buildSolanaPayUri,
   buildWalletDeeplink,
   detectWallets,
+  discoverWalletStandard,
   getWalletMeta,
   isMobile,
   mount,
@@ -111,6 +112,82 @@ describe('detectWallets', () => {
     expect(calls).not.toContain('connect');
     expect(calls).not.toContain('signMessage');
     expect(calls).not.toContain('request');
+  });
+});
+
+describe('discoverWalletStandard', () => {
+  it('returns no wallets when nothing is listening', () => {
+    const bus = new EventTarget();
+    expect(discoverWalletStandard(bus)).toEqual([]);
+  });
+
+  it('collects wallet ids from the wallet-standard register handshake', () => {
+    const bus = new EventTarget();
+    const advertise = (name: string): void => {
+      bus.addEventListener('wallet-standard:app-ready', (e) => {
+        const detail = (e as CustomEvent<{ register: (w: unknown) => void }>).detail;
+        detail.register({ name });
+      });
+    };
+    advertise('Phantom');
+    advertise('Solflare Wallet');
+    advertise('Backpack');
+    const ids = discoverWalletStandard(bus);
+    expect(ids.sort()).toEqual(['backpack', 'phantom', 'solflare']);
+  });
+
+  it('case-insensitive name matching catches build variants', () => {
+    const bus = new EventTarget();
+    bus.addEventListener('wallet-standard:app-ready', (e) => {
+      const detail = (e as CustomEvent<{ register: (w: unknown) => void }>).detail;
+      detail.register({ name: 'coinbase wallet' });
+      detail.register({ name: 'TRUST Wallet (Solana)' });
+    });
+    expect(discoverWalletStandard(bus).sort()).toEqual(['coinbase', 'trust']);
+  });
+
+  it('ignores wallets whose name does not match any known brand', () => {
+    const bus = new EventTarget();
+    bus.addEventListener('wallet-standard:app-ready', (e) => {
+      const detail = (e as CustomEvent<{ register: (w: unknown) => void }>).detail;
+      detail.register({ name: 'Some Unknown Wallet' });
+    });
+    expect(discoverWalletStandard(bus)).toEqual([]);
+  });
+
+  it('never calls a method on the registered wallet object', () => {
+    const bus = new EventTarget();
+    const calls: string[] = [];
+    const trap = new Proxy(
+      {},
+      {
+        get(_target, prop) {
+          calls.push(String(prop));
+          if (prop === 'name') return 'Phantom';
+          return undefined;
+        },
+      },
+    );
+    bus.addEventListener('wallet-standard:app-ready', (e) => {
+      const detail = (e as CustomEvent<{ register: (w: unknown) => void }>).detail;
+      detail.register(trap);
+    });
+    discoverWalletStandard(bus);
+    expect(calls).toContain('name');
+    expect(calls).not.toContain('connect');
+    expect(calls).not.toContain('signMessage');
+    expect(calls).not.toContain('features');
+  });
+
+  it('detectWallets unions legacy globals with wallet-standard discovery', () => {
+    const bus = new EventTarget();
+    bus.addEventListener('wallet-standard:app-ready', (e) => {
+      const detail = (e as CustomEvent<{ register: (w: unknown) => void }>).detail;
+      detail.register({ name: 'Backpack' });
+    });
+    const result = detectWallets({ solflare: { isSolflare: true } }, bus);
+    // Canonical WALLETS order is phantom, solflare, backpack, glow, trust, coinbase
+    expect(result.installed).toEqual(['solflare', 'backpack']);
   });
 });
 

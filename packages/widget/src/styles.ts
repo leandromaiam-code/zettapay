@@ -171,6 +171,51 @@ export const WIDGET_STYLES = /* css */ `
 }
 .zp-modal[data-theme="light"] .zp-btn-secondary:hover { background: rgba(15, 23, 42, 0.08); }
 
+.zp-wallets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.zp-wallets:empty { display: none; }
+.zp-wallet-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background 180ms ease, border-color 180ms ease;
+}
+.zp-wallet-pill:hover {
+  background: rgba(79, 107, 255, 0.14);
+  border-color: rgba(79, 107, 255, 0.32);
+}
+.zp-modal[data-theme="light"] .zp-wallet-pill {
+  background: rgba(15, 23, 42, 0.05);
+  border-color: rgba(15, 23, 42, 0.1);
+}
+.zp-wallet-pill[data-installed="true"] {
+  border-color: rgba(20, 241, 149, 0.45);
+  background: rgba(20, 241, 149, 0.08);
+}
+.zp-wallet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.32);
+}
+.zp-modal[data-theme="light"] .zp-wallet-dot { background: rgba(15, 23, 42, 0.32); }
+.zp-wallet-pill[data-installed="true"] .zp-wallet-dot {
+  background: #14F195;
+  box-shadow: 0 0 6px rgba(20, 241, 149, 0.6);
+}
+
 .zp-status {
   display: flex;
   align-items: center;

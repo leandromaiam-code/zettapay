@@ -149,6 +149,43 @@
       0%, 30% { background: rgba(20, 241, 149, 0.18); border-color: rgba(20, 241, 149, 0.5); }
       100% { background: rgba(79, 107, 255, 0.08); border-color: rgba(79, 107, 255, 0.3); }
     }
+    .wallets-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .wallet-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(79, 107, 255, 0.06);
+      border: 1px solid rgba(79, 107, 255, 0.22);
+      color: #FFFFFF;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 180ms ease, border-color 180ms ease;
+    }
+    .wallet-pill:hover {
+      background: rgba(79, 107, 255, 0.14);
+      border-color: rgba(79, 107, 255, 0.46);
+    }
+    .wallet-pill[data-installed="true"] {
+      background: rgba(20, 241, 149, 0.08);
+      border-color: rgba(20, 241, 149, 0.45);
+    }
+    .wallet-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.32);
+    }
+    .wallet-pill[data-installed="true"] .wallet-dot {
+      background: #14F195;
+      box-shadow: 0 0 6px rgba(20, 241, 149, 0.6);
+    }
   </style>
 </head>
 <body class="grid-bg">
@@ -216,6 +253,7 @@
           <div class="qr-container my-4 text-center">
             <img id="solanaPayQr" src="" alt="Solana Pay QR" class="mx-auto rounded-xl" style="max-width:240px"/>
           </div>
+          <div id="walletsRow" class="wallets-row" role="list" aria-label="Open in wallet"></div>
           <p class="text-sm text-muted">Open Phantom, Solflare, or your wallet of choice — scan the QR or paste the address, then send the amount. We monitor the blockchain — confirmation in 5-30s.</p>
           <div id="paymentStatus" class="text-mint font-semibold hidden">&#9203; Waiting for payment...</div>
 
@@ -289,12 +327,109 @@
       merchantAddress: document.getElementById('merchantAddress'),
       solanaPayQr: document.getElementById('solanaPayQr'),
       solanaPayLink: document.getElementById('solanaPayLink'),
+      walletsRow: document.getElementById('walletsRow'),
       paymentStatus: document.getElementById('paymentStatus'),
       successBlock: document.getElementById('successBlock'),
       txSigRow: document.getElementById('txSigRow'),
       txSigLabel: document.getElementById('txSigLabel'),
       manualRedirect: document.getElementById('manualRedirect'),
     };
+
+    // Canonical wallet list. Order is intentional — Phantom leads since it's
+    // the de-facto reference Solana wallet. Keep in sync with the
+    // @zettapay/embed and @zettapay/widget detection modules.
+    const WALLETS = [
+      { id: 'phantom', name: 'Phantom' },
+      { id: 'solflare', name: 'Solflare' },
+      { id: 'backpack', name: 'Backpack' },
+      { id: 'glow', name: 'Glow' },
+      { id: 'trust', name: 'Trust' },
+      { id: 'coinbase', name: 'Coinbase' },
+    ];
+
+    // ZettaPay never calls connect(). Detection inspects injected globals
+    // via property reads only, and listens for the canonical wallet-standard
+    // `register-wallet` handshake — both read-only.
+    function detectInstalledWallets() {
+      const w = (typeof window !== 'undefined') ? window : {};
+      const found = new Set();
+      if ((w.phantom && w.phantom.solana && w.phantom.solana.isPhantom === true) ||
+          (w.solana && w.solana.isPhantom === true)) found.add('phantom');
+      if (w.solflare && w.solflare.isSolflare === true) found.add('solflare');
+      if ((w.backpack && w.backpack.isBackpack === true) || w.xnft !== undefined) found.add('backpack');
+      if (w.glow !== undefined || w.glowSolana !== undefined) found.add('glow');
+      if ((w.trustwallet && w.trustwallet.solana !== undefined) ||
+          (w.trustWallet && w.trustWallet.solana !== undefined)) found.add('trust');
+      if (w.coinbaseSolana !== undefined || w.coinbaseWalletExtension !== undefined) found.add('coinbase');
+
+      // Wallet-standard READ — dispatch app-ready and collect register callbacks.
+      // No method is ever invoked on any wallet object.
+      try {
+        const register = function (wallet) {
+          if (!wallet || typeof wallet.name !== 'string') return;
+          const n = wallet.name.toLowerCase();
+          if (n.indexOf('phantom') >= 0) found.add('phantom');
+          else if (n.indexOf('solflare') >= 0) found.add('solflare');
+          else if (n.indexOf('backpack') >= 0) found.add('backpack');
+          else if (n.indexOf('glow') >= 0) found.add('glow');
+          else if (n.indexOf('trust') >= 0) found.add('trust');
+          else if (n.indexOf('coinbase') >= 0) found.add('coinbase');
+        };
+        let evt;
+        try {
+          evt = new CustomEvent('wallet-standard:app-ready', { detail: { register: register } });
+        } catch (_e) {
+          evt = new Event('wallet-standard:app-ready');
+          evt.detail = { register: register };
+        }
+        window.dispatchEvent(evt);
+      } catch (_e) { /* read-only; ignore */ }
+
+      return found;
+    }
+
+    // Build the wallet-specific universal link. For Backpack/Glow/Trust the
+    // best handler is the OS-level `solana:` URI itself (they all register
+    // it natively on mobile). Desktop users scan the QR.
+    function buildWalletDeeplink(walletId, solanaPayUri) {
+      const encoded = encodeURIComponent(solanaPayUri);
+      switch (walletId) {
+        case 'phantom':  return 'https://phantom.app/ul/browse/' + encoded;
+        case 'solflare': return 'https://solflare.com/ul/v1/browse/' + encoded;
+        case 'coinbase': return 'https://go.cb-w.com/dapp?cb_url=' + encoded;
+        case 'backpack':
+        case 'glow':
+        case 'trust':
+        default:         return solanaPayUri;
+      }
+    }
+
+    function renderWalletsRow(solanaPayUri) {
+      if (!els.walletsRow || !solanaPayUri) return;
+      const installed = detectInstalledWallets();
+      const ordered = WALLETS.slice().sort(function (a, b) {
+        return (installed.has(a.id) ? 0 : 1) - (installed.has(b.id) ? 0 : 1);
+      });
+      els.walletsRow.innerHTML = '';
+      ordered.forEach(function (meta) {
+        const link = document.createElement('a');
+        link.className = 'wallet-pill';
+        link.setAttribute('role', 'listitem');
+        link.setAttribute('data-wallet', meta.id);
+        if (installed.has(meta.id)) link.setAttribute('data-installed', 'true');
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.href = buildWalletDeeplink(meta.id, solanaPayUri);
+        const dot = document.createElement('span');
+        dot.className = 'wallet-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.textContent = meta.name;
+        link.appendChild(dot);
+        link.appendChild(label);
+        els.walletsRow.appendChild(link);
+      });
+    }
 
     function showInvalid(reason) {
       els.invalidReason.textContent = reason;
@@ -434,6 +569,7 @@
     function renderQr(uri) {
       if (!uri) return;
       els.solanaPayLink.href = uri;
+      renderWalletsRow(uri);
       if (typeof window.QRCode === 'undefined') return;
       window.QRCode.toDataURL(
         uri,

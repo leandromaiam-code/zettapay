@@ -95,7 +95,26 @@ describe('open()', () => {
     expect(overlay.getAttribute('aria-modal')).toBe('true');
     expect(overlay.querySelector('[data-zp-qr]')).not.toBeNull();
     expect(overlay.querySelector('[data-zp-phantom]')).not.toBeNull();
+    expect(overlay.querySelector('[data-zp-wallets]')).not.toBeNull();
     expect(overlay.querySelector('.zp-amount')?.textContent).toContain('12.5 USDC');
+  });
+
+  it('renders an adaptive multi-wallet row once the intent resolves', async () => {
+    open({ merchantId: '@yourshop', amount: 5 });
+    // Wait for the createPaymentIntent promise + DOM update.
+    await new Promise((r) => setTimeout(r, 30));
+    const row = document.querySelector('[data-zp-wallets]') as HTMLElement;
+    expect(row).not.toBeNull();
+    const wallets = row.querySelectorAll('a[data-wallet]');
+    // Phantom is surfaced via the primary CTA, so the row carries the
+    // remaining five wallets.
+    expect(wallets.length).toBe(5);
+    const ids = Array.from(wallets).map((el) => el.getAttribute('data-wallet'));
+    expect(ids).toEqual(expect.arrayContaining(['solflare', 'backpack', 'glow', 'trust', 'coinbase']));
+    // None of the rendered affordances may include a `connect()` call.
+    const html = row.innerHTML.toLowerCase();
+    expect(html).not.toContain('connect wallet');
+    expect(html).not.toContain('wallet.connect');
   });
 
   it('Esc dismisses the modal and fires onCancel', async () => {

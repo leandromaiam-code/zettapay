@@ -1,6 +1,13 @@
 import { ApiError, createPaymentIntent, pollPaymentStatus, DEFAULT_API_BASE, DEFAULT_CHECKOUT_BASE } from './api.js';
 import { renderQrSvg } from './qr.js';
 import { injectStylesOnce } from './styles.js';
+import {
+  buildWalletBrowseLink,
+  detectWallets,
+  WIDGET_WALLETS,
+  type WalletDetection,
+  type WalletId,
+} from './wallets.js';
 import type {
   PaymentIntent,
   WidgetConfig,
@@ -50,16 +57,14 @@ function checkoutUrlFor(intent: PaymentIntent, base: string): string {
 }
 
 /**
- * Phantom universal link for desktop + mobile. On mobile (iOS/Android) this
- * deep-links straight into the Phantom app; on desktop it falls back to a
- * Phantom-branded landing that bridges to the wallet extension.
+ * Phantom universal link for desktop + mobile. Retained so the legacy
+ * `[data-zp-phantom]` anchor keeps working — modern adaptive UX is built
+ * via `buildWalletBrowseLink` over `WIDGET_WALLETS`.
  *
  * Reference: https://docs.phantom.app/phantom-deeplinks/provider-methods/browse
  */
 function phantomDeeplink(checkoutUrl: string): string {
-  const encoded = encodeURIComponent(checkoutUrl);
-  const ref = encodeURIComponent(new URL(checkoutUrl).origin);
-  return `https://phantom.app/ul/browse/${encoded}?ref=${ref}`;
+  return buildWalletBrowseLink('phantom', checkoutUrl);
 }
 
 function broadcast(msg: WidgetPostMessage): void {
@@ -111,6 +116,7 @@ export function openCheckout(rawConfig: WidgetConfig): OpenHandle {
           ${ICON_COPY}<span>Copy checkout link</span>
         </button>
       </div>
+      <div class="zp-wallets" data-zp-wallets role="list" aria-label="More wallets"></div>
       <div class="zp-status" data-zp-status data-state="loading">
         <span class="zp-spinner" aria-hidden="true"></span>
         <span data-zp-status-text>Creating payment intent…</span>
@@ -124,8 +130,16 @@ export function openCheckout(rawConfig: WidgetConfig): OpenHandle {
   const qrWrap = overlay.querySelector('[data-zp-qr]') as HTMLElement;
   const phantomLink = overlay.querySelector('[data-zp-phantom]') as HTMLAnchorElement;
   const copyBtn = overlay.querySelector('[data-zp-copy]') as HTMLButtonElement;
+  const walletsRow = overlay.querySelector('[data-zp-wallets]') as HTMLElement;
   const statusEl = overlay.querySelector('[data-zp-status]') as HTMLElement;
   const statusTextEl = overlay.querySelector('[data-zp-status-text]') as HTMLElement;
+
+  // Read-only wallet detection. Drives the adaptive band only — we never
+  // call `connect()`, the customer signs entirely inside their own wallet.
+  const detection: WalletDetection = detectWallets();
+  const installed = new Set<WalletId>(detection.installed);
+  walletsRow.dataset.surface = detection.isMobile ? 'mobile' : 'desktop';
+  if (installed.size > 0) walletsRow.dataset.hasInstalled = 'true';
 
   const abortCtrl = new AbortController();
   let intentRef: PaymentIntent | null = null;
@@ -189,6 +203,7 @@ export function openCheckout(rawConfig: WidgetConfig): OpenHandle {
       phantomLink.href = phantomUrl;
       phantomLink.removeAttribute('aria-disabled');
       copyBtn.disabled = false;
+      renderWalletsRow(walletsRow, checkoutUrl, installed);
       copyBtn.addEventListener('click', () => {
         void copyToClipboard(checkoutUrl).then((ok) => {
           if (!ok) return;
@@ -281,6 +296,44 @@ async function copyToClipboard(text: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Render the adaptive multi-wallet band. Every supported wallet gets a
+ * universal-link tile that, when tapped, opens the hosted checkout page
+ * inside that wallet's in-app browser. We never invoke any connect-style
+ * method on the wallet — the customer signs the transfer in their own
+ * wallet.
+ *
+ * Installed wallets float to the top and carry a small status dot; the
+ * remaining wallets stay visible so the customer can pick whichever one
+ * they actually use. Phantom is rendered through the primary CTA above,
+ * so we skip it here to avoid duplicating the affordance.
+ */
+function renderWalletsRow(
+  row: HTMLElement,
+  checkoutUrl: string,
+  installed: Set<WalletId>,
+): void {
+  row.innerHTML = '';
+  const secondary = WIDGET_WALLETS.filter((w) => w.id !== 'phantom');
+  const ordered = [...secondary].sort((a, b) => {
+    const ai = installed.has(a.id) ? 0 : 1;
+    const bi = installed.has(b.id) ? 0 : 1;
+    return ai - bi;
+  });
+  for (const meta of ordered) {
+    const link = document.createElement('a');
+    link.setAttribute('role', 'listitem');
+    link.setAttribute('data-wallet', meta.id);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.className = 'zp-wallet-pill';
+    if (installed.has(meta.id)) link.dataset.installed = 'true';
+    link.href = buildWalletBrowseLink(meta.id, checkoutUrl);
+    link.innerHTML = `<span class="zp-wallet-dot" aria-hidden="true"></span><span>${escapeHtml(meta.name)}</span>`;
+    row.appendChild(link);
   }
 }
 

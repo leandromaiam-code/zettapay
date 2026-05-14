@@ -25,6 +25,7 @@ export {
   WALLETS,
   buildWalletDeeplink,
   detectWallets,
+  discoverWalletStandard,
   getWalletMeta,
   isMobile,
 } from './wallets.js';
