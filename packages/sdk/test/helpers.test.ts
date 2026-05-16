@@ -11,9 +11,12 @@ import {
   ZETTAPAY_IDL,
   ZETTAPAY_PROGRAM_ID,
   createInvoice,
+  deriveInvoiceUsdcAddress,
   deriveMerchantBindingPda,
   derivePaymentPda,
+  ensureInvoiceUsdcAta,
   getInvoiceStatus,
+  isInvoiceExpired,
   listenPaymentEvents,
   USDC_DECIMALS,
   USDC_DEVNET_MINT,
@@ -336,5 +339,117 @@ describe('listenPaymentEvents', () => {
     );
 
     expect(onError).toHaveBeenCalledOnce();
+  });
+});
+
+describe('isInvoiceExpired — Z28.5 edge: invoice expired', () => {
+  it('returns false when expiresAt is null or undefined', () => {
+    expect(isInvoiceExpired({ expiresAt: null }, 10_000)).toBe(false);
+    expect(isInvoiceExpired({ expiresAt: undefined as unknown as null }, 10_000))
+      .toBe(false);
+  });
+
+  it('returns false strictly before expiresAt', () => {
+    expect(isInvoiceExpired({ expiresAt: 1_600 }, 1_500)).toBe(false);
+  });
+
+  it('returns true at expiresAt boundary (inclusive) and after', () => {
+    // Matches the `getInvoiceStatus` predicate: `now >= expiresAt` flips
+    // to expired. Pin both surfaces here so they stay in lockstep.
+    expect(isInvoiceExpired({ expiresAt: 1_600 }, 1_600)).toBe(true);
+    expect(isInvoiceExpired({ expiresAt: 1_600 }, 1_601)).toBe(true);
+  });
+
+  it('defaults `now` to the wall clock when not supplied', () => {
+    const ahead = Math.floor(Date.now() / 1000) + 60;
+    const behind = Math.floor(Date.now() / 1000) - 60;
+    expect(isInvoiceExpired({ expiresAt: ahead })).toBe(false);
+    expect(isInvoiceExpired({ expiresAt: behind })).toBe(true);
+  });
+});
+
+describe('ensureInvoiceUsdcAta — Z28.5 edge: ATA missing creation', () => {
+  const masterPubkey = Keypair.generate().publicKey;
+  const payer = Keypair.generate().publicKey;
+
+  it('returns exists=true when the ATA is already on-chain', async () => {
+    const fakeConnection = {
+      getAccountInfo: vi.fn().mockResolvedValue({
+        owner: ZETTAPAY_PROGRAM_ID,
+        lamports: 1_000_000,
+        executable: false,
+        rentEpoch: 0,
+        data: Buffer.alloc(165),
+      }),
+    } as unknown as Connection;
+
+    const result = await ensureInvoiceUsdcAta({
+      connection: fakeConnection,
+      payer,
+      masterPubkey,
+      invoiceIndex: 0,
+      cluster: 'devnet',
+    });
+
+    expect(result.exists).toBe(true);
+    expect(result.createInstruction).toBeNull();
+    // Derivation must match the deterministic helper exactly — drift
+    // here would silently route payments to an address the merchant
+    // does not watch.
+    const expected = deriveInvoiceUsdcAddress({
+      masterPubkey,
+      invoiceIndex: 0,
+      cluster: 'devnet',
+    });
+    expect(result.invoicePda.toBase58()).toBe(expected.invoicePda.toBase58());
+    expect(result.usdcAta.toBase58()).toBe(expected.usdcAta.toBase58());
+  });
+
+  it('returns a build-ready idempotent create instruction when the ATA is missing', async () => {
+    const fakeConnection = {
+      getAccountInfo: vi.fn().mockResolvedValue(null),
+    } as unknown as Connection;
+
+    const result = await ensureInvoiceUsdcAta({
+      connection: fakeConnection,
+      payer,
+      masterPubkey,
+      invoiceIndex: 7,
+      cluster: 'devnet',
+    });
+
+    expect(result.exists).toBe(false);
+    expect(result.createInstruction).not.toBeNull();
+
+    // Sanity-check the produced instruction wires the canonical
+    // associated-token-program id + the three required signer keys (in
+    // the order the SPL idempotent-create helper emits them).
+    const ix = result.createInstruction!;
+    expect(ix.programId.toBase58()).toBe(
+      'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
+    );
+    const keys = ix.keys.map((k) => k.pubkey.toBase58());
+    expect(keys).toContain(payer.toBase58());
+    expect(keys).toContain(result.usdcAta.toBase58());
+    expect(keys).toContain(result.invoicePda.toBase58());
+    expect(keys).toContain(result.usdcMint.toBase58());
+  });
+
+  it('passes the explicit mint override through to derivation', async () => {
+    const fakeConnection = {
+      getAccountInfo: vi.fn().mockResolvedValue(null),
+    } as unknown as Connection;
+    const customMint = Keypair.generate().publicKey;
+
+    const result = await ensureInvoiceUsdcAta({
+      connection: fakeConnection,
+      payer,
+      masterPubkey,
+      invoiceIndex: 0,
+      mint: customMint,
+    });
+
+    expect(result.usdcMint.toBase58()).toBe(customMint.toBase58());
+    expect(result.createInstruction).not.toBeNull();
   });
 });

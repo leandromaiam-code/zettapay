@@ -9,12 +9,14 @@ import {
   Connection,
   PublicKey,
   Transaction,
+  TransactionInstruction,
   sendAndConfirmTransaction,
   type Commitment,
   type ConfirmOptions,
   type Signer,
 } from '@solana/web3.js';
 import {
+  createAssociatedTokenAccountIdempotentInstruction,
   createAssociatedTokenAccountInstruction,
   createTransferCheckedInstruction,
   getAccount,
@@ -27,8 +29,11 @@ import {
   USDC_MINT,
   ZETTAPAY_PROGRAM_ID,
   buildRegisterMerchantInstruction,
+  deriveInvoiceUsdcAddress,
   deriveMerchantBindingPda,
   derivePaymentPda,
+  type DeriveInvoiceUsdcAddressParams,
+  type InvoiceUsdcAddress,
 } from './onchain.js';
 import { ZETTAPAY_IDL } from './idl/zettapay.js';
 
@@ -295,12 +300,92 @@ export async function getInvoiceStatus(
     };
   }
 
-  const now = params.now ?? Math.floor(Date.now() / 1000);
-  const expiresAt = params.invoice.expiresAt;
-  if (expiresAt !== null && expiresAt !== undefined && now >= expiresAt) {
+  if (isInvoiceExpired(params.invoice, params.now)) {
     return { status: 'expired', paymentPda: pda.toBase58(), receipt: null };
   }
   return { status: 'pending', paymentPda: pda.toBase58(), receipt: null };
+}
+
+/**
+ * Pure predicate — `true` once an invoice's advisory `expiresAt` is
+ * strictly in the past. Returns `false` when `expiresAt` is missing or
+ * `null` (the SDK convention for "no expiry").
+ *
+ * Mirrors the Rust `state::is_invoice_expired` helper so the SDK and the
+ * on-chain crate agree on the boundary (`now >= expiresAt`, exclusive
+ * inside the on-chain check) — drift here would let dashboard and
+ * SPV-monitor surfaces disagree about whether an invoice is still
+ * payable.
+ */
+export function isInvoiceExpired(
+  invoice: Pick<Invoice, 'expiresAt'>,
+  now?: number,
+): boolean {
+  const expiresAt = invoice.expiresAt;
+  if (expiresAt === null || expiresAt === undefined) return false;
+  const ts = now ?? Math.floor(Date.now() / 1000);
+  return ts >= expiresAt;
+}
+
+// ---------------------------------------------------------------------------
+// ensureInvoiceUsdcAta — Z28.5 edge: ATA missing
+// ---------------------------------------------------------------------------
+
+export interface EnsureInvoiceUsdcAtaParams extends DeriveInvoiceUsdcAddressParams {
+  connection: Connection;
+  /**
+   * Wallet that pays for the ATA creation rent. Required only when the
+   * ATA is missing — when the ATA already exists, the returned
+   * instruction is `null` and no signer is consumed.
+   */
+  payer: PublicKey;
+  commitment?: Commitment;
+}
+
+export interface EnsureInvoiceUsdcAtaResult extends InvoiceUsdcAddress {
+  /** `true` when the ATA already exists on-chain — no instruction needed. */
+  exists: boolean;
+  /**
+   * Idempotent `createAssociatedTokenAccount` instruction the caller
+   * prepends to their settlement transaction. `null` when `exists === true`.
+   *
+   * The instruction is the idempotent variant so a race with another
+   * payer's identical instruction will not error: SPL idempotent-create
+   * silently no-ops if the ATA already exists by the time the tx lands.
+   */
+  createInstruction: TransactionInstruction | null;
+}
+
+/**
+ * Guard the "ATA missing at payment time" edge: derive the invoice's
+ * USDC ATA, check whether it already exists on-chain, and return a
+ * ready-to-prepend idempotent-create instruction when it does not.
+ *
+ * The native `zettapay-core` program never creates ATAs itself
+ * (premise 14: no custody, so the SDK / payer is responsible for the
+ * token-account scaffolding). Without this guard, a payment landing
+ * against an invoice whose USDC ATA was never created would silently
+ * fail at the SPL token program — the merchant would see the payment
+ * tx rejected and the customer would have an unrecoverable timeout.
+ */
+export async function ensureInvoiceUsdcAta(
+  params: EnsureInvoiceUsdcAtaParams,
+): Promise<EnsureInvoiceUsdcAtaResult> {
+  const derived = deriveInvoiceUsdcAddress(params);
+  const info = await params.connection.getAccountInfo(
+    derived.usdcAta,
+    params.commitment ?? 'confirmed',
+  );
+  if (info !== null) {
+    return { ...derived, exists: true, createInstruction: null };
+  }
+  const createInstruction = createAssociatedTokenAccountIdempotentInstruction(
+    params.payer,
+    derived.usdcAta,
+    derived.invoicePda,
+    derived.usdcMint,
+  );
+  return { ...derived, exists: false, createInstruction };
 }
 
 /**
