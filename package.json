@@ -20,6 +20,7 @@
     "sdk:generate": "npm run openapi:export && bash scripts/generate-sdks.sh",
     "audit:static-rust": "bash scripts/static-analysis-rust.sh",
     "smoke:devnet": "tsx scripts/smoke-devnet.ts",
+    "stress:construction:z28-4": "tsx scripts/stress-construction-z28-4.ts",
     "beta:devnet:z28-1": "tsx scripts/beta-devnet-z28-1.ts",
     "beta:mainnet:onboard": "tsx scripts/beta-mainnet-z30-2-onboard.ts",
     "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts"
