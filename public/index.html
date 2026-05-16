@@ -202,6 +202,21 @@
     .logo-wordmark {
       filter: invert(1) brightness(2);
     }
+
+    /* Install language tabs */
+    .install-tab {
+      color: #94A3B8;
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+    }
+    .install-tab:hover { color: #FFFFFF; }
+    .install-tab[aria-selected="true"] {
+      color: #FFFFFF;
+      background: rgba(79, 107, 255, 0.18);
+      border-color: rgba(79, 107, 255, 0.4);
+      box-shadow: 0 0 18px rgba(79, 107, 255, 0.2);
+    }
   </style>
 </head>
 <body class="grid-bg">
@@ -566,8 +581,19 @@ POST /pay
 
       <div class="grid md:grid-cols-2 gap-6">
         <div class="glass rounded-2xl p-8 reveal">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">1. Install</div>
-          <pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-comment">$</span> npm install <span class="code-string">@zettapay/sdk</span></code></pre>
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div class="text-xs font-mono text-mint uppercase tracking-widest">1. Install</div>
+            <div class="install-tabs flex flex-wrap gap-1 p-1 rounded-full bg-royal/5 border border-royal/15" role="tablist" aria-label="SDK language">
+              <button type="button" role="tab" data-install-tab="ts" aria-selected="true" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">TypeScript</button>
+              <button type="button" role="tab" data-install-tab="py" aria-selected="false" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">Python</button>
+              <button type="button" role="tab" data-install-tab="php" aria-selected="false" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">PHP</button>
+              <button type="button" role="tab" data-install-tab="rust" aria-selected="false" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">Rust</button>
+            </div>
+          </div>
+          <pre data-install-pane="ts" class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-comment">$</span> npm install <span class="code-string">@zettapay/sdk</span></code></pre>
+          <pre data-install-pane="py" class="code-block rounded-lg p-4 text-sm overflow-x-auto hidden"><code><span class="code-comment">$</span> pip install <span class="code-string">zettapay</span></code></pre>
+          <pre data-install-pane="php" class="code-block rounded-lg p-4 text-sm overflow-x-auto hidden"><code><span class="code-comment">$</span> composer require <span class="code-string">zettapay/sdk</span></code></pre>
+          <pre data-install-pane="rust" class="code-block rounded-lg p-4 text-sm overflow-x-auto hidden"><code><span class="code-comment">$</span> cargo add <span class="code-string">zettapay</span></code></pre>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.05s;">
@@ -713,6 +739,18 @@ POST /pay
         }, 4000);
       });
     }
+
+    // Install language tabs
+    (() => {
+      const tabs = document.querySelectorAll('.install-tab[data-install-tab]');
+      const panes = document.querySelectorAll('[data-install-pane]');
+      if (!tabs.length || !panes.length) return;
+      const activate = (key) => {
+        tabs.forEach(t => t.setAttribute('aria-selected', t.dataset.installTab === key ? 'true' : 'false'));
+        panes.forEach(p => p.classList.toggle('hidden', p.dataset.installPane !== key));
+      };
+      tabs.forEach(t => t.addEventListener('click', () => activate(t.dataset.installTab)));
+    })();
 
     // Animated stat counters
     const counters = document.querySelectorAll('.stat-counter[data-target]');
