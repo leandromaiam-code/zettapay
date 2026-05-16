@@ -17,6 +17,18 @@ lives in [`immunefi/`](immunefi/). The two listings share scope
 boundaries and rules; the mainnet listing differs only in pool size,
 program ID, and effective date.
 
+### Devnet listing — package & status
+
+The devnet submission package is canonical in `audit/immunefi/`:
+
+- [`immunefi/PROGRAM.md`](immunefi/PROGRAM.md) — program overview submitted to Immunefi.
+- [`immunefi/SCOPE.md`](immunefi/SCOPE.md), [`immunefi/SEVERITY.md`](immunefi/SEVERITY.md), [`immunefi/REWARDS.md`](immunefi/REWARDS.md), [`immunefi/RULES.md`](immunefi/RULES.md) — listing terms.
+- [`immunefi/ASSETS.json`](immunefi/ASSETS.json) — machine-readable asset list for the Immunefi form.
+- [`immunefi/SUBMISSION_CHECKLIST.md`](immunefi/SUBMISSION_CHECKLIST.md) — operator runbook for publishing the listing.
+- [`immunefi/STATUS.md`](immunefi/STATUS.md) — append-only status log; the single source of truth for whether the listing is `package-ready`, `onboarding`, `submitted`, `live`, `paused`, or `superseded`.
+
+For the current devnet stage and public URL, read `STATUS.md` first.
+
 ## Scope
 
 | In scope | Out of scope |
