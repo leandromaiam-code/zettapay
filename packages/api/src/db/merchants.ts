@@ -37,6 +37,8 @@ export interface CoinflowSettlementSettings {
 export interface VelocityLimits {
   maxPaymentsPerMinute: number;
   maxAmountPerHour: number;
+}
+
 export interface PixSettlementSettings {
   enabled: boolean;
   autoSettle: boolean;
@@ -85,6 +87,8 @@ export interface UpdateCoinflowInput {
 export interface UpdateVelocityInput {
   maxPaymentsPerMinute: number;
   maxAmountPerHour: number;
+}
+
 export interface UpdatePixInput {
   enabled: boolean;
   autoSettle: boolean;
@@ -112,6 +116,7 @@ function toMerchant(row: MerchantRow): Merchant {
     velocity: {
       maxPaymentsPerMinute: row.velocity_max_payments_per_minute,
       maxAmountPerHour: row.velocity_max_amount_per_hour,
+    },
     pix: {
       enabled: row.pix_enabled === 1,
       autoSettle: row.pix_auto_settle === 1,
@@ -249,6 +254,16 @@ export function redactMerchant(
     input.redactedAt,
     id,
   );
+  if (result.changes === 0) {
+    throw new Error(`merchant ${id} not found`);
+  }
+  const merchant = findMerchantById(db, id);
+  if (!merchant) {
+    throw new Error(`merchant ${id} disappeared after redaction`);
+  }
+  return merchant;
+}
+
 export function updateMerchantFraudThreshold(
   db: Db,
   id: string,
@@ -264,7 +279,6 @@ export function updateMerchantFraudThreshold(
   }
   const merchant = findMerchantById(db, id);
   if (!merchant) {
-    throw new Error(`merchant ${id} disappeared after redaction`);
     throw new Error(`merchant ${id} disappeared after update`);
   }
   return merchant;
@@ -284,6 +298,18 @@ export function updateMerchantVelocity(
   const result = stmt.run(
     input.maxPaymentsPerMinute,
     input.maxAmountPerHour,
+    id,
+  );
+  if (result.changes === 0) {
+    throw new Error(`merchant ${id} not found`);
+  }
+  const merchant = findMerchantById(db, id);
+  if (!merchant) {
+    throw new Error(`merchant ${id} disappeared after update`);
+  }
+  return merchant;
+}
+
 export function updateMerchantPix(
   db: Db,
   id: string,
