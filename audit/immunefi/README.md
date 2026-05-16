@@ -28,6 +28,7 @@ external audit (OtterSec or Halborn) and continues post-launch.
 | [`REWARDS.md`](REWARDS.md) | Payout table per tier, payout mechanics, multi-finding apportioning rules. |
 | [`RULES.md`](RULES.md) | Rules of engagement, PoC requirements, prohibited actions, coordinated disclosure. |
 | [`SUBMISSION_CHECKLIST.md`](SUBMISSION_CHECKLIST.md) | Step-by-step for the ZettaPay security lead to actually post the listing on `immunefi.com`. |
+| [`STATUS.md`](STATUS.md) | Submission status log — current stage, per-step progress, transition history. Mirrors `community/listings/STATUS.md`. |
 
 ## Why post on Immunefi
 
