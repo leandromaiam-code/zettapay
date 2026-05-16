@@ -133,7 +133,8 @@
     "src/services/program_monitor.ts",
     "src/db/ambassadors.ts",
     "src/services/ambassadors.ts",
-    "src/routes/ambassadors.ts"
+    "src/routes/ambassadors.ts",
+    "src/services/edge_cases.ts"
   ],
   "exclude": ["dist", "node_modules", "test/**/*", "tests/**/*", "**/*.test.ts"]
 }
