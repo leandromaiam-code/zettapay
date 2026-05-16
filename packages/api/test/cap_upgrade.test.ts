@@ -4,8 +4,10 @@ import { closeDatabase, openDatabase } from "../src/db/index.js";
 import { appendAudit, listAuditEntries } from "../src/db/audit_journal.js";
 import {
   D30_500_USDC_SCHEDULE,
+  D60_REMOVE_CAP_SCHEDULE,
   capUpgradeFiresAt,
   findAppliedCap,
+  isCapRemovalSchedule,
   isCapUpgradeDue,
   noopCapBroadcaster,
   runCapUpgrade,
@@ -336,6 +338,157 @@ describe("runCapUpgrade — orchestrator outcomes", () => {
     expect(applied!.amountBaseUnits).toBe(500_000_000n);
     expect(applied!.signature).toBe("sig_seeded");
     expect(applied!.broadcastSkipped).toBe(false);
+  });
+});
+
+describe("D60_REMOVE_CAP_SCHEDULE (Z30.5)", () => {
+  it("encodes cap removal as 0n at the D+60 boundary", () => {
+    expect(D60_REMOVE_CAP_SCHEDULE.maxInvoiceBaseUnits).toBe(0n);
+    expect(D60_REMOVE_CAP_SCHEDULE.triggerAfterDays).toBe(60);
+    expect(D60_REMOVE_CAP_SCHEDULE.eventName).toBe(
+      "cap_upgrade.set_max_invoice_amount.d60_remove",
+    );
+  });
+
+  it("isCapRemovalSchedule flags D+60 but not D+30", () => {
+    expect(isCapRemovalSchedule(D60_REMOVE_CAP_SCHEDULE)).toBe(true);
+    expect(isCapRemovalSchedule(D30_500_USDC_SCHEDULE)).toBe(false);
+  });
+
+  it("fires exactly 60 days after launchAt", () => {
+    const firesAt = capUpgradeFiresAt(LAUNCH_AT, D60_REMOVE_CAP_SCHEDULE);
+    expect(Date.parse(firesAt) - LAUNCH_MS).toBe(60 * ONE_DAY);
+  });
+
+  it("returns false at D+30 (D+60 not due yet)", () => {
+    expect(
+      isCapUpgradeDue(LAUNCH_AT, D60_REMOVE_CAP_SCHEDULE, LAUNCH_MS + 30 * ONE_DAY),
+    ).toBe(false);
+  });
+
+  it("returns true at exactly D+60", () => {
+    expect(
+      isCapUpgradeDue(LAUNCH_AT, D60_REMOVE_CAP_SCHEDULE, LAUNCH_MS + 60 * ONE_DAY),
+    ).toBe(true);
+  });
+});
+
+describe("runCapUpgrade — D+60 cap removal (Z30.5)", () => {
+  let db: Db;
+
+  beforeEach(() => {
+    closeDatabase();
+    db = openDatabase(":memory:");
+    seedMerchant(db);
+  });
+
+  afterEach(() => {
+    closeDatabase();
+  });
+
+  it("not_due at D+30 — D+60 has not yet arrived", async () => {
+    const { broadcaster, calls } = recordingBroadcaster();
+    const outcome = await runCapUpgrade({
+      db,
+      betaConfig: makeBetaConfig(LAUNCH_AT),
+      broadcaster,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      now: () => LAUNCH_MS + 30 * ONE_DAY,
+    });
+    expect(outcome.kind).toBe("not_due");
+    expect(calls).toEqual([]);
+    expect(listAuditEntries(db)).toHaveLength(0);
+  });
+
+  it("applies cap removal at D+60 with clean health — broadcasts 0n, audit has capRemoved=true", async () => {
+    const { broadcaster, calls } = recordingBroadcaster("sig_d60_remove");
+    const outcome = await runCapUpgrade({
+      db,
+      betaConfig: makeBetaConfig(LAUNCH_AT),
+      broadcaster,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      now: () => LAUNCH_MS + 60 * ONE_DAY,
+    });
+    expect(outcome.kind).toBe("applied");
+    if (outcome.kind === "applied") {
+      expect(outcome.signature).toBe("sig_d60_remove");
+      expect(outcome.amountBaseUnits).toBe(0n);
+      expect(outcome.broadcastSkipped).toBe(false);
+    }
+    expect(calls).toEqual([0n]);
+
+    const rows = listAuditEntries(db, {
+      event: D60_REMOVE_CAP_SCHEDULE.eventName,
+    });
+    expect(rows).toHaveLength(1);
+    const payload = rows[0]!.payload as Record<string, unknown>;
+    expect(payload.amountBaseUnits).toBe("0");
+    expect(payload.amountUsd).toBe(0);
+    expect(payload.capRemoved).toBe(true);
+    expect(payload.signature).toBe("sig_d60_remove");
+  });
+
+  it("D+30 audit payload reports capRemoved=false", async () => {
+    const { broadcaster } = recordingBroadcaster("sig_d30");
+    await runCapUpgrade({
+      db,
+      betaConfig: makeBetaConfig(LAUNCH_AT),
+      broadcaster,
+      schedule: D30_500_USDC_SCHEDULE,
+      now: () => LAUNCH_MS + 30 * ONE_DAY,
+    });
+    const rows = listAuditEntries(db, {
+      event: D30_500_USDC_SCHEDULE.eventName,
+    });
+    const payload = rows[0]!.payload as Record<string, unknown>;
+    expect(payload.capRemoved).toBe(false);
+  });
+
+  it("blocks D+60 fail-closed when program-health alerts are firing", async () => {
+    const nowMs = LAUNCH_MS + 60 * ONE_DAY;
+    seedCompletedPayments(db, "m_cap_test", 30, nowMs);
+    seedFailedPayments(db, "m_cap_test", 10, nowMs);
+
+    const { broadcaster, calls } = recordingBroadcaster();
+    const outcome = await runCapUpgrade({
+      db,
+      betaConfig: makeBetaConfig(LAUNCH_AT),
+      broadcaster,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      now: () => nowMs,
+    });
+    expect(outcome.kind).toBe("blocked_health");
+    expect(calls).toEqual([]);
+    expect(
+      listAuditEntries(db, { event: D60_REMOVE_CAP_SCHEDULE.eventName }),
+    ).toHaveLength(0);
+  });
+
+  it("D+30 and D+60 audit rows coexist with distinct idempotency keys", async () => {
+    const cfg = makeBetaConfig(LAUNCH_AT);
+    const { broadcaster: bD30 } = recordingBroadcaster("sig_d30");
+    await runCapUpgrade({
+      db,
+      betaConfig: cfg,
+      broadcaster: bD30,
+      schedule: D30_500_USDC_SCHEDULE,
+      now: () => LAUNCH_MS + 30 * ONE_DAY,
+    });
+    const { broadcaster: bD60 } = recordingBroadcaster("sig_d60");
+    await runCapUpgrade({
+      db,
+      betaConfig: cfg,
+      broadcaster: bD60,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      now: () => LAUNCH_MS + 60 * ONE_DAY,
+    });
+
+    expect(
+      listAuditEntries(db, { event: D30_500_USDC_SCHEDULE.eventName }),
+    ).toHaveLength(1);
+    expect(
+      listAuditEntries(db, { event: D60_REMOVE_CAP_SCHEDULE.eventName }),
+    ).toHaveLength(1);
   });
 });
 

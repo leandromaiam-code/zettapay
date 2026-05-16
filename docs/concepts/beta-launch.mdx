@@ -167,6 +167,32 @@ for the full window:
 3. Remove the alert rules above from the operator dashboard.
 4. Archive `BETA_ALLOWED_MERCHANTS` for postmortem reference.
 
+## Runbook: cap removal (Z30.5)
+
+At D+60, after the program-health monitor has reported zero critical
+alerts across the full beta window, the cap-upgrade orchestrator
+broadcasts `set_max_invoice_amount(0)` on-chain. `0` is the program's
+"no per-invoice ceiling" sentinel (Z30.1).
+
+The off-chain enforcer mirrors this by accepting `BETA_MERCHANT_CAP_USDC=0`
+and short-circuiting the volume gate. The allowlist and window-expiry
+gates stay armed — so cap removal is *not* graduation to GA.
+
+```sh
+# At D+60, redeploy with:
+BETA_MERCHANT_CAP_USDC=0
+```
+
+`/beta/status` then reports each merchant with `capUsd: 0`,
+`utilizationPct: 0`, `remainingUsd: Infinity`, and `exhausted: false`.
+The cumulative volume column keeps tracking so operators can still
+spot anomalous flow.
+
+Reversibility: set `BETA_MERCHANT_CAP_USDC` back to a positive value
+and redeploy to restore the volume gate. The on-chain ceiling is
+controlled separately via `set_max_invoice_amount(positive)` on the
+deploy authority.
+
 ## Test coverage
 
 `packages/api/test/beta.test.ts` covers config parsing, the three

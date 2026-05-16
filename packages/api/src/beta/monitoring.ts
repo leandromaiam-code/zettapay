@@ -62,6 +62,13 @@ export function betaStatusSnapshot(
   const endsAt = betaEndsAt(config);
   const allowlistIds = Array.from(config.allowlist);
 
+  const capUsd = config.merchantCapUsd;
+  // Z30.5 — cap=0 is the "no cap" signal (D+60 cap removal). Without this
+  // guard the utilization row would report `exhausted: true` for every
+  // allowlisted merchant (since `cumulative >= 0` is always true) and
+  // `remainingUsd: 0`, which is the opposite of reality.
+  const capRemoved = capUsd === 0;
+
   const utilization: MerchantBetaUtilization[] = allowlistIds.map(
     (merchantId) => {
       const cumulativeUsd = sumPaymentAmountByMerchantSince(
@@ -69,14 +76,16 @@ export function betaStatusSnapshot(
         merchantId,
         sinceIso,
       );
-      const remainingUsd = Math.max(0, config.merchantCapUsd - cumulativeUsd);
+      const remainingUsd = capRemoved
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, capUsd - cumulativeUsd);
       return {
         merchantId,
         cumulativeUsd,
-        capUsd: config.merchantCapUsd,
-        utilizationPct: utilizationPct(cumulativeUsd, config.merchantCapUsd),
+        capUsd,
+        utilizationPct: capRemoved ? 0 : utilizationPct(cumulativeUsd, capUsd),
         remainingUsd,
-        exhausted: cumulativeUsd >= config.merchantCapUsd,
+        exhausted: capRemoved ? false : cumulativeUsd >= capUsd,
       };
     },
   );

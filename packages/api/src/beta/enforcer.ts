@@ -84,6 +84,19 @@ export function enforceBetaLimits(
     sinceIso,
   );
   const capUsd = config.merchantCapUsd;
+
+  // Z30.5 — capUsd=0 means "no cap" (D+60 cap removal), the off-chain twin
+  // of on-chain set_max_invoice_amount(0). Allowlist + window-expiry gates
+  // above stay armed; only the volume gate is disabled.
+  if (capUsd === 0) {
+    return {
+      enforced: true,
+      cumulativeUsd,
+      capUsd,
+      remainingUsd: Number.POSITIVE_INFINITY,
+    };
+  }
+
   const remainingUsd = capUsd - cumulativeUsd;
 
   if (cumulativeUsd + amount > capUsd) {
