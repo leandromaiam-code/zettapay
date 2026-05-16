@@ -123,6 +123,25 @@ describe("loadBetaConfig", () => {
     process.env.BETA_LAUNCH_AT = "not-a-date";
     expect(() => loadBetaConfig()).toThrow(ConfigurationError);
   });
+
+  it("accepts BETA_MERCHANT_CAP_USDC=0 as the Z30.5 cap-removal sentinel", () => {
+    process.env.BETA_MERCHANT_CAP_USDC = "0";
+    const cfg = loadBetaConfig();
+    expect(cfg.merchantCapUsd).toBe(0);
+  });
+
+  it("rejects negative BETA_MERCHANT_CAP_USDC", () => {
+    process.env.BETA_MERCHANT_CAP_USDC = "-1";
+    expect(() => loadBetaConfig()).toThrow(ConfigurationError);
+  });
+
+  it("still rejects BETA_MAX_MERCHANTS=0 and BETA_DURATION_DAYS=0", () => {
+    process.env.BETA_MAX_MERCHANTS = "0";
+    expect(() => loadBetaConfig()).toThrow(ConfigurationError);
+    delete process.env.BETA_MAX_MERCHANTS;
+    process.env.BETA_DURATION_DAYS = "0";
+    expect(() => loadBetaConfig()).toThrow(ConfigurationError);
+  });
 });
 
 describe("betaEndsAt / isBetaExpired", () => {
@@ -283,6 +302,55 @@ describe("enforceBetaLimits", () => {
     expect(details.scope).toBe("beta:window_expired");
   });
 
+  it("Z30.5 cap=0 — skips the volume gate but keeps allowlist + window active", () => {
+    const merchant = findMerchantById(db, merchantId)!;
+    // Seed $50k of completed spend — would blow past any positive cap.
+    for (let i = 0; i < 50; i += 1) {
+      const id = `pay_big_${i}`;
+      insertPayment(db, {
+        id,
+        merchantId,
+        amountUsdc: 1_000,
+        payerWallet: Keypair.generate().publicKey.toBase58(),
+        metadata: null,
+      });
+      markPaymentCompleted(db, id, `sig_big_${i}`);
+    }
+    const cfg = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+    });
+    const result = enforceBetaLimits(db, cfg, { merchant, amount: 25_000 });
+    expect(result.enforced).toBe(true);
+    expect(result.capUsd).toBe(0);
+    expect(result.remainingUsd).toBe(Number.POSITIVE_INFINITY);
+    expect(result.cumulativeUsd).toBe(50_000);
+
+    // Allowlist still armed even under cap=0.
+    const cfgNoList = buildBetaConfig({
+      allowlist: new Set(["other"]),
+      merchantCapUsd: 0,
+    });
+    expect(() =>
+      enforceBetaLimits(db, cfgNoList, { merchant, amount: 1 }),
+    ).toThrow(HttpError);
+
+    // Window expiry still armed even under cap=0.
+    const cfgExpired = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+      launchAt: "2026-01-01T00:00:00.000Z",
+      durationDays: 30,
+    });
+    expect(() =>
+      enforceBetaLimits(db, cfgExpired, {
+        merchant,
+        amount: 1,
+        now: new Date("2026-04-01T00:00:00Z"),
+      }),
+    ).toThrow(HttpError);
+  });
+
   it("does not count failed payments toward the cap", () => {
     const merchant = findMerchantById(db, merchantId)!;
     for (let i = 0; i < 20; i += 1) {
@@ -360,6 +428,32 @@ describe("betaStatusSnapshot", () => {
     expect(snap.endsAt).toBe("2026-05-31T00:00:00.000Z");
     expect(snap.daysRemaining).toBe(16);
     expect(snap.expired).toBe(false);
+  });
+
+  it("Z30.5 cap=0 — reports exhausted=false / utilization=0 / remaining=Infinity even with heavy spend", () => {
+    for (let i = 0; i < 50; i += 1) {
+      const id = `pay_post_cap_${i}`;
+      insertPayment(db, {
+        id,
+        merchantId,
+        amountUsdc: 1_000,
+        payerWallet: Keypair.generate().publicKey.toBase58(),
+        metadata: null,
+      });
+      markPaymentCompleted(db, id, `sig_post_cap_${i}`);
+    }
+    const cfg = buildBetaConfig({
+      allowlist: new Set([merchantId]),
+      merchantCapUsd: 0,
+    });
+    const snap = betaStatusSnapshot(db, cfg);
+    const row = snap.utilization[0]!;
+    expect(row.cumulativeUsd).toBe(50_000);
+    expect(row.capUsd).toBe(0);
+    expect(row.utilizationPct).toBe(0);
+    expect(row.remainingUsd).toBe(Number.POSITIVE_INFINITY);
+    expect(row.exhausted).toBe(false);
+    expect(snap.totals.merchantsExhausted).toBe(0);
   });
 
   it("flips exhausted/expired correctly past the cap and end date", () => {

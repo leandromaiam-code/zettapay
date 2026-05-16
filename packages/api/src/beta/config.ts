@@ -34,11 +34,16 @@ function readBoolean(name: string, fallback: boolean): boolean {
   throw new ConfigurationError(`Invalid boolean env var ${name}=${raw}`);
 }
 
-function readNumber(name: string, fallback: number): number {
+function readNumber(
+  name: string,
+  fallback: number,
+  options: { allowZero?: boolean } = {},
+): number {
   const raw = process.env[name];
   if (raw === undefined || raw === "") return fallback;
   const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  const min = options.allowZero ? 0 : 1;
+  if (!Number.isFinite(parsed) || parsed < min) {
     throw new ConfigurationError(`Invalid numeric env var ${name}=${raw}`);
   }
   return parsed;
@@ -67,9 +72,12 @@ function readCsv(name: string): string[] {
 
 export function loadBetaConfig(): BetaLaunchConfig {
   const enabled = readBoolean("BETA_MODE_ENABLED", false);
+  // Z30.5 — cap=0 is the off-chain twin of on-chain `set_max_invoice_amount(0)`
+  // = "no per-merchant ceiling". Negative values still rejected.
   const merchantCapUsd = readNumber(
     "BETA_MERCHANT_CAP_USDC",
     DEFAULT_MERCHANT_CAP_USD,
+    { allowZero: true },
   );
   const maxMerchants = readNumber("BETA_MAX_MERCHANTS", DEFAULT_MAX_MERCHANTS);
   const durationDays = readNumber("BETA_DURATION_DAYS", DEFAULT_DURATION_DAYS);

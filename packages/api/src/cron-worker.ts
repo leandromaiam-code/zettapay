@@ -3,7 +3,11 @@ import { initTracing } from "./lib/tracing.js";
 const tracing = initTracing("zettapay-cron-worker");
 
 import { loadBetaConfig } from "./beta/config.js";
-import { noopCapBroadcaster } from "./beta/cap_upgrade.js";
+import {
+  D30_500_USDC_SCHEDULE,
+  D60_REMOVE_CAP_SCHEDULE,
+  noopCapBroadcaster,
+} from "./beta/cap_upgrade.js";
 import { loadSolanaCapBroadcasterFromEnv } from "./beta/solana_cap_broadcaster.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
@@ -126,14 +130,26 @@ async function main(): Promise<void> {
     logger.info("cap_upgrade_cron.broadcaster_selected", {
       kind: solanaBroadcaster ? "solana_rpc" : "noop",
     });
-    const capCron = startCapUpgradeCron({
+    // Z30.4 D+30 → $500 cap, Z30.5 D+60 → cap removed. Each schedule has its
+    // own audit-event idempotency key so the rows coexist in audit_journal.
+    const capCronD30 = startCapUpgradeCron({
       db,
       betaConfig,
       broadcaster,
+      schedule: D30_500_USDC_SCHEDULE,
       intervalMs: capUpgradeIntervalMs,
       logger,
     });
-    shutdown.register("cap_upgrade_cron", () => capCron.close());
+    shutdown.register("cap_upgrade_cron_d30", () => capCronD30.close());
+    const capCronD60 = startCapUpgradeCron({
+      db,
+      betaConfig,
+      broadcaster,
+      schedule: D60_REMOVE_CAP_SCHEDULE,
+      intervalMs: capUpgradeIntervalMs,
+      logger,
+    });
+    shutdown.register("cap_upgrade_cron_d60", () => capCronD60.close());
   } else {
     logger.info("cap_upgrade_cron.disabled", {
       reason: betaConfig.enabled ? "no_launch_date" : "beta_mode_off",

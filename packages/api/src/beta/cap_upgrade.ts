@@ -55,6 +55,23 @@ export const D30_500_USDC_SCHEDULE: CapUpgradeSchedule = {
   eventName: "cap_upgrade.set_max_invoice_amount.d30",
 };
 
+/**
+ * Z30.5 — D+60 cap REMOVAL. After 60 days of bug-free operation, the
+ * orchestrator broadcasts `set_max_invoice_amount(0)`, which the on-chain
+ * program interprets as "no per-invoice ceiling" (Z30.1 semantics). The
+ * cap is gone and ZettaPay accepts arbitrary-sized invoices.
+ */
+export const D60_REMOVE_CAP_SCHEDULE: CapUpgradeSchedule = {
+  triggerAfterDays: 60,
+  maxInvoiceBaseUnits: 0n,
+  eventName: "cap_upgrade.set_max_invoice_amount.d60_remove",
+};
+
+/** True when the schedule's outcome is "no cap" rather than a literal $0 ceiling. */
+export function isCapRemovalSchedule(schedule: CapUpgradeSchedule): boolean {
+  return schedule.maxInvoiceBaseUnits === 0n;
+}
+
 export type CapBroadcastResult =
   | { kind: "ok"; signature: string }
   | { kind: "skipped"; reason: string };
@@ -297,6 +314,7 @@ export async function runCapUpgrade(
       amountUsd: Number(
         schedule.maxInvoiceBaseUnits / USDC_BASE_UNITS_PER_USD,
       ),
+      capRemoved: isCapRemovalSchedule(schedule),
       signature,
       broadcastSkipped,
       launchAt,
