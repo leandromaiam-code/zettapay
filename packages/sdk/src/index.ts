@@ -91,6 +91,18 @@ export {
   type InvoiceQrOptions,
 } from './solana-pay.js';
 export {
+  deriveAddress,
+  deriveBitcoinAddress,
+  deriveEthereumAddress,
+  deriveUsdcAddress,
+  type BitcoinNetwork,
+  type DerivedAddress,
+  type DerivedChain,
+  type DeriveAddressParams,
+  type DeriveBitcoinAddressParams,
+  type DeriveEthereumAddressParams,
+} from './derive.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,
