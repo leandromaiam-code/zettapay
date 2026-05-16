@@ -22,7 +22,8 @@
     "smoke:devnet": "tsx scripts/smoke-devnet.ts",
     "beta:devnet:z28-1": "tsx scripts/beta-devnet-z28-1.ts",
     "beta:mainnet:onboard": "tsx scripts/beta-mainnet-z30-2-onboard.ts",
-    "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts"
+    "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts",
+    "z29:4:program-live": "tsx scripts/z29-4-mainnet-program-live.ts"
   },
   "devDependencies": {
     "@vercel/node": "^3.2.24"
