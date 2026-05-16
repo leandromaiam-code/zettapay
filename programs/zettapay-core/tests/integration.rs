@@ -33,10 +33,12 @@ use solana_sdk::{
 use solana_sdk::instruction::InstructionError;
 
 use zettapay_core::{
-    find_invoice_pda, find_merchant_pda, find_program_config_pda, process_instruction,
-    CreateInvoiceArgs, InitProgramConfigArgs, Invoice, InstructionTag, Merchant, ProgramConfig,
-    RegisterMerchantArgs, SetMaxInvoiceAmountArgs, SweepArgs, CHAIN_BASE, CHAIN_ETHEREUM,
-    CHAIN_SOLANA, CURRENCY_USDC, DEFAULT_MAX_INVOICE_AMOUNT, INVOICE_STATUS_OPEN,
+    find_btc_header_chain_pda, find_invoice_pda, find_merchant_pda, find_program_config_pda,
+    find_spv_proof_btc_pda, find_spv_proof_eth_pda, process_instruction, sha256d, BitcoinHeaderChain,
+    CreateInvoiceArgs, InitBtcHeaderChainArgs, InitProgramConfigArgs, Invoice, InstructionTag,
+    Merchant, ProgramConfig, RegisterMerchantArgs, SetMaxInvoiceAmountArgs, SubmitBtcProofPart1Args,
+    SubmitEthReceiptPart1Args, SweepArgs, UpdateBtcHeaderArgs, BLOCK_HEADER_LEN, CHAIN_BASE,
+    CHAIN_ETHEREUM, CHAIN_SOLANA, CURRENCY_USDC, DEFAULT_MAX_INVOICE_AMOUNT, INVOICE_STATUS_OPEN,
     INVOICE_STATUS_SWEPT, INVOICE_TAG, MAX_CHAINS, MERCHANT_TAG, PROGRAM_CONFIG_TAG, ZpError,
 };
 
@@ -977,4 +979,575 @@ async fn create_invoice_after_cap_disabled_allows_any_amount() {
 
     let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
     assert_eq!(inv.amount, huge);
+}
+
+// --- 8. Z28.5 edge cases --------------------------------------------------
+//
+// Each test below documents one of the failure modes the spec calls out:
+//
+//   * chain reorg simulation (BTC header chain) — competing fork at the
+//     same parent is rejected with `HeaderChainDiscontinuous` once the
+//     legitimate tip has advanced.
+//   * double payment same invoice — a SPV proof (BTC or ETH) cannot be
+//     opened against an invoice whose lifecycle has already terminated
+//     (Swept). `InvoiceAlreadyPaid` is the program-level guard the
+//     off-chain dispatcher relies on so a retry race cannot record two
+//     settlements for one invoice.
+//   * sweep with invalid invoice indexes — sweeping with an account list
+//     that does not correspond to the supplied indexes (uninitialized
+//     PDA, cross-merchant PDA, mismatched length) is the canonical caller-
+//     bug the program refuses to silently round-trip.
+
+// --- shared regtest helpers ----------------------------------------------
+
+/// Bitcoin regtest difficulty. Decodes to the target with the top byte
+/// equal to `0x7f` and the next two bytes `0xff` — so any hash whose
+/// most-significant byte is ≤ 0x7f satisfies PoW. About 50% of arbitrary
+/// nonces clear the bar, so the grind loop below converges instantly.
+const REGTEST_N_BITS: u32 = 0x207f_ffff;
+
+/// Mine a regtest-difficulty Bitcoin block header. Pure CPU; the grind is
+/// bounded by `u32::MAX` and converges in ≈1–2 iterations because the
+/// regtest target leaves the top byte free.
+///
+/// The returned header is byte-for-byte usable in `init_btc_header_chain`
+/// + `update_btc_header` — both validate PoW via the same predicate this
+/// loop checks.
+fn mine_regtest_header(
+    prev_hash: [u8; 32],
+    merkle_root: [u8; 32],
+    timestamp: u32,
+) -> [u8; BLOCK_HEADER_LEN] {
+    let mut header = [0u8; BLOCK_HEADER_LEN];
+    header[0..4].copy_from_slice(&1u32.to_le_bytes());
+    header[4..36].copy_from_slice(&prev_hash);
+    header[36..68].copy_from_slice(&merkle_root);
+    header[68..72].copy_from_slice(&timestamp.to_le_bytes());
+    header[72..76].copy_from_slice(&REGTEST_N_BITS.to_le_bytes());
+    for nonce in 0u32..u32::MAX {
+        header[76..80].copy_from_slice(&nonce.to_le_bytes());
+        let hash = sha256d(&header);
+        // Regtest target = ... 0xff 0xff 0x7f (bytes 29, 30, 31). The
+        // top byte dominates the LE comparison: hash[31] <= 0x7f
+        // suffices because target[30] = 0xff which dominates whatever
+        // hash[30] turns out to be.
+        if hash[31] <= 0x7f {
+            return header;
+        }
+    }
+    panic!("regtest mining ran past u32::MAX without a valid nonce");
+}
+
+fn ix_init_btc_header_chain(
+    payer: &Pubkey,
+    anchor_header: &[u8],
+    anchor_height: u64,
+) -> Instruction {
+    let (chain_pda, _) = find_btc_header_chain_pda(&program_id());
+    let args = InitBtcHeaderChainArgs {
+        anchor_header: anchor_header.to_vec(),
+        anchor_height,
+    };
+    let mut data = vec![InstructionTag::InitBtcHeaderChain as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(chain_pda, false),
+            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data,
+    }
+}
+
+fn ix_update_btc_header(new_header: &[u8]) -> Instruction {
+    let (chain_pda, _) = find_btc_header_chain_pda(&program_id());
+    let args = UpdateBtcHeaderArgs {
+        new_header: new_header.to_vec(),
+    };
+    let mut data = vec![InstructionTag::UpdateBtcHeader as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![AccountMeta::new(chain_pda, false)],
+        data,
+    }
+}
+
+fn ix_submit_btc_proof_part_1(
+    invoice: &Pubkey,
+    submitter: &Pubkey,
+    payer: &Pubkey,
+    tx_data: Vec<u8>,
+    merkle_path: Vec<[u8; 32]>,
+    merkle_index: u32,
+) -> Instruction {
+    let (spv_proof_pda, _) = find_spv_proof_btc_pda(invoice, &program_id());
+    let args = SubmitBtcProofPart1Args {
+        tx_data,
+        merkle_path,
+        merkle_index,
+    };
+    let mut data = vec![InstructionTag::SubmitBtcProofPart1 as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(spv_proof_pda, false),
+            AccountMeta::new_readonly(*invoice, false),
+            AccountMeta::new_readonly(*submitter, true),
+            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data,
+    }
+}
+
+fn ix_submit_eth_receipt_part_1(
+    invoice: &Pubkey,
+    submitter: &Pubkey,
+    payer: &Pubkey,
+) -> Instruction {
+    let (spv_proof_pda, _) = find_spv_proof_eth_pda(invoice, &program_id());
+    let args = SubmitEthReceiptPart1Args {
+        token: [0x11u8; 20],
+        from_addr: [0x22u8; 20],
+        to_addr: [0x33u8; 20],
+        amount: 1_500_000,
+        receipt_hash: [0x44u8; 32],
+        merkle_path: vec![[7u8; 32]],
+        merkle_index: 0,
+    };
+    let mut data = vec![InstructionTag::SubmitEthReceiptPart1 as u8];
+    args.serialize(&mut data).unwrap();
+    Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(spv_proof_pda, false),
+            AccountMeta::new_readonly(*invoice, false),
+            AccountMeta::new_readonly(*submitter, true),
+            AccountMeta::new(*payer, true),
+            AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data,
+    }
+}
+
+async fn fetch_header_chain(banks: &mut BanksClient) -> BitcoinHeaderChain {
+    let (pda, _) = find_btc_header_chain_pda(&program_id());
+    let acc: Account = banks
+        .get_account(pda)
+        .await
+        .unwrap()
+        .expect("header chain account");
+    assert_eq!(acc.owner, program_id());
+    BitcoinHeaderChain::try_from_slice(&acc.data).expect("header chain decodes")
+}
+
+// --- 8a. chain reorg simulation BTC --------------------------------------
+
+#[tokio::test]
+async fn btc_header_chain_rejects_reorg_attempt_from_already_extended_parent() {
+    // Init the chain at anchor H0. Extend it to H1 (the new tip). Then
+    // submit a competing fork H1' that also names H0 as parent — the
+    // canonical chain-reorg attempt at depth 1. Because the chain's
+    // `latest_hash` has already moved to H1, the prev-hash equality
+    // check inside `update_btc_header` rejects H1' with
+    // `HeaderChainDiscontinuous` instead of silently swapping the tip.
+    let (mut banks, payer, _) = program_test().start().await;
+
+    let h0 = mine_regtest_header([0u8; 32], [0xa1u8; 32], 1_700_000_000);
+    let h0_hash = sha256d(&h0);
+    send(
+        &mut banks,
+        &payer,
+        &[],
+        &[ix_init_btc_header_chain(&payer.pubkey(), &h0, 800_000)],
+    )
+    .await
+    .expect("init btc header chain should succeed");
+
+    let h1 = mine_regtest_header(h0_hash, [0xa2u8; 32], 1_700_000_600);
+    send(&mut banks, &payer, &[], &[ix_update_btc_header(&h1)])
+        .await
+        .expect("legitimate extension to H1 should succeed");
+    let h1_hash = sha256d(&h1);
+
+    // Competing fork: same parent as H1 (H0), different merkle_root.
+    let h1_prime = mine_regtest_header(h0_hash, [0xb2u8; 32], 1_700_000_700);
+    let err = send(&mut banks, &payer, &[], &[ix_update_btc_header(&h1_prime)])
+        .await
+        .expect_err("reorg attempt must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::HeaderChainDiscontinuous as u32),
+        "expected HeaderChainDiscontinuous, got {err:?}"
+    );
+
+    // Chain tip must still be H1 — a rejected reorg cannot have written
+    // any state.
+    let chain = fetch_header_chain(&mut banks).await;
+    assert_eq!(chain.latest_hash, h1_hash);
+    assert_eq!(chain.latest_height, 800_001);
+
+    // And a genuine extension on top of H1 still works.
+    let h2 = mine_regtest_header(h1_hash, [0xa3u8; 32], 1_700_001_200);
+    send(&mut banks, &payer, &[], &[ix_update_btc_header(&h2)])
+        .await
+        .expect("extension on top of the surviving tip should succeed");
+}
+
+// --- 8b. double payment same invoice -------------------------------------
+
+#[tokio::test]
+async fn btc_spv_part_1_on_swept_invoice_is_rejected() {
+    // The Solana settlement rail flips an invoice Open → Swept. After
+    // that, opening a BTC SPV proof would be a second settlement against
+    // the same invoice — the program rejects with `InvoiceAlreadyPaid`
+    // before any proof account gets created. This is the on-chain guard
+    // the off-chain webhook dispatcher relies on so a retry race cannot
+    // record two settlements for one invoice.
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            1_000_000,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_sweep(&master.pubkey(), &master.pubkey(), vec![0])],
+    )
+    .await
+    .unwrap();
+
+    let (invoice_pda, _) = find_invoice_pda(&master.pubkey(), 0, &program_id());
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_submit_btc_proof_part_1(
+            &invoice_pda,
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![0xde, 0xad, 0xbe, 0xef],
+            vec![],
+            0,
+        )],
+    )
+    .await
+    .expect_err("BTC SPV proof on swept invoice must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::InvoiceAlreadyPaid as u32),
+        "expected InvoiceAlreadyPaid, got {err:?}"
+    );
+
+    // Invoice must remain Swept — the rejected proof cannot have created
+    // an SPV proof account or shifted the invoice status.
+    let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
+    assert_eq!(inv.status, INVOICE_STATUS_SWEPT);
+}
+
+#[tokio::test]
+async fn eth_spv_part_1_on_swept_invoice_is_rejected() {
+    // Mirror of `btc_spv_part_1_on_swept_invoice_is_rejected` for the
+    // Ethereum receipt rail. Same defense — a terminated invoice cannot
+    // accept a new settlement proof, regardless of which chain the
+    // settlement claims to come from.
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            1_000_000,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_sweep(&master.pubkey(), &master.pubkey(), vec![0])],
+    )
+    .await
+    .unwrap();
+
+    let (invoice_pda, _) = find_invoice_pda(&master.pubkey(), 0, &program_id());
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_submit_eth_receipt_part_1(
+            &invoice_pda,
+            &master.pubkey(),
+            &payer.pubkey(),
+        )],
+    )
+    .await
+    .expect_err("ETH SPV proof on swept invoice must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::InvoiceAlreadyPaid as u32),
+        "expected InvoiceAlreadyPaid, got {err:?}"
+    );
+}
+
+// --- 8c. sweep with invalid invoice_ids ---------------------------------
+
+#[tokio::test]
+async fn sweep_with_uninitialised_invoice_pda_is_rejected() {
+    // Caller passes a non-zero invoice index whose PDA was never
+    // initialised. The account is still system-owned, so the
+    // `assert_owned_by_program` check fires before any deserialization.
+    // The error surfaces as `IllegalOwner` from solana_program — distinct
+    // from any `ZpError::*` custom code, which is exactly the signal an
+    // off-chain monitor uses to alert on "caller bug, not protocol bug".
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            1_000_000,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .unwrap();
+
+    // Index 99 has no on-chain invoice; the PDA derivation still yields a
+    // valid address but the account is uninitialised (system-owned).
+    let err = send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_sweep(&master.pubkey(), &master.pubkey(), vec![99])],
+    )
+    .await
+    .expect_err("sweep against uninitialised invoice PDA must be rejected");
+    // No custom code — the bare ProgramError::IllegalOwner shows up as a
+    // non-Custom InstructionError. The exact discriminator is left
+    // unchecked because Banks may collapse the wrapper across versions;
+    // the contract we care about here is "does NOT succeed and does NOT
+    // surface a ZpError custom code".
+    assert!(extract_custom(&err).is_none(), "expected non-custom error, got {err:?}");
+    assert!(
+        matches!(err, TransactionError::InstructionError(_, _)),
+        "expected an instruction error, got {err:?}"
+    );
+
+    // The legitimate invoice 0 must remain Open — a rejected sweep cannot
+    // partially apply.
+    let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
+    assert_eq!(inv.status, INVOICE_STATUS_OPEN);
+}
+
+#[tokio::test]
+async fn sweep_with_foreign_merchant_invoice_pda_is_rejected() {
+    // Two merchants register independently. Caller tries to sweep with a
+    // sweep payload that names index 0 on merchant A's call, but supplies
+    // merchant B's invoice PDA as the per-index account. The PDA-seed
+    // recomputation against merchant A's master rejects the wrong address
+    // with `InvoicePdaMismatch`.
+    let (mut banks, payer, _) = program_test().start().await;
+    let master_a = Keypair::new();
+    let master_b = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+    for m in [&master_a, &master_b] {
+        send(
+            &mut banks,
+            &payer,
+            &[m],
+            &[ix_register_merchant(
+                &m.pubkey(),
+                &payer.pubkey(),
+                vec![CHAIN_SOLANA],
+            )],
+        )
+        .await
+        .unwrap();
+        send(
+            &mut banks,
+            &payer,
+            &[m],
+            &[ix_create_invoice(
+                &m.pubkey(),
+                &payer.pubkey(),
+                0,
+                1_000_000,
+                CURRENCY_USDC,
+            )],
+        )
+        .await
+        .unwrap();
+    }
+
+    // Hand-build the sweep instruction so the merchant + signer reference
+    // master_a, but the per-index account is master_b's invoice PDA.
+    let (merchant_a_pda, _) = find_merchant_pda(&master_a.pubkey(), &program_id());
+    let (foreign_invoice_pda, _) = find_invoice_pda(&master_b.pubkey(), 0, &program_id());
+    let args = SweepArgs {
+        invoice_indexes: vec![0],
+    };
+    let mut data = vec![InstructionTag::Sweep as u8];
+    args.serialize(&mut data).unwrap();
+    let ix = Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(merchant_a_pda, false),
+            AccountMeta::new_readonly(master_a.pubkey(), true),
+            AccountMeta::new(foreign_invoice_pda, false),
+        ],
+        data,
+    };
+
+    let err = send(&mut banks, &payer, &[&master_a], &[ix])
+        .await
+        .expect_err("cross-merchant sweep must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::InvoicePdaMismatch as u32),
+        "expected InvoicePdaMismatch, got {err:?}"
+    );
+
+    // Both merchants' invoices stay Open.
+    let a = fetch_invoice(&mut banks, &master_a.pubkey(), 0).await;
+    let b = fetch_invoice(&mut banks, &master_b.pubkey(), 0).await;
+    assert_eq!(a.status, INVOICE_STATUS_OPEN);
+    assert_eq!(b.status, INVOICE_STATUS_OPEN);
+}
+
+#[tokio::test]
+async fn sweep_with_index_account_count_mismatch_is_rejected() {
+    // Caller supplies two indexes but only one invoice account. The
+    // length-mismatch guard (`AccountInvoiceCountMismatch`) fires before
+    // any PDA recomputation — protecting against silent skips where the
+    // off-chain ledger would credit settlements that never happened.
+    let (mut banks, payer, _) = program_test().start().await;
+    let master = Keypair::new();
+
+    init_default_config(&mut banks, &payer).await;
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_register_merchant(
+            &master.pubkey(),
+            &payer.pubkey(),
+            vec![CHAIN_SOLANA],
+        )],
+    )
+    .await
+    .unwrap();
+    send(
+        &mut banks,
+        &payer,
+        &[&master],
+        &[ix_create_invoice(
+            &master.pubkey(),
+            &payer.pubkey(),
+            0,
+            1_000_000,
+            CURRENCY_USDC,
+        )],
+    )
+    .await
+    .unwrap();
+
+    // Hand-build a sweep with two indexes but only one account.
+    let (merchant_pda, _) = find_merchant_pda(&master.pubkey(), &program_id());
+    let (invoice_0_pda, _) = find_invoice_pda(&master.pubkey(), 0, &program_id());
+    let args = SweepArgs {
+        invoice_indexes: vec![0, 1],
+    };
+    let mut data = vec![InstructionTag::Sweep as u8];
+    args.serialize(&mut data).unwrap();
+    let ix = Instruction {
+        program_id: program_id(),
+        accounts: vec![
+            AccountMeta::new(merchant_pda, false),
+            AccountMeta::new_readonly(master.pubkey(), true),
+            AccountMeta::new(invoice_0_pda, false),
+        ],
+        data,
+    };
+
+    let err = send(&mut banks, &payer, &[&master], &[ix])
+        .await
+        .expect_err("count mismatch must be rejected");
+    assert_eq!(
+        extract_custom(&err),
+        Some(ZpError::AccountInvoiceCountMismatch as u32),
+        "expected AccountInvoiceCountMismatch, got {err:?}"
+    );
+
+    let inv = fetch_invoice(&mut banks, &master.pubkey(), 0).await;
+    assert_eq!(inv.status, INVOICE_STATUS_OPEN);
 }

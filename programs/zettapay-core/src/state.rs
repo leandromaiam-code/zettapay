@@ -128,6 +128,34 @@ impl Invoice {
         + 8;                      // swept_at
 }
 
+/// Default off-chain invoice TTL — 24 hours in seconds. Pure advisory.
+/// V1 invoices have no on-chain expiry (the struct layout pre-dates the
+/// concept and the protocol's per-invoice cap obviates it), so expiry is
+/// enforced by the off-chain SDK and dashboard. The constant is exported
+/// here so the SDK and the on-chain helper agree on the same default.
+pub const DEFAULT_INVOICE_TTL_SECONDS: i64 = 24 * 60 * 60;
+
+/// Pure helper: an invoice is expired when its lifecycle is still Open
+/// and `now > created_at + ttl_seconds`. Returns `false` for any non-Open
+/// status because Swept / Paid invoices have a terminal status that
+/// supersedes expiry. Returns `false` when `ttl_seconds <= 0` so callers
+/// can disable the check with a sentinel.
+///
+/// The helper is callable from the BPF entrypoint (used nowhere in V1)
+/// and from off-chain Rust tests that mirror the SDK's expiry semantics.
+pub fn is_invoice_expired(invoice: &Invoice, now: i64, ttl_seconds: i64) -> bool {
+    if invoice.status != INVOICE_STATUS_OPEN {
+        return false;
+    }
+    if ttl_seconds <= 0 {
+        return false;
+    }
+    let Some(deadline) = invoice.created_at.checked_add(ttl_seconds) else {
+        return false;
+    };
+    now > deadline
+}
+
 /// Bitcoin SPV payment proof PDA. Seeds: see
 /// [`crate::pda::find_spv_proof_btc_pda`].
 ///
@@ -621,5 +649,73 @@ mod tests {
         };
         let bytes = inv.try_to_vec().unwrap();
         assert_eq!(bytes.len(), Invoice::SIZE);
+    }
+
+    fn fresh_invoice(status: u8, created_at: i64) -> Invoice {
+        Invoice {
+            tag: INVOICE_TAG,
+            bump: 0,
+            merchant: Pubkey::default(),
+            invoice_index: 0,
+            amount: 1_000_000,
+            currency: CURRENCY_USDC,
+            status,
+            created_at,
+            swept_at: 0,
+        }
+    }
+
+    #[test]
+    fn is_invoice_expired_returns_false_before_deadline() {
+        // Created at t=1000, ttl=600 → expires at t=1600. At t=1500 the
+        // invoice is still pending.
+        let inv = fresh_invoice(INVOICE_STATUS_OPEN, 1000);
+        assert!(!is_invoice_expired(&inv, 1500, 600));
+    }
+
+    #[test]
+    fn is_invoice_expired_returns_false_at_deadline_boundary() {
+        // The check is strict >, so `now == deadline` is still in-window.
+        // This matches the SDK convention (`now >= expiresAt` flips to
+        // expired only after the deadline, not on it — pin both sides
+        // here so the two never drift apart).
+        let inv = fresh_invoice(INVOICE_STATUS_OPEN, 1000);
+        assert!(!is_invoice_expired(&inv, 1600, 600));
+    }
+
+    #[test]
+    fn is_invoice_expired_returns_true_past_deadline() {
+        let inv = fresh_invoice(INVOICE_STATUS_OPEN, 1000);
+        assert!(is_invoice_expired(&inv, 1601, 600));
+    }
+
+    #[test]
+    fn is_invoice_expired_ignores_swept_invoice() {
+        // Terminal statuses supersede expiry. A swept invoice past its
+        // notional deadline must not flip back to "expired" in any UI
+        // path that consults this helper.
+        let inv = fresh_invoice(INVOICE_STATUS_SWEPT, 1000);
+        assert!(!is_invoice_expired(&inv, 1_000_000, 600));
+    }
+
+    #[test]
+    fn is_invoice_expired_disables_with_zero_ttl() {
+        // Sentinel: a zero (or negative) TTL means "no expiry enforced".
+        let inv = fresh_invoice(INVOICE_STATUS_OPEN, 1000);
+        assert!(!is_invoice_expired(&inv, 10_000_000, 0));
+        assert!(!is_invoice_expired(&inv, 10_000_000, -1));
+    }
+
+    #[test]
+    fn is_invoice_expired_does_not_overflow_on_extreme_created_at() {
+        // Refuse to wrap a saturated `created_at + ttl` into a small
+        // deadline that would falsely mark recent invoices expired.
+        let inv = fresh_invoice(INVOICE_STATUS_OPEN, i64::MAX);
+        assert!(!is_invoice_expired(&inv, 10_000, 600));
+    }
+
+    #[test]
+    fn default_invoice_ttl_is_one_day() {
+        assert_eq!(DEFAULT_INVOICE_TTL_SECONDS, 86_400);
     }
 }
