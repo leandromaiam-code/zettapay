@@ -4,6 +4,7 @@ const tracing = initTracing("zettapay-cron-worker");
 
 import { loadBetaConfig } from "./beta/config.js";
 import { noopCapBroadcaster } from "./beta/cap_upgrade.js";
+import { loadSolanaCapBroadcasterFromEnv } from "./beta/solana_cap_broadcaster.js";
 import { closeDatabase, openDatabase } from "./db/index.js";
 import type { Cluster } from "./lib/currencies.js";
 import { logger } from "./lib/logger.js";
@@ -120,10 +121,15 @@ async function main(): Promise<void> {
       process.env.CAP_UPGRADE_CRON_INTERVAL_MS ?? "3600000",
       10,
     );
+    const solanaBroadcaster = loadSolanaCapBroadcasterFromEnv(undefined, logger);
+    const broadcaster = solanaBroadcaster ?? noopCapBroadcaster();
+    logger.info("cap_upgrade_cron.broadcaster_selected", {
+      kind: solanaBroadcaster ? "solana_rpc" : "noop",
+    });
     const capCron = startCapUpgradeCron({
       db,
       betaConfig,
-      broadcaster: noopCapBroadcaster(),
+      broadcaster,
       intervalMs: capUpgradeIntervalMs,
       logger,
     });
