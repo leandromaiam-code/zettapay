@@ -9,7 +9,7 @@ data
 *.log
 src
 packages
-docs
+/docs
 Dockerfile
 docker-compose.yml
 .dockerignore
