@@ -14,6 +14,7 @@
  *           data-currency="USDC"    (optional, default USDC)
  *           data-label="Pay 10 USDC"  (optional, button text)
  *           data-mount="#zettapay-button"  (optional, CSS selector; default: insert after <script>)
+ *           data-network="mainnet"    (optional, default "devnet"; accepts "mainnet"|"devnet")
  *           defer></script>
  */
 (function () {
@@ -29,7 +30,22 @@
 
   var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   var USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
+  var USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   var QR_CDN = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
+
+  function normalizeNetwork(value) {
+    var v = String(value || '').toLowerCase().trim();
+    if (v === 'mainnet' || v === 'mainnet-beta' || v === 'main') return 'mainnet';
+    return 'devnet';
+  }
+
+  function mintForNetwork(network) {
+    return network === 'mainnet' ? USDC_MINT_MAINNET : USDC_MINT_DEVNET;
+  }
+
+  function labelForNetwork(network) {
+    return network === 'mainnet' ? 'Solana Mainnet' : 'Solana Devnet';
+  }
 
   function getScriptTag() {
     return document.currentScript || document.querySelector('script[src*="zettapay"][src$="embed.js"]');
@@ -47,6 +63,7 @@
       mount: s.getAttribute('data-mount') || null,
       onSuccess: s.getAttribute('data-on-success') || null,
       onCancel: s.getAttribute('data-on-cancel') || null,
+      network: normalizeNetwork(s.getAttribute('data-network')),
       script: s
     };
   }
@@ -123,7 +140,7 @@
       '<p class="zp-sub">Scan or paste — no wallet connect required.</p>' +
       '<div class="zettapay-row"><span class="label">Merchant</span><span class="value" data-zp-merchant>' + escapeHTML(config.merchant) + '</span></div>' +
       (config.amount ? '<div class="zettapay-row"><span class="label">Amount</span><span class="value">' + escapeHTML(config.amount) + ' ' + escapeHTML(config.currency) + '</span></div>' : '') +
-      '<div class="zettapay-row"><span class="label">Network</span><span class="value">Solana Devnet</span></div>' +
+      '<div class="zettapay-row"><span class="label">Network</span><span class="value">' + escapeHTML(labelForNetwork(config.network)) + '</span></div>' +
       '<div class="zettapay-qr"><img alt="Solana Pay QR" data-zp-qr /></div>' +
       '<div class="zettapay-addr" data-zp-addr>Loading merchant address…</div>' +
       '<div class="zettapay-actions">' +
@@ -193,10 +210,10 @@
       });
   }
 
-  function buildSolanaPayUri(merchantWallet, amount, label, reference) {
+  function buildSolanaPayUri(merchantWallet, amount, label, reference, network) {
     var params = new URLSearchParams();
     if (amount) params.set('amount', String(amount));
-    params.set('spl-token', USDC_MINT_DEVNET);
+    params.set('spl-token', mintForNetwork(network));
     params.set('label', 'ZettaPay');
     if (label) params.set('message', label);
     if (reference) params.set('reference', reference);
@@ -255,7 +272,7 @@
     resolveMerchantWallet(config.merchant, amount)
       .then(function (wallet) {
         setAddress(modal, wallet);
-        var uri = buildSolanaPayUri(wallet, amount, config.label, config.merchant);
+        var uri = buildSolanaPayUri(wallet, amount, config.label, config.merchant, config.network);
         setOpenLink(modal, uri);
         return loadQrcodeLib().then(function (lib) {
           return new Promise(function (resolve, reject) {

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay HTTP API reference — REST endpoints, webhook delivery semantics, x402 + MCP for AI agents, error codes." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta property="og:title" content="ZettaPay · API reference" />
+  <meta property="og:description" content="REST + webhooks + x402 + MCP. Complete reference for merchants, payments, agents, and onramp." />
+  <title>ZettaPay · API reference</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79,107,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,107,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    @keyframes gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .glass {
+      background: rgba(79,107,255,0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79,107,255,0.15);
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      pointer-events: none;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+
+    /* Method pills */
+    .pill { display:inline-flex; align-items:center; padding: 2px 8px; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; }
+    .pill-get  { background: rgba(20,241,149,0.12); color: #14F195; border: 1px solid rgba(20,241,149,0.35); }
+    .pill-post { background: rgba(79,107,255,0.14); color: #6B82FF; border: 1px solid rgba(79,107,255,0.4); }
+    .pill-del  { background: rgba(239,68,68,0.12);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.35); }
+    .pill-put  { background: rgba(245,158,11,0.12); color: #fcd34d; border: 1px solid rgba(245,158,11,0.35); }
+
+    .ep-path { font-family: 'JetBrains Mono', monospace; font-size: 13.5px; color: #fff; }
+
+    .code {
+      background: #0d1320;
+      border: 1px solid rgba(79,107,255,0.18);
+      border-radius: 12px;
+      padding: 16px 18px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.65;
+      color: #cbd5e1;
+      overflow-x: auto;
+      white-space: pre;
+    }
+    .tk-k { color: #6B82FF; }   /* keyword */
+    .tk-s { color: #14F195; }   /* string */
+    .tk-n { color: #fcd34d; }   /* number */
+    .tk-c { color: #64748b; font-style: italic; }
+    .tk-p { color: #94A3B8; }   /* punctuation */
+    .tk-f { color: #c4b5fd; }   /* func */
+    .tk-d { color: #f0abfc; }   /* directive */
+
+    .toc-link {
+      display: block;
+      padding: 6px 10px;
+      border-radius: 8px;
+      color: #94A3B8;
+      font-size: 13px;
+      transition: background 0.2s, color 0.2s;
+    }
+    .toc-link:hover { background: rgba(79,107,255,0.08); color: #fff; }
+    .toc-link.active { color: #fff; background: rgba(79,107,255,0.12); }
+    .toc-group { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.12em; color: #64748b; margin: 14px 10px 4px; }
+
+    .ep-card { scroll-margin-top: 100px; }
+    table.params { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.params th { text-align: left; font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    table.params td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; color: #cbd5e1; }
+    table.params td code { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #fff; background: rgba(79,107,255,0.10); padding: 1px 6px; border-radius: 4px; }
+    .req { display:inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+    .req-req { background: rgba(239,68,68,0.12); color: #fca5a5; }
+    .req-opt { background: rgba(148,163,184,0.12); color: #94A3B8; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 400px; height: 400px; top: 50%; left: -150px; opacity: 0.12;"></div>
+
+  <!-- NAV -->
+  <nav class="relative z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative pt-12 pb-10 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto">
+      <a href="/docs" class="inline-flex items-center gap-2 text-xs font-mono text-muted hover:text-white transition mb-6">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        All docs
+      </a>
+      <span class="text-xs font-mono text-mint uppercase tracking-widest">Reference</span>
+      <h1 class="text-4xl md:text-6xl font-bold mt-3 mb-4 tracking-tight">HTTP <span class="gradient-text">API</span></h1>
+      <p class="text-muted text-base md:text-lg max-w-3xl leading-relaxed">
+        Every endpoint exposed by the protocol. REST for humans, JSON-RPC over <code class="font-mono text-mint text-sm">MCP</code> for tools,
+        <code class="font-mono text-mint text-sm">x402</code> for autonomous agents. All responses are JSON, all writes are idempotent,
+        all webhooks are HMAC-signed.
+      </p>
+      <div class="flex flex-wrap items-center gap-3 mt-6 text-xs font-mono text-muted">
+        <span class="px-3 py-1 rounded-full bg-mint/10 border border-mint/30 text-mint">v1 · stable</span>
+        <span>Base URL: <code class="text-white">https://zettapay.dev</code></span>
+        <span>·</span>
+        <span>Auth: <code class="text-white">Authorization: Bearer &lt;api_key&gt;</code></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- BODY: TOC + content -->
+  <section class="px-4 lg:px-12 pb-24">
+    <div class="max-w-7xl mx-auto grid grid-cols-12 gap-8">
+
+      <!-- TOC -->
+      <aside class="hidden lg:block col-span-3">
+        <div class="sticky top-6 glass rounded-2xl p-4">
+          <div class="toc-group">Conventions</div>
+          <a href="#auth" class="toc-link">Authentication</a>
+          <a href="#idempotency" class="toc-link">Idempotency</a>
+          <a href="#errors" class="toc-link">Errors</a>
+          <a href="#rate-limits" class="toc-link">Rate limits</a>
+
+          <div class="toc-group">Merchants</div>
+          <a href="#merchants-register" class="toc-link">POST /merchants/register</a>
+          <a href="#merchants-onboard" class="toc-link">POST /merchants/onboard</a>
+          <a href="#merchant-get" class="toc-link">GET /merchants/:id</a>
+          <a href="#merchant-analytics" class="toc-link">GET /merchants/:id/analytics</a>
+          <a href="#merchant-payments" class="toc-link">GET /merchants/:id/payments</a>
+          <a href="#merchant-payouts" class="toc-link">GET /merchants/:id/payouts</a>
+          <a href="#merchant-keys" class="toc-link">POST /merchants/:id/keys</a>
+          <a href="#merchant-settings" class="toc-link">PATCH /merchants/:id/settings</a>
+
+          <div class="toc-group">Payments</div>
+          <a href="#pay" class="toc-link">POST /pay</a>
+          <a href="#payments-list" class="toc-link">GET /payments</a>
+          <a href="#analytics" class="toc-link">GET /analytics/:merchant</a>
+          <a href="#simulate" class="toc-link">POST /simulate/:merchant</a>
+
+          <div class="toc-group">Webhooks</div>
+          <a href="#webhooks" class="toc-link">Delivery semantics</a>
+          <a href="#webhooks-signature" class="toc-link">Signature verification</a>
+          <a href="#webhooks-replay" class="toc-link">Replay protection</a>
+
+          <div class="toc-group">AI Agents</div>
+          <a href="#x402" class="toc-link">x402 spec</a>
+          <a href="#mcp" class="toc-link">MCP (JSON-RPC)</a>
+
+          <div class="toc-group">Fiat</div>
+          <a href="#onramp" class="toc-link">POST /onramp</a>
+          <a href="#onramp-webhook" class="toc-link">POST /onramp/webhook</a>
+
+          <div class="toc-group">Health & status</div>
+          <a href="#healthz" class="toc-link">GET /healthz</a>
+          <a href="#ready" class="toc-link">GET /ready</a>
+          <a href="#metrics" class="toc-link">GET /metrics</a>
+          <a href="#status" class="toc-link">GET /api/status</a>
+          <a href="#faucet" class="toc-link">POST /faucet (devnet)</a>
+        </div>
+      </aside>
+
+      <!-- CONTENT -->
+      <div class="col-span-12 lg:col-span-9 space-y-10">
+
+        <!-- CONVENTIONS -->
+        <article id="auth" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h2 class="text-2xl font-bold mb-3">Authentication</h2>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Authenticate every server-to-server request with your API key as a bearer token. Keys are issued from the
+            <a href="/dashboard" class="text-royal-bright hover:underline">merchant dashboard</a> after registration.
+            Treat keys like passwords — rotate immediately on compromise.
+          </p>
+          <pre class="code"><span class="tk-d">Authorization:</span> Bearer zp_live_<span class="tk-s">…</span>
+<span class="tk-d">Content-Type:</span> application/json</pre>
+          <p class="text-xs text-muted/80 font-mono mt-3">Public endpoints (<code>/healthz</code>, <code>/api/status</code>, embed asset routes) do not require auth.</p>
+        </article>
+
+        <article id="idempotency" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h2 class="text-2xl font-bold mb-3">Idempotency</h2>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            All <code class="font-mono text-mint text-xs">POST</code> writes accept an
+            <code class="font-mono text-mint text-xs">Idempotency-Key</code> header (≤128 chars). Replays return the original response
+            with the original status. Use a fresh UUID per logical operation, persist it alongside the call, and re-send on retry.
+          </p>
+          <pre class="code"><span class="tk-d">Idempotency-Key:</span> 9f4d1c20-7d3b-4e0a-9c0f-3f9b2a8b1234</pre>
+        </article>
+
+        <article id="errors" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h2 class="text-2xl font-bold mb-3">Errors</h2>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Errors return a non-2xx status and a stable JSON envelope. The
+            <code class="font-mono text-mint text-xs">code</code> field is machine-readable; <code class="font-mono text-mint text-xs">message</code> is human-readable
+            and may change. Never branch on <code class="font-mono text-mint text-xs">message</code>.
+          </p>
+          <pre class="code">{
+  <span class="tk-d">"error"</span>: {
+    <span class="tk-d">"code"</span>: <span class="tk-s">"invalid_amount"</span>,
+    <span class="tk-d">"message"</span>: <span class="tk-s">"Field \"amount\" must be a positive number"</span>
+  }
+}</pre>
+          <table class="params mt-5">
+            <thead><tr><th>Status</th><th>Code family</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td>400</td><td><code>invalid_*</code></td><td>Request validation failed.</td></tr>
+              <tr><td>401</td><td><code>unauthorized</code></td><td>Missing or invalid API key.</td></tr>
+              <tr><td>403</td><td><code>forbidden</code></td><td>Key lacks access to this resource.</td></tr>
+              <tr><td>404</td><td><code>not_found</code></td><td>Merchant, payment, or invoice does not exist.</td></tr>
+              <tr><td>405</td><td><code>method_not_allowed</code></td><td>HTTP verb not supported on this path.</td></tr>
+              <tr><td>409</td><td><code>conflict</code></td><td>Idempotency key reused with a different payload.</td></tr>
+              <tr><td>429</td><td><code>rate_limited</code></td><td>Per-key rate limit exceeded — see <a href="#rate-limits" class="text-royal-bright hover:underline">below</a>.</td></tr>
+              <tr><td>5xx</td><td><code>internal</code> / <code>upstream</code></td><td>Retry with exponential backoff.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article id="rate-limits" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h2 class="text-2xl font-bold mb-3">Rate limits</h2>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Sliding window per API key. Limits are advertised in response headers and apply per endpoint family.
+          </p>
+          <pre class="code"><span class="tk-d">X-RateLimit-Limit:</span>     60
+<span class="tk-d">X-RateLimit-Remaining:</span> 57
+<span class="tk-d">X-RateLimit-Reset:</span>     1715900400</pre>
+          <p class="text-xs text-muted/80 mt-3">Free tier: <strong class="text-white">60 req/min</strong> per key. Beta cohorts and self-hosted deployments raise the ceiling — contact us for production limits.</p>
+        </article>
+
+        <!-- MERCHANTS -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Merchants</span><span class="text-xs font-mono text-muted">/api/merchants/*</span></h2>
+
+        <article id="merchants-register" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/merchants/register</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-5">
+            Register a merchant. Returns a deterministic merchant id, an API key handle, and your webhook receipt URL. Idempotent.
+          </p>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Request body</h3>
+          <table class="params mb-5">
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>name</code><span class="req req-req">required</span></td><td>string</td><td>Merchant display name, ≤120 chars.</td></tr>
+              <tr><td><code>walletAddress</code><span class="req req-req">required</span></td><td>string</td><td>Base58 Solana pubkey where USDC settles. Wallet-less — no connect required.</td></tr>
+              <tr><td><code>email</code><span class="req req-req">required</span></td><td>string</td><td>Operational notices, magic-link login.</td></tr>
+              <tr><td><code>webhookUrl</code><span class="req req-opt">optional</span></td><td>string</td><td>HTTPS URL. Must serve a valid certificate.</td></tr>
+            </tbody>
+          </table>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Example</h3>
+          <pre class="code">curl -X POST https://zettapay.dev/api/merchants/register \
+  -H <span class="tk-s">"Authorization: Bearer zp_live_…"</span> \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -H <span class="tk-s">"Idempotency-Key: $(uuidgen)"</span> \
+  -d <span class="tk-s">'{
+    "name": "Acme Robotics",
+    "walletAddress": "4Nd1mYG6X9wQ…ZkR2",
+    "email": "ops@acme.example",
+    "webhookUrl": "https://acme.example/zp/webhook"
+  }'</span></pre>
+        </article>
+
+        <article id="merchants-onboard" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/merchants/onboard</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-3">
+            Self-service onboarding state used by <a href="/signup" class="text-royal-bright hover:underline">/signup</a>. <code>POST</code> creates a merchant from the signup flow,
+            <code>GET</code> returns the checklist + dashboard link + ready-to-paste embed snippet.
+          </p>
+        </article>
+
+        <article id="merchant-get" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/merchants/:merchant</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Public merchant card: handle, wallet, accepted currencies. Used by the embed widget to resolve <code>data-merchant</code>.</p>
+        </article>
+
+        <article id="merchant-analytics" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/merchants/:merchant/analytics</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">TPV, MRR, conversion, top customers, and 30-day trends. Powers the per-merchant dashboard. Aggregates only — no PII.</p>
+        </article>
+
+        <article id="merchant-payments" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/merchants/:merchant/payments</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">Paginated payment history scoped to a single merchant. Pair with <code>?limit=</code> and <code>?cursor=</code>.</p>
+          <table class="params">
+            <thead><tr><th>Query</th><th>Default</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>limit</code></td><td>50</td><td>Max 200.</td></tr>
+              <tr><td><code>cursor</code></td><td>—</td><td>Opaque, returned in <code>next</code>.</td></tr>
+              <tr><td><code>status</code></td><td>—</td><td><code>pending</code> · <code>confirmed</code> · <code>failed</code></td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article id="merchant-payouts" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/merchants/:merchant/payouts</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Settled batches with on-chain signatures. Powers the <a href="/dashboard" class="text-royal-bright hover:underline">/dashboard/payouts</a> page.</p>
+        </article>
+
+        <article id="merchant-keys" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="pill pill-get">GET</span>
+            <span class="pill pill-del">DELETE</span>
+            <span class="ep-path">/api/merchants/:merchant/keys</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Rotate, list, or revoke API keys. Newly issued keys are returned <strong>once</strong> in cleartext; persist immediately.</p>
+        </article>
+
+        <article id="merchant-settings" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-put">PATCH</span>
+            <span class="ep-path">/api/merchants/:merchant/settings</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Update webhook URL, email, brand color, default currency. Audit-logged.</p>
+        </article>
+
+        <!-- PAYMENTS -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Payments</span><span class="text-xs font-mono text-muted">/api/pay · /api/payments</span></h2>
+
+        <article id="pay" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/pay</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-5">
+            Create a payment intent. Returns a Solana Pay URI and an invoice id. The payer scans the QR (or pastes the address) from any Solana wallet —
+            no wallet connect, no extension. Settlement is observed on-chain and dispatched as a webhook.
+          </p>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Request body</h3>
+          <table class="params mb-5">
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>merchantId</code><span class="req req-req">required</span></td><td>string</td><td>≤64 chars.</td></tr>
+              <tr><td><code>amount</code><span class="req req-req">required</span></td><td>number</td><td>USDC, positive, ≤1,000,000.</td></tr>
+              <tr><td><code>currency</code><span class="req req-opt">optional</span></td><td>string</td><td>Default <code>USDC</code>.</td></tr>
+              <tr><td><code>payerWallet</code><span class="req req-opt">optional</span></td><td>string</td><td>Base58 Solana pubkey. Used to scope the invoice + populate analytics.</td></tr>
+              <tr><td><code>metadata</code><span class="req req-opt">optional</span></td><td>object</td><td>Free-form JSON returned on webhook. Treat as semi-public.</td></tr>
+            </tbody>
+          </table>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Response</h3>
+          <pre class="code">{
+  <span class="tk-d">"id"</span>: <span class="tk-s">"inv_01H8XK…"</span>,
+  <span class="tk-d">"status"</span>: <span class="tk-s">"pending"</span>,
+  <span class="tk-d">"amount"</span>: <span class="tk-n">10</span>,
+  <span class="tk-d">"currency"</span>: <span class="tk-s">"USDC"</span>,
+  <span class="tk-d">"checkoutUrl"</span>: <span class="tk-s">"https://zettapay.dev/checkout/inv_01H8XK…"</span>,
+  <span class="tk-d">"solanaPayUri"</span>: <span class="tk-s">"solana:4Nd1mYG6X9wQ…?amount=10&amp;spl-token=…&amp;reference=…"</span>,
+  <span class="tk-d">"expiresAt"</span>: <span class="tk-s">"2026-05-16T20:30:00Z"</span>
+}</pre>
+        </article>
+
+        <article id="payments-list" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/payments</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Account-wide payment listing for the authenticated key. Use the per-merchant variant for narrower scopes.</p>
+        </article>
+
+        <article id="analytics" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/analytics/:merchant</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Aggregate timeseries: daily TPV, average ticket, distinct payers, conversion. JSON output, ready for charting.</p>
+        </article>
+
+        <article id="simulate" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/simulate/:merchant</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Devnet-only. Emits a synthetic settlement, fires the merchant webhook, and inserts a row into payments. Convenient for end-to-end webhook tests without touching the network.</p>
+        </article>
+
+        <!-- WEBHOOKS -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Webhooks</span><span class="text-xs font-mono text-muted">Stripe-grade delivery</span></h2>
+
+        <article id="webhooks" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h3 class="text-lg font-bold mb-2">Delivery semantics</h3>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Webhooks are <code>POST</code>ed to the URL registered on the merchant. We retry up to three times with exponential backoff (10s, 60s, 5m).
+            Deliveries are queued, ordered per invoice, and replayable from the dashboard for 90 days. Webhook URLs must be HTTPS.
+          </p>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Event payload</h3>
+          <pre class="code">{
+  <span class="tk-d">"id"</span>: <span class="tk-s">"evt_01H8XK…"</span>,
+  <span class="tk-d">"type"</span>: <span class="tk-s">"payment.confirmed"</span>,
+  <span class="tk-d">"created"</span>: <span class="tk-s">"2026-05-16T19:42:11Z"</span>,
+  <span class="tk-d">"data"</span>: {
+    <span class="tk-d">"invoiceId"</span>: <span class="tk-s">"inv_01H8XK…"</span>,
+    <span class="tk-d">"merchantId"</span>: <span class="tk-s">"@acme-robotics"</span>,
+    <span class="tk-d">"amount"</span>: <span class="tk-n">10</span>,
+    <span class="tk-d">"currency"</span>: <span class="tk-s">"USDC"</span>,
+    <span class="tk-d">"payer"</span>: <span class="tk-s">"6tK…dpL"</span>,
+    <span class="tk-d">"signature"</span>: <span class="tk-s">"5x9c…Wq3"</span>,
+    <span class="tk-d">"metadata"</span>: { <span class="tk-d">"orderId"</span>: <span class="tk-s">"o_42"</span> }
+  }
+}</pre>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mt-5 mb-2">Event types</h3>
+          <table class="params">
+            <thead><tr><th>Event</th><th>Fires when</th></tr></thead>
+            <tbody>
+              <tr><td><code>payment.pending</code></td><td>Invoice created.</td></tr>
+              <tr><td><code>payment.confirmed</code></td><td>On-chain confirmation observed.</td></tr>
+              <tr><td><code>payment.failed</code></td><td>Invoice expired or amount mismatch.</td></tr>
+              <tr><td><code>payout.settled</code></td><td>Daily batch landed in merchant wallet.</td></tr>
+              <tr><td><code>merchant.updated</code></td><td>Settings changed via dashboard or API.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article id="webhooks-signature" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h3 class="text-lg font-bold mb-2">Signature verification</h3>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Each delivery includes an <code>X-ZettaPay-Signature</code> header: <code>t=&lt;timestamp&gt;, v1=&lt;hex&gt;</code>.
+            Compute <code>HMAC-SHA256(t + "." + rawBody, webhookSecret)</code> and constant-time compare against <code>v1</code>.
+            Reject deliveries older than 5 minutes to defeat replay.
+          </p>
+          <pre class="code"><span class="tk-k">import</span> { createHmac, timingSafeEqual } <span class="tk-k">from</span> <span class="tk-s">'crypto'</span>;
+
+<span class="tk-k">export function</span> <span class="tk-f">verify</span>(rawBody: <span class="tk-k">string</span>, header: <span class="tk-k">string</span>, secret: <span class="tk-k">string</span>) {
+  <span class="tk-k">const</span> [tPart, vPart] = header.<span class="tk-f">split</span>(<span class="tk-s">','</span>).<span class="tk-f">map</span>(p =&gt; p.<span class="tk-f">trim</span>());
+  <span class="tk-k">const</span> t = tPart.<span class="tk-f">split</span>(<span class="tk-s">'='</span>)[<span class="tk-n">1</span>];
+  <span class="tk-k">const</span> v1 = vPart.<span class="tk-f">split</span>(<span class="tk-s">'='</span>)[<span class="tk-n">1</span>];
+
+  <span class="tk-k">const</span> mac = <span class="tk-f">createHmac</span>(<span class="tk-s">'sha256'</span>, secret)
+    .<span class="tk-f">update</span>(<span class="tk-s">`</span>${t}<span class="tk-s">.</span>${rawBody}<span class="tk-s">`</span>)
+    .<span class="tk-f">digest</span>(<span class="tk-s">'hex'</span>);
+
+  <span class="tk-k">if</span> (mac.length !== v1.length) <span class="tk-k">return false</span>;
+  <span class="tk-k">return</span> <span class="tk-f">timingSafeEqual</span>(<span class="tk-f">Buffer</span>.<span class="tk-f">from</span>(mac), <span class="tk-f">Buffer</span>.<span class="tk-f">from</span>(v1));
+}</pre>
+        </article>
+
+        <article id="webhooks-replay" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h3 class="text-lg font-bold mb-2">Replay protection</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Every event ships with a stable <code>id</code>. Persist <code>id</code> on receipt and ignore re-deliveries.
+            Combine with the timestamp window to defeat replay attacks. Replays from the dashboard are deliberate and re-use the original event id.
+          </p>
+        </article>
+
+        <!-- AGENTS -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">AI Agents</span><span class="text-xs font-mono text-muted">x402 · MCP</span></h2>
+
+        <article id="x402" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <h3 class="text-lg font-bold mb-2">x402 — autonomous payments</h3>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            ZettaPay is an <a class="text-royal-bright hover:underline" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402</a>
+            payment provider. When an agent hits a paywalled resource that returns <code>402 Payment Required</code>, the response advertises a
+            ZettaPay challenge. The agent signs a transaction blob (held in its own wallet, never custodied by ZettaPay) and re-sends the request with
+            <code>X-PAYMENT</code>. The protocol verifies on-chain and unlocks the resource.
+          </p>
+          <pre class="code"><span class="tk-d">HTTP/1.1</span> <span class="tk-n">402</span> Payment Required
+<span class="tk-d">WWW-Authenticate:</span> X402 realm=<span class="tk-s">"ZettaPay"</span>,
+  amount=<span class="tk-n">0.05</span>, currency=<span class="tk-s">"USDC"</span>,
+  recipient=<span class="tk-s">"4Nd1mYG…ZkR2"</span>,
+  nonce=<span class="tk-s">"a3f9…"</span></pre>
+          <p class="text-xs text-muted/80 mt-3">Full spec lives at <a class="text-royal-bright hover:underline" href="/docs/quickstart#x402">/docs/quickstart#x402</a>.</p>
+        </article>
+
+        <article id="mcp" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/mcp</span>
+            <span class="text-xs font-mono text-muted">JSON-RPC 2.0</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Model Context Protocol endpoint. Exposes payment primitives as tool calls so any MCP-aware host (Claude, GPT, Gemini) can issue invoices,
+            poll status, and stream confirmations without bespoke integration code.
+          </p>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Tools advertised</h3>
+          <table class="params">
+            <thead><tr><th>Tool</th><th>Description</th></tr></thead>
+            <tbody>
+              <tr><td><code>create_invoice</code></td><td>Mint an invoice and return the Solana Pay URI.</td></tr>
+              <tr><td><code>get_invoice</code></td><td>Fetch status + on-chain signature for an invoice id.</td></tr>
+              <tr><td><code>list_payments</code></td><td>Paginate confirmed payments for the calling agent identity.</td></tr>
+              <tr><td><code>resolve_merchant</code></td><td>Look up a merchant card by handle or wallet.</td></tr>
+            </tbody>
+          </table>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mt-5 mb-2">Request</h3>
+          <pre class="code">{
+  <span class="tk-d">"jsonrpc"</span>: <span class="tk-s">"2.0"</span>,
+  <span class="tk-d">"id"</span>: <span class="tk-n">1</span>,
+  <span class="tk-d">"method"</span>: <span class="tk-s">"tools/call"</span>,
+  <span class="tk-d">"params"</span>: {
+    <span class="tk-d">"name"</span>: <span class="tk-s">"create_invoice"</span>,
+    <span class="tk-d">"arguments"</span>: { <span class="tk-d">"merchantId"</span>: <span class="tk-s">"@acme"</span>, <span class="tk-d">"amount"</span>: <span class="tk-n">0.05</span> }
+  }
+}</pre>
+        </article>
+
+        <!-- FIAT -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Fiat onramp</span><span class="text-xs font-mono text-muted">MoonPay</span></h2>
+
+        <article id="onramp" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/onramp</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">
+            Open a MoonPay-powered fiat → USDC purchase flow for a specific invoice. Returns a signed deep-link the payer can scan.
+            KYC, when required, is performed by MoonPay under its own policy.
+          </p>
+        </article>
+
+        <article id="onramp-webhook" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/onramp/webhook</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">
+            Endpoint that MoonPay posts to once fiat clears and USDC has been delivered to the payer wallet. ZettaPay then matches the deposit
+            to the originating invoice and triggers <code>payment.confirmed</code>.
+          </p>
+        </article>
+
+        <!-- HEALTH -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Health &amp; status</span><span class="text-xs font-mono text-muted">unauthenticated</span></h2>
+
+        <article id="healthz" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/healthz</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Liveness probe. <code>200</code> when the process is reachable.</p>
+        </article>
+
+        <article id="ready" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/ready</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Readiness probe. <code>200</code> only when DB, RPC, and webhook dispatcher are all reachable.</p>
+        </article>
+
+        <article id="metrics" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/metrics</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Prometheus exposition format. Per-endpoint latency histograms, request counts, webhook delivery counters.</p>
+        </article>
+
+        <article id="status" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/status</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Component-by-component health snapshot used by the public <a href="/status" class="text-royal-bright hover:underline">/status</a> page. Includes an RSS feed at <code>/status/feed.rss</code>.</p>
+        </article>
+
+        <article id="faucet" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/faucet</span>
+            <span class="text-xs font-mono text-muted">devnet only</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed">Drip devnet USDC to a wallet you control. Rate-limited per IP. See <a href="/docs/faucet" class="text-royal-bright hover:underline">/docs/faucet</a>.</p>
+        </article>
+
+        <!-- CTA -->
+        <div class="glass rounded-2xl p-8 text-center mt-6">
+          <h3 class="text-2xl font-bold mb-3">Ready to ship?</h3>
+          <p class="text-muted text-sm mb-6 max-w-xl mx-auto">Start with the 5-minute quickstart or drop the embed onto your checkout.</p>
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a href="/docs/quickstart" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm">Quickstart</a>
+            <a href="/docs/embed" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Embed widget</a>
+            <a href="/signup" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Get an API key</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-royal/10 mt-6 pt-12 pb-8 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+          <span class="text-base font-bold">ZettaPay</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
+          <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
+          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Company</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/about" class="text-muted hover:text-white transition">About</a></li>
+          <li><a href="/contact" class="text-muted hover:text-white transition">Contact</a></li>
+          <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/privacy" class="text-muted hover:text-white transition">Privacy</a></li>
+          <li><a href="/terms" class="text-muted hover:text-white transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
+      <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
+      <span>Built with Solana &middot; USDC &middot; x402</span>
+    </div>
+  </footer>
+
+  <script>
+    // Light-touch TOC active-link tracking via IntersectionObserver.
+    (function () {
+      const links = Array.from(document.querySelectorAll('.toc-link'));
+      const map = new Map();
+      links.forEach(a => {
+        const id = a.getAttribute('href').replace('#', '');
+        const el = document.getElementById(id);
+        if (el) map.set(id, a);
+      });
+      if (!map.size) return;
+      const obs = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          const a = map.get(e.target.id);
+          if (!a) return;
+          if (e.isIntersecting) {
+            links.forEach(l => l.classList.remove('active'));
+            a.classList.add('active');
+          }
+        });
+      }, { rootMargin: '-30% 0px -60% 0px' });
+      map.forEach((_a, id) => {
+        const el = document.getElementById(id);
+        if (el) obs.observe(el);
+      });
+    })();
+  </script>
+</body>
+</html>

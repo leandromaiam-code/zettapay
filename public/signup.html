@@ -362,7 +362,10 @@
             </div>
           </div>
 
-          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-end">
+          <div class="mt-6 pt-6 border-t border-royal/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p class="text-[11px] text-muted/70 leading-relaxed">
+              By continuing you agree to our <a href="/terms" class="text-royal-bright hover:underline">Terms</a> and <a href="/privacy" class="text-royal-bright hover:underline">Privacy</a>.
+            </p>
             <button type="button" id="step1Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
               Continue
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
@@ -535,6 +538,19 @@
       </div>
     </div>
   </main>
+
+  <footer class="border-t border-royal/10 mt-12 py-8 px-4 lg:px-12">
+    <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-muted/70">
+      <span>© 2026 ZettaPay &middot; wallet-less by design</span>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 justify-center">
+        <a href="/about" class="hover:text-white transition">About</a>
+        <a href="/contact" class="hover:text-white transition">Contact</a>
+        <a href="/privacy" class="hover:text-white transition">Privacy</a>
+        <a href="/terms" class="hover:text-white transition">Terms</a>
+        <a href="/status" class="hover:text-white transition">Status</a>
+      </div>
+    </div>
+  </footer>
 
   <div id="toast" class="toast">Copied to clipboard</div>
 
