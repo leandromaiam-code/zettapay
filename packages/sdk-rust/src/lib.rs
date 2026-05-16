@@ -37,6 +37,7 @@ mod client;
 mod error;
 mod retry;
 mod types;
+pub mod webhook;
 
 pub use client::{Client, ClientBuilder, ListOptions, X402_HEADER};
 pub use error::Error;
