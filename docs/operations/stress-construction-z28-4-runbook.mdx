@@ -1,0 +1,151 @@
+---
+title: "Z28.4 — Off-chain construction microbench"
+description: "Profile the SDK-side construction throughput (PDA derive + Borsh encode + URI/QR render) that sits in front of every devnet/mainnet transaction. Pairs with the devnet stress runner to separate client cost from on-chain cost."
+---
+
+## Purpose
+
+The devnet runner (`npm run stress:devnet:z28-4`) measures what
+**confirms** per second against a real RPC. This runner measures what
+the **client constructs** per second on pure CPU — no RPC, no SOL, no
+network. The two reports sit side by side under the Z28 sprint folder
+so triage can answer one question precisely:
+
+> "When Phase 4 confirmed 25 tx/sec, was the wall the RPC, the leader,
+> or the SDK itself?"
+
+If construction sustains thousands of ops/sec and devnet sustains tens
+of tx/sec, the gap is on-chain or network — not the client. If
+construction itself dips below the operator's expected throughput
+floor (default 50 ops/sec on any individual bench), the SDK is the
+ceiling and no devnet tuning will move it.
+
+## What it benches
+
+| Bench                              | What it does                                          |
+|------------------------------------|-------------------------------------------------------|
+| `deriveMerchantBindingPda`         | Merchant binding PDA derivation (handle + owner seed) |
+| `deriveInvoicePda`                 | Invoice PDA from `(master, u64-le(index))`            |
+| `deriveInvoiceUsdcAddress`         | Invoice PDA + USDC ATA in one call                    |
+| `buildRegisterMerchantInstruction` | RegisterMerchant ix construction (discriminator + Borsh) |
+| `buildRecordPaymentInstruction`    | RecordPayment ix construction                         |
+| `buildZettaPayUri`                 | `zettapay:invoice/<pda>?...` URI builder              |
+| `buildSolanaPayUri`                | `solana:<recipient>?...` spec-compliant URI builder   |
+| `generateInvoiceQrSvg`             | QR SVG render via `qrcode` (heaviest bench)           |
+| `checkout_full_pipeline`           | Composed: derive invoice + ATA + both URIs per checkout |
+
+Each bench runs an untimed warmup (10 % of `STRESS_OPS` by default)
+before the measured pass. Per-iteration latency is recorded with
+`process.hrtime.bigint()` and p50/p95/p99/max are reported in
+microseconds. The runner counts failures and captures the first five
+distinct error messages — a non-zero `failedCount` always flags
+`construction_failures:<bench>` in `bottlenecks[]`.
+
+## Running
+
+```sh
+npm run stress:construction:z28-4
+```
+
+Smoke (≈1 second total) — useful while iterating on the script itself:
+
+```sh
+STRESS_OPS=50 STRESS_OPS_FLOOR=1 npm run stress:construction:z28-4
+```
+
+Tighter floor for regression gating in CI:
+
+```sh
+STRESS_OPS=1000 STRESS_OPS_FLOOR=500 \
+  STRESS_REPORT_PATH=./reports/construction-$(date +%Y%m%d-%H%M).json \
+  npm run stress:construction:z28-4
+```
+
+## Tunables
+
+| Variable                  | Default | Purpose                                                                  |
+|---------------------------|---------|--------------------------------------------------------------------------|
+| `STRESS_OPS`              | `1000`  | Iterations per bench. Mirrors the Z28.4 mission spec (1000 invoices).    |
+| `STRESS_WARMUP_FRACTION`  | `0.1`   | Warmup as a fraction of `STRESS_OPS`. Discarded; lets V8 JIT settle.     |
+| `STRESS_OPS_FLOOR`        | `50`    | Threshold below which a bench tags `slow_construction:<name>`.           |
+| `STRESS_TIME_BUDGET_MS`   | `60000` | Hard wall-clock cap per bench. Exceeding emits `time_budget_exceeded:*`. |
+| `STRESS_REPORT_PATH`      | `./stress-construction-z28-4-report.json` | Output JSON artifact.                  |
+
+## Reading the report
+
+The JSON artifact mirrors the devnet runner's shape — three sections:
+
+### `benches[]`
+
+One row per bench. The fields:
+
+- `ops` — actual iterations that completed (may be less than
+  `STRESS_OPS` if the time budget tripped).
+- `totalMs` — wall-clock time for the measured pass.
+- `opsPerSec` — `ops / (totalMs/1000)`. The headline number.
+- `latencyUs.{p50, p95, p99, max, avg}` — per-iteration latency in
+  microseconds.
+- `failedCount` + `errorSamples[]` — non-zero `failedCount` means the
+  bench saw exceptions; first five distinct messages preserved.
+
+### `bottlenecks[]`
+
+Plain-string tags. Patterns:
+
+| Tag                                              | Meaning                                                 |
+|--------------------------------------------------|---------------------------------------------------------|
+| `construction_failures:<bench>:M/N`              | At least one iteration threw.                           |
+| `slow_construction:<bench>:<ops/s><floor`        | `opsPerSec` fell below `STRESS_OPS_FLOOR`.              |
+| `time_budget_exceeded:<bench>`                   | `STRESS_TIME_BUDGET_MS` tripped mid-bench.              |
+| `none_observed`                                  | Clean run — file the report as a baseline.              |
+
+The process exit code is `1` if `bottlenecks[]` contains anything
+other than `none_observed`, `0` otherwise. The JSON file is written
+either way.
+
+## Triage cheatsheet
+
+- **`slow_construction:deriveMerchantBindingPda`** — PDA derivation
+  is curve25519-bound; if it drops you're either CPU-starved (CI
+  shared runner) or on a Node build that mis-compiled the native
+  ed25519 path. Re-run on a dedicated box before filing.
+- **`slow_construction:generateInvoiceQrSvg`** — `qrcode` is the
+  single heaviest bench. Expected ≥ 200 ops/sec on a modern x86_64
+  laptop. Dropping under 100 ops/sec without a config change is
+  worth investigating; check if `error-correction-level` was
+  accidentally raised to `H`.
+- **`construction_failures:<bench>:1000/1000`** — the bench is
+  100 % failing; the SDK changed shape and the script needs a
+  signature update. See the existing `errorSamples` and patch.
+- **Devnet runner reports `slow_confirm:Phase 4:p95=30s` AND this
+  runner is `none_observed` at >1000 ops/sec** — the wall is RPC /
+  on-chain, not the SDK. Switch to a paid RPC and re-run the devnet
+  side; do not touch the SDK.
+- **Devnet runner reports `low_tps:Phase 2` AND this runner reports
+  `slow_construction:buildRegisterMerchantInstruction:30ops/s`** —
+  the SDK itself is the wall; devnet TPS will not move until the ix
+  builder is fixed.
+
+## After the run
+
+1. Commit the JSON report under the Z28 sprint folder (gitignored
+   from the repo root by convention; copy into the sprint folder).
+2. For every non-`none_observed` tag, open a `z28.4-followup` ticket
+   referencing the report path and the specific bench in the title.
+3. Append the run row (host, node version, headline ops/sec for QR
+   and checkout-pipeline benches) to the rolling Z28.4 trend table.
+   Regressions across SDK revisions are the signal worth tracking.
+
+## Premise alignment
+
+This runner + this runbook honor Layer 0 of `CLAUDE.md`:
+
+- **Premise 1 + 2** — Solana V1, USDC V1. The bench exercises only
+  the USDC + Solana paths in the SDK.
+- **Premise 23 (SDK first)** — the runner consumes the public
+  `@zettapay/sdk` surface so any regression in the SDK is reflected
+  here.
+- **Premise 26 (PR per mission)** — companion runner under the same
+  Z28.4 mission as the devnet harness.
+- **Wallet-less hard rule** — no wallet adapter, no `connect()`. All
+  pubkeys are fabricated via `Keypair.generate()` at start-up.

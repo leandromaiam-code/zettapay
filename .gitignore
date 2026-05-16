@@ -14,3 +14,7 @@ target/
 .anchor/
 *.so
 **/Cargo.lock
+
+# Z28.4 stress artifacts — copy into sprint folder, don't commit at repo root
+stress-z28-4-report*.json
+stress-construction-z28-4-report*.json

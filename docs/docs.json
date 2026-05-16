@@ -92,7 +92,8 @@
               "operations/mainnet-deploy-phantom-dashboard",
               "operations/fund-deployer-wallet",
               "operations/ecosystem-listings",
-              "operations/beta-devnet-z28-1-runbook"
+              "operations/beta-devnet-z28-1-runbook",
+              "operations/stress-construction-z28-4-runbook"
             ]
           }
         ]
