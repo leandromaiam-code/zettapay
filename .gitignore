@@ -14,3 +14,7 @@ target/
 .anchor/
 *.so
 **/Cargo.lock
+
+# Z25.4 devnet deploy artifacts — keypairs MUST NEVER be committed.
+devnet-keypair.json
+*-keypair.json

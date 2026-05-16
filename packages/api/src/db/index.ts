@@ -792,5 +792,30 @@ function applyMigrations(db: Db): void {
       ON risk_assessments(payment_id) WHERE payment_id IS NOT NULL;
     CREATE INDEX IF NOT EXISTS risk_assessments_created_at_idx
       ON risk_assessments(created_at);
+
+    -- Z25.4: registry of deployed on-chain programs (one row per
+    -- program_name + cluster). The devnet deploy automation upserts here
+    -- after a solana program deploy so the SDK/API/smoke test can resolve
+    -- the live program id without a config redeploy. Global, not
+    -- merchant-scoped -- RLS in the Postgres mirror grants select to all
+    -- and mutation to service role only.
+    CREATE TABLE IF NOT EXISTS zettapay_protocol_config (
+      id                  TEXT PRIMARY KEY,
+      program_name        TEXT NOT NULL,
+      cluster             TEXT NOT NULL CHECK (cluster IN ('mainnet-beta','devnet','testnet','localnet')),
+      program_id          TEXT NOT NULL,
+      artifact_sha256     TEXT,
+      artifact_size       INTEGER,
+      deployer_pubkey     TEXT,
+      deploy_tx_signature TEXT,
+      deployed_at         TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      updated_at          TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+      UNIQUE (program_name, cluster)
+    );
+
+    CREATE INDEX IF NOT EXISTS zettapay_protocol_config_program_idx
+      ON zettapay_protocol_config(program_name);
+    CREATE INDEX IF NOT EXISTS zettapay_protocol_config_cluster_idx
+      ON zettapay_protocol_config(cluster);
   `);
 }
