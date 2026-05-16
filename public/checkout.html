@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay hosted checkout — pay an invoice in USDC on Solana from any wallet. No connection required." />
+  <meta name="description" content="ZettaPay hosted checkout — pay an invoice in USDC on Solana, Bitcoin, or USDC on Base from any wallet. No connection required." />
   <meta name="robots" content="noindex, nofollow" />
   <meta property="og:title" content="ZettaPay — Hosted checkout" />
   <title>ZettaPay — Pay invoice</title>
@@ -204,19 +204,29 @@
           <p id="descriptionValue" class="text-sm text-white/90 leading-relaxed bg-deep-card/40 border border-royal/10 rounded-xl px-4 py-3"></p>
         </div>
 
+        <div class="currency-selector mb-4">
+          <label for="currencySelect" class="text-xs font-mono uppercase tracking-widest text-muted block mb-2">Pay with</label>
+          <select id="currencySelect" class="w-full bg-black/40 border border-white/20 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-royal-bright">
+            <option value="USDC_SOL">USDC on Solana (fast, ~15s)</option>
+            <option value="BTC">Bitcoin (BTC, ~30 min, 3 confirmations)</option>
+            <option value="USDC_BASE">USDC on Base (~1 min)</option>
+          </select>
+        </div>
+
         <!-- Wallet-less pay block -->
         <div id="payBlock" class="glass rounded-2xl p-6 space-y-4">
-          <h2 class="text-2xl font-bold">Pay with Solana</h2>
-          <p class="text-muted">Send <span id="amountUsdc"></span> USDC to:</p>
+          <h2 id="payHeading" class="text-2xl font-bold">Pay with Solana</h2>
+          <p class="text-muted">Send <span id="amountValueLabel"></span> <span id="amountAssetLabel">USDC</span> to:</p>
           <div class="address-display p-4 bg-black/40 rounded-lg font-mono text-sm break-all" id="merchantAddress"></div>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="copyAddress()" class="btn-secondary px-4 py-2 rounded-lg text-sm">Copy address</button>
             <a id="solanaPayLink" href="#" class="btn-secondary px-4 py-2 rounded-lg text-sm inline-block">Open in wallet</a>
           </div>
           <div class="qr-container my-4 text-center">
-            <img id="solanaPayQr" src="" alt="Solana Pay QR" class="mx-auto rounded-xl" style="max-width:240px"/>
+            <img id="solanaPayQr" src="" alt="Payment QR" class="mx-auto rounded-xl" style="max-width:240px"/>
           </div>
-          <p class="text-sm text-muted">Open Phantom, Solflare, or your wallet of choice — scan the QR or paste the address, then send the amount. We monitor the blockchain — confirmation in 5-30s.</p>
+          <p id="walletHint" class="text-sm text-muted">Open Phantom, Solflare, or your wallet of choice — scan the QR or paste the address, then send the amount. We monitor the blockchain — confirmation in 5-30s.</p>
+          <p id="timingNotice" class="text-xs text-amber font-mono uppercase tracking-widest">Payment confirms in ~15s</p>
           <div id="paymentStatus" class="text-mint font-semibold hidden">&#9203; Waiting for payment...</div>
 
           <div class="flex items-center justify-center gap-2 secure-pill rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-mint mx-auto w-fit">
@@ -267,12 +277,47 @@
 
     const ALLOWED_CURRENCIES = ['USDC', 'USD', 'BRL', 'EUR'];
     const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const BTC_ADDRESS_RE = /^(bc1[a-zA-HJ-NP-Z0-9]{25,89}|tb1[a-zA-HJ-NP-Z0-9]{25,89}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
+    const EVM_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
     const MERCHANT_REF_RE = /^[a-zA-Z0-9_-]{3,64}$/;
     const INVOICE_RE = /^[a-zA-Z0-9_-]{1,64}$/;
     const MAX_AMOUNT = 1_000_000;
     const REDIRECT_DELAY_MS = 2400;
     const USDC_MAINNET_MINT = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
-    const POLL_INTERVAL_MS = 5000;
+    const USDC_BASE_CONTRACT = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+    const BASE_CHAIN_ID = 8453;
+    const POLL_INTERVAL = {
+      USDC_SOL: 5000,
+      BTC: 30000,
+      USDC_BASE: 10000,
+    };
+    const PAY_CURRENCIES = ['USDC_SOL', 'BTC', 'USDC_BASE'];
+    const DEFAULT_PAY_CURRENCY = 'USDC_SOL';
+    const TIMING_NOTICE = {
+      USDC_SOL: 'Payment confirms in ~15s',
+      BTC: 'Bitcoin can take ~30 min (3 confirmations). Do not close this page.',
+      USDC_BASE: 'Payment confirms in ~1 min',
+    };
+    const WALLET_HINT = {
+      USDC_SOL: 'Open Phantom, Solflare, or your wallet of choice — scan the QR or paste the address, then send the amount. We monitor the blockchain — confirmation in 5-30s.',
+      BTC: 'Open your Bitcoin wallet (hardware, mobile, or exchange withdraw) — scan the QR or paste the address, then send the amount. Bitcoin confirmations take ~30 min.',
+      USDC_BASE: 'Open your EVM wallet on Base, Polygon, or Arbitrum — scan the QR or paste the address, then send USDC. We monitor the chain for the transfer.',
+    };
+    const HEADING = {
+      USDC_SOL: 'Pay with Solana',
+      BTC: 'Pay with Bitcoin',
+      USDC_BASE: 'Pay with USDC on Base',
+    };
+    const ASSET_LABEL = {
+      USDC_SOL: 'USDC',
+      BTC: 'BTC',
+      USDC_BASE: 'USDC',
+    };
+    const ADDRESS_VALIDATORS = {
+      USDC_SOL: SOLANA_ADDRESS_RE,
+      BTC: BTC_ADDRESS_RE,
+      USDC_BASE: EVM_ADDRESS_RE,
+    };
 
     const els = {
       invalidCard: document.getElementById('invalidCard'),
@@ -284,11 +329,16 @@
       currencyValue: document.getElementById('currencyValue'),
       descriptionBlock: document.getElementById('descriptionBlock'),
       descriptionValue: document.getElementById('descriptionValue'),
+      currencySelect: document.getElementById('currencySelect'),
       payBlock: document.getElementById('payBlock'),
-      amountUsdc: document.getElementById('amountUsdc'),
+      payHeading: document.getElementById('payHeading'),
+      amountValueLabel: document.getElementById('amountValueLabel'),
+      amountAssetLabel: document.getElementById('amountAssetLabel'),
       merchantAddress: document.getElementById('merchantAddress'),
       solanaPayQr: document.getElementById('solanaPayQr'),
       solanaPayLink: document.getElementById('solanaPayLink'),
+      walletHint: document.getElementById('walletHint'),
+      timingNotice: document.getElementById('timingNotice'),
       paymentStatus: document.getElementById('paymentStatus'),
       successBlock: document.getElementById('successBlock'),
       txSigRow: document.getElementById('txSigRow'),
@@ -333,10 +383,13 @@
 
       const description = trimToLen(params.get('description') || '', 280);
 
-      const merchantAddress = trimToLen(params.get('to') || params.get('address') || '', 64);
-      if (merchantAddress && !SOLANA_ADDRESS_RE.test(merchantAddress)) {
+      const merchantAddress = trimToLen(params.get('to') || params.get('address') || '', 96);
+      if (merchantAddress && !isValidAddressAnyChain(merchantAddress)) {
         return { error: 'Invalid merchant wallet address (`to`) in URL.' };
       }
+
+      let payCurrency = trimToLen((params.get('pay_currency') || DEFAULT_PAY_CURRENCY).toUpperCase(), 16);
+      if (!PAY_CURRENCIES.includes(payCurrency)) payCurrency = DEFAULT_PAY_CURRENCY;
 
       const successUrl = trimToLen(params.get('success_url') || '', 2048);
       let validatedSuccessUrl = '';
@@ -364,8 +417,20 @@
           currency: currency,
           description: description,
           successUrl: validatedSuccessUrl,
+          payCurrency: payCurrency,
         },
       };
+    }
+
+    function isValidAddressAnyChain(addr) {
+      if (typeof addr !== 'string') return false;
+      return SOLANA_ADDRESS_RE.test(addr) || BTC_ADDRESS_RE.test(addr) || EVM_ADDRESS_RE.test(addr);
+    }
+
+    function isValidAddressForCurrency(addr, payCurrency) {
+      if (typeof addr !== 'string') return false;
+      const re = ADDRESS_VALIDATORS[payCurrency];
+      return re ? re.test(addr) : false;
     }
 
     function formatAmount(n) {
@@ -373,9 +438,10 @@
       return Number(n).toFixed(2).replace(/\.?0+$/, '');
     }
 
-    async function loadInvoice(invoiceId, fromUrl) {
+    async function loadInvoice(invoiceId, fromUrl, payCurrency) {
+      const qs = payCurrency ? '?currency=' + encodeURIComponent(payCurrency) : '';
       try {
-        const resp = await fetch('/api/invoice/' + encodeURIComponent(invoiceId), {
+        const resp = await fetch('/api/invoice/' + encodeURIComponent(invoiceId) + qs, {
           headers: { Accept: 'application/json' },
         });
         if (resp.ok) {
@@ -389,24 +455,48 @@
               currency: data.invoice.currency || fromUrl.currency,
               description: data.invoice.description || fromUrl.description,
               successUrl: data.invoice.successUrl || fromUrl.successUrl,
+              payCurrency: payCurrency || fromUrl.payCurrency || DEFAULT_PAY_CURRENCY,
             };
           }
         }
       } catch (_err) {
         // endpoint absent — fall back to URL data
       }
-      return fromUrl;
+      return Object.assign({}, fromUrl, { payCurrency: payCurrency || fromUrl.payCurrency || DEFAULT_PAY_CURRENCY });
     }
 
-    function buildSolanaPayUri(inv) {
-      if (!inv.merchantAddress) return '';
-      const params = new URLSearchParams();
-      params.set('amount', formatAmount(inv.amount));
-      params.set('spl-token', USDC_MAINNET_MINT);
-      params.set('reference', inv.invoiceId);
-      params.set('label', 'ZettaPay');
-      params.set('message', 'Invoice ' + inv.invoiceId);
-      return 'solana:' + inv.merchantAddress + '?' + params.toString();
+    function buildPaymentURI(currency, address, amount) {
+      if (!address) return '';
+      const amt = formatAmount(amount);
+      if (currency === 'USDC_SOL') {
+        const params = new URLSearchParams();
+        params.set('amount', amt);
+        params.set('spl-token', USDC_MAINNET_MINT);
+        params.set('label', 'ZettaPay');
+        return 'solana:' + address + '?' + params.toString();
+      }
+      if (currency === 'BTC') {
+        return 'bitcoin:' + address + '?amount=' + amt;
+      }
+      if (currency === 'USDC_BASE') {
+        // EIP-681 USDC ERC-20 transfer on Base (chain 8453). USDC has 6 decimals.
+        const baseUnits = Math.round(Number(amount) * 1e6);
+        return 'ethereum:' + USDC_BASE_CONTRACT + '@' + BASE_CHAIN_ID +
+          '/transfer?address=' + address + '&uint256=' + baseUnits;
+      }
+      return '';
+    }
+
+    function buildPaymentURIWithRef(inv) {
+      const base = buildPaymentURI(inv.payCurrency, inv.merchantAddress, inv.amount);
+      if (!base) return '';
+      // Add a reference param for Solana Pay tracking; harmless for other URIs since we don't append.
+      if (inv.payCurrency === 'USDC_SOL') {
+        const sep = base.indexOf('?') >= 0 ? '&' : '?';
+        return base + sep + 'reference=' + encodeURIComponent(inv.invoiceId) +
+          '&message=' + encodeURIComponent('Invoice ' + inv.invoiceId);
+      }
+      return base;
     }
 
     function renderInvoice(inv) {
@@ -414,21 +504,35 @@
       els.merchantLabel.textContent = 'Pay @' + inv.merchant;
       els.amountValue.textContent = formatAmount(inv.amount);
       els.currencyValue.textContent = inv.currency;
-      els.amountUsdc.textContent = formatAmount(inv.amount);
+      els.amountValueLabel.textContent = formatAmount(inv.amount);
       if (inv.description) {
         els.descriptionValue.textContent = inv.description;
         els.descriptionBlock.classList.remove('hidden');
       }
       document.title = 'Pay ' + formatAmount(inv.amount) + ' ' + inv.currency + ' to @' + inv.merchant;
 
-      if (inv.merchantAddress) {
+      renderPayMethod(inv);
+
+      els.checkoutCard.classList.remove('hidden');
+    }
+
+    function renderPayMethod(inv) {
+      const pc = inv.payCurrency || DEFAULT_PAY_CURRENCY;
+      els.payHeading.textContent = HEADING[pc];
+      els.amountAssetLabel.textContent = ASSET_LABEL[pc];
+      els.walletHint.textContent = WALLET_HINT[pc];
+      els.timingNotice.textContent = TIMING_NOTICE[pc];
+
+      els.merchantAddress.classList.remove('text-rose');
+      if (inv.merchantAddress && isValidAddressForCurrency(inv.merchantAddress, pc)) {
         els.merchantAddress.textContent = inv.merchantAddress;
+      } else if (inv.merchantAddress) {
+        els.merchantAddress.textContent = 'No ' + ASSET_LABEL[pc] + ' address available for this merchant on ' + pc + '. Choose a different currency.';
+        els.merchantAddress.classList.add('text-rose');
       } else {
         els.merchantAddress.textContent = 'Merchant wallet not configured. Contact the merchant.';
         els.merchantAddress.classList.add('text-rose');
       }
-
-      els.checkoutCard.classList.remove('hidden');
     }
 
     function renderQr(uri) {
@@ -447,7 +551,7 @@
 
     function copyAddress() {
       const addr = els.merchantAddress.textContent || '';
-      if (!addr || !SOLANA_ADDRESS_RE.test(addr)) return;
+      if (!addr || !isValidAddressAnyChain(addr)) return;
       const flash = function () {
         els.merchantAddress.classList.add('copy-flash');
         setTimeout(function () { els.merchantAddress.classList.remove('copy-flash'); }, 1200);
@@ -519,9 +623,10 @@
       return u.toString();
     }
 
-    async function pollStatusOnce(invoiceId) {
+    async function pollStatusOnce(invoiceId, payCurrency) {
+      const qs = payCurrency ? '?currency=' + encodeURIComponent(payCurrency) : '';
       try {
-        const resp = await fetch('/api/invoice/' + encodeURIComponent(invoiceId) + '/status', {
+        const resp = await fetch('/api/invoice/' + encodeURIComponent(invoiceId) + '/status' + qs, {
           headers: { Accept: 'application/json' },
           cache: 'no-store',
         });
@@ -538,10 +643,31 @@
       }
     }
 
-    function startPolling(invoiceId) {
+    function startPolling(invoiceId, payCurrency) {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
       showWaiting();
-      pollStatusOnce(invoiceId);
-      pollTimer = setInterval(function () { pollStatusOnce(invoiceId); }, POLL_INTERVAL_MS);
+      const interval = POLL_INTERVAL[payCurrency] || POLL_INTERVAL[DEFAULT_PAY_CURRENCY];
+      pollStatusOnce(invoiceId, payCurrency);
+      pollTimer = setInterval(function () { pollStatusOnce(invoiceId, payCurrency); }, interval);
+    }
+
+    async function applyCurrency(payCurrency) {
+      if (!PAY_CURRENCIES.includes(payCurrency)) payCurrency = DEFAULT_PAY_CURRENCY;
+      if (!invoice) return;
+      const refreshed = await loadInvoice(invoice.invoiceId, invoice, payCurrency);
+      invoice = refreshed;
+      renderPayMethod(invoice);
+      const uri = buildPaymentURIWithRef(invoice);
+      renderQr(uri);
+      if (invoice.merchantAddress && isValidAddressForCurrency(invoice.merchantAddress, payCurrency)) {
+        startPolling(invoice.invoiceId, payCurrency);
+      } else if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
     }
 
     // Boot
@@ -551,18 +677,25 @@
         showInvalid(parsed.error);
         return;
       }
-      invoice = await loadInvoice(parsed.invoice.invoiceId, parsed.invoice);
+      const initialPayCurrency = parsed.invoice.payCurrency || DEFAULT_PAY_CURRENCY;
+      invoice = await loadInvoice(parsed.invoice.invoiceId, parsed.invoice, initialPayCurrency);
 
-      if (!invoice.merchantAddress) {
-        renderInvoice(invoice);
-        return;
+      if (els.currencySelect) {
+        els.currencySelect.value = initialPayCurrency;
+        els.currencySelect.addEventListener('change', function (e) {
+          applyCurrency(e.target.value);
+        });
       }
 
       renderInvoice(invoice);
 
-      const uri = buildSolanaPayUri(invoice);
+      if (!invoice.merchantAddress) return;
+
+      const uri = buildPaymentURIWithRef(invoice);
       renderQr(uri);
-      startPolling(invoice.invoiceId);
+      if (isValidAddressForCurrency(invoice.merchantAddress, invoice.payCurrency || DEFAULT_PAY_CURRENCY)) {
+        startPolling(invoice.invoiceId, invoice.payCurrency || DEFAULT_PAY_CURRENCY);
+      }
     })();
   </script>
 </body>
