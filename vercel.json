@@ -122,6 +122,26 @@
     {
       "source": "/status/feed.rss",
       "destination": "/api/status/feed.rss"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/privacy.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/terms.html"
+    },
+    {
+      "source": "/about",
+      "destination": "/about.html"
+    },
+    {
+      "source": "/contact",
+      "destination": "/contact.html"
+    },
+    {
+      "source": "/docs/api",
+      "destination": "/docs/api.html"
     }
   ],
   "headers": [

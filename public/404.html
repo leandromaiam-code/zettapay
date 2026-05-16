@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta name="description" content="The page you are looking for could not be found on ZettaPay." />
+  <title>404 — Page not found · ZettaPay</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-bright': '#6B82FF',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+          animation: {
+            'gradient': 'gradient 8s linear infinite',
+            'float': 'float 6s ease-in-out infinite',
+            'glow-pulse': 'glowPulse 4s ease-in-out infinite',
+          },
+          keyframes: {
+            gradient: {
+              '0%, 100%': { 'background-position': '0% 50%' },
+              '50%': { 'background-position': '100% 50%' },
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            glowPulse: {
+              '0%, 100%': { opacity: '0.3' },
+              '50%': { opacity: '0.6' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb animate-glow-pulse" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 400px; height: 400px; bottom: 10%; left: -100px; opacity: 0.15;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 350px; height: 350px; top: 50%; right: 20%; opacity: 0.1;"></div>
+
+  <main class="relative min-h-screen flex flex-col items-center justify-center px-6 py-20 text-center">
+    <a href="/" class="absolute top-8 left-6 sm:left-12 flex items-center gap-3 group">
+      <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+      <span class="font-bold text-lg">ZettaPay</span>
+    </a>
+
+    <img src="/Logo_symbol.png" alt="" class="w-20 h-20 md:w-24 md:h-24 animate-float mb-10 opacity-90" />
+
+    <div class="glass rounded-full px-5 py-2 mb-8 inline-flex items-center gap-2">
+      <span class="w-2 h-2 rounded-full bg-solana"></span>
+      <span class="text-xs font-mono text-solana uppercase tracking-widest">Error 404 &middot; Off-chain</span>
+    </div>
+
+    <h1 class="text-7xl md:text-9xl font-bold mb-6 tracking-tighter">
+      <span class="gradient-text">404</span>
+    </h1>
+    <h2 class="text-2xl md:text-4xl font-bold mb-4 tracking-tight max-w-2xl">
+      This page never settled.
+    </h2>
+    <p class="text-muted text-base md:text-lg max-w-xl mb-10 leading-relaxed">
+      The route you requested doesn&apos;t exist on this protocol.
+      No transaction was attempted. No fees were charged.
+    </p>
+
+    <div class="flex flex-col sm:flex-row items-center gap-3 mb-12">
+      <a href="/" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm flex items-center gap-2">
+        Back to home
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+      </a>
+      <a href="/docs" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Read the docs</a>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl w-full">
+      <a href="/pricing" class="glass rounded-xl px-4 py-3 text-sm text-muted hover:text-white transition">Pricing &rarr;</a>
+      <a href="/dashboard" class="glass rounded-xl px-4 py-3 text-sm text-muted hover:text-white transition">Dashboard &rarr;</a>
+      <a href="/status" class="glass rounded-xl px-4 py-3 text-sm text-muted hover:text-white transition">Status &rarr;</a>
+      <a href="/contact" class="glass rounded-xl px-4 py-3 text-sm text-muted hover:text-white transition">Contact &rarr;</a>
+    </div>
+
+    <p class="text-xs font-mono text-muted/50 mt-12">If you arrived here via a broken link, <a href="/contact" class="text-royal-bright hover:underline">let us know</a>.</p>
+  </main>
+</body>
+</html>

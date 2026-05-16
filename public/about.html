@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay is the Solana USDC payment protocol for AI agents and humans. Wallet-less, custody-less, sub-2-second settlement, 0.30% fee." />
+  <meta property="og:title" content="About — ZettaPay" />
+  <meta property="og:description" content="Why we built the protocol AI agents were waiting for, and the principles we will not compromise on." />
+  <meta property="og:type" content="website" />
+  <title>About — ZettaPay</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.8s ease-out forwards',
+            'gradient': 'gradient 8s linear infinite',
+          },
+          keyframes: {
+            fadeUp: {
+              '0%': { opacity: '0', transform: 'translateY(30px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            gradient: {
+              '0%, 100%': { 'background-position': '0% 50%' },
+              '50%': { 'background-position': '100% 50%' },
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass:hover {
+      background: rgba(79, 107, 255, 0.08);
+      border-color: rgba(79, 107, 255, 0.3);
+      transition: all 0.4s ease;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradient 6s linear infinite;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.25;
+      pointer-events: none;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 600px; height: 600px; top: -200px; right: -200px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 400px; height: 400px; top: 35%; left: -150px; opacity: 0.12;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 500px; height: 500px; bottom: 10%; right: 10%; opacity: 0.1;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative pt-36 pb-20 px-4 lg:px-12">
+    <div class="max-w-5xl mx-auto text-center">
+      <span class="text-xs font-mono text-mint uppercase tracking-widest">About</span>
+      <h1 class="text-5xl md:text-7xl font-bold mt-4 mb-8 tracking-tight leading-[1.05]">
+        The protocol <span class="gradient-text">AI agents</span><br/>were waiting for.
+      </h1>
+      <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto leading-relaxed">
+        ZettaPay is a Solana-native payment protocol designed for the agentic economy.
+        <span class="text-white font-semibold">0.30% fees, sub-2-second settlement, no wallet connect, no custody.</span>
+        Built so machines and humans can transact without the legacy tax of credit-card rails.
+      </p>
+    </div>
+  </section>
+
+  <!-- WHY -->
+  <section class="px-4 lg:px-12 py-16">
+    <div class="max-w-6xl mx-auto">
+      <div class="grid md:grid-cols-2 gap-6 mb-6">
+        <div class="glass rounded-2xl p-8">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">The problem</div>
+          <h2 class="text-2xl font-bold mb-4">Legacy rails were never built for agents</h2>
+          <p class="text-muted leading-relaxed text-sm">
+            Stripe&apos;s 2.9% + $0.30 makes a $0.05 LLM call economically impossible. Credit-card chargebacks
+            assume a human in the loop. Issuing API keys to autonomous code without spend boundaries is a
+            catastrophic risk waiting to happen. Every team building agent-driven SaaS reinvents the same
+            broken plumbing.
+          </p>
+        </div>
+        <div class="glass rounded-2xl p-8">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Our answer</div>
+          <h2 class="text-2xl font-bold mb-4">An open protocol, not a closed processor</h2>
+          <p class="text-muted leading-relaxed text-sm">
+            ZettaPay is a thin, non-custodial layer over Solana USDC. We never hold funds. We don&apos;t
+            require wallet connections. We expose <code class="font-mono text-mint text-xs">x402</code>
+            and <code class="font-mono text-mint text-xs">MCP</code> as first-class citizens so any agent
+            framework can integrate in minutes. The spec and SDKs are MIT.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-7">
+          <div class="text-3xl font-bold gradient-text mb-2">0.30%</div>
+          <div class="text-sm text-white font-semibold mb-1">10&times; cheaper</div>
+          <div class="text-xs text-muted leading-relaxed">Flat protocol fee. No card swipe, no interchange, no monthly minimums.</div>
+        </div>
+        <div class="glass rounded-2xl p-7">
+          <div class="text-3xl font-bold gradient-text mb-2">&lt;2s</div>
+          <div class="text-sm text-white font-semibold mb-1">Instant settlement</div>
+          <div class="text-xs text-muted leading-relaxed">Funds land in the merchant wallet directly on confirmation. No ACH hold.</div>
+        </div>
+        <div class="glass rounded-2xl p-7">
+          <div class="text-3xl font-bold gradient-text mb-2">0</div>
+          <div class="text-sm text-white font-semibold mb-1">Funds custodied</div>
+          <div class="text-xs text-muted leading-relaxed">Payments settle peer-to-peer. We never touch the money.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRINCIPLES -->
+  <section class="px-4 lg:px-12 py-16">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Principles</span>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3 mb-4">Lines we will not cross</h2>
+        <p class="text-muted max-w-2xl mx-auto">The constraints that define the protocol &mdash; not preferences, but hard rules.</p>
+      </div>
+
+      <div class="space-y-4">
+        <div class="glass rounded-xl p-6 flex gap-5">
+          <div class="text-2xl font-mono text-mint shrink-0 w-10">01</div>
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Wallet-less, always</h3>
+            <p class="text-muted text-sm leading-relaxed">Merchants paste a public address at signup. Payers scan a QR or copy an address. No wallet connect, no browser-extension dependency, no signature prompt sitting in front of checkout.</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-6 flex gap-5">
+          <div class="text-2xl font-mono text-mint shrink-0 w-10">02</div>
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Non-custodial, period</h3>
+            <p class="text-muted text-sm leading-relaxed">Funds move directly from payer to merchant on-chain. We are not a money services business. The protocol owns no float, no escrow, no settlement pool.</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-6 flex gap-5">
+          <div class="text-2xl font-mono text-mint shrink-0 w-10">03</div>
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Stripe-grade reliability</h3>
+            <p class="text-muted text-sm leading-relaxed">HMAC-signed webhooks with idempotency keys, exponential retries, replay from dashboard, structured logs with correlation IDs. We hold ourselves to the bar humans pay 2.9% for.</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-6 flex gap-5">
+          <div class="text-2xl font-mono text-mint shrink-0 w-10">04</div>
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Agent-native, not agent-friendly</h3>
+            <p class="text-muted text-sm leading-relaxed"><code class="font-mono text-mint text-xs">x402</code> and <code class="font-mono text-mint text-xs">MCP</code> are first-class. The protocol assumes the payer might be a Claude tool call, a GPT operator, or a Gemini agent &mdash; not just a human with a card.</p>
+          </div>
+        </div>
+        <div class="glass rounded-xl p-6 flex gap-5">
+          <div class="text-2xl font-mono text-mint shrink-0 w-10">05</div>
+          <div>
+            <h3 class="text-lg font-semibold mb-1">Open by default</h3>
+            <p class="text-muted text-sm leading-relaxed">Protocol spec and SDKs are MIT. Auditable static analysis on every on-chain commit. Public status page. Bug bounty before scale. The moat is adoption, not lock-in.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK -->
+  <section class="px-4 lg:px-12 py-16">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Stack</span>
+        <h2 class="text-4xl md:text-5xl font-bold mt-3 mb-4">Built on proven primitives</h2>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="glass rounded-xl p-5 text-center">
+          <div class="font-mono text-mint text-xs uppercase tracking-widest mb-2">Chain</div>
+          <div class="font-semibold">Solana</div>
+          <div class="text-xs text-muted mt-1">65k TPS, sub-cent fees</div>
+        </div>
+        <div class="glass rounded-xl p-5 text-center">
+          <div class="font-mono text-mint text-xs uppercase tracking-widest mb-2">Asset</div>
+          <div class="font-semibold">USDC</div>
+          <div class="text-xs text-muted mt-1">Circle, regulated</div>
+        </div>
+        <div class="glass rounded-xl p-5 text-center">
+          <div class="font-mono text-mint text-xs uppercase tracking-widest mb-2">Protocols</div>
+          <div class="font-semibold">x402 + MCP</div>
+          <div class="text-xs text-muted mt-1">Open specs</div>
+        </div>
+        <div class="glass rounded-xl p-5 text-center">
+          <div class="font-mono text-mint text-xs uppercase tracking-widest mb-2">Onramp</div>
+          <div class="font-semibold">MoonPay</div>
+          <div class="text-xs text-muted mt-1">Fiat to USDC</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="px-4 lg:px-12 py-24">
+    <div class="max-w-3xl mx-auto text-center">
+      <h2 class="text-4xl md:text-6xl font-bold mb-6">Ship in <span class="gradient-text">30 seconds</span></h2>
+      <p class="text-muted text-lg mb-10">Paste a wallet. Drop a script tag. Start accepting USDC.</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+        <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base">Get started</a>
+        <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the docs</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-royal/10 py-12 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+          <span class="text-base font-bold">ZettaPay</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
+          <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
+          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Company</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/about" class="text-white transition">About</a></li>
+          <li><a href="/contact" class="text-muted hover:text-white transition">Contact</a></li>
+          <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/privacy" class="text-muted hover:text-white transition">Privacy</a></li>
+          <li><a href="/terms" class="text-muted hover:text-white transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
+      <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
+      <span>Built with Solana &middot; USDC &middot; x402</span>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay terms of service — payment protocol terms, merchant obligations, fee schedule, and dispute handling." />
+  <meta property="og:title" content="Terms of Service — ZettaPay" />
+  <meta property="og:description" content="The agreement between merchants integrating ZettaPay and the protocol operator." />
+  <meta property="og:type" content="website" />
+  <title>Terms of Service — ZettaPay</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .prose-zp h2 { font-size: 1.5rem; font-weight: 700; color: #fff; margin-top: 2.5rem; margin-bottom: 1rem; letter-spacing: -0.01em; }
+    .prose-zp h3 { font-size: 1.125rem; font-weight: 600; color: #fff; margin-top: 1.75rem; margin-bottom: 0.5rem; }
+    .prose-zp p { color: #cbd5e1; line-height: 1.75; margin-bottom: 1rem; }
+    .prose-zp ul { color: #cbd5e1; line-height: 1.75; margin-bottom: 1rem; padding-left: 1.25rem; list-style: disc; }
+    .prose-zp li { margin-bottom: 0.4rem; }
+    .prose-zp a { color: #6B82FF; text-decoration: underline; text-underline-offset: 3px; }
+    .prose-zp a:hover { color: #14F195; }
+    .prose-zp strong { color: #fff; font-weight: 600; }
+    .prose-zp code { font-family: 'JetBrains Mono', monospace; font-size: 0.875em; color: #14F195; background: rgba(20,241,149,0.08); padding: 0.1rem 0.4rem; border-radius: 4px; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 500px; height: 500px; top: -200px; right: -150px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 400px; height: 400px; top: 40%; left: -150px; opacity: 0.12;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
+        <a href="/signup" class="px-4 py-2 rounded-full font-semibold text-sm" style="background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%); color: #fff;">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="relative pt-36 pb-12 px-4 lg:px-12">
+    <div class="max-w-4xl mx-auto">
+      <a href="/" class="inline-flex items-center gap-2 text-xs font-mono text-muted hover:text-white transition mb-6">
+        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+        Back to home
+      </a>
+      <span class="text-xs font-mono text-mint uppercase tracking-widest">Legal</span>
+      <h1 class="text-4xl md:text-6xl font-bold mt-4 mb-4 tracking-tight">Terms of <span class="gradient-text">Service</span></h1>
+      <p class="text-muted text-sm font-mono">Effective date: 2026-05-16 &middot; Last updated: 2026-05-16</p>
+    </div>
+  </section>
+
+  <!-- CONTENT -->
+  <section class="px-4 lg:px-12 pb-24">
+    <div class="max-w-4xl mx-auto glass rounded-2xl p-8 md:p-12 prose-zp">
+
+      <p>These Terms govern your access to ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;service&rdquo;, &ldquo;we&rdquo;), including the merchant dashboard, embed widget, SDKs, and HTTP APIs. By registering as a merchant or integrating any ZettaPay artifact, you (&ldquo;you&rdquo;, &ldquo;merchant&rdquo;) agree to these Terms.</p>
+
+      <h2>1. Eligibility</h2>
+      <ul>
+        <li>You must be 18 or older and legally able to enter contracts in your jurisdiction.</li>
+        <li>You must not be located in, or operating from, a jurisdiction subject to comprehensive sanctions.</li>
+        <li>You are responsible for ensuring the activities you transact are lawful in your jurisdiction.</li>
+      </ul>
+
+      <h2>2. The protocol &mdash; what it is and is not</h2>
+      <ul>
+        <li>ZettaPay is non-custodial. Every USDC payment settles directly from payer to merchant on Solana. We never take possession of funds.</li>
+        <li>ZettaPay is not a money services business, bank, money transmitter, or licensed payment institution.</li>
+        <li>Fiat onramp/offramp services, where surfaced, are operated by third parties (e.g. MoonPay) under their own terms.</li>
+      </ul>
+
+      <h2>3. Merchant account</h2>
+      <ul>
+        <li>You provide a Solana <strong>public address</strong> at signup. ZettaPay never requests a wallet connection or private key.</li>
+        <li>You are solely responsible for the security of your wallet, seed phrase, and signing devices.</li>
+        <li>You will keep your contact email and webhook URL current and reachable.</li>
+        <li>API keys are confidential. Treat them like passwords. Rotate immediately on suspected compromise.</li>
+      </ul>
+
+      <h2>4. Acceptable use</h2>
+      <p>You agree not to use ZettaPay to facilitate:</p>
+      <ul>
+        <li>Activities prohibited by applicable law, including fraud, money laundering, terrorism financing, or sanctions evasion.</li>
+        <li>Sale of regulated goods (firearms, controlled substances, restricted financial products) without applicable licenses.</li>
+        <li>Adult content involving minors, non-consensual content, or any content depicting violence against people or animals.</li>
+        <li>Phishing, malware distribution, or impersonation of other parties.</li>
+        <li>Stress-testing or reverse-engineering the protocol without authorization (see our bug bounty program for sanctioned channels).</li>
+      </ul>
+      <p>We may suspend or terminate accounts that violate this section, with or without notice. On-chain settlements that have already confirmed cannot be reversed.</p>
+
+      <h2>5. Fees</h2>
+      <ul>
+        <li>Protocol fee: <strong>0.30%</strong> of each settled invoice, deducted at the point of settlement.</li>
+        <li>Solana network fees apply per transaction (typically &lt; $0.01).</li>
+        <li>Fiat onramp partners charge their own fees, disclosed at the point of purchase.</li>
+        <li>Free tier: the first 100 transactions per merchant per calendar month are not charged a protocol fee, subject to abuse review.</li>
+      </ul>
+      <p>We may change fees with at least 30 days&apos; notice via the merchant dashboard and email. Continued integration after the notice period constitutes acceptance.</p>
+
+      <h2>6. Refunds, chargebacks, and disputes</h2>
+      <ul>
+        <li>Solana transactions are <strong>final</strong>. There is no chargeback mechanism at the protocol layer.</li>
+        <li>Refund policy between merchant and payer is set by the merchant. We do not mediate refunds.</li>
+        <li>If you intend to issue a refund, send USDC directly back to the payer&apos;s originating address.</li>
+        <li>Disputes between payer and merchant are resolved between those parties. We are not a party to commercial disputes.</li>
+      </ul>
+
+      <h2>7. Service availability</h2>
+      <p>We target high availability and publish real-time component health at <a href="/status">/status</a>. We do not guarantee uninterrupted service. The protocol depends on the Solana network and third-party RPC providers; outages on those networks may affect settlement timing.</p>
+
+      <h2>8. Webhooks and integration</h2>
+      <ul>
+        <li>Webhook URLs must be served over HTTPS with a valid certificate.</li>
+        <li>Webhooks are signed with HMAC-SHA256 and include idempotency keys. You must verify the signature and dedupe by idempotency key before acting on a webhook.</li>
+        <li>We retry failed webhook deliveries with exponential backoff for up to three attempts. After exhaustion, deliveries can be replayed from the dashboard.</li>
+      </ul>
+
+      <h2>9. Intellectual property &amp; open source</h2>
+      <ul>
+        <li>The protocol specification and official SDKs are released under MIT.</li>
+        <li>The merchant dashboard, hosted infrastructure, and brand assets remain proprietary.</li>
+        <li>You may not use the ZettaPay name or logos in a way that suggests endorsement without our written permission.</li>
+      </ul>
+
+      <h2>10. Disclaimers</h2>
+      <p>The protocol is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. To the maximum extent permitted by law, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. Cryptocurrency carries inherent volatility and operational risk. You acknowledge that you have the technical competence to manage your own wallet.</p>
+
+      <h2>11. Limitation of liability</h2>
+      <p>To the maximum extent permitted by law, our aggregate liability arising out of or relating to these Terms or the protocol is limited to the greater of (a) the total fees you paid to us in the 12 months preceding the claim, or (b) USD $100. We are not liable for indirect, incidental, consequential, or punitive damages, including lost profits or business interruption, even if advised of the possibility.</p>
+
+      <h2>12. Indemnification</h2>
+      <p>You will defend and indemnify us against third-party claims arising from your use of the protocol, your content, your customer interactions, or your breach of these Terms.</p>
+
+      <h2>13. Suspension &amp; termination</h2>
+      <ul>
+        <li>You may close your merchant account at any time from the dashboard.</li>
+        <li>We may suspend or terminate accounts for violation of these Terms, suspected abuse, or to comply with law.</li>
+        <li>Sections 5 (Fees), 6 (Refunds), 9&ndash;14 survive termination.</li>
+      </ul>
+
+      <h2>14. Governing law &amp; venue</h2>
+      <p>These Terms are governed by the laws of the State of Delaware, USA, without regard to conflict-of-law principles. Disputes shall be resolved in the state or federal courts located in Wilmington, Delaware, except where local consumer-protection law grants you rights that cannot be waived.</p>
+
+      <h2>15. Changes</h2>
+      <p>We may update these Terms. Material changes will be announced via the dashboard and email at least 14 days before they take effect, except for changes required for legal or security reasons, which may be effective immediately.</p>
+
+      <h2>16. Contact</h2>
+      <p>Legal: <a href="mailto:legal@zettapay.dev">legal@zettapay.dev</a><br/>Support: <a href="/contact">/contact</a></p>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-royal/10 py-12 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+          <span class="text-base font-bold">ZettaPay</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
+          <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
+          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Company</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/about" class="text-muted hover:text-white transition">About</a></li>
+          <li><a href="/contact" class="text-muted hover:text-white transition">Contact</a></li>
+          <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/privacy" class="text-muted hover:text-white transition">Privacy</a></li>
+          <li><a href="/terms" class="text-white transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
+      <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
+      <span>Built with Solana &middot; USDC &middot; x402</span>
+    </div>
+  </footer>
+</body>
+</html>

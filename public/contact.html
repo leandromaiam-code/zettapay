@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Contact ZettaPay — support, security, legal, partnerships, press. We respond fast and write back personally." />
+  <meta property="og:title" content="Contact — ZettaPay" />
+  <meta property="og:description" content="Reach support, security, legal, or partnerships. Email and GitHub are the fastest routes." />
+  <meta property="og:type" content="website" />
+  <title>Contact — ZettaPay</title>
+  <link rel="icon" type="image/png" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass:hover {
+      background: rgba(79, 107, 255, 0.08);
+      border-color: rgba(79, 107, 255, 0.3);
+      transition: all 0.4s ease;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.2;
+      pointer-events: none;
+    }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .input-field {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      color: #fff;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.875rem;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: #4F6BFF;
+      background: rgba(79, 107, 255, 0.05);
+      box-shadow: 0 0 0 3px rgba(79, 107, 255, 0.15);
+    }
+    .input-field::placeholder { color: #475569; }
+    label.fld { display: block; font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.4rem; }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 500px; height: 500px; top: -200px; right: -150px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 400px; height: 400px; top: 40%; left: -100px; opacity: 0.1;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Sign up</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO + CHANNELS -->
+  <section class="relative pt-36 pb-16 px-4 lg:px-12">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Contact</span>
+        <h1 class="text-5xl md:text-6xl font-bold mt-4 mb-6 tracking-tight">
+          Get in <span class="gradient-text">touch</span>
+        </h1>
+        <p class="text-muted text-lg leading-relaxed">
+          Real humans, fast replies. Pick the channel that fits your question.
+          For incidents, the public status page is the fastest signal.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-5">
+        <a href="mailto:support@zettapay.dev" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Support</div>
+          <div class="font-semibold mb-1">support@zettapay.dev</div>
+          <div class="text-xs text-muted leading-relaxed">Integration help, billing, account questions. We reply within one business day.</div>
+        </a>
+        <a href="mailto:security@zettapay.dev" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-royal/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-1">Security</div>
+          <div class="font-semibold mb-1">security@zettapay.dev</div>
+          <div class="text-xs text-muted leading-relaxed">Vulnerability reports. PGP key on request. Bug bounty active &mdash; see <a href="/docs" class="underline">docs</a>.</div>
+        </a>
+        <a href="mailto:legal@zettapay.dev" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-solana/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-1">Legal &amp; privacy</div>
+          <div class="font-semibold mb-1">legal@zettapay.dev</div>
+          <div class="text-xs text-muted leading-relaxed">DPA requests, compliance, GDPR/CCPA, takedown notices.</div>
+        </a>
+        <a href="https://github.com/leandromaiam-code/zettapay/issues" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-muted uppercase tracking-widest mb-1">GitHub issues</div>
+          <div class="font-semibold mb-1">leandromaiam-code/zettapay</div>
+          <div class="text-xs text-muted leading-relaxed">Bug reports, feature requests, protocol RFCs. Public, fastest route for technical questions.</div>
+        </a>
+        <a href="mailto:partnerships@zettapay.dev" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Partnerships</div>
+          <div class="font-semibold mb-1">partnerships@zettapay.dev</div>
+          <div class="text-xs text-muted leading-relaxed">Integrations, agent frameworks, ecosystem grants, co-marketing.</div>
+        </a>
+        <a href="mailto:press@zettapay.dev" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-royal/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-1">Press</div>
+          <div class="font-semibold mb-1">press@zettapay.dev</div>
+          <div class="text-xs text-muted leading-relaxed">Media inquiries, brand assets, founder availability for interviews.</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- MESSAGE FORM (mailto) -->
+  <section class="px-4 lg:px-12 pb-24">
+    <div class="max-w-3xl mx-auto">
+      <div class="glass rounded-2xl p-8 md:p-10">
+        <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Or send a message</div>
+        <h2 class="text-3xl font-bold mb-2">Drop us a note</h2>
+        <p class="text-muted text-sm mb-8">The form opens your email client with the details prefilled. No accounts, no tracking.</p>
+
+        <form id="contact-form" class="space-y-5">
+          <div class="grid sm:grid-cols-2 gap-5">
+            <div>
+              <label class="fld" for="name">Name</label>
+              <input class="input-field" id="name" name="name" type="text" placeholder="Ada Lovelace" required />
+            </div>
+            <div>
+              <label class="fld" for="email">Email</label>
+              <input class="input-field" id="email" name="email" type="email" placeholder="ada@example.com" required />
+            </div>
+          </div>
+          <div>
+            <label class="fld" for="topic">Topic</label>
+            <select class="input-field" id="topic" name="topic">
+              <option value="support">Support</option>
+              <option value="security">Security disclosure</option>
+              <option value="legal">Legal &amp; privacy</option>
+              <option value="partnerships">Partnerships</option>
+              <option value="press">Press</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label class="fld" for="message">Message</label>
+            <textarea class="input-field" id="message" name="message" rows="6" placeholder="What can we help with?" required></textarea>
+          </div>
+          <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
+            <button type="submit" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm w-full sm:w-auto">Open in mail client</button>
+            <span class="text-xs text-muted font-mono">No data leaves your device until you hit send.</span>
+          </div>
+        </form>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4 mt-8 text-sm">
+        <a href="/status" class="glass rounded-xl p-5 block">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Incident?</div>
+          <div class="font-semibold">Check live status &rarr;</div>
+          <div class="text-xs text-muted mt-1">Real-time component health and incident history.</div>
+        </a>
+        <a href="/docs" class="glass rounded-xl p-5 block">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Integration question?</div>
+          <div class="font-semibold">Browse the docs &rarr;</div>
+          <div class="text-xs text-muted mt-1">Quickstart, embed, SDK reference, recipes.</div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-royal/10 py-12 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+          <span class="text-base font-bold">ZettaPay</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
+          <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
+          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Company</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/about" class="text-muted hover:text-white transition">About</a></li>
+          <li><a href="/contact" class="text-white transition">Contact</a></li>
+          <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/privacy" class="text-muted hover:text-white transition">Privacy</a></li>
+          <li><a href="/terms" class="text-muted hover:text-white transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
+      <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
+      <span>Built with Solana &middot; USDC &middot; x402</span>
+    </div>
+  </footer>
+
+  <script>
+    const TOPIC_TO_INBOX = {
+      support: 'support@zettapay.dev',
+      security: 'security@zettapay.dev',
+      legal: 'legal@zettapay.dev',
+      partnerships: 'partnerships@zettapay.dev',
+      press: 'press@zettapay.dev',
+      other: 'support@zettapay.dev',
+    };
+    const TOPIC_LABEL = {
+      support: 'Support',
+      security: 'Security',
+      legal: 'Legal',
+      partnerships: 'Partnerships',
+      press: 'Press',
+      other: 'Inquiry',
+    };
+    const form = document.getElementById('contact-form');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      const name = (data.get('name') || '').toString().trim();
+      const email = (data.get('email') || '').toString().trim();
+      const topic = (data.get('topic') || 'support').toString();
+      const message = (data.get('message') || '').toString().trim();
+      const to = TOPIC_TO_INBOX[topic] || TOPIC_TO_INBOX.support;
+      const subject = `[${TOPIC_LABEL[topic] || 'Inquiry'}] ${name || 'New message'}`;
+      const body = `From: ${name} <${email}>\n\n${message}`;
+      const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = href;
+    });
+  </script>
+</body>
+</html>

@@ -605,7 +605,7 @@
           <div class="faq-body">
             Three steps, ~5 minutes:
             <ol class="list-decimal pl-5 mt-3 space-y-1.5">
-              <li>Click <a href="/signup" class="text-royal-bright hover:underline">Start Free</a> and connect your <span class="text-white">Phantom</span> wallet &mdash; no email or card required.</li>
+              <li>Click <a href="/signup" class="text-royal-bright hover:underline">Start Free</a> and paste your <span class="text-white">Solana wallet address</span> &mdash; no wallet connect, no email, no card.</li>
               <li>Copy your API key and the <code>&lt;script&gt;</code> tag from <a href="/dashboard" class="text-royal-bright hover:underline">your dashboard</a>, or install <code>@zettapay/sdk</code>.</li>
               <li>Drop the embed onto your checkout page. Your first USDC payment lands in your wallet in under 2 seconds.</li>
             </ol>
@@ -655,7 +655,7 @@
         Today, in five minutes.
       </h2>
       <p class="text-muted text-lg mb-10 max-w-2xl mx-auto">
-        No credit card. No call with a sales rep. Connect your wallet, copy the embed, ship.
+        No credit card. No call with a sales rep. Paste your wallet address, copy the embed, ship.
         Your first USDC payment settles in under two seconds.
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -669,19 +669,43 @@
   </section>
 
   <!-- FOOTER -->
-  <footer class="border-t border-royal/10 py-12 px-4 lg:px-12">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-      <div class="flex items-center gap-3">
-        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
-        <span class="text-sm text-muted font-mono">ZettaPay &middot; Solana payments for AI agents and humans</span>
+  <footer class="border-t border-royal/10 pt-12 pb-8 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      <div class="col-span-2 md:col-span-1">
+        <div class="flex items-center gap-3 mb-3">
+          <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
+          <span class="text-base font-bold">ZettaPay</span>
+        </div>
+        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
       </div>
-      <div class="flex items-center gap-6 text-sm">
-        <a href="/" class="text-muted hover:text-white transition">Home</a>
-        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
-        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
-        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
-        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/pricing" class="text-white transition">Pricing</a></li>
+          <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
+          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+        </ul>
       </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Company</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/about" class="text-muted hover:text-white transition">About</a></li>
+          <li><a href="/contact" class="text-muted hover:text-white transition">Contact</a></li>
+          <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Legal</div>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/privacy" class="text-muted hover:text-white transition">Privacy</a></li>
+          <li><a href="/terms" class="text-muted hover:text-white transition">Terms</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
+      <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
+      <span>Built with Solana &middot; USDC &middot; x402</span>
     </div>
   </footer>
 
