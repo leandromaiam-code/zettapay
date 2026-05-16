@@ -217,12 +217,6 @@
       color: #14F195;
       border-color: rgba(20, 241, 149, 0.45);
     }
-    .secret-blur {
-      filter: blur(7px);
-      transition: filter 0.25s ease;
-      cursor: pointer;
-    }
-    .secret-blur.revealed { filter: none; }
     .logo-wordmark { filter: invert(1) brightness(2); }
     .toast {
       position: fixed;
@@ -492,19 +486,9 @@
                   <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
                 </div>
               </div>
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs font-mono uppercase tracking-widest text-amber">Secret key</label>
-                  <span class="text-[10px] text-amber/80 font-mono uppercase tracking-widest">Show only once</span>
-                </div>
-                <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3 border-amber/30">
-                  <code id="secretKeyValue" class="key-value text-white flex-1 min-w-0 secret-blur" title="Click to reveal">sk_live_…</code>
-                  <button type="button" data-copy-target="secretKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
-                </div>
-                <p class="text-[11px] text-amber/80 mt-2 leading-relaxed">
-                  Store this in your server-side env vars. We never display it again — rotate from the dashboard if lost.
-                </p>
-              </div>
+              <p class="text-[11px] text-muted/70 mt-1 leading-relaxed">
+                Manage and rotate keys anytime from your dashboard.
+              </p>
             </div>
           </details>
 
@@ -611,7 +595,6 @@
       const shopSummary = document.getElementById('shopSummary');
       const merchantIdSummary = document.getElementById('merchantIdSummary');
       const publicKeyValue = document.getElementById('publicKeyValue');
-      const secretKeyValue = document.getElementById('secretKeyValue');
       const embedCodeValue = document.getElementById('embedCodeValue');
       const copyEmbedBtn = document.getElementById('copyEmbedBtn');
       const copyEmbedLabel = document.getElementById('copyEmbedLabel');
@@ -821,7 +804,6 @@
         const merchant = (result && result.merchant) || {};
         merchantIdSummary.textContent = merchant.id || '';
         publicKeyValue.textContent = result.public_key || '';
-        secretKeyValue.textContent = result.secret_key || '';
         embedCodeValue.textContent = result.embed_code || '';
         dashboardLink.setAttribute('href', result.dashboard_url || '/dashboard');
       }
@@ -888,19 +870,14 @@
       });
       step2Next.addEventListener('click', () => submitOnboard(shopHandle.value));
 
-      // Generic copy buttons (public/secret keys)
+      // Generic copy buttons (publishable key)
       document.querySelectorAll('[data-copy-target]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const targetId = btn.getAttribute('data-copy-target');
           const target = targetId ? document.getElementById(targetId) : null;
           if (!target) return;
-          if (target === secretKeyValue) target.classList.add('revealed');
           copyText(target.textContent || '', btn);
         });
-      });
-
-      secretKeyValue.addEventListener('click', () => {
-        secretKeyValue.classList.toggle('revealed');
       });
 
       copyEmbedBtn.addEventListener('click', async () => {
