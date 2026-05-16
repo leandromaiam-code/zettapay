@@ -22,6 +22,9 @@ description with no further editing required.
   adjectives.
 - When a listing goes live, append the public URL under the file's
   `Status` line and set the date.
+- Track submission progress in [`STATUS.md`](./STATUS.md) — one row per
+  target, updated in place as stages advance (drafted → submitted →
+  acknowledged → live).
 - Re-run the awareness sweep every quarter; new RPC providers and
   registries appear faster than this checklist.
 
@@ -41,9 +44,10 @@ description with no further editing required.
   ecosystem directory + Superteam grants/bounties surface. Required for
   any future Solana Foundation co-marketing.
 
-## Status (2026-05-11)
+## Status
 
-All five drafts are prepared. None are submitted yet — submission requires
-the operator to attach the brand kit (`logo/wordmark-light.png`,
-`logo/wordmark-dark.png`, `logo/symbol-light.png`) and the audit summary
-(`audit/`) at send time.
+See [`STATUS.md`](./STATUS.md) for the live submission tracker. As of
+2026-05-16 all five drafts are prepared and none are submitted yet —
+submission requires the operator to attach the brand kit
+(`logo/wordmark-light.png`, `logo/wordmark-dark.png`,
+`logo/symbol-light.png`) and the audit summary (`audit/`) at send time.
