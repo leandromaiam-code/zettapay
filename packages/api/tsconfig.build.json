@@ -79,6 +79,7 @@
     "src/services/blacklist-data.ts",
     "src/services/risk-scoring.ts",
     "src/db/risk_assessments.ts",
+    "src/db/protocol_config.ts",
     "src/routes/risk.ts",
     "src/services/webhook_dispatcher.ts",
     "src/services/webhook_worker.ts",
