@@ -74,9 +74,26 @@ AI agent tool calls, and other async runtimes.
 | `get_payment(id)` | `GET /payments/:id` | Fetch a recorded payment. |
 | `list_payments(limit, offset)` | `GET /payments` | Paginated list. |
 | `health()` | `GET /healthz` | Liveness probe. |
+| `invoices.create(...)` | `POST /api/invoices` | Multi-chain invoice (BTC / Base / Polygon / Ethereum). |
+| `invoices.get(id)` | `GET /api/invoices/:id` | Fetch a multi-chain invoice. |
 
 Both `ZettaPayClient` and `AsyncZettaPayClient` expose the identical method
 surface (snake_case for Python) — the async variant returns coroutines.
+
+### Multi-chain invoices
+
+```python
+invoice = client.invoices.create(
+    amount_usd=29,
+    chain="base",  # "btc" | "base" | "polygon" | "ethereum"
+    metadata={"order_id": "xyz"},
+)
+print(invoice.receive_address, invoice.amount_native)
+```
+
+Webhook payloads on multi-chain invoices include a `chain` field. Legacy
+events emit `chain="unknown"` — use `normalize_webhook_chain()` for safe
+parsing.
 
 ## Errors
 

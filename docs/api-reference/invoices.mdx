@@ -1,0 +1,90 @@
+---
+title: "Invoices"
+description: "Multi-chain invoice creation — BTC + USDC on Base, Polygon, Ethereum."
+---
+
+ZettaPay watches the chain. Create an invoice with the **chain** you want to
+collect on; the API returns a per-invoice receive address derived by the
+[HD wallet allocator](/guides/accept-payments). When a payment lands, the
+listener fires a [webhook](/api-reference/webhooks/verify-signature).
+
+## `POST /api/invoices`
+
+### Request body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `amount_usd` | number | yes | USD amount, `0.01 ≤ x ≤ 1,000,000`. |
+| `chain` | string enum | yes | One of `btc`, `base`, `polygon`, `ethereum`. |
+| `merchant_id` | string | no | Defaults to the merchant resolved from your API key. |
+| `ttl_seconds` | number | no | Invoice expiry in seconds. `60..86400`, default `900`. |
+| `metadata` | object | no | Arbitrary JSON, ≤ 4 KB serialized. |
+
+The `chain` field is **required**. Requests with `chain: "solana"` (or any
+other value) are rejected with `400 invalid_chain`.
+
+### Example
+
+```bash
+curl -X POST https://api.zettapay.io/api/invoices \
+  -H "Authorization: Bearer $ZETTAPAY_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount_usd": 29,
+    "chain": "base",
+    "metadata": { "order_id": "xyz" }
+  }'
+```
+
+### Response (`201 Created`)
+
+```json
+{
+  "invoice_id": "inv_1c2b3a…",
+  "chain": "base",
+  "receive_address": "0xMerchantReceive…",
+  "amount_usd": 29,
+  "amount_native": "29.00",
+  "qr_uri": "ethereum:0xMerchantReceive…@8453?value=29.00",
+  "expires_at": 1709876543,
+  "status": "pending",
+  "verify_url": "https://basescan.org/address/0xMerchantReceive…"
+}
+```
+
+### Errors
+
+| Code | Status | When |
+| --- | --- | --- |
+| `missing_chain` | 400 | `chain` field omitted. |
+| `invalid_chain` | 400 | `chain` is not in the supported enum. |
+| `invalid_amount` | 400 | `amount_usd` is missing, non-numeric, or out of range. |
+| `invalid_ttl` | 400 | `ttl_seconds` is out of `[60, 86400]`. |
+| `invalid_metadata` | 400 | `metadata` is not a JSON object. |
+| `metadata_too_large` | 400 | Serialized `metadata` exceeds 4 KB. |
+
+## Webhook payload
+
+When the listener confirms a payment, ZettaPay POSTs to your registered
+webhook URL with this body shape:
+
+```json
+{
+  "invoice_id": "inv_1c2b3a…",
+  "status": "confirmed",
+  "chain": "base",
+  "tx_hash": "0xabc…",
+  "amount_native": "29.00",
+  "confirmations": 3,
+  "receive_address": "0xMerchantReceive…",
+  "merchant_id": "mer_42",
+  "metadata": { "order_id": "xyz" }
+}
+```
+
+> **Backward compatibility.** Invoices created before Z52 (the introduction
+> of `chain`) emit webhooks with `chain: "unknown"`. All four official SDKs
+> normalize legacy events to `"unknown"` automatically — see
+> `normalizeWebhookChain()` (TS), `normalize_webhook_chain()` (Python),
+> `WebhookChain::from_optional()` (Rust), `Invoice::normalizeWebhookChain()`
+> (PHP).

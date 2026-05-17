@@ -35,12 +35,16 @@
 
 mod client;
 mod error;
+pub mod invoices;
 mod retry;
 mod types;
 pub mod webhook;
 
 pub use client::{Client, ClientBuilder, ListOptions, X402_HEADER};
 pub use error::Error;
+pub use invoices::{
+    Chain, CreateInvoiceInput, Invoice, InvoiceStatus, WebhookChain, WebhookInvoicePayload,
+};
 pub use retry::RetryPolicy;
 pub use types::{
     HealthStatus, ListMerchantsResponse, ListPaymentsResponse, Merchant, PayResponse,

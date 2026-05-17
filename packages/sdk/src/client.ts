@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
 import { fromAxiosError } from './errors.js';
+import { InvoicesResource, type InvoiceTransport } from './invoices.js';
 import type {
   HealthStatus,
   ListMerchantsOptions,
@@ -35,6 +36,8 @@ function toBase64(transaction: string | Uint8Array): string {
 export class ZettaPayClient {
   private readonly http: AxiosInstance;
 
+  readonly invoices: InvoicesResource;
+
   constructor(options: ZettaPayClientOptions) {
     if (!options.baseURL || typeof options.baseURL !== 'string') {
       throw new Error('ZettaPayClient: baseURL is required');
@@ -50,6 +53,16 @@ export class ZettaPayClient {
           ...options.headers,
         },
       });
+
+    const transport: InvoiceTransport = {
+      request: <T>(method: 'POST' | 'GET', path: string, body?: unknown) =>
+        this.request<T>({
+          method: method.toLowerCase() as 'post' | 'get',
+          url: path,
+          ...(body !== undefined ? { data: body } : {}),
+        }),
+    };
+    this.invoices = new InvoicesResource(transport);
   }
 
   /** Submit a signed Solana transaction to the X-402 /pay endpoint. */
