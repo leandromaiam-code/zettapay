@@ -8,7 +8,7 @@
 // same Transfer log only writes the same state.
 
 import type {
-  BaseListenerChain,
+  EvmListenerChain,
   InvoiceStore,
   MatchedTx,
   PendingInvoice,
@@ -59,7 +59,7 @@ export class SupabaseInvoiceStore implements InvoiceStore {
     this.tableName = opts.tableName ?? "zettapay_invoices";
   }
 
-  async listPending(chain: BaseListenerChain): Promise<PendingInvoice[]> {
+  async listPending(chain: EvmListenerChain): Promise<PendingInvoice[]> {
     const url =
       `${this.baseUrl}/rest/v1/${this.tableName}` +
       `?select=${encodeURIComponent(PENDING_SELECT)}` +
@@ -121,8 +121,8 @@ export class SupabaseInvoiceStore implements InvoiceStore {
 }
 
 function rowToInvoice(row: InvoiceRow): PendingInvoice {
-  if (!isBaseChain(row.chain)) {
-    throw new Error(`invoice ${row.id} has non-Base chain "${row.chain}"`);
+  if (!isEvmChain(row.chain)) {
+    throw new Error(`invoice ${row.id} has non-EVM chain "${row.chain}"`);
   }
   return {
     id: row.id,
@@ -133,8 +133,13 @@ function rowToInvoice(row: InvoiceRow): PendingInvoice {
   };
 }
 
-function isBaseChain(value: string): value is BaseListenerChain {
-  return value === "base" || value === "base-sepolia";
+function isEvmChain(value: string): value is EvmListenerChain {
+  return (
+    value === "base" ||
+    value === "base-sepolia" ||
+    value === "polygon" ||
+    value === "polygon-amoy"
+  );
 }
 
 function assertHexAddress(value: string): `0x${string}` {

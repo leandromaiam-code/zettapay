@@ -1,15 +1,15 @@
-// Z47 — Base USDC listener.
+// Z47 — EVM USDC listener (Base in Z47, Polygon in Z47.2).
 //
-// Watches the canonical USDC ERC-20 Transfer event on Base for any address
-// in the active invoice set. ZettaPay is non-custodial: there is no payer
-// key, no relayer, no facilitator transfer. Each invoice has a HD-derived
-// receive address (Z45). When a Transfer with `to` == that address and
-// `value` == invoice.amount_native fires, we record the match and start
-// counting confirmations until Base finality (12 blocks).
+// Watches the canonical USDC ERC-20 Transfer event on a target EVM chain for
+// any address in the active invoice set. ZettaPay is non-custodial: there is
+// no payer key, no relayer, no facilitator transfer. Each invoice has a
+// HD-derived receive address (Z45). When a Transfer with `to` == that address
+// and `value` == invoice.amount_native fires, we record the match and start
+// counting confirmations until chain finality (12 blocks on Base, 128 on
+// Polygon PoS).
 //
-// The listener is intentionally chain-scoped: Base only in Z47. Polygon and
-// Ethereum land in Z47.2 / Z47.3 by instantiating a second listener with
-// different `chain` + `contractAddress`.
+// The listener is intentionally chain-scoped: instantiate one EvmListener per
+// chain (Base mainnet, Base Sepolia, Polygon PoS, Polygon Amoy).
 
 import {
   createPublicClient,
@@ -19,9 +19,20 @@ import {
   type Log,
   type PublicClient,
 } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, polygon, polygonAmoy } from "viem/chains";
 
-export type BaseListenerChain = "base" | "base-sepolia";
+export type EvmListenerChain =
+  | "base"
+  | "base-sepolia"
+  | "polygon"
+  | "polygon-amoy";
+
+/**
+ * @deprecated Kept for compatibility with early Z47 callers that imported
+ * `BaseListenerChain` before Polygon support landed. New code should reference
+ * {@link EvmListenerChain} directly.
+ */
+export type BaseListenerChain = EvmListenerChain;
 
 /** Canonical Circle-native USDC on Base mainnet (6 decimals). */
 export const USDC_BASE_MAINNET: Address =
@@ -31,8 +42,19 @@ export const USDC_BASE_MAINNET: Address =
 export const USDC_BASE_SEPOLIA: Address =
   "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 
+/** Canonical Circle-native USDC on Polygon PoS mainnet (6 decimals). */
+export const USDC_POLYGON_MAINNET: Address =
+  "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
+
+/** Circle testnet USDC on Polygon Amoy (6 decimals). */
+export const USDC_POLYGON_AMOY: Address =
+  "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582";
+
 /** Base finality target — 12 blocks ≈ 24s at 2s slot time. */
 export const BASE_FINALITY_BLOCKS = 12;
+
+/** Polygon PoS finality target — 128 blocks ≈ 4-5 min at 2s block time. */
+export const POLYGON_FINALITY_BLOCKS = 128;
 
 /** Backfill window on boot — getLogs from `head - BACKFILL_BLOCK_RANGE`. */
 export const BACKFILL_BLOCK_RANGE = 1_000n;
@@ -54,7 +76,7 @@ export const ERC20_TRANSFER_EVENT = parseAbiItem(
  */
 export interface PendingInvoice {
   id: string;
-  chain: BaseListenerChain;
+  chain: EvmListenerChain;
   receiveAddress: Address;
   amountNative: bigint;
   requiredConfirmations: number;
@@ -73,7 +95,7 @@ export interface MatchedTx {
  */
 export interface InvoiceStore {
   /** Pending invoices on `chain` (status='pending', tx_hash IS NULL). */
-  listPending(chain: BaseListenerChain): Promise<PendingInvoice[]>;
+  listPending(chain: EvmListenerChain): Promise<PendingInvoice[]>;
   /** Bind the first observed match — set tx_hash + confirmations=1. */
   markMatched(invoiceId: string, tx: MatchedTx): Promise<void>;
   /** Bump the confirmation count for an already-matched invoice. */
@@ -115,8 +137,8 @@ export interface ListenerPublicClient {
 }
 
 export interface EvmListenerOptions {
-  chain: BaseListenerChain;
-  /** Public RPC URL — Alchemy free tier or `https://mainnet.base.org`. */
+  chain: EvmListenerChain;
+  /** Public RPC URL — Alchemy/QuickNode tier or the chain's free RPC. */
   rpcUrl?: string;
   /** ERC-20 contract; defaults to the canonical USDC for the chosen chain. */
   contractAddress?: Address;
@@ -124,7 +146,12 @@ export interface EvmListenerOptions {
   store: InvoiceStore;
   /** Test seam — when omitted, a viem PublicClient is built from `rpcUrl`. */
   publicClient?: ListenerPublicClient;
-  /** Default 12 (Base finality). */
+  /**
+   * Override the confirmation count used as the listener-wide finality target.
+   * Defaults to the chain's canonical finality: 12 blocks for Base, 128 for
+   * Polygon PoS (per-invoice `requiredConfirmations` still wins for tier
+   * policies in {@link PendingInvoice.requiredConfirmations}).
+   */
   finalityBlocks?: number;
   /** Default 1000 — number of blocks to scan on boot for missed transfers. */
   backfillRange?: bigint;
@@ -195,13 +222,8 @@ export class EvmListener {
 
   constructor(opts: EvmListenerOptions) {
     const contractAddress =
-      opts.contractAddress ??
-      (opts.chain === "base" ? USDC_BASE_MAINNET : USDC_BASE_SEPOLIA);
-    const rpcUrl =
-      opts.rpcUrl ??
-      (opts.chain === "base"
-        ? "https://mainnet.base.org"
-        : "https://sepolia.base.org");
+      opts.contractAddress ?? defaultUsdcContract(opts.chain);
+    const rpcUrl = opts.rpcUrl ?? defaultRpcUrl(opts.chain);
     const publicClient =
       opts.publicClient ?? (buildViemClient(opts.chain, rpcUrl) as ListenerPublicClient);
     this.options = {
@@ -209,7 +231,7 @@ export class EvmListener {
       rpcUrl,
       contractAddress,
       store: opts.store,
-      finalityBlocks: opts.finalityBlocks ?? BASE_FINALITY_BLOCKS,
+      finalityBlocks: opts.finalityBlocks ?? defaultFinalityBlocks(opts.chain),
       backfillRange: opts.backfillRange ?? BACKFILL_BLOCK_RANGE,
       refreshDebounceMs: opts.refreshDebounceMs ?? REFRESH_DEBOUNCE_MS,
       reconnectDelayMs: opts.reconnectDelayMs ?? RECONNECT_DELAY_MS,
@@ -466,10 +488,61 @@ function normaliseAddress(address: Address | string): string {
   return address.toLowerCase();
 }
 
+function defaultUsdcContract(chain: EvmListenerChain): Address {
+  switch (chain) {
+    case "base":
+      return USDC_BASE_MAINNET;
+    case "base-sepolia":
+      return USDC_BASE_SEPOLIA;
+    case "polygon":
+      return USDC_POLYGON_MAINNET;
+    case "polygon-amoy":
+      return USDC_POLYGON_AMOY;
+  }
+}
+
+function defaultRpcUrl(chain: EvmListenerChain): string {
+  switch (chain) {
+    case "base":
+      return "https://mainnet.base.org";
+    case "base-sepolia":
+      return "https://sepolia.base.org";
+    case "polygon":
+      return "https://polygon-rpc.com";
+    case "polygon-amoy":
+      return "https://rpc-amoy.polygon.technology";
+  }
+}
+
+function defaultFinalityBlocks(chain: EvmListenerChain): number {
+  switch (chain) {
+    case "base":
+    case "base-sepolia":
+      return BASE_FINALITY_BLOCKS;
+    case "polygon":
+    case "polygon-amoy":
+      return POLYGON_FINALITY_BLOCKS;
+  }
+}
+
 function buildViemClient(
-  chain: BaseListenerChain,
+  chain: EvmListenerChain,
   rpcUrl: string,
 ): PublicClient {
-  const viemChain = chain === "base" ? base : baseSepolia;
+  let viemChain;
+  switch (chain) {
+    case "base":
+      viemChain = base;
+      break;
+    case "base-sepolia":
+      viemChain = baseSepolia;
+      break;
+    case "polygon":
+      viemChain = polygon;
+      break;
+    case "polygon-amoy":
+      viemChain = polygonAmoy;
+      break;
+  }
   return createPublicClient({ chain: viemChain, transport: http(rpcUrl) });
 }
