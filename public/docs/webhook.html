@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="ZettaPay webhook reference — event types, signature verification (HMAC-SHA256), retry policy, replay protection, idempotency." />
+  <meta name="theme-color" content="#0A0A0A" />
+  <meta property="og:title" content="ZettaPay · Webhook reference" />
+  <meta property="og:description" content="Verify ZettaPay webhooks. HMAC-SHA256 signatures, 300 s tolerance window, idempotent by tx_hash." />
+  <title>ZettaPay · Webhook reference</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
+        colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+      }},
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body { background:#0A0A0A; color:#FFF; font-family:'Inter',ui-sans-serif,system-ui; overflow-x:hidden; }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79,107,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79,107,255,0.03) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg,#4F6BFF 0%,#14F195 50%,#9945FF 100%);
+      background-size:200% auto;
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      animation: gradient 6s linear infinite;
+    }
+    @keyframes gradient { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+    .glass {
+      background: rgba(79,107,255,0.05);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79,107,255,0.15);
+      transition: all 0.3s ease;
+    }
+    .glow-orb { position:absolute; border-radius:50%; filter: blur(120px); opacity:0.18; pointer-events:none; }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+
+    .code-card {
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      box-shadow: 0 0 60px rgba(79, 107, 255, 0.06), inset 0 1px 0 rgba(79, 107, 255, 0.1);
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .code-card pre {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      padding: 18px 20px;
+      overflow-x: auto;
+      margin: 0;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 8px 8px 0 8px;
+      border-bottom: 1px solid rgba(79, 107, 255, 0.12);
+      background: rgba(79, 107, 255, 0.04);
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+      border: 1px solid transparent;
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      transition: color 0.2s ease, background 0.2s ease;
+      background: transparent;
+    }
+    .tab-btn:hover { color: #c0c8d4; }
+    .tab-btn.active {
+      color: #FFFFFF;
+      background: #0d0d0d;
+      border-color: rgba(79, 107, 255, 0.2);
+    }
+    .copy-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 6px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      background: rgba(79, 107, 255, 0.08);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 2;
+    }
+    .copy-btn:hover { color:#FFFFFF; background: rgba(79,107,255,0.15); border-color: rgba(79,107,255,0.4); }
+    .copy-btn.copied { color:#14F195; border-color: rgba(20,241,149,0.5); background: rgba(20,241,149,0.1); }
+
+    .tk-c { color:#64748b; } .tk-k { color:#9945FF; } .tk-s { color:#4F6BFF; }
+    .tk-f { color:#14F195; } .tk-n { color:#f97316; } .tk-t { color:#6B82FF; }
+
+    .btn-primary {
+      background: linear-gradient(135deg,#4F6BFF 0%,#6B82FF 100%);
+      color:#FFF; transition: all 0.3s ease;
+      box-shadow: 0 0 30px rgba(79,107,255,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 40px rgba(79,107,255,0.5); }
+    .btn-ghost {
+      background: rgba(79,107,255,0.05);
+      border: 1px solid rgba(79,107,255,0.3);
+      color:#FFF; transition: all 0.3s ease;
+    }
+    .btn-ghost:hover { background: rgba(79,107,255,0.1); border-color: rgba(79,107,255,0.6); }
+
+    .toc-link {
+      display:block; padding: 6px 12px; font-size: 13px; color:#94A3B8;
+      border-left: 2px solid transparent; transition: all 0.2s ease;
+    }
+    .toc-link:hover { color:#FFFFFF; border-left-color: rgba(79,107,255,0.4); }
+    .toc-link.active { color:#FFFFFF; border-left-color:#4F6BFF; }
+
+    .badge {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:4px 10px; font-family:'JetBrains Mono',monospace; font-size:10px;
+      font-weight:500; letter-spacing:0.08em; text-transform:uppercase;
+      color:#14F195; background:rgba(20,241,149,0.08);
+      border:1px solid rgba(20,241,149,0.25); border-radius:999px;
+    }
+    .badge-dot { width:6px; height:6px; border-radius:50%; background:#14F195; box-shadow:0 0 8px #14F195; }
+
+    .callout {
+      border-left: 2px solid #4F6BFF;
+      background: rgba(79,107,255,0.06);
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      color: #c0c8d4;
+    }
+    .callout strong { color:#FFFFFF; }
+
+    table.spec { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.spec th, table.spec td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(79,107,255,0.1);
+      vertical-align: top;
+    }
+    table.spec th {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    table.spec td code, table.spec th code {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      color: #6B82FF;
+    }
+  </style>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background:#4F6BFF; width:600px; height:600px; top:-200px; right:-200px;"></div>
+  <div class="glow-orb" style="background:#9945FF; width:400px; height:400px; bottom:10%; left:-150px; opacity:0.08;"></div>
+
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_symbol.png" alt="ZettaPay" class="w-8 h-8 rounded-lg group-hover:scale-110 transition-transform" />
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark hidden sm:block" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/" class="text-muted hover:text-white transition">Home</a>
+        <a href="/docs" class="text-white">Docs</a>
+        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
+      </div>
+      <a href="/docs/quickstart" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Quickstart →</a>
+    </div>
+  </nav>
+
+  <main class="pt-28 lg:pt-32 pb-20 max-w-7xl mx-auto px-4 lg:px-12">
+    <div class="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-10">
+
+      <aside class="hidden lg:block">
+        <div class="sticky top-32">
+          <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
+          <nav class="flex flex-col gap-1" id="toc">
+            <a href="#overview" class="toc-link active">Overview</a>
+            <a href="#delivery" class="toc-link">Delivery</a>
+            <a href="#headers" class="toc-link">Headers</a>
+            <a href="#body" class="toc-link">Body schema</a>
+            <a href="#events" class="toc-link">Event types</a>
+            <a href="#networks" class="toc-link">Networks &amp; finality</a>
+            <a href="#signature" class="toc-link">Signature scheme</a>
+            <a href="#verify" class="toc-link">Verify examples</a>
+            <a href="#replay" class="toc-link">Replay protection</a>
+            <a href="#idempotency" class="toc-link">Idempotency</a>
+            <a href="#retries" class="toc-link">Retries</a>
+            <a href="#testing" class="toc-link">Testing locally</a>
+          </nav>
+        </div>
+      </aside>
+
+      <article class="max-w-3xl">
+        <header class="mb-10">
+          <span class="badge mb-5"><span class="badge-dot"></span>Reference · webhooks</span>
+          <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
+            <span class="gradient-text">Webhook</span> reference.
+          </h1>
+          <p class="text-lg text-muted leading-relaxed">
+            Stripe-grade webhooks for on-chain payments. HMAC-SHA256 signatures, 300 s tolerance window, at-least-once
+            delivery with exponential backoff, idempotent by <code class="text-mint font-mono text-sm">tx_hash</code>.
+          </p>
+        </header>
+
+        <section id="overview" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Overview</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            When ZettaPay's chain listener detects a transaction that matches an open invoice — by destination
+            address, amount, and (where supported) memo — it POSTs a signed JSON event to the HTTPS URL you
+            registered at signup. The payload tells you which invoice was paid, on which network, with which
+            <code class="text-mint font-mono text-sm">tx_hash</code>. You verify the signature, look up your
+            order by <code class="text-mint font-mono text-sm">customer_ref</code>, mark it paid, and respond
+            <code class="text-mint font-mono text-sm">2xx</code>.
+          </p>
+        </section>
+
+        <section id="delivery" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Delivery semantics</h2>
+          <ul class="space-y-2 text-muted leading-relaxed">
+            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Transport.</strong> HTTPS only. HTTP URLs are rejected at registration.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Method.</strong> <code class="text-mint font-mono text-sm">POST</code> with <code class="text-mint font-mono text-sm">Content-Type: application/json</code>.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Success.</strong> Any <code>2xx</code> response within 10 s is treated as acknowledged.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Failure.</strong> Non-2xx or timeout triggers retry with exponential backoff (see <a class="text-royal-bright underline" href="#retries">retries</a>).</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Order.</strong> Events for the same invoice are delivered in confirmation order; cross-invoice ordering is not guaranteed.</li>
+          </ul>
+        </section>
+
+        <section id="headers" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Headers</h2>
+          <div class="code-card overflow-hidden">
+            <table class="spec">
+              <thead>
+                <tr><th>Header</th><th>Value</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>X-ZettaPay-Signature</code></td>
+                  <td class="text-muted">Hex-encoded HMAC-SHA256 of <code>"{timestamp}.{raw_body}"</code> using your <code>webhook_secret</code>.</td>
+                </tr>
+                <tr>
+                  <td><code>X-ZettaPay-Timestamp</code></td>
+                  <td class="text-muted">Unix epoch seconds (UTC) when ZettaPay built the event. Reject if outside a 300 s tolerance window.</td>
+                </tr>
+                <tr>
+                  <td><code>X-ZettaPay-Event-Id</code></td>
+                  <td class="text-muted">Stable id for this delivery attempt — useful for de-dupe and log correlation.</td>
+                </tr>
+                <tr>
+                  <td><code>X-ZettaPay-Delivery-Attempt</code></td>
+                  <td class="text-muted">Integer, 1-based. First delivery is <code>1</code>; retries increment.</td>
+                </tr>
+                <tr>
+                  <td><code>User-Agent</code></td>
+                  <td class="text-muted"><code>ZettaPay-Webhooks/1</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="body" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Body schema</h2>
+          <p class="text-muted leading-relaxed mb-4">All events share the same envelope.</p>
+
+          <div class="code-card" data-tabs="body">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="json">JSON</button>
+              <button class="tab-btn" data-tab="schema">Field reference</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="json" class="block">{
+  <span class="tk-s">"invoice_id"</span>:        <span class="tk-s">"inv_01HMABCD..."</span>,
+  <span class="tk-s">"event"</span>:             <span class="tk-s">"payment.confirmed"</span>,
+  <span class="tk-s">"amount"</span>:            <span class="tk-s">"19.90"</span>,
+  <span class="tk-s">"currency"</span>:          <span class="tk-s">"USDC"</span>,
+  <span class="tk-s">"network"</span>:           <span class="tk-s">"solana"</span>,
+  <span class="tk-s">"tx_hash"</span>:           <span class="tk-s">"5jkA..."</span>,
+  <span class="tk-s">"confirmations"</span>:     <span class="tk-n">1</span>,
+  <span class="tk-s">"customer_address"</span>:  <span class="tk-s">"7Np41oeY..."</span>,
+  <span class="tk-s">"customer_ref"</span>:      <span class="tk-s">"order_42"</span>,
+  <span class="tk-s">"created_at"</span>:        <span class="tk-s">"2026-05-17T12:34:56Z"</span>
+}</pre>
+<pre data-pane="schema" class="hidden"><span class="tk-s">invoice_id</span>        <span class="tk-c">string  · ZettaPay invoice id (inv_*)</span>
+<span class="tk-s">event</span>             <span class="tk-c">string  · see "Event types" below</span>
+<span class="tk-s">amount</span>            <span class="tk-c">string  · decimal as a string (avoid float drift)</span>
+<span class="tk-s">currency</span>          <span class="tk-c">string  · "BTC" | "ETH" | "USDC"</span>
+<span class="tk-s">network</span>           <span class="tk-c">string  · "bitcoin" | "ethereum" | "base" | "polygon" | "solana"</span>
+<span class="tk-s">tx_hash</span>           <span class="tk-c">string  · on-chain transaction hash / signature</span>
+<span class="tk-s">confirmations</span>     <span class="tk-c">number  · confirmations at delivery time</span>
+<span class="tk-s">customer_address</span>  <span class="tk-c">string  · the address that paid</span>
+<span class="tk-s">customer_ref</span>      <span class="tk-c">string  · whatever you set on the invoice</span>
+<span class="tk-s">created_at</span>        <span class="tk-c">string  · ISO-8601 UTC</span></pre>
+          </div>
+        </section>
+
+        <section id="events" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Event types</h2>
+          <div class="code-card overflow-hidden">
+            <table class="spec">
+              <thead>
+                <tr><th>Event</th><th>Fired when</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>payment.detected</code></td>
+                  <td class="text-muted">A matching transaction is observed in the mempool / unconfirmed. <em>Optional</em> — opt in per webhook endpoint.</td>
+                </tr>
+                <tr>
+                  <td><code>payment.confirmed</code></td>
+                  <td class="text-muted">Transaction reached the configured confirmation threshold for the network. <strong>The signal you should act on.</strong></td>
+                </tr>
+                <tr>
+                  <td><code>payment.underpaid</code></td>
+                  <td class="text-muted">A confirmed transaction landed but was less than <code>amount</code>. Includes the actual amount received.</td>
+                </tr>
+                <tr>
+                  <td><code>payment.overpaid</code></td>
+                  <td class="text-muted">Confirmed transaction exceeded <code>amount</code> (rare; useful for tipping flows).</td>
+                </tr>
+                <tr>
+                  <td><code>invoice.expired</code></td>
+                  <td class="text-muted">Invoice hit its expiry window with no matching transaction. Safe to fail the order client-side.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="networks" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Networks &amp; finality</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay runs its own RPC listeners on every supported network. Default confirmation thresholds:
+          </p>
+          <div class="code-card overflow-hidden">
+            <table class="spec">
+              <thead>
+                <tr><th>Network</th><th>Default confs</th><th>Typical latency</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>solana</code></td><td class="text-muted"><code>finalized</code> commitment</td><td class="text-muted">&lt; 2 s</td></tr>
+                <tr><td><code>ethereum</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 12 s</td></tr>
+                <tr><td><code>base</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
+                <tr><td><code>polygon</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
+                <tr><td><code>bitcoin</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 10 min</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout mt-5">
+            <strong>Reorgs.</strong> If a confirmed transaction is rolled back, ZettaPay re-fires the event when the
+            new canonical chain re-includes (or omits) it. Always trust the latest event for a given
+            <code>tx_hash</code> over a stale one.
+          </div>
+        </section>
+
+        <section id="signature" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Signature scheme</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay signs the concatenation
+            <code class="text-mint font-mono text-sm">"{X-ZettaPay-Timestamp}.{raw_body}"</code> with HMAC-SHA256
+            using your <code class="text-mint font-mono text-sm">webhook_secret</code>, hex-encoded. To verify:
+          </p>
+          <ol class="space-y-2 text-muted leading-relaxed list-decimal pl-5 mb-5">
+            <li>Read the raw request body <em>as bytes</em>. Do not pre-parse JSON — re-serialization changes whitespace.</li>
+            <li>Read <code class="text-mint font-mono text-sm">X-ZettaPay-Signature</code> and <code class="text-mint font-mono text-sm">X-ZettaPay-Timestamp</code>.</li>
+            <li>Reject if <code>|now - timestamp| &gt; 300</code> seconds.</li>
+            <li>Compute <code>hmac_sha256(secret, f"{timestamp}.{body}")</code>, hex-encode.</li>
+            <li>Compare against the header using a <strong class="text-white">constant-time</strong> comparator (<code>crypto.timingSafeEqual</code>, <code>hmac.compare_digest</code>, <code>hash_equals</code>, <code>subtle::ConstantTimeEq</code>).</li>
+            <li>Process the event.</li>
+          </ol>
+        </section>
+
+        <section id="verify" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Verify examples</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            Pure-stdlib verification, no SDK required. Copy, drop into your handler, done.
+          </p>
+
+          <div class="code-card" data-tabs="verify">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn" data-tab="py">Python</button>
+              <button class="tab-btn" data-tab="php">PHP</button>
+              <button class="tab-btn" data-tab="rs">Rust</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ts" class="block"><span class="tk-k">import</span> { createHmac, timingSafeEqual } <span class="tk-k">from</span> <span class="tk-s">'node:crypto'</span>;
+
+<span class="tk-k">export function</span> <span class="tk-f">verifyZettaPay</span>(
+  rawBody: <span class="tk-t">Buffer</span>,
+  signature: <span class="tk-t">string</span>,
+  timestamp: <span class="tk-t">string</span>,
+  secret: <span class="tk-t">string</span>,
+  toleranceSec = <span class="tk-n">300</span>,
+): <span class="tk-t">void</span> {
+  <span class="tk-k">const</span> ts = parseInt(timestamp, <span class="tk-n">10</span>);
+  <span class="tk-k">if</span> (!Number.<span class="tk-f">isFinite</span>(ts)) <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'bad timestamp'</span>);
+
+  <span class="tk-k">const</span> now = Math.<span class="tk-f">floor</span>(<span class="tk-t">Date</span>.<span class="tk-f">now</span>() / <span class="tk-n">1000</span>);
+  <span class="tk-k">if</span> (Math.<span class="tk-f">abs</span>(now - ts) &gt; toleranceSec) {
+    <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'timestamp outside tolerance'</span>);
+  }
+
+  <span class="tk-k">const</span> expected = <span class="tk-f">createHmac</span>(<span class="tk-s">'sha256'</span>, secret)
+    .<span class="tk-f">update</span>(`${timestamp}.${rawBody.<span class="tk-f">toString</span>(<span class="tk-s">'utf8'</span>)}`)
+    .<span class="tk-f">digest</span>(<span class="tk-s">'hex'</span>);
+
+  <span class="tk-k">const</span> sigBuf = <span class="tk-t">Buffer</span>.<span class="tk-f">from</span>(signature, <span class="tk-s">'hex'</span>);
+  <span class="tk-k">const</span> expBuf = <span class="tk-t">Buffer</span>.<span class="tk-f">from</span>(expected, <span class="tk-s">'hex'</span>);
+  <span class="tk-k">if</span> (sigBuf.length !== expBuf.length || !<span class="tk-f">timingSafeEqual</span>(sigBuf, expBuf)) {
+    <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'signature mismatch'</span>);
+  }
+}</pre>
+<pre data-pane="py" class="hidden"><span class="tk-k">import</span> hmac
+<span class="tk-k">import</span> hashlib
+<span class="tk-k">import</span> time
+
+
+<span class="tk-k">class</span> <span class="tk-t">WebhookError</span>(<span class="tk-t">Exception</span>): <span class="tk-k">pass</span>
+
+
+<span class="tk-k">def</span> <span class="tk-f">verify_zettapay</span>(
+    raw_body: bytes,
+    signature: str,
+    timestamp: str,
+    secret: str,
+    tolerance_sec: int = <span class="tk-n">300</span>,
+) -&gt; <span class="tk-k">None</span>:
+    <span class="tk-k">try</span>:
+        ts = <span class="tk-f">int</span>(timestamp)
+    <span class="tk-k">except</span> <span class="tk-t">ValueError</span>:
+        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"bad timestamp"</span>)
+
+    <span class="tk-k">if</span> <span class="tk-f">abs</span>(<span class="tk-f">int</span>(time.<span class="tk-f">time</span>()) - ts) &gt; tolerance_sec:
+        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"timestamp outside tolerance"</span>)
+
+    payload  = <span class="tk-f">f"{ts}."</span>.<span class="tk-f">encode</span>() + raw_body
+    expected = hmac.<span class="tk-f">new</span>(secret.<span class="tk-f">encode</span>(), payload, hashlib.sha256).<span class="tk-f">hexdigest</span>()
+
+    <span class="tk-k">if not</span> hmac.<span class="tk-f">compare_digest</span>(expected, signature):
+        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"signature mismatch"</span>)</pre>
+<pre data-pane="php" class="hidden"><span class="tk-k">&lt;?php</span>
+<span class="tk-k">declare</span>(strict_types=<span class="tk-n">1</span>);
+
+<span class="tk-k">final class</span> <span class="tk-t">ZettaPayWebhook</span>
+{
+    <span class="tk-k">public static function</span> <span class="tk-f">verify</span>(
+        <span class="tk-t">string</span> <span class="tk-s">$rawBody</span>,
+        <span class="tk-t">string</span> <span class="tk-s">$signature</span>,
+        <span class="tk-t">string</span> <span class="tk-s">$timestamp</span>,
+        <span class="tk-t">string</span> <span class="tk-s">$secret</span>,
+        <span class="tk-t">int</span>    <span class="tk-s">$toleranceSec</span> = <span class="tk-n">300</span>,
+    ): <span class="tk-t">void</span> {
+        <span class="tk-k">if</span> (!<span class="tk-f">ctype_digit</span>(<span class="tk-s">$timestamp</span>)) {
+            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'bad timestamp'</span>);
+        }
+        <span class="tk-s">$ts</span> = (<span class="tk-t">int</span>) <span class="tk-s">$timestamp</span>;
+        <span class="tk-k">if</span> (<span class="tk-f">abs</span>(<span class="tk-f">time</span>() - <span class="tk-s">$ts</span>) &gt; <span class="tk-s">$toleranceSec</span>) {
+            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'timestamp outside tolerance'</span>);
+        }
+
+        <span class="tk-s">$expected</span> = <span class="tk-f">hash_hmac</span>(<span class="tk-s">'sha256'</span>, <span class="tk-s">$timestamp</span> . <span class="tk-s">'.'</span> . <span class="tk-s">$rawBody</span>, <span class="tk-s">$secret</span>);
+        <span class="tk-k">if</span> (!<span class="tk-f">hash_equals</span>(<span class="tk-s">$expected</span>, <span class="tk-s">$signature</span>)) {
+            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'signature mismatch'</span>);
+        }
+    }
+}</pre>
+<pre data-pane="rs" class="hidden"><span class="tk-k">use</span> hmac::{<span class="tk-t">Hmac</span>, <span class="tk-t">Mac</span>};
+<span class="tk-k">use</span> sha2::<span class="tk-t">Sha256</span>;
+<span class="tk-k">use</span> std::time::{<span class="tk-t">SystemTime</span>, <span class="tk-t">UNIX_EPOCH</span>};
+<span class="tk-k">use</span> subtle::<span class="tk-t">ConstantTimeEq</span>;
+
+<span class="tk-k">type</span> <span class="tk-t">HmacSha256</span> = <span class="tk-t">Hmac</span>&lt;<span class="tk-t">Sha256</span>&gt;;
+
+<span class="tk-k">pub fn</span> <span class="tk-f">verify_zettapay</span>(
+    raw_body: &amp;[u8],
+    signature_hex: &amp;str,
+    timestamp: &amp;str,
+    secret: &amp;[u8],
+    tolerance_sec: u64,
+) -&gt; <span class="tk-t">Result</span>&lt;(), &amp;<span class="tk-s">'static</span> <span class="tk-t">str</span>&gt; {
+    <span class="tk-k">let</span> ts: u64 = timestamp.<span class="tk-f">parse</span>().<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad timestamp"</span>)?;
+    <span class="tk-k">let</span> now  = <span class="tk-t">SystemTime</span>::<span class="tk-f">now</span>().<span class="tk-f">duration_since</span>(<span class="tk-t">UNIX_EPOCH</span>).<span class="tk-f">unwrap</span>().<span class="tk-f">as_secs</span>();
+    <span class="tk-k">if</span> now.<span class="tk-f">abs_diff</span>(ts) &gt; tolerance_sec {
+        <span class="tk-k">return</span> <span class="tk-t">Err</span>(<span class="tk-s">"timestamp outside tolerance"</span>);
+    }
+
+    <span class="tk-k">let mut</span> mac = <span class="tk-t">HmacSha256</span>::<span class="tk-f">new_from_slice</span>(secret).<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad key"</span>)?;
+    mac.<span class="tk-f">update</span>(timestamp.<span class="tk-f">as_bytes</span>());
+    mac.<span class="tk-f">update</span>(b<span class="tk-s">"."</span>);
+    mac.<span class="tk-f">update</span>(raw_body);
+    <span class="tk-k">let</span> expected = mac.<span class="tk-f">finalize</span>().<span class="tk-f">into_bytes</span>();
+
+    <span class="tk-k">let</span> sig = hex::<span class="tk-f">decode</span>(signature_hex).<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad sig"</span>)?;
+    <span class="tk-k">if</span> sig.<span class="tk-f">ct_eq</span>(&amp;expected).<span class="tk-f">into</span>() { <span class="tk-t">Ok</span>(()) } <span class="tk-k">else</span> { <span class="tk-t">Err</span>(<span class="tk-s">"signature mismatch"</span>) }
+}</pre>
+          </div>
+        </section>
+
+        <section id="replay" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Replay protection</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            The 300 s tolerance on <code>X-ZettaPay-Timestamp</code> bounds any attacker's replay window. Combine with
+            <a class="text-royal-bright underline" href="#idempotency">idempotency</a> for full coverage: even if an attacker
+            captures a valid request within the window, your unique constraint on <code>tx_hash</code> ensures the order
+            cannot be marked paid twice.
+          </p>
+          <div class="callout">
+            <strong>Clock drift.</strong> If your server's clock drifts &gt; 5 minutes from UTC, signature verification
+            will fail in ways that look like attacks. Run NTP. <code>X-ZettaPay-Timestamp</code> is always UTC seconds.
+          </div>
+        </section>
+
+        <section id="idempotency" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Idempotency</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay aims for exactly-once <em>logical</em> delivery: a successful event is never re-fired with the
+            same <code>tx_hash</code>. In practice, network failures mean you may receive the same logical event more
+            than once across retries — same <code>tx_hash</code>, same <code>invoice_id</code>. Defense in depth:
+          </p>
+          <ul class="space-y-2 text-muted leading-relaxed">
+            <li class="flex gap-3"><span class="text-mint">›</span> Add a <code>UNIQUE (tx_hash)</code> constraint on your payments table; let the INSERT fail on duplicate.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> Or upsert by <code>invoice_id</code> and treat repeated calls as no-ops.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> Return <code>200</code> on duplicates so ZettaPay stops retrying.</li>
+          </ul>
+        </section>
+
+        <section id="retries" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Retry policy</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            Non-2xx responses (and 10 s timeouts) trigger retry with exponential backoff + full jitter:
+          </p>
+          <div class="code-card overflow-hidden">
+            <table class="spec">
+              <thead><tr><th>Attempt</th><th>Delay (approx)</th></tr></thead>
+              <tbody>
+                <tr><td><code>1</code></td><td class="text-muted">immediate</td></tr>
+                <tr><td><code>2</code></td><td class="text-muted">10 s</td></tr>
+                <tr><td><code>3</code></td><td class="text-muted">30 s</td></tr>
+                <tr><td><code>4</code></td><td class="text-muted">2 min</td></tr>
+                <tr><td><code>5</code></td><td class="text-muted">10 min</td></tr>
+                <tr><td><code>6</code></td><td class="text-muted">1 h</td></tr>
+                <tr><td><code>7</code></td><td class="text-muted">6 h</td></tr>
+                <tr><td><code>8</code> (final)</td><td class="text-muted">24 h</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-muted mt-4">
+            After the final attempt, the event is parked in the dashboard's <em>Webhook deliveries</em> log and can
+            be replayed manually. Successful events that you missed never go to a dead-letter queue silently — you
+            can always replay from the log.
+          </p>
+        </section>
+
+        <section id="testing" class="scroll-mt-32 mb-14">
+          <h2 class="text-2xl font-bold mb-3">Testing locally</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            Expose your dev server with a tunnel and have ZettaPay deliver to it.
+          </p>
+          <div class="code-card" data-tabs="test">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="ngrok">ngrok</button>
+              <button class="tab-btn" data-tab="cf">cloudflared</button>
+              <button class="tab-btn" data-tab="send">Send a test event</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="ngrok" class="block"><span class="tk-c"># Expose your local Express / Flask / Slim server on a public HTTPS URL</span>
+ngrok http 3000
+
+<span class="tk-c"># Copy the https://*.ngrok.io URL into the merchant dashboard's</span>
+<span class="tk-c"># Webhooks panel, append your route (e.g. /webhooks/zettapay).</span></pre>
+<pre data-pane="cf" class="hidden"><span class="tk-c"># Same idea, with Cloudflare Tunnel</span>
+cloudflared tunnel --url http://localhost:3000</pre>
+<pre data-pane="send" class="hidden"><span class="tk-c"># Fire a synthetic payment.confirmed event at the URL you registered.</span>
+curl -X POST https://api.zettapay.dev/webhooks/test \
+  -H <span class="tk-s">"Authorization: Bearer $ZETTAPAY_API_KEY"</span> \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -d <span class="tk-s">'{ "event": "payment.confirmed", "network": "solana", "amount": "1.00" }'</span></pre>
+          </div>
+        </section>
+
+        <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
+          <a href="/docs/quickstart" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← Quickstart</a>
+          <a href="/docs/api" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">HTTP API reference →</a>
+        </div>
+      </article>
+    </div>
+  </main>
+
+  <footer class="border-t border-royal/10 mt-12">
+    <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
+      <div class="flex items-center gap-3">
+        <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
+        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
+        <a class="hover:text-white transition" href="/">Home</a>
+        <a class="hover:text-white transition" href="/pricing">Pricing</a>
+        <a class="hover:text-white transition" href="/about">About</a>
+        <a class="hover:text-white transition" href="/contact">Contact</a>
+        <a class="hover:text-white transition" href="/status">Status</a>
+        <a class="hover:text-white transition" href="/privacy">Privacy</a>
+        <a class="hover:text-white transition" href="/terms">Terms</a>
+        <a class="hover:text-white transition" href="https://github.com/leandromaiam-code/zettapay">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Tabs
+    document.querySelectorAll('[data-tabs]').forEach((card) => {
+      const buttons = card.querySelectorAll('.tab-btn');
+      const panes = card.querySelectorAll('[data-pane]');
+      buttons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.dataset.tab;
+          buttons.forEach((b) => b.classList.toggle('active', b === btn));
+          panes.forEach((p) => {
+            const match = p.dataset.pane === target;
+            p.classList.toggle('hidden', !match);
+            p.classList.toggle('block', match);
+          });
+        });
+      });
+    });
+
+    // Copy
+    document.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('[data-tabs]');
+        const visible = card.querySelector('[data-pane]:not(.hidden)');
+        if (!visible) return;
+        try {
+          await navigator.clipboard.writeText(visible.innerText);
+          const original = btn.textContent;
+          btn.textContent = 'Copied';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        } catch (_) {}
+      });
+    });
+
+    // TOC active link on scroll
+    const tocLinks = document.querySelectorAll('#toc .toc-link');
+    const sections = Array.from(tocLinks).map((a) => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + entry.target.id));
+      });
+    }, { rootMargin: '-30% 0px -60% 0px' });
+    sections.forEach((s) => observer.observe(s));
+  </script>
+</body>
+</html>
