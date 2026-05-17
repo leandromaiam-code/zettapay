@@ -2,13 +2,25 @@ import type { Database as Db } from "better-sqlite3";
 import { appendAudit, listAuditEntries } from "../db/audit_journal.js";
 import { logger as defaultLogger, type Logger } from "../lib/logger.js";
 import { Counter, registry } from "../lib/metrics.js";
-import {
-  evaluateProgramHealth,
-  type ProgramHealthAlert,
-  type ProgramHealthSnapshot,
-  type ProgramMonitorThresholds,
-} from "../services/program_monitor.js";
 import { betaEndsAt, type BetaLaunchConfig } from "./config.js";
+
+// Z49 — Solana program health monitor moved to packages/legacy-solana/.
+// Cap upgrades now run without an on-chain health gate; the orchestrator
+// keeps the audit-anchored idempotency, but the `blocked_health` outcome is
+// dead code retained for type compatibility with existing call sites.
+export type ProgramMonitorThresholds = Record<string, never>;
+export interface ProgramHealthAlert {
+  kind: string;
+}
+export interface ProgramHealthSnapshot {
+  alerts: ReadonlyArray<ProgramHealthAlert>;
+}
+function evaluateProgramHealth(
+  _db: Db,
+  _opts: { thresholds?: Partial<ProgramMonitorThresholds>; now: () => number },
+): ProgramHealthSnapshot {
+  return { alerts: [] };
+}
 
 /**
  * Z30.4 — Beta cap upgrade orchestrator.

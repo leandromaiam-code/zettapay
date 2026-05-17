@@ -12,7 +12,6 @@ import { betaRouter } from "./routes/beta.js";
 import { loadBetaConfig, type BetaLaunchConfig } from "./beta/config.js";
 import { funnelRouter } from "./routes/funnel.js";
 import { healthRouter } from "./routes/health.js";
-import { indexerRouter } from "./routes/indexer.js";
 import { incidentsRouter } from "./routes/incidents.js";
 import { kycRouter } from "./routes/kyc.js";
 import { mcpRegistryRouter } from "./routes/mcp-registry.js";
@@ -50,7 +49,6 @@ import type { GracefulShutdown } from "./lib/shutdown.js";
 import type { SolanaService } from "./services/solana.js";
 import type { CreatePaymentDeps } from "./services/payments.js";
 import type { CoinflowClient } from "./coinflow/client.js";
-import type { OnChainPaymentIndexer } from "./services/onchain_indexer.js";
 import type { KycProviderClient } from "./services/kyc/provider.js";
 import { loadAmlConfigFromEnv, type AmlMonitorConfig } from "./services/aml.js";
 import type {
@@ -103,14 +101,6 @@ export interface CreateAppOptions {
   admin?: {
     adminKey?: string | null;
   };
-  /** Z9.5 on-chain payment indexer. When `indexer` is omitted, the read API
-   * stays live but webhook + backfill routes return config_error. The
-   * `webhookAuthKey` is the shared secret presented by Helius/Geyser; same
-   * 24-char minimum and config_error fallback as the admin gate. */
-  indexer?: {
-    webhookAuthKey?: string | null;
-    indexer?: OnChainPaymentIndexer;
-  };
   /** Hook fired after Pix auto-settle finishes (success or swallow). Test seam. */
   onAutoPixSettle?: CreatePaymentDeps["onAutoPixSettle"];
   /**
@@ -145,26 +135,22 @@ export function createApp(options: CreateAppOptions): Express {
     shutdown,
     coinflow,
     onAutoSettle,
+    onAutoPixSettle,
     shopify,
     shopifyTokenExchanger,
     kyc,
     treasury,
     admin,
-    indexer,
     pix,
-    onAutoSettle,
-    onAutoPixSettle,
-  } = options;
-  const betaConfig = options.betaConfig ?? loadBetaConfig();
-  const { db, solana, shutdown, coinflow, onAutoSettle, attestation } = options;
-  const { db, solana, shutdown, coinflow, onAutoSettle, evm } = options;
+    attestation,
+    evm,
     amlConfig,
     onAmlEvaluated,
-  } = options;
-  const resolvedAmlConfig: AmlMonitorConfig | null =
-    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
     incidents: incidentOptions,
   } = options;
+  const betaConfig = options.betaConfig ?? loadBetaConfig();
+  const resolvedAmlConfig: AmlMonitorConfig | null =
+    amlConfig === undefined ? loadAmlConfigFromEnv() : amlConfig;
   const incidentService = new IncidentService(db);
 
   const app = express();
@@ -254,12 +240,6 @@ export function createApp(options: CreateAppOptions): Express {
   app.use(webhooksAdminRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(statusPageRouter(db, { adminKey: admin?.adminKey ?? null }));
   app.use(ambassadorsRouter(db, { adminKey: admin?.adminKey ?? null }));
-  app.use(
-    indexerRouter(db, {
-      webhookAuthKey: indexer?.webhookAuthKey ?? null,
-      ...(indexer?.indexer ? { indexer: indexer.indexer } : {}),
-    }),
-  );
   app.use(
     shopifyRouter(db, {
       config: shopify ?? null,

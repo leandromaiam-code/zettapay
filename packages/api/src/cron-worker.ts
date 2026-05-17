@@ -16,11 +16,6 @@ import {
   readSyntheticMonitorConfigFromEnv,
   startSyntheticMonitor,
 } from "./services/synthetic_monitor.js";
-import {
-  createHttpWhatsAppNotifier,
-  readProgramMonitorConfigFromEnv,
-  startProgramMonitor,
-} from "./services/program_monitor.js";
 
 /**
  * Standalone subscription cron worker. Drains due subscriptions on a fixed
@@ -137,27 +132,6 @@ async function main(): Promise<void> {
   } else {
     logger.info("cap_upgrade_cron.disabled", {
       reason: betaConfig.enabled ? "no_launch_date" : "beta_mode_off",
-    });
-  }
-
-  const programMonitor = readProgramMonitorConfigFromEnv();
-  if (programMonitor.enabled) {
-    const notifier = programMonitor.notifier
-      ? createHttpWhatsAppNotifier(programMonitor.notifier)
-      : undefined;
-    const handle = startProgramMonitor({
-      db,
-      intervalMs: programMonitor.intervalMs,
-      thresholds: programMonitor.thresholds,
-      ...(notifier ? { notifier } : {}),
-      logger,
-    });
-    shutdown.register("program_monitor", () => handle.close());
-  } else {
-    logger.info("program_monitor.disabled", {
-      reason: programMonitor.notifier
-        ? "explicit_disable"
-        : "no_whatsapp_webhook_configured",
     });
   }
 

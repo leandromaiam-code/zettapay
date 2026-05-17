@@ -8,7 +8,7 @@ import {
   type CapUpgradeSchedule,
 } from "../beta/cap_upgrade.js";
 import type { Logger } from "../lib/logger.js";
-import type { ProgramMonitorThresholds } from "./program_monitor.js";
+import type { ProgramMonitorThresholds } from "../beta/cap_upgrade.js";
 
 /**
  * Z30.4 — Cron wrapper around `runCapUpgrade`. Mirrors `subscription_cron`:
