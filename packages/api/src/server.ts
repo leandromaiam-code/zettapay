@@ -30,7 +30,8 @@ import { SolanaService } from "./services/solana.js";
 import type { ShopifyAppConfig } from "./services/shopify.js";
 import { createSumsubClient } from "./services/kyc/sumsub.js";
 import type { KycProviderClient } from "./services/kyc/provider.js";
-import { EvmService } from "./services/evm.js";
+// Z53 HR-CUSTODY: EVM payer key removed — see Z53 mission notes.
+// No EVM signing service runs in-process; merchants supply their own xpub.
 
 const port = Number.parseInt(process.env.PORT ?? "3001", 10);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -100,9 +101,6 @@ const app = createApp({
 const attestation = loadAttestation();
 
 const app = createApp({ db, solana, shutdown, coinflow, attestation });
-const evm = loadEvm();
-
-const app = createApp({ db, solana, shutdown, coinflow, evm });
 
 const server = app.listen(port, host, () => {
   logger.info("server.listening", { host, port });
@@ -134,12 +132,6 @@ function loadKyc(): KycProviderClient | undefined {
     webhookSecret,
     ...(baseUrl ? { baseUrl } : {}),
   });
-function loadEvm(): EvmService | undefined {
-  const key = process.env.EVM_PAYER_PRIVATE_KEY?.trim();
-  if (!key) return undefined;
-  return new EvmService({ payerPrivateKey: key });
-}
-
 function loadCoinflow(): CoinflowClient | undefined {
   const apiKey = process.env.COINFLOW_API_KEY;
   if (!apiKey) return undefined;

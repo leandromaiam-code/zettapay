@@ -5,7 +5,13 @@
 [![@zettapay/embed](https://img.shields.io/npm/v/%40zettapay%2Fembed?label=%40zettapay%2Fembed&color=f5e6c8)](https://www.npmjs.com/package/@zettapay/embed)
 [![license: MIT](https://img.shields.io/badge/license-MIT-f5e6c8.svg)](./LICENSE)
 
-Open-source universal payment protocol on Solana for humans and AI agents.
+Open-source non-custodial payment protocol — humans and AI agents pay
+merchants directly in BTC or USDC. ZettaPay never holds merchant funds or
+signing keys: the merchant supplies a BIP84 xpub/zpub at signup, ZettaPay
+derives a watch-only bech32 P2WPKH address per invoice, and on-chain
+confirmation is observed via mempool.space. See
+[`HR-CUSTODY` in `docs/HR-GATES.md`](./docs/HR-GATES.md) for the full
+non-custody contract.
 
 ## Install
 
