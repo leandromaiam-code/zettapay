@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Fabric HR-* learning analysis daily
+Requires=fabric-hr-learning.service
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30min
+Persistent=true
+Unit=fabric-hr-learning.service
+
+[Install]
+WantedBy=timers.target

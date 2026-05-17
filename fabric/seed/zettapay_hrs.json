@@ -1,0 +1,65 @@
+{
+  "workspace_slug": "zettapay",
+  "workspace_id": "c5c5be05-b8e2-4fd7-b85c-6e3e2d00f96b",
+  "rules": [
+    {
+      "id": "HR-CUSTODY",
+      "title": "Non-custodial invariant",
+      "severity": "hard",
+      "body": "ZettaPay never possesses, generates, stores, or has capacity to sign with private keys controlling merchant/customer funds. Forbidden patterns include any code that stores private keys for merchant/customer wallets, derives addresses from a ZettaPay-held master seed (use merchant xpub instead), or signs transactions on behalf of merchants. Sweep cron services that consolidate funds using our keys are also forbidden.",
+      "detection_patterns": [
+        "\\bPRIVATE_KEY\\b",
+        "\\bMASTER_SEED\\b",
+        "\\bTREASURY_\\w*KEY\\b",
+        "createWalletClient\\s*\\(",
+        "privateKeyToAccount\\s*\\(",
+        "KeyManager\\.sign\\w+",
+        "signBtcTx",
+        "signEvmTx",
+        "sweep_worker",
+        "master_seed",
+        "BIP39.*mnemonic"
+      ]
+    },
+    {
+      "id": "HR-WALLET-LESS",
+      "title": "Wallet-less merchant",
+      "severity": "hard",
+      "body": "Merchant never connects a wallet. UI shows address inputs only (no wallet.connect, no Phantom/Metamask buttons). Customer uses their own wallet — that is fine — but merchant never does.",
+      "detection_patterns": [
+        "wallet\\.connect\\s*\\(",
+        "window\\.solana\\.connect",
+        "window\\.ethereum\\.request",
+        "ConnectWallet",
+        "useWallet\\(",
+        "@solana/wallet-adapter"
+      ]
+    },
+    {
+      "id": "HR-PII-MINIMAL",
+      "title": "Minimal PII",
+      "severity": "hard",
+      "body": "ZettaPay collects only email + shop_name from merchants. No name, no doc, no address, no birthdate. No KYC unless triggered by regulatory threshold (>$10k tx volume — feature-gated).",
+      "detection_patterns": [
+        "kyc\\b",
+        "\\bssn\\b",
+        "social_security",
+        "tax_id",
+        "passport"
+      ]
+    },
+    {
+      "id": "HR-SECRETS-IN-GIT",
+      "title": "No secrets in git",
+      "severity": "blocker",
+      "body": "Real API keys, private keys, webhook secrets never committed. Use placeholders in .env.example. Real values in Supabase Vault or platform secrets store.",
+      "detection_patterns": [
+        "sk_live_[a-zA-Z0-9]{20,}",
+        "zk_live_[a-zA-Z0-9]{20,}",
+        "whsec_[a-zA-Z0-9_-]{20,}",
+        "ghp_[a-zA-Z0-9]{30,}",
+        "0x[a-fA-F0-9]{64}\\s*(//|$)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+[Unit]
+Description=Fabric HR-* post-merge scan (revert main commits that violate Hard Rules)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/fabric/hr.env
+WorkingDirectory=/opt/veridian-fabric
+ExecStart=/usr/bin/node /opt/veridian-fabric/fabric/bin/postscan.js \
+  --repo-path /opt/fabric-workspaces/zettapay \
+  --workspace-slug zettapay \
+  --since-file /var/lib/fabric/hr-postscan.lastsha
+TimeoutStartSec=15min
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
