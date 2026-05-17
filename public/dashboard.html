@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="/theme.css" />
   <meta name="description" content="ZettaPay merchant dashboard — wallet-less offline signature login, USDC balance, real-time analytics (TPV, MRR, conversion, top customers), Coinflow settlement." />
   <meta property="og:title" content="ZettaPay Dashboard — Merchant control plane" />
   <meta name="robots" content="noindex, nofollow" />
@@ -180,6 +182,7 @@
     .modal-card { width: 100%; max-width: 44rem; max-height: 90vh; overflow: auto; }
     @media (max-width: 640px) { .modal-card { max-height: 92vh; } }
   </style>
+  <script src="/theme-toggle.js" defer></script>
 </head>
 <body class="grid-bg">
   <div class="hero-gradient"></div>
