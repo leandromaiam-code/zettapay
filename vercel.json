@@ -116,6 +116,10 @@
       "destination": "/checkout.html"
     },
     {
+      "source": "/checkout",
+      "destination": "/checkout.html"
+    },
+    {
       "source": "/status",
       "destination": "/status.html"
     },
