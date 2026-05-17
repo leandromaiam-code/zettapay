@@ -298,12 +298,12 @@
       <div class="mb-6 animate-fade-up" style="animation-delay: 0.04s; animation-fill-mode: both;">
         <div class="flex items-center justify-between text-xs mb-3">
           <span class="font-mono uppercase tracking-widest text-muted">
-            Step <span id="progressCurrent">1</span> of 3
+            Step <span id="progressCurrent">1</span> of 4
           </span>
           <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Shop</span>
         </div>
         <div class="progress-track">
-          <div id="progressBar" class="progress-bar" style="width: 33%;"></div>
+          <div id="progressBar" class="progress-bar" style="width: 25%;"></div>
         </div>
         <div class="flex items-center justify-between mt-4">
           <div class="flex items-center gap-2">
@@ -313,12 +313,17 @@
           <div class="flex-1 h-px bg-royal/15 mx-2"></div>
           <div class="flex items-center gap-2">
             <span id="dot2" class="step-dot pending">2</span>
-            <span id="lbl2" class="step-label pending hidden sm:inline">Credentials</span>
+            <span id="lbl2" class="step-label pending hidden sm:inline">Verify</span>
           </div>
           <div class="flex-1 h-px bg-royal/15 mx-2"></div>
           <div class="flex items-center gap-2">
             <span id="dot3" class="step-dot pending">3</span>
-            <span id="lbl3" class="step-label pending hidden sm:inline">Install</span>
+            <span id="lbl3" class="step-label pending hidden sm:inline">Credentials</span>
+          </div>
+          <div class="flex-1 h-px bg-royal/15 mx-2"></div>
+          <div class="flex items-center gap-2">
+            <span id="dot4" class="step-dot pending">4</span>
+            <span id="lbl4" class="step-label pending hidden sm:inline">Install</span>
           </div>
         </div>
       </div>
@@ -377,7 +382,7 @@
               By continuing you agree to our <a href="/terms" class="text-royal-bright hover:underline">Terms</a> and <a href="/privacy" class="text-royal-bright hover:underline">Privacy</a>.
             </p>
             <button type="button" id="step1Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
-              <span id="step1NextLabel">Generate credentials</span>
+              <span id="step1NextLabel">Send verification code</span>
               <svg id="step1Spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
@@ -391,14 +396,71 @@
           </div>
         </section>
 
-        <!-- STEP 2 — CREDENTIALS (shown once) -->
+        <!-- STEP 2 — VERIFY OTP -->
         <section id="panel2" class="panel" aria-labelledby="panel2-title">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
+              <svg class="w-7 h-7 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            </div>
+            <h2 id="panel2-title" class="text-2xl md:text-3xl font-bold tracking-tight">Verify <span class="gradient-text">your email</span></h2>
+            <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
+              Code sent to <strong id="otpEmailLabel" class="text-white">you@example.com</strong>. Paste the 6-digit code below. The code expires in 30 minutes.
+            </p>
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <label for="otpInput" class="block text-xs font-mono uppercase tracking-widest text-royal-bright mb-2">Verification code</label>
+              <input
+                type="text"
+                id="otpInput"
+                name="otp"
+                inputmode="numeric"
+                pattern="[0-9]{6}"
+                maxlength="6"
+                placeholder="123456"
+                autocomplete="one-time-code"
+                spellcheck="false"
+                class="input text-center tracking-[0.5em] font-mono text-2xl"
+                style="letter-spacing: 0.5em;"
+              />
+              <div id="errOtp" class="hidden text-xs text-rose mt-2 font-mono"></div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-royal/10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div class="flex items-center gap-3 text-xs">
+              <button type="button" id="resendOtpBtn" class="text-royal-bright hover:underline font-mono uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed disabled:no-underline" disabled>
+                <span id="resendOtpLabel">Resend in 60s</span>
+              </button>
+              <span class="text-muted/40">·</span>
+              <button type="button" id="changeEmailBtn" class="text-muted hover:text-white font-mono uppercase tracking-widest">
+                Use different email
+              </button>
+            </div>
+            <button type="button" id="step2Verify" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
+              <span id="step2VerifyLabel">Verify code</span>
+              <svg id="step2Spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              <svg id="step2Arrow" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+            </button>
+          </div>
+
+          <div id="step2Error" class="hidden mt-4 glass rounded-xl p-4 border border-rose/40">
+            <div class="text-sm text-rose font-mono"></div>
+          </div>
+        </section>
+
+        <!-- STEP 3 — CREDENTIALS (shown once) -->
+        <section id="panel3" class="panel" aria-labelledby="panel3-title">
           <div class="text-center mb-6">
             <div class="inline-flex items-center gap-2 pill-success px-3 py-1 rounded-full mb-4">
               <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
               <span class="text-[10px] font-mono uppercase tracking-widest">Account ready</span>
             </div>
-            <h2 id="panel2-title" class="text-2xl md:text-3xl font-bold tracking-tight">Your <span class="gradient-text">credentials</span> — shown once</h2>
+            <h2 id="panel3-title" class="text-2xl md:text-3xl font-bold tracking-tight">Your <span class="gradient-text">credentials</span> — shown once</h2>
             <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
               Copy these now. We store hashed versions and can't recover them later. Rotate any time from the dashboard.
             </p>
@@ -473,20 +535,20 @@
           </div>
 
           <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-end gap-3 flex-wrap">
-            <button type="button" id="step2Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
+            <button type="button" id="step3Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
               Continue to install
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
             </button>
           </div>
         </section>
 
-        <!-- STEP 3 — INSTALL + INTEGRATION SNIPPET -->
-        <section id="panel3" class="panel" aria-labelledby="panel3-title">
+        <!-- STEP 4 — INSTALL + INTEGRATION SNIPPET -->
+        <section id="panel4" class="panel" aria-labelledby="panel4-title">
           <div class="text-center mb-6">
             <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
               <svg class="w-7 h-7 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
             </div>
-            <h2 id="panel3-title" class="text-2xl md:text-3xl font-bold tracking-tight">Install the SDK &middot; <span class="gradient-text">configure in your code</span></h2>
+            <h2 id="panel4-title" class="text-2xl md:text-3xl font-bold tracking-tight">Install the SDK &middot; <span class="gradient-text">configure in your code</span></h2>
             <p class="text-muted text-sm mt-2 max-w-lg mx-auto leading-relaxed">
               Your public addresses stay in your environment variables. You call <code class="font-mono text-royal-bright">zp.register()</code> at boot — our listener watches the chain and posts webhooks when payments confirm.
             </p>
@@ -591,10 +653,14 @@
   <script>
     (function () {
       const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+      const OTP_RE = /^\d{6}$/;
       function validEmail(s) { return !!s && EMAIL_RE.test(s.trim()); }
+      function validOtp(s) { return !!s && OTP_RE.test(s.trim()); }
 
       let currentStep = 1;
       let toastTimer = null;
+      let resendTimer = null;
+      let resendRemaining = 0;
       const state = {
         shopName: '',
         shopEmail: '',
@@ -603,31 +669,11 @@
         webhookSecret: '',
       };
 
-      // ----- Random helpers (crypto-strong) -----
-      function randBytes(n) {
-        const buf = new Uint8Array(n);
-        (window.crypto || window.msCrypto).getRandomValues(buf);
-        return buf;
-      }
-      function b64url(buf) {
-        let bin = '';
-        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-        return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-      }
-      function hexStr(buf) {
-        let s = '';
-        for (let i = 0; i < buf.length; i++) s += buf[i].toString(16).padStart(2, '0');
-        return s;
-      }
-      function generateMerchantId() { return 'mch_' + hexStr(randBytes(8)) + hexStr(randBytes(4)); }
-      function generateApiKey() { return 'zk_live_' + b64url(randBytes(24)); }
-      function generateWebhookSecret() { return 'whsec_' + b64url(randBytes(32)); }
-
       // ----- Step navigation -----
-      const stepNames = ['Shop', 'Credentials', 'Install'];
-      const panels = [1, 2, 3].map(i => document.getElementById('panel' + i));
-      const dots = [1, 2, 3].map(i => document.getElementById('dot' + i));
-      const labels = [1, 2, 3].map(i => document.getElementById('lbl' + i));
+      const stepNames = ['Shop', 'Verify', 'Credentials', 'Install'];
+      const panels = [1, 2, 3, 4].map(i => document.getElementById('panel' + i));
+      const dots = [1, 2, 3, 4].map(i => document.getElementById('dot' + i));
+      const labels = [1, 2, 3, 4].map(i => document.getElementById('lbl' + i));
       const progressBar = document.getElementById('progressBar');
       const progressCurrent = document.getElementById('progressCurrent');
       const progressLabel = document.getElementById('progressLabel');
@@ -653,7 +699,7 @@
           }
         });
         progressCurrent.textContent = String(step);
-        progressBar.style.width = Math.round((step / 3) * 100) + '%';
+        progressBar.style.width = Math.round((step / 4) * 100) + '%';
         progressLabel.textContent = stepNames[step - 1];
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -755,7 +801,7 @@
         shopEmail.disabled = loading;
         step1NextArrow.classList.toggle('hidden', loading);
         step1Spinner.classList.toggle('hidden', !loading);
-        step1NextLabel.textContent = loading ? 'Generating…' : 'Generate credentials';
+        step1NextLabel.textContent = loading ? 'Sending code…' : 'Send verification code';
       }
 
       function showStep1Error(message) {
@@ -767,66 +813,174 @@
         step1ErrorText.textContent = '';
       }
 
-      async function postOnboard(payload) {
-        const resp = await fetch('/api/merchants/onboard', {
+      async function postJson(url, payload, extraHeaders) {
+        const headers = Object.assign(
+          { 'Content-Type': 'application/json' },
+          extraHeaders || {},
+        );
+        const resp = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Idempotency-Key': (state.shopEmail || 'anon') + ':' + Date.now(),
-          },
+          headers: headers,
           body: JSON.stringify(payload),
         });
         let body = null;
         try { body = await resp.json(); } catch (e) { body = null; }
-        if (!resp.ok) {
-          const msg = body && body.error && body.error.message
-            ? body.error.message
-            : 'Onboarding failed (' + resp.status + ')';
-          throw new Error(msg);
+        return { ok: resp.ok, status: resp.status, body: body || {} };
+      }
+
+      function errorMessage(result, fallback) {
+        if (result && result.body && result.body.error && result.body.error.message) {
+          return result.body.error.message;
         }
-        return body || {};
+        return fallback + ' (' + (result && result.status ? result.status : 'network') + ')';
       }
 
-      function synthesizeFallback() {
-        return {
-          merchant: { id: generateMerchantId(), name: state.shopName, email: state.shopEmail },
-          api_key: generateApiKey(),
-          webhook_secret: generateWebhookSecret(),
-        };
-      }
-
-      function extractCredentials(result) {
-        const merchant = (result && result.merchant) || {};
-        return {
-          merchantId: merchant.id || generateMerchantId(),
-          apiKey: result.api_key || result.public_key || generateApiKey(),
-          webhookSecret: result.webhook_secret || generateWebhookSecret(),
-        };
-      }
-
-      async function submitSignup() {
+      async function submitRegister() {
         clearStep1Error();
         setStep1Loading(true);
-        const payload = { name: state.shopName, email: state.shopEmail };
-        let result;
-        try {
-          result = await postOnboard(payload);
-        } catch (err) {
-          result = synthesizeFallback();
-          showStep1Error((err && err.message ? err.message : 'API unreachable') + ' — showing local preview');
-        }
-        const creds = extractCredentials(result);
-        state.merchantId = creds.merchantId;
-        state.apiKey = creds.apiKey;
-        state.webhookSecret = creds.webhookSecret;
-        renderStep2();
+        const payload = { email: state.shopEmail, shop_name: state.shopName };
+        const result = await postJson('/api/merchants/register', payload).catch(() => ({
+          ok: false, status: 0, body: { error: { message: 'Network unreachable' } },
+        }));
         setStep1Loading(false);
+        if (!result.ok) {
+          showStep1Error(errorMessage(result, 'Could not send code'));
+          return;
+        }
+        otpEmailLabel.textContent = state.shopEmail;
+        otpInput.value = '';
+        clearStep2Error();
+        refreshStep2();
         setStep(2);
+        startResendCooldown(60);
+        setTimeout(() => otpInput.focus(), 80);
       }
 
-      step1Next.addEventListener('click', submitSignup);
+      step1Next.addEventListener('click', submitRegister);
 
-      // ===== STEP 2 — credentials =====
+      // ===== STEP 2 — verify OTP =====
+      const otpInput = document.getElementById('otpInput');
+      const errOtp = document.getElementById('errOtp');
+      const otpEmailLabel = document.getElementById('otpEmailLabel');
+      const step2Verify = document.getElementById('step2Verify');
+      const step2VerifyLabel = document.getElementById('step2VerifyLabel');
+      const step2Arrow = document.getElementById('step2Arrow');
+      const step2Spinner = document.getElementById('step2Spinner');
+      const step2Error = document.getElementById('step2Error');
+      const step2ErrorText = step2Error.querySelector('div');
+      const resendOtpBtn = document.getElementById('resendOtpBtn');
+      const resendOtpLabel = document.getElementById('resendOtpLabel');
+      const changeEmailBtn = document.getElementById('changeEmailBtn');
+
+      function refreshStep2() {
+        const otp = otpInput.value.trim();
+        let ok = validOtp(otp);
+        otpInput.classList.toggle('valid', ok);
+        otpInput.classList.toggle('error', otp.length > 0 && !ok && otp.length === 6);
+        if (otp.length > 0 && !ok && otp.length === 6) {
+          errOtp.textContent = 'Code must be 6 digits';
+          errOtp.classList.remove('hidden');
+        } else {
+          errOtp.classList.add('hidden');
+        }
+        step2Verify.disabled = !ok;
+      }
+
+      otpInput.addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D+/g, '').slice(0, 6);
+        refreshStep2();
+      });
+      otpInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !step2Verify.disabled) { e.preventDefault(); step2Verify.click(); }
+      });
+
+      function setStep2Loading(loading) {
+        step2Verify.disabled = loading || !validOtp(otpInput.value.trim());
+        otpInput.disabled = loading;
+        step2Arrow.classList.toggle('hidden', loading);
+        step2Spinner.classList.toggle('hidden', !loading);
+        step2VerifyLabel.textContent = loading ? 'Verifying…' : 'Verify code';
+      }
+      function showStep2Error(message) {
+        step2Error.classList.remove('hidden');
+        step2ErrorText.textContent = message;
+      }
+      function clearStep2Error() {
+        step2Error.classList.add('hidden');
+        step2ErrorText.textContent = '';
+      }
+
+      function startResendCooldown(seconds) {
+        if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+        resendRemaining = seconds;
+        resendOtpBtn.disabled = true;
+        resendOtpLabel.textContent = 'Resend in ' + resendRemaining + 's';
+        resendTimer = setInterval(() => {
+          resendRemaining -= 1;
+          if (resendRemaining <= 0) {
+            clearInterval(resendTimer);
+            resendTimer = null;
+            resendOtpBtn.disabled = false;
+            resendOtpLabel.textContent = 'Resend code';
+          } else {
+            resendOtpLabel.textContent = 'Resend in ' + resendRemaining + 's';
+          }
+        }, 1000);
+      }
+
+      async function submitVerify() {
+        clearStep2Error();
+        setStep2Loading(true);
+        const payload = { email: state.shopEmail, otp: otpInput.value.trim() };
+        const result = await postJson('/api/merchants/verify', payload).catch(() => ({
+          ok: false, status: 0, body: { error: { message: 'Network unreachable' } },
+        }));
+        setStep2Loading(false);
+        if (!result.ok) {
+          showStep2Error(errorMessage(result, 'Invalid or expired code'));
+          otpInput.classList.add('error');
+          return;
+        }
+        const data = result.body || {};
+        const merchant = data.merchant || {};
+        state.merchantId = merchant.id || '';
+        state.apiKey = data.listener_key || data.api_key || '';
+        state.webhookSecret = data.webhook_secret || '';
+        if (!state.merchantId || !state.apiKey || !state.webhookSecret) {
+          showStep2Error('Server returned an incomplete credential set — please contact support.');
+          return;
+        }
+        renderStep3();
+        setStep(3);
+      }
+
+      step2Verify.addEventListener('click', submitVerify);
+
+      resendOtpBtn.addEventListener('click', async () => {
+        if (resendOtpBtn.disabled) return;
+        clearStep2Error();
+        resendOtpBtn.disabled = true;
+        resendOtpLabel.textContent = 'Resending…';
+        const payload = { email: state.shopEmail, shop_name: state.shopName };
+        const result = await postJson('/api/merchants/register', payload).catch(() => ({
+          ok: false, status: 0, body: { error: { message: 'Network unreachable' } },
+        }));
+        if (!result.ok) {
+          showStep2Error(errorMessage(result, 'Could not resend code'));
+        }
+        startResendCooldown(60);
+      });
+
+      changeEmailBtn.addEventListener('click', () => {
+        if (resendTimer) { clearInterval(resendTimer); resendTimer = null; }
+        clearStep2Error();
+        otpInput.value = '';
+        refreshStep2();
+        setStep(1);
+        setTimeout(() => shopEmail.focus(), 80);
+      });
+
+      // ===== STEP 3 — credentials =====
       const merchantIdValue = document.getElementById('merchantIdValue');
       const apiKeyValue = document.getElementById('apiKeyValue');
       const webhookSecretValue = document.getElementById('webhookSecretValue');
@@ -837,7 +991,7 @@
       const envSnippet = document.getElementById('envSnippet');
       const copyEnvBtn = document.getElementById('copyEnvBtn');
       const copyEnvLabel = document.getElementById('copyEnvLabel');
-      const step2Next = document.getElementById('step2Next');
+      const step3Next = document.getElementById('step3Next');
 
       function buildEnvSnippet() {
         return 'ZETTAPAY_MERCHANT_ID=' + state.merchantId + '\n' +
@@ -845,7 +999,7 @@
                'ZETTAPAY_WEBHOOK_SECRET=' + state.webhookSecret;
       }
 
-      function renderStep2() {
+      function renderStep3() {
         merchantIdValue.textContent = state.merchantId;
         apiKeyValue.textContent = state.apiKey;
         webhookSecretValue.textContent = state.webhookSecret;
@@ -873,9 +1027,9 @@
         }
       });
 
-      step2Next.addEventListener('click', () => setStep(3));
+      step3Next.addEventListener('click', () => setStep(4));
 
-      // ===== STEP 3 — install snippets =====
+      // ===== STEP 4 — install snippets =====
       const tsSnippet = document.getElementById('tsSnippet');
       const copyTsBtn = document.getElementById('copyTsBtn');
       const copyTsLabel = document.getElementById('copyTsLabel');
