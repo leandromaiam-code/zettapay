@@ -142,6 +142,10 @@
     {
       "source": "/docs/api",
       "destination": "/docs/api.html"
+    },
+    {
+      "source": "/install",
+      "destination": "/install/index.html"
     }
   ],
   "headers": [
