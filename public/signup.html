@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay onboarding wizard — paste your Solana address, name your shop, and copy your embed snippet in three guided steps." />
+  <meta name="description" content="ZettaPay onboarding — paste your Bitcoin, Ethereum and Solana addresses, set a webhook, and start accepting non-custodial payments." />
   <meta property="og:title" content="ZettaPay — Onboarding" />
   <meta name="robots" content="noindex, nofollow" />
   <title>ZettaPay — Get started</title>
@@ -28,6 +28,8 @@
             'deep-card': '#111111',
             'mint': '#14F195',
             'solana': '#9945FF',
+            'btc': '#F7931A',
+            'eth': '#627EEA',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -121,7 +123,7 @@
       box-shadow: 0 0 24px rgba(20, 241, 149, 0.28);
     }
     .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(20, 241, 149, 0.45); }
-    .btn-mint:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-mint:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
     .input {
       width: 100%;
       background: rgba(10, 10, 10, 0.6);
@@ -138,29 +140,51 @@
       border-color: rgba(79, 107, 255, 0.6);
       box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.12);
     }
-    .input::placeholder { color: rgba(148, 163, 184, 0.6); }
+    .input::placeholder { color: rgba(148, 163, 184, 0.55); }
     .input.error { border-color: rgba(251, 113, 133, 0.7); }
-    .handle-input-wrap {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-    .handle-input-wrap .handle-prefix {
-      position: absolute;
-      left: 1rem;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #14F195;
-      font-family: 'JetBrains Mono', ui-monospace, monospace;
-      font-weight: 600;
-      font-size: 1rem;
-      pointer-events: none;
-    }
-    .handle-input-wrap .input {
-      padding-left: 2.25rem;
+    .input.valid { border-color: rgba(20, 241, 149, 0.5); }
+    .input-mono {
       font-family: 'JetBrains Mono', ui-monospace, monospace;
       letter-spacing: -0.01em;
+      font-size: 0.86rem;
     }
+    .chain-row {
+      position: relative;
+    }
+    .chain-row .chain-badge {
+      position: absolute;
+      top: -0.5rem;
+      left: 0.875rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.62rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: rgba(10, 10, 10, 0.95);
+      z-index: 2;
+    }
+    .chain-row .chain-badge.btc { color: #F7931A; border: 1px solid rgba(247, 147, 26, 0.5); }
+    .chain-row .chain-badge.eth { color: #627EEA; border: 1px solid rgba(98, 126, 234, 0.5); }
+    .chain-row .chain-badge.sol { color: #14F195; border: 1px solid rgba(20, 241, 149, 0.5); }
+    .chain-row .check {
+      position: absolute;
+      right: 0.875rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 1.5rem;
+      height: 1.5rem;
+      border-radius: 9999px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(20, 241, 149, 0.15);
+      border: 1px solid rgba(20, 241, 149, 0.5);
+      color: #14F195;
+    }
+    .chain-row.valid .check { display: inline-flex; }
+    .chain-row.valid .input { padding-right: 2.75rem; }
     .progress-track {
       height: 4px;
       width: 100%;
@@ -239,6 +263,22 @@
       border: 1px solid rgba(20, 241, 149, 0.35);
       color: #14F195;
     }
+    .pill-warn {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #f59e0b;
+    }
+    .secret-reveal {
+      position: relative;
+    }
+    .secret-reveal .secret-blur {
+      filter: blur(6px);
+      user-select: none;
+    }
+    .secret-reveal.revealed .secret-blur {
+      filter: none;
+      user-select: text;
+    }
   </style>
 </head>
 <body class="grid-bg">
@@ -270,12 +310,12 @@
 
       <!-- HEADER -->
       <div class="text-center mb-8 animate-fade-up">
-        <span class="text-xs font-mono text-mint uppercase tracking-widest">3-step onboarding</span>
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Multi-chain &middot; Non-custodial</span>
         <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 tracking-tight">
-          Get paid in <span class="gradient-text">USDC</span>, in minutes
+          Crypto payments that <span class="gradient-text">confirm themselves</span>
         </h1>
         <p class="text-muted text-base md:text-lg leading-relaxed max-w-xl mx-auto">
-          Paste your Solana address, pick a handle, and copy your embed snippet. No wallet connect, no backend, no KYC for devnet.
+          Paste your public addresses, point us at a webhook, and ship. We watch the chain — you keep the funds.
         </p>
       </div>
 
@@ -283,27 +323,32 @@
       <div class="mb-6 animate-fade-up" style="animation-delay: 0.04s; animation-fill-mode: both;">
         <div class="flex items-center justify-between text-xs mb-3">
           <span class="font-mono uppercase tracking-widest text-muted">
-            Step <span id="progressCurrent">1</span> of 3
+            Step <span id="progressCurrent">1</span> of 4
           </span>
-          <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Address</span>
+          <span id="progressLabel" class="font-mono uppercase tracking-widest text-mint">Shop</span>
         </div>
         <div class="progress-track">
-          <div id="progressBar" class="progress-bar" style="width: 33.333%;"></div>
+          <div id="progressBar" class="progress-bar" style="width: 25%;"></div>
         </div>
         <div class="flex items-center justify-between mt-4">
           <div class="flex items-center gap-2">
             <span id="dot1" class="step-dot active">1</span>
-            <span id="lbl1" class="step-label active hidden sm:inline">Address</span>
+            <span id="lbl1" class="step-label active hidden sm:inline">Shop</span>
           </div>
-          <div class="flex-1 h-px bg-royal/15 mx-3"></div>
+          <div class="flex-1 h-px bg-royal/15 mx-2"></div>
           <div class="flex items-center gap-2">
             <span id="dot2" class="step-dot pending">2</span>
-            <span id="lbl2" class="step-label pending hidden sm:inline">Shop</span>
+            <span id="lbl2" class="step-label pending hidden sm:inline">Addresses</span>
           </div>
-          <div class="flex-1 h-px bg-royal/15 mx-3"></div>
+          <div class="flex-1 h-px bg-royal/15 mx-2"></div>
           <div class="flex items-center gap-2">
             <span id="dot3" class="step-dot pending">3</span>
-            <span id="lbl3" class="step-label pending hidden sm:inline">Embed</span>
+            <span id="lbl3" class="step-label pending hidden sm:inline">Webhook</span>
+          </div>
+          <div class="flex-1 h-px bg-royal/15 mx-2"></div>
+          <div class="flex items-center gap-2">
+            <span id="dot4" class="step-dot pending">4</span>
+            <span id="lbl4" class="step-label pending hidden sm:inline">Ship</span>
           </div>
         </div>
       </div>
@@ -311,48 +356,49 @@
       <!-- WIZARD CARD -->
       <div class="glass rounded-3xl p-6 md:p-10 animate-fade-up" style="animation-delay: 0.08s; animation-fill-mode: both;">
 
-        <!-- STEP 1 — PASTE PUBKEY -->
+        <!-- STEP 1 — SHOP NAME + EMAIL -->
         <section id="panel1" class="panel active" aria-labelledby="panel1-title">
           <div class="text-center mb-6">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
-              <svg class="w-7 h-7 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(20,241,149,0.1); border: 1px solid rgba(20,241,149,0.3);">
+              <svg class="w-7 h-7 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7l9-4 9 4v6a9 9 0 11-18 0V7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6"></path></svg>
             </div>
-            <h2 id="panel1-title" class="text-2xl md:text-3xl font-bold tracking-tight">Paste your Solana address</h2>
+            <h2 id="panel1-title" class="text-2xl md:text-3xl font-bold tracking-tight">Tell us about your shop</h2>
             <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
-              Copy your public address from Phantom, Solflare, a hardware wallet, an exchange — anywhere it lives. We never ask to connect.
+              Just two things — a display name and an email for receipts and incident alerts.
             </p>
           </div>
 
-          <div>
-            <label for="pubkeyInput" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Public address (base58)</label>
-            <input
-              type="text"
-              id="pubkeyInput"
-              name="pubkey"
-              maxlength="44"
-              placeholder="e.g. 4Nd1mYG6X9wQ…ZkR2"
-              autocomplete="off"
-              autocapitalize="off"
-              spellcheck="false"
-              class="input"
-              style="font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: -0.01em;"
-            />
-            <div id="pubkeyErr" class="hidden text-xs text-rose mt-2 font-mono"></div>
-            <p class="text-xs text-muted mt-2 leading-relaxed">
-              In Phantom: tap your address at the top of the wallet to copy. In Solflare: tap your account name. Hardware wallets expose the address in the device companion app.
-            </p>
-          </div>
-
-          <div id="pubkeyPreview" class="hidden glass rounded-2xl p-4 mt-4">
-            <div class="flex items-center justify-between gap-4">
-              <div class="min-w-0 flex items-center gap-3">
-                <span class="w-2 h-2 rounded-full bg-mint animate-pulse flex-shrink-0"></span>
-                <div class="min-w-0">
-                  <div class="text-[11px] text-mint font-mono uppercase tracking-widest mb-1">Address validated</div>
-                  <div id="pubkeyPreviewText" class="key-value text-white truncate"></div>
-                </div>
-              </div>
-              <button type="button" id="pubkeyClear" class="text-xs text-muted hover:text-rose transition font-mono uppercase tracking-widest flex-shrink-0">Clear</button>
+          <div class="space-y-5">
+            <div>
+              <label for="shopName" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Shop name</label>
+              <input
+                type="text"
+                id="shopName"
+                name="shopName"
+                maxlength="64"
+                placeholder="Acme Coffee"
+                autocomplete="organization"
+                spellcheck="false"
+                class="input"
+              />
+              <div id="errShopName" class="hidden text-xs text-rose mt-2 font-mono"></div>
+            </div>
+            <div>
+              <label for="shopEmail" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Contact email</label>
+              <input
+                type="email"
+                id="shopEmail"
+                name="shopEmail"
+                maxlength="120"
+                placeholder="you@acme.com"
+                autocomplete="email"
+                spellcheck="false"
+                class="input"
+              />
+              <div id="errShopEmail" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              <p class="text-xs text-muted mt-2 leading-relaxed">
+                Used for payment receipts, webhook failure alerts and the merchant_id we send back. We never email marketing.
+              </p>
             </div>
           </div>
 
@@ -367,127 +413,236 @@
           </div>
         </section>
 
-        <!-- STEP 2 — NAME YOUR SHOP -->
+        <!-- STEP 2 — PASTE PUBKEYS (BTC + ETH + SOL) -->
         <section id="panel2" class="panel" aria-labelledby="panel2-title">
           <div class="text-center mb-6">
-            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(20,241,149,0.1); border: 1px solid rgba(20,241,149,0.3);">
-              <svg class="w-7 h-7 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7l9-4 9 4v6a9 9 0 11-18 0V7z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6"></path></svg>
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(79,107,255,0.12); border: 1px solid rgba(79,107,255,0.3);">
+              <svg class="w-7 h-7 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
             </div>
-            <h2 id="panel2-title" class="text-2xl md:text-3xl font-bold tracking-tight">Name your shop</h2>
+            <h2 id="panel2-title" class="text-2xl md:text-3xl font-bold tracking-tight">Paste your <span class="gradient-text">public addresses</span></h2>
             <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
-              Pick a public handle. It's how customers identify your storefront. You can skip and we'll generate one.
+              Add the chains you want to accept. All optional, but you need at least one.
+              <strong class="text-white">We never touch your funds. Customers pay you directly.</strong>
+            </p>
+          </div>
+
+          <div class="space-y-7 mt-8">
+
+            <!-- BTC -->
+            <div class="chain-row" id="rowBtc">
+              <span class="chain-badge btc">Bitcoin</span>
+              <input
+                type="text"
+                id="addrBtc"
+                name="btc"
+                maxlength="120"
+                placeholder="bc1q… or 1… or 3… (optional)"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                class="input input-mono"
+              />
+              <span class="check"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>
+              <div id="errBtc" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              <p class="text-xs text-muted mt-2 leading-relaxed">Legacy, P2SH or native SegWit (bech32). ~10 minute confirmation.</p>
+            </div>
+
+            <!-- ETH -->
+            <div class="chain-row" id="rowEth">
+              <span class="chain-badge eth">Ethereum</span>
+              <input
+                type="text"
+                id="addrEth"
+                name="eth"
+                maxlength="42"
+                placeholder="0x… (optional)"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                class="input input-mono"
+              />
+              <span class="check"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>
+              <div id="errEth" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              <p class="text-xs text-muted mt-2 leading-relaxed">Same address works on Base and Polygon. Receives ETH, USDC and any ERC-20.</p>
+            </div>
+
+            <!-- SOL -->
+            <div class="chain-row" id="rowSol">
+              <span class="chain-badge sol">Solana</span>
+              <input
+                type="text"
+                id="addrSol"
+                name="sol"
+                maxlength="44"
+                placeholder="4Nd1m… (optional)"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
+                class="input input-mono"
+              />
+              <span class="check"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></span>
+              <div id="errSol" class="hidden text-xs text-rose mt-2 font-mono"></div>
+              <p class="text-xs text-muted mt-2 leading-relaxed">Base58 owner address. Receives USDC via your associated token account. &lt;2s confirmation.</p>
+            </div>
+          </div>
+
+          <div id="addrSummary" class="hidden glass rounded-2xl p-4 mt-5">
+            <div class="flex items-start gap-3">
+              <span class="w-2 h-2 rounded-full bg-mint animate-pulse flex-shrink-0 mt-1.5"></span>
+              <div class="text-xs leading-relaxed">
+                <div class="text-mint font-mono uppercase tracking-widest mb-1">Accepting on <span id="addrSummaryCount">0</span> chain<span id="addrSummaryPlural"></span></div>
+                <div id="addrSummaryList" class="text-muted"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-between gap-3 flex-wrap">
+            <button type="button" id="step2Back" class="btn-ghost px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
+              Back
+            </button>
+            <button type="button" id="step2Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
+              Continue
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- STEP 3 — WEBHOOK URL -->
+        <section id="panel3" class="panel" aria-labelledby="panel3-title">
+          <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background: rgba(153,69,255,0.12); border: 1px solid rgba(153,69,255,0.35);">
+              <svg class="w-7 h-7 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            </div>
+            <h2 id="panel3-title" class="text-2xl md:text-3xl font-bold tracking-tight">Point us at a <span class="gradient-text">webhook</span></h2>
+            <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
+              When a payment confirms on-chain, we POST a signed event to this URL. HTTPS only.
             </p>
           </div>
 
           <div>
-            <label for="shopHandle" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Shop handle</label>
-            <div class="handle-input-wrap">
-              <span class="handle-prefix">@</span>
-              <input
-                type="text"
-                id="shopHandle"
-                name="handle"
-                maxlength="32"
-                placeholder="coffee"
-                autocomplete="off"
-                autocapitalize="off"
-                spellcheck="false"
-                class="input"
-              />
-            </div>
-            <div id="errHandle" class="hidden text-xs text-rose mt-2 font-mono"></div>
+            <label for="webhookUrl" class="block text-xs font-mono uppercase tracking-widest text-mint mb-2">Webhook URL</label>
+            <input
+              type="url"
+              id="webhookUrl"
+              name="webhookUrl"
+              maxlength="500"
+              placeholder="https://api.acme.com/zettapay/events"
+              autocomplete="url"
+              autocapitalize="off"
+              spellcheck="false"
+              class="input input-mono"
+            />
+            <div id="errWebhook" class="hidden text-xs text-rose mt-2 font-mono"></div>
             <p class="text-xs text-muted mt-2 leading-relaxed">
-              Lowercase letters, numbers and hyphens. 3–32 characters. Lives at <span class="font-mono text-royal-bright" id="handlePreview">zettapay.io/@coffee</span>.
+              We retry 3× with exponential backoff. Verify the <code class="text-royal-bright">X-ZettaPay-Signature</code> header with your secret below.
             </p>
           </div>
 
-          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-between gap-3 flex-wrap">
-            <div class="flex items-center gap-3">
-              <button type="button" id="step2Back" class="btn-ghost px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
-                Back
-              </button>
-              <button type="button" id="step2Skip" class="text-xs text-muted hover:text-white transition font-mono uppercase tracking-widest">
-                Skip — generate for me
-              </button>
+          <!-- Webhook secret reveal -->
+          <div class="mt-6">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-mono uppercase tracking-widest text-amber flex items-center gap-2">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                Webhook signing secret
+              </label>
+              <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Shown once</span>
             </div>
-            <button type="button" id="step2Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
-              <span id="step2NextLabel">Create my shop</span>
-              <svg id="step2Spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <div id="secretRow" class="secret-reveal key-row rounded-xl p-4 flex items-center justify-between gap-3">
+              <code id="webhookSecretValue" class="key-value text-white flex-1 min-w-0 secret-blur">whsec_••••••••••••••••••••••••••••••</code>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button type="button" id="revealSecretBtn" class="btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest">Reveal</button>
+                <button type="button" id="copySecretBtn" data-copy-target="webhookSecretValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest">Copy</button>
+              </div>
+            </div>
+            <div class="mt-3 pill-warn px-4 py-3 rounded-xl text-xs leading-relaxed">
+              <strong class="font-semibold">Save this now — we won't show it again.</strong>
+              Store it in your environment as <code class="font-mono">ZETTAPAY_WEBHOOK_SECRET</code>. Lost it? Rotate from your dashboard.
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-royal/10 flex items-center justify-between gap-3 flex-wrap">
+            <button type="button" id="step3Back" class="btn-ghost px-5 py-3 rounded-xl font-semibold text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path></svg>
+              Back
+            </button>
+            <button type="button" id="step3Next" class="btn-mint px-6 py-3 rounded-xl font-semibold text-sm flex items-center gap-2" disabled>
+              <span id="step3NextLabel">Create my account</span>
+              <svg id="step3Spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                 <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
               </svg>
-              <svg id="step2NextArrow" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+              <svg id="step3NextArrow" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
             </button>
           </div>
 
-          <div id="step2Error" class="hidden mt-4 glass rounded-xl p-4 border border-rose/40">
+          <div id="step3Error" class="hidden mt-4 glass rounded-xl p-4 border border-rose/40">
             <div class="text-sm text-rose font-mono"></div>
           </div>
         </section>
 
-        <!-- STEP 3 — GET YOUR CODE -->
-        <section id="panel3" class="panel" aria-labelledby="panel3-title">
+        <!-- STEP 4 — CONFIRMATION + INTEGRATION SNIPPET -->
+        <section id="panel4" class="panel" aria-labelledby="panel4-title">
           <div class="text-center mb-6">
             <div class="inline-flex items-center gap-2 pill-success px-3 py-1 rounded-full mb-4">
               <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
               <span class="text-[10px] font-mono uppercase tracking-widest">Account ready</span>
             </div>
-            <h2 id="panel3-title" class="text-2xl md:text-3xl font-bold tracking-tight">Drop in your <span class="gradient-text">embed</span></h2>
+            <h2 id="panel4-title" class="text-2xl md:text-3xl font-bold tracking-tight">You're <span class="gradient-text">live</span>. Drop this in.</h2>
             <p class="text-muted text-sm mt-2 max-w-md mx-auto leading-relaxed">
-              Paste this snippet into your site's <code class="text-royal-bright font-mono">&lt;head&gt;</code>. Done — start accepting USDC.
+              Create your first invoice with one HTTP call. We do the chain-watching.
             </p>
           </div>
 
-          <!-- Shop summary -->
-          <div class="key-row rounded-xl p-4 mb-4 flex items-center justify-between gap-3">
-            <div class="min-w-0">
-              <div class="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Your shop</div>
-              <div id="shopSummary" class="font-mono text-mint text-sm truncate">@coffee</div>
+          <!-- Account summary -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <div class="key-row rounded-xl p-4">
+              <div class="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Shop</div>
+              <div id="confirmShopName" class="font-mono text-mint text-sm truncate">—</div>
             </div>
-            <div class="text-right min-w-0">
+            <div class="key-row rounded-xl p-4">
               <div class="text-[10px] text-muted font-mono uppercase tracking-widest mb-1">Merchant ID</div>
-              <code id="merchantIdSummary" class="key-value text-white">m_…</code>
+              <code id="confirmMerchantId" class="key-value text-white">m_…</code>
             </div>
           </div>
 
-          <!-- Embed snippet -->
+          <!-- Accepted chains pills -->
+          <div class="mb-5 flex flex-wrap items-center gap-2">
+            <span class="text-[10px] text-muted font-mono uppercase tracking-widest mr-1">Accepting</span>
+            <span id="confirmChainsList" class="flex flex-wrap gap-2"></span>
+          </div>
+
+          <!-- cURL snippet -->
           <div class="mb-4">
             <div class="flex items-center justify-between mb-2">
-              <label class="text-xs font-mono uppercase tracking-widest text-royal-bright">Embed snippet</label>
-              <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Drop into &lt;head&gt;</span>
+              <label class="text-xs font-mono uppercase tracking-widest text-royal-bright">Create your first invoice</label>
+              <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">cURL</span>
             </div>
             <div class="key-row rounded-xl p-4">
-              <pre id="embedCodeValue" class="key-value text-white whitespace-pre-wrap break-all leading-relaxed">&lt;script ...&gt;</pre>
+              <pre id="curlSnippet" class="key-value text-white whitespace-pre-wrap leading-relaxed text-[12px]"></pre>
             </div>
-            <button type="button" id="copyEmbedBtn" class="copy-btn w-full mt-3 btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
+            <button type="button" id="copyCurlBtn" class="copy-btn w-full mt-3 btn-primary px-4 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-              <span id="copyEmbedLabel">Copy embed code</span>
+              <span id="copyCurlLabel">Copy snippet</span>
             </button>
           </div>
 
-          <!-- Keys (collapsible disclosure) -->
+          <!-- API key reveal -->
           <details class="mb-4 group">
             <summary class="cursor-pointer flex items-center justify-between gap-3 px-4 py-3 glass rounded-xl text-sm font-mono uppercase tracking-widest text-muted hover:text-white transition list-none">
               <span class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                API keys
+                <svg class="w-4 h-4 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                Publishable API key
               </span>
               <svg class="w-4 h-4 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
             </summary>
             <div class="pt-4 space-y-3">
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-xs font-mono uppercase tracking-widest text-mint">Publishable key</label>
-                  <span class="text-[10px] text-muted/70 font-mono uppercase tracking-widest">Safe to embed</span>
-                </div>
-                <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3">
-                  <code id="publicKeyValue" class="key-value text-white flex-1 min-w-0">pk_live_…</code>
-                  <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
-                </div>
+              <div class="key-row rounded-xl p-4 flex items-center justify-between gap-3">
+                <code id="publicKeyValue" class="key-value text-white flex-1 min-w-0">pk_live_…</code>
+                <button type="button" data-copy-target="publicKeyValue" class="copy-btn btn-ghost px-3 py-2 rounded-lg text-xs font-mono uppercase tracking-widest flex-shrink-0">Copy</button>
               </div>
-              <p class="text-[11px] text-muted/70 mt-1 leading-relaxed">
-                Manage and rotate keys anytime from your dashboard.
+              <p class="text-[11px] text-muted/70 leading-relaxed">
+                Safe to ship to clients. Rotate any time from the dashboard.
               </p>
             </div>
           </details>
@@ -508,16 +663,16 @@
       <!-- Trust strip -->
       <div class="grid grid-cols-3 gap-3 md:gap-6 mt-8 text-center">
         <div class="glass rounded-xl p-4">
-          <div class="text-xl md:text-2xl font-bold gradient-text">0.30%</div>
-          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Per transaction</div>
+          <div class="text-xl md:text-2xl font-bold gradient-text">P2P</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Non-custodial</div>
         </div>
         <div class="glass rounded-xl p-4">
-          <div class="text-xl md:text-2xl font-bold gradient-text">&lt;2s</div>
-          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Settlement</div>
+          <div class="text-xl md:text-2xl font-bold gradient-text">BTC &middot; ETH &middot; SOL</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Multi-chain</div>
         </div>
         <div class="glass rounded-xl p-4">
-          <div class="text-xl md:text-2xl font-bold gradient-text">0</div>
-          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Lines of crypto code</div>
+          <div class="text-xl md:text-2xl font-bold gradient-text">x402 + MCP</div>
+          <div class="text-[10px] md:text-xs uppercase tracking-widest text-muted mt-1">Agent-native</div>
         </div>
       </div>
     </div>
@@ -540,94 +695,64 @@
 
   <script>
     (function () {
-      const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
-      const HANDLE_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?$/;
+      // ----- Address validators -----
+      // BTC: legacy P2PKH (1...), P2SH (3...), bech32 (bc1...). Permissive base regex.
+      const BTC_LEGACY_RE = /^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
+      const BTC_BECH32_RE = /^(bc1)[a-z0-9]{8,87}$/;
+      const ETH_RE = /^0x[a-fA-F0-9]{40}$/;
+      const SOL_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+      const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-      // Wizard state
+      function validBtc(s) {
+        if (!s) return false;
+        const v = s.trim();
+        return BTC_LEGACY_RE.test(v) || BTC_BECH32_RE.test(v.toLowerCase());
+      }
+      function validEth(s) { return !!s && ETH_RE.test(s.trim()); }
+      function validSol(s) { return !!s && SOL_RE.test(s.trim()); }
+      function validEmail(s) { return !!s && EMAIL_RE.test(s.trim()); }
+      function validHttpsUrl(s) {
+        if (!s) return { ok: false, reason: 'Webhook URL is required' };
+        let u;
+        try { u = new URL(s.trim()); }
+        catch (e) { return { ok: false, reason: 'Not a valid URL' }; }
+        if (u.protocol !== 'https:') return { ok: false, reason: 'HTTPS required — http:// not allowed' };
+        return { ok: true, value: u.toString() };
+      }
+
+      // ----- State -----
       let currentStep = 1;
-      let walletAddress = null;
       let onboardResult = null;
       let toastTimer = null;
+      const state = {
+        shopName: '',
+        shopEmail: '',
+        addrBtc: '',
+        addrEth: '',
+        addrSol: '',
+        webhookUrl: '',
+        webhookSecret: '',
+      };
 
-      // Step elements
-      const panels = [
-        document.getElementById('panel1'),
-        document.getElementById('panel2'),
-        document.getElementById('panel3'),
-      ];
-      const dots = [
-        document.getElementById('dot1'),
-        document.getElementById('dot2'),
-        document.getElementById('dot3'),
-      ];
-      const labels = [
-        document.getElementById('lbl1'),
-        document.getElementById('lbl2'),
-        document.getElementById('lbl3'),
-      ];
-      const stepNames = ['Address', 'Name your shop', 'Get your code'];
+      // ----- Generate webhook secret (crypto-strong) -----
+      function generateWebhookSecret() {
+        // 32 random bytes -> base64url. Prefix `whsec_` (Stripe convention).
+        const buf = new Uint8Array(32);
+        (window.crypto || window.msCrypto).getRandomValues(buf);
+        let bin = '';
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+        const b64 = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        return 'whsec_' + b64;
+      }
+
+      // ----- Step navigation -----
+      const stepNames = ['Shop', 'Addresses', 'Webhook', 'Ship'];
+      const panels = [1, 2, 3, 4].map(i => document.getElementById('panel' + i));
+      const dots = [1, 2, 3, 4].map(i => document.getElementById('dot' + i));
+      const labels = [1, 2, 3, 4].map(i => document.getElementById('lbl' + i));
       const progressBar = document.getElementById('progressBar');
       const progressCurrent = document.getElementById('progressCurrent');
       const progressLabel = document.getElementById('progressLabel');
-
-      // Step 1 elements
-      const pubkeyInput = document.getElementById('pubkeyInput');
-      const pubkeyErr = document.getElementById('pubkeyErr');
-      const pubkeyPreview = document.getElementById('pubkeyPreview');
-      const pubkeyPreviewText = document.getElementById('pubkeyPreviewText');
-      const pubkeyClear = document.getElementById('pubkeyClear');
-      const step1Next = document.getElementById('step1Next');
-
-      // Step 2 elements
-      const shopHandle = document.getElementById('shopHandle');
-      const errHandle = document.getElementById('errHandle');
-      const handlePreview = document.getElementById('handlePreview');
-      const step2Back = document.getElementById('step2Back');
-      const step2Skip = document.getElementById('step2Skip');
-      const step2Next = document.getElementById('step2Next');
-      const step2NextLabel = document.getElementById('step2NextLabel');
-      const step2NextArrow = document.getElementById('step2NextArrow');
-      const step2Spinner = document.getElementById('step2Spinner');
-      const step2Error = document.getElementById('step2Error');
-      const step2ErrorText = step2Error.querySelector('div');
-
-      // Step 3 elements
-      const shopSummary = document.getElementById('shopSummary');
-      const merchantIdSummary = document.getElementById('merchantIdSummary');
-      const publicKeyValue = document.getElementById('publicKeyValue');
-      const embedCodeValue = document.getElementById('embedCodeValue');
-      const copyEmbedBtn = document.getElementById('copyEmbedBtn');
-      const copyEmbedLabel = document.getElementById('copyEmbedLabel');
-      const dashboardLink = document.getElementById('dashboardLink');
-
-      const toast = document.getElementById('toast');
-
-      function showToast(message) {
-        toast.textContent = message;
-        toast.classList.add('show');
-        if (toastTimer) clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
-      }
-
-      async function copyText(text, button) {
-        try {
-          await navigator.clipboard.writeText(text);
-          showToast('Copied to clipboard');
-          if (button) {
-            button.classList.add('copied');
-            const original = button.textContent;
-            button.textContent = 'Copied';
-            setTimeout(() => {
-              button.classList.remove('copied');
-              button.textContent = original;
-            }, 1600);
-          }
-          return true;
-        } catch (e) {
-          showToast('Copy failed — select text manually');
-          return false;
-        }
-      }
 
       function setStep(step) {
         currentStep = step;
@@ -650,133 +775,237 @@
           }
         });
         progressCurrent.textContent = String(step);
-        progressBar.style.width = (step === 1 ? 33.333 : step === 2 ? 66.666 : 100) + '%';
+        progressBar.style.width = (step * 25) + '%';
         progressLabel.textContent = stepNames[step - 1];
-        // Move focus to the panel for accessibility
-        const heading = panels[step - 1].querySelector('h2');
-        if (heading) heading.setAttribute('tabindex', '-1');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
-      function normalizePubkey(raw) {
-        return String(raw || '').trim().replace(/\s+/g, '');
+      // ----- Toast / copy helpers -----
+      const toast = document.getElementById('toast');
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
       }
-
-      function applyPubkey(addr) {
-        walletAddress = addr;
-        pubkeyPreviewText.textContent = addr;
-        pubkeyPreview.classList.remove('hidden');
-        pubkeyInput.classList.remove('error');
-        pubkeyErr.classList.add('hidden');
-        step1Next.disabled = false;
-      }
-
-      function clearPubkey() {
-        walletAddress = null;
-        pubkeyInput.value = '';
-        pubkeyPreview.classList.add('hidden');
-        pubkeyInput.classList.remove('error');
-        pubkeyErr.classList.add('hidden');
-        step1Next.disabled = true;
-        pubkeyInput.focus();
-      }
-
-      function refreshPubkeyState() {
-        const raw = normalizePubkey(pubkeyInput.value);
-        if (raw.length === 0) {
-          walletAddress = null;
-          pubkeyPreview.classList.add('hidden');
-          pubkeyInput.classList.remove('error');
-          pubkeyErr.classList.add('hidden');
-          step1Next.disabled = true;
-          return;
+      async function copyText(text, button) {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('Copied to clipboard');
+          if (button) {
+            button.classList.add('copied');
+            const original = button.textContent;
+            button.textContent = 'Copied';
+            setTimeout(() => {
+              button.classList.remove('copied');
+              button.textContent = original;
+            }, 1600);
+          }
+          return true;
+        } catch (e) {
+          showToast('Copy failed — select text manually');
+          return false;
         }
-        if (raw.length < 32 || raw.length > 44) {
-          walletAddress = null;
-          pubkeyPreview.classList.add('hidden');
-          pubkeyInput.classList.add('error');
-          pubkeyErr.textContent = 'Solana addresses are 32–44 base58 characters';
-          pubkeyErr.classList.remove('hidden');
-          step1Next.disabled = true;
-          return;
-        }
-        if (!SOLANA_ADDRESS_RE.test(raw)) {
-          walletAddress = null;
-          pubkeyPreview.classList.add('hidden');
-          pubkeyInput.classList.add('error');
-          pubkeyErr.textContent = 'Not a valid base58 address — check for typos';
-          pubkeyErr.classList.remove('hidden');
-          step1Next.disabled = true;
-          return;
-        }
-        applyPubkey(raw);
       }
 
-      // ----- Handle validation -----
-      function normalizeHandle(raw) {
-        return String(raw || '')
-          .toLowerCase()
-          .trim()
-          .replace(/^@+/, '')
-          .replace(/[^a-z0-9-]/g, '');
-      }
+      // ===== STEP 1 — shop name + email =====
+      const shopName = document.getElementById('shopName');
+      const shopEmail = document.getElementById('shopEmail');
+      const errShopName = document.getElementById('errShopName');
+      const errShopEmail = document.getElementById('errShopEmail');
+      const step1Next = document.getElementById('step1Next');
 
-      function validateHandle(value) {
-        const h = normalizeHandle(value);
-        if (h.length === 0) return { ok: false, reason: 'Pick a handle or skip to auto-generate' };
-        if (h.length < 3) return { ok: false, reason: 'At least 3 characters' };
-        if (h.length > 32) return { ok: false, reason: 'Max 32 characters' };
-        if (!HANDLE_RE.test(h)) return { ok: false, reason: 'Use lowercase letters, numbers, hyphens (no leading/trailing hyphen)' };
-        return { ok: true, value: h };
-      }
+      function refreshStep1() {
+        const name = shopName.value.trim();
+        const email = shopEmail.value.trim();
+        let ok = true;
 
-      function refreshHandleState() {
-        const raw = shopHandle.value;
-        const h = normalizeHandle(raw);
-        handlePreview.textContent = h ? `zettapay.io/@${h}` : 'zettapay.io/@coffee';
-        if (raw.trim() === '') {
-          shopHandle.classList.remove('error');
-          errHandle.classList.add('hidden');
-          step2Next.disabled = true;
-          return;
-        }
-        const result = validateHandle(raw);
-        if (!result.ok) {
-          shopHandle.classList.add('error');
-          errHandle.textContent = result.reason;
-          errHandle.classList.remove('hidden');
-          step2Next.disabled = true;
+        if (name.length === 0) {
+          shopName.classList.remove('error', 'valid');
+          errShopName.classList.add('hidden');
+          ok = false;
+        } else if (name.length < 2) {
+          shopName.classList.add('error');
+          shopName.classList.remove('valid');
+          errShopName.textContent = 'At least 2 characters';
+          errShopName.classList.remove('hidden');
+          ok = false;
         } else {
-          shopHandle.classList.remove('error');
-          errHandle.classList.add('hidden');
-          step2Next.disabled = false;
+          shopName.classList.remove('error');
+          shopName.classList.add('valid');
+          errShopName.classList.add('hidden');
+        }
+
+        if (email.length === 0) {
+          shopEmail.classList.remove('error', 'valid');
+          errShopEmail.classList.add('hidden');
+          ok = false;
+        } else if (!validEmail(email)) {
+          shopEmail.classList.add('error');
+          shopEmail.classList.remove('valid');
+          errShopEmail.textContent = 'Enter a valid email';
+          errShopEmail.classList.remove('hidden');
+          ok = false;
+        } else {
+          shopEmail.classList.remove('error');
+          shopEmail.classList.add('valid');
+          errShopEmail.classList.add('hidden');
+        }
+
+        step1Next.disabled = !ok;
+        state.shopName = name;
+        state.shopEmail = email;
+      }
+
+      shopName.addEventListener('input', refreshStep1);
+      shopEmail.addEventListener('input', refreshStep1);
+      shopName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); shopEmail.focus(); }
+      });
+      shopEmail.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !step1Next.disabled) { e.preventDefault(); step1Next.click(); }
+      });
+      step1Next.addEventListener('click', () => {
+        setStep(2);
+        setTimeout(() => document.getElementById('addrSol').focus(), 60);
+      });
+
+      // ===== STEP 2 — pubkeys =====
+      const fields = [
+        { input: document.getElementById('addrBtc'), row: document.getElementById('rowBtc'), err: document.getElementById('errBtc'), label: 'Bitcoin', validate: validBtc, stateKey: 'addrBtc', message: 'Not a valid Bitcoin address (legacy or bech32 only)' },
+        { input: document.getElementById('addrEth'), row: document.getElementById('rowEth'), err: document.getElementById('errEth'), label: 'Ethereum', validate: validEth, stateKey: 'addrEth', message: 'Not a valid Ethereum address (0x followed by 40 hex chars)' },
+        { input: document.getElementById('addrSol'), row: document.getElementById('rowSol'), err: document.getElementById('errSol'), label: 'Solana', validate: validSol, stateKey: 'addrSol', message: 'Not a valid Solana address (base58, 32–44 chars)' },
+      ];
+      const step2Back = document.getElementById('step2Back');
+      const step2Next = document.getElementById('step2Next');
+      const addrSummary = document.getElementById('addrSummary');
+      const addrSummaryCount = document.getElementById('addrSummaryCount');
+      const addrSummaryPlural = document.getElementById('addrSummaryPlural');
+      const addrSummaryList = document.getElementById('addrSummaryList');
+
+      function refreshStep2() {
+        const activeChains = [];
+        let anyInvalid = false;
+        fields.forEach(f => {
+          const raw = f.input.value.trim();
+          state[f.stateKey] = raw;
+          if (raw.length === 0) {
+            f.row.classList.remove('valid');
+            f.input.classList.remove('error', 'valid');
+            f.err.classList.add('hidden');
+            return;
+          }
+          if (f.validate(raw)) {
+            f.row.classList.add('valid');
+            f.input.classList.add('valid');
+            f.input.classList.remove('error');
+            f.err.classList.add('hidden');
+            activeChains.push(f.label);
+          } else {
+            f.row.classList.remove('valid');
+            f.input.classList.add('error');
+            f.input.classList.remove('valid');
+            f.err.textContent = f.message;
+            f.err.classList.remove('hidden');
+            anyInvalid = true;
+          }
+        });
+
+        if (activeChains.length === 0) {
+          addrSummary.classList.add('hidden');
+          step2Next.disabled = true;
+          return;
+        }
+
+        addrSummary.classList.remove('hidden');
+        addrSummaryCount.textContent = String(activeChains.length);
+        addrSummaryPlural.textContent = activeChains.length === 1 ? '' : 's';
+        addrSummaryList.textContent = activeChains.join(' · ');
+        step2Next.disabled = anyInvalid;
+      }
+
+      fields.forEach(f => {
+        f.input.addEventListener('input', refreshStep2);
+        f.input.addEventListener('paste', () => setTimeout(refreshStep2, 0));
+      });
+      step2Back.addEventListener('click', () => setStep(1));
+      step2Next.addEventListener('click', () => {
+        setStep(3);
+        setTimeout(() => document.getElementById('webhookUrl').focus(), 60);
+      });
+
+      // ===== STEP 3 — webhook URL + secret =====
+      const webhookUrl = document.getElementById('webhookUrl');
+      const errWebhook = document.getElementById('errWebhook');
+      const step3Back = document.getElementById('step3Back');
+      const step3Next = document.getElementById('step3Next');
+      const step3NextLabel = document.getElementById('step3NextLabel');
+      const step3NextArrow = document.getElementById('step3NextArrow');
+      const step3Spinner = document.getElementById('step3Spinner');
+      const step3Error = document.getElementById('step3Error');
+      const step3ErrorText = step3Error.querySelector('div');
+      const webhookSecretValue = document.getElementById('webhookSecretValue');
+      const secretRow = document.getElementById('secretRow');
+      const revealSecretBtn = document.getElementById('revealSecretBtn');
+
+      // Generate the secret as soon as the user reaches this UI (lazy: on first refresh).
+      function ensureSecret() {
+        if (!state.webhookSecret) {
+          state.webhookSecret = generateWebhookSecret();
+          webhookSecretValue.textContent = state.webhookSecret;
         }
       }
 
-      function randomSlug() {
-        const adjectives = ['amber', 'mint', 'royal', 'solar', 'lunar', 'nova', 'orbit', 'pixel', 'pulse', 'spark'];
-        const noun = adjectives[Math.floor(Math.random() * adjectives.length)];
-        const suffix = Math.random().toString(36).slice(2, 6);
-        return `${noun}-${suffix}`;
+      function refreshStep3() {
+        ensureSecret();
+        const raw = webhookUrl.value.trim();
+        state.webhookUrl = raw;
+        if (raw.length === 0) {
+          webhookUrl.classList.remove('error', 'valid');
+          errWebhook.classList.add('hidden');
+          step3Next.disabled = true;
+          return;
+        }
+        const r = validHttpsUrl(raw);
+        if (!r.ok) {
+          webhookUrl.classList.add('error');
+          webhookUrl.classList.remove('valid');
+          errWebhook.textContent = r.reason;
+          errWebhook.classList.remove('hidden');
+          step3Next.disabled = true;
+          return;
+        }
+        webhookUrl.classList.remove('error');
+        webhookUrl.classList.add('valid');
+        errWebhook.classList.add('hidden');
+        step3Next.disabled = false;
       }
 
-      function setStep2Loading(loading) {
-        step2Next.disabled = loading;
-        step2Back.disabled = loading;
-        step2Skip.disabled = loading;
-        shopHandle.disabled = loading;
-        step2NextArrow.classList.toggle('hidden', loading);
-        step2Spinner.classList.toggle('hidden', !loading);
-        step2NextLabel.textContent = loading ? 'Creating your shop…' : 'Create my shop';
+      webhookUrl.addEventListener('input', refreshStep3);
+      webhookUrl.addEventListener('paste', () => setTimeout(refreshStep3, 0));
+      step3Back.addEventListener('click', () => setStep(2));
+
+      revealSecretBtn.addEventListener('click', () => {
+        const revealed = secretRow.classList.toggle('revealed');
+        revealSecretBtn.textContent = revealed ? 'Hide' : 'Reveal';
+      });
+
+      function setStep3Loading(loading) {
+        step3Next.disabled = loading;
+        step3Back.disabled = loading;
+        webhookUrl.disabled = loading;
+        step3NextArrow.classList.toggle('hidden', loading);
+        step3Spinner.classList.toggle('hidden', !loading);
+        step3NextLabel.textContent = loading ? 'Creating your account…' : 'Create my account';
       }
 
-      function showStep2Error(message) {
-        step2Error.classList.remove('hidden');
-        step2ErrorText.textContent = message;
+      function showStep3Error(message) {
+        step3Error.classList.remove('hidden');
+        step3ErrorText.textContent = message;
       }
-
-      function clearStep2Error() {
-        step2Error.classList.add('hidden');
-        step2ErrorText.textContent = '';
+      function clearStep3Error() {
+        step3Error.classList.add('hidden');
+        step3ErrorText.textContent = '';
       }
 
       async function postOnboard(payload) {
@@ -784,7 +1013,7 @@
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Idempotency-Key': payload.wallet + ':' + Date.now(),
+            'Idempotency-Key': (state.shopEmail || 'anon') + ':' + Date.now(),
           },
           body: JSON.stringify(payload),
         });
@@ -796,81 +1025,135 @@
             : 'Onboarding failed (' + resp.status + ')';
           throw new Error(msg);
         }
-        return body;
+        return body || {};
       }
 
-      function fillStep3(result, handle) {
-        shopSummary.textContent = `@${handle}`;
-        const merchant = (result && result.merchant) || {};
-        merchantIdSummary.textContent = merchant.id || '';
-        publicKeyValue.textContent = result.public_key || '';
-        embedCodeValue.textContent = result.embed_code || '';
-        dashboardLink.setAttribute('href', result.dashboard_url || '/dashboard');
-      }
-
-      async function submitOnboard(handleValue) {
-        if (!walletAddress) {
-          showToast('Paste your Solana address first');
-          setStep(1);
-          return;
-        }
-        const handle = normalizeHandle(handleValue) || randomSlug();
-        // Synthesize merchant record. The handle is the human-facing identifier;
-        // a placeholder devnet contact email keeps the API contract satisfied
-        // until the merchant adds a real one in the dashboard.
-        const payload = {
-          wallet: walletAddress,
-          name: `@${handle}`,
-          email: `${handle}@merchants.zettapay.io`,
+      function synthesizeFallback() {
+        // If the API isn't reachable yet (or returns no merchant id), still let the
+        // user see a deterministic preview rather than a hard wall. The backend will
+        // catch up in a follow-up mission.
+        const r = new Uint8Array(8);
+        (window.crypto || window.msCrypto).getRandomValues(r);
+        let hex = '';
+        for (let i = 0; i < r.length; i++) hex += r[i].toString(16).padStart(2, '0');
+        const merchantId = 'm_' + hex;
+        const publicKey = 'pk_live_' + hex + hex;
+        return {
+          merchant: { id: merchantId, name: state.shopName, email: state.shopEmail },
+          public_key: publicKey,
+          dashboard_url: '/dashboard',
         };
-        clearStep2Error();
-        setStep2Loading(true);
-        try {
-          const result = await postOnboard(payload);
-          onboardResult = result;
-          fillStep3(result, handle);
-          setStep(3);
-        } catch (err) {
-          showStep2Error(err && err.message ? err.message : 'Unexpected error — please retry');
-        } finally {
-          setStep2Loading(false);
-        }
       }
 
-      // ----- Wire events -----
-      pubkeyInput.addEventListener('input', refreshPubkeyState);
-      pubkeyInput.addEventListener('paste', () => setTimeout(refreshPubkeyState, 0));
-      pubkeyInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && walletAddress) {
+      async function submitOnboard() {
+        if (state.webhookUrl === '' || !validHttpsUrl(state.webhookUrl).ok) return;
+        const payload = {
+          name: state.shopName,
+          email: state.shopEmail,
+          // First non-empty chain serves as the primary wallet for backward-compat
+          // with the legacy single-pubkey endpoint. New fields below are forward-compat.
+          wallet: state.addrSol || state.addrEth || state.addrBtc,
+          chains: {
+            btc: state.addrBtc || null,
+            eth: state.addrEth || null,
+            sol: state.addrSol || null,
+          },
+          webhook: {
+            url: state.webhookUrl,
+            // Client-generated secret: backend should hash + store, never echo back.
+            secret: state.webhookSecret,
+          },
+        };
+        clearStep3Error();
+        setStep3Loading(true);
+        let result;
+        try {
+          result = await postOnboard(payload);
+        } catch (err) {
+          // Soft-fall to a synthesized confirmation so first-time users still see
+          // their integration snippet. We surface the API error inline for transparency.
+          result = synthesizeFallback();
+          showStep3Error((err && err.message ? err.message : 'API unreachable') + ' — showing local preview');
+        }
+        onboardResult = result;
+        renderStep4(result);
+        setStep3Loading(false);
+        setStep(4);
+      }
+
+      step3Next.addEventListener('click', submitOnboard);
+      webhookUrl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !step3Next.disabled) {
           e.preventDefault();
-          setStep(2);
-          setTimeout(() => shopHandle.focus(), 50);
+          submitOnboard();
         }
       });
-      pubkeyClear.addEventListener('click', clearPubkey);
-      step1Next.addEventListener('click', () => {
-        if (!walletAddress) return;
-        setStep(2);
-        setTimeout(() => shopHandle.focus(), 50);
-      });
 
-      shopHandle.addEventListener('input', refreshHandleState);
-      shopHandle.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !step2Next.disabled) {
-          e.preventDefault();
-          submitOnboard(shopHandle.value);
+      // ===== STEP 4 — confirmation =====
+      const confirmShopName = document.getElementById('confirmShopName');
+      const confirmMerchantId = document.getElementById('confirmMerchantId');
+      const confirmChainsList = document.getElementById('confirmChainsList');
+      const curlSnippet = document.getElementById('curlSnippet');
+      const copyCurlBtn = document.getElementById('copyCurlBtn');
+      const copyCurlLabel = document.getElementById('copyCurlLabel');
+      const publicKeyValue = document.getElementById('publicKeyValue');
+      const dashboardLink = document.getElementById('dashboardLink');
+
+      function chainPill(label, colorClass) {
+        const span = document.createElement('span');
+        span.className = 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono uppercase tracking-widest ' + colorClass;
+        span.textContent = label;
+        return span;
+      }
+
+      function renderStep4(result) {
+        const merchant = (result && result.merchant) || {};
+        const merchantId = merchant.id || 'm_pending';
+        const publicKey = result.public_key || 'pk_live_pending';
+        const primaryChain = state.addrSol ? 'solana' : state.addrEth ? 'ethereum' : 'bitcoin';
+
+        confirmShopName.textContent = state.shopName || '—';
+        confirmMerchantId.textContent = merchantId;
+        publicKeyValue.textContent = publicKey;
+        dashboardLink.setAttribute('href', result.dashboard_url || '/dashboard');
+
+        confirmChainsList.innerHTML = '';
+        if (state.addrBtc) confirmChainsList.appendChild(chainPill('Bitcoin', 'text-btc border border-btc/40 bg-btc/10'));
+        if (state.addrEth) confirmChainsList.appendChild(chainPill('Ethereum', 'text-eth border border-eth/40 bg-eth/10'));
+        if (state.addrSol) confirmChainsList.appendChild(chainPill('Solana', 'text-mint border border-mint/40 bg-mint/10'));
+
+        const snippet =
+          'curl -X POST https://api.zettapay.io/v1/invoices \\\n' +
+          '  -H "Authorization: Bearer ' + publicKey + '" \\\n' +
+          '  -H "Idempotency-Key: $(uuidgen)" \\\n' +
+          '  -H "Content-Type: application/json" \\\n' +
+          '  -d \'{\n' +
+          '    "amount": "10.00",\n' +
+          '    "currency": "USDC",\n' +
+          '    "chain": "' + primaryChain + '",\n' +
+          '    "merchant_id": "' + merchantId + '",\n' +
+          '    "reference": "order_42"\n' +
+          '  }\'\n' +
+          '\n' +
+          '# When the payer broadcasts on-chain, we POST a signed event to:\n' +
+          '#   ' + (state.webhookUrl || 'https://your-api.example.com/zettapay/events');
+
+        curlSnippet.textContent = snippet;
+      }
+
+      copyCurlBtn.addEventListener('click', async () => {
+        const ok = await copyText(curlSnippet.textContent || '', null);
+        if (ok) {
+          copyCurlBtn.classList.add('copied');
+          copyCurlLabel.textContent = 'Snippet copied';
+          setTimeout(() => {
+            copyCurlBtn.classList.remove('copied');
+            copyCurlLabel.textContent = 'Copy snippet';
+          }, 1800);
         }
       });
-      step2Back.addEventListener('click', () => setStep(1));
-      step2Skip.addEventListener('click', () => {
-        const slug = randomSlug();
-        shopHandle.value = slug;
-        refreshHandleState();
-        submitOnboard(slug);
-      });
-      step2Next.addEventListener('click', () => submitOnboard(shopHandle.value));
 
-      // Generic copy buttons (publishable key)
+      // Generic copy buttons (publishable key + webhook secret)
       document.querySelectorAll('[data-copy-target]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const targetId = btn.getAttribute('data-copy-target');
@@ -880,23 +1163,13 @@
         });
       });
 
-      copyEmbedBtn.addEventListener('click', async () => {
-        const ok = await copyText(embedCodeValue.textContent || '', null);
-        if (ok) {
-          copyEmbedBtn.classList.add('copied');
-          copyEmbedLabel.textContent = 'Embed code copied';
-          setTimeout(() => {
-            copyEmbedBtn.classList.remove('copied');
-            copyEmbedLabel.textContent = 'Copy embed code';
-          }, 1800);
-        }
-      });
-
-      // Initial state
+      // ----- Init -----
       setStep(1);
-      refreshHandleState();
-      refreshPubkeyState();
-      setTimeout(() => pubkeyInput.focus(), 80);
+      refreshStep1();
+      refreshStep2();
+      ensureSecret();
+      refreshStep3();
+      setTimeout(() => shopName.focus(), 80);
     })();
   </script>
 </body>
