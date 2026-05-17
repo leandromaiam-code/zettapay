@@ -1,3 +1,6 @@
+// DEPRECATED (Z53): quarantined custodial code. Wrapped EvmService.transferToken
+// which signs ERC-20 with ZettaPay-held EVM_PAYER_PRIVATE_KEY — violates HR-CUSTODY.
+// Do not import.
 import type { Database as Db } from "better-sqlite3";
 import { findMerchantById } from "../db/merchants.js";
 import {

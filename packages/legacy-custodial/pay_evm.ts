@@ -1,3 +1,5 @@
+// DEPRECATED (Z53): quarantined custodial endpoint. /pay/evm/:merchant was
+// backed by EVM_PAYER_PRIVATE_KEY — violates HR-CUSTODY. Do not mount.
 import { Router } from "express";
 import type { Database as Db } from "better-sqlite3";
 import { idempotency } from "../middleware/idempotency.js";

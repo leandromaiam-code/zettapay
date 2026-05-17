@@ -26,12 +26,18 @@
     "beta:mainnet:digest": "tsx scripts/beta-mainnet-z30-2-digest.ts"
   },
   "devDependencies": {
+    "@types/ws": "^8.5.13",
     "@vercel/node": "^3.2.24"
   },
   "engines": {
     "node": ">=18.18"
   },
   "dependencies": {
-    "@sentry/node": "^10.52.0"
+    "@noble/curves": "^1.9.7",
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6",
+    "@scure/bip32": "^1.7.0",
+    "@sentry/node": "^10.52.0",
+    "ws": "^8.18.0"
   }
 }

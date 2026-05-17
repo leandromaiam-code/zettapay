@@ -107,6 +107,14 @@ export {
   type DeriveEthereumAddressParams,
 } from './derive.js';
 export {
+  deriveBip84Address,
+  parseExtendedPublicKey,
+  type Bip84Network,
+  type Bip84Parsed,
+  type DerivedBip84,
+  type DeriveBip84Params,
+} from './derive-bip84.js';
+export {
   SUPPORTED_CHAINS,
   InvoicesResource,
   isSupportedChain,

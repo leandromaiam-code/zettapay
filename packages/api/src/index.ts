@@ -9,7 +9,7 @@ export {
   type UnifiedPayment,
 } from "./routes/payment.js";
 export { funnelRouter } from "./routes/funnel.js";
-export { payEvmRouter } from "./routes/pay_evm.js";
+// Z53: payEvmRouter quarantined to packages/legacy-custodial/ (HR-CUSTODY).
 export { settlementRouter } from "./routes/settlement.js";
 export { verifySignatureRouter } from "./routes/verify-signature.js";
 export {
@@ -106,20 +106,7 @@ export {
   type VerifyFailureReason,
 } from "./lib/webhook-signature.js";
 export { SolanaService, type SolanaConfig } from "./services/solana.js";
-export {
-  EvmService,
-  toAtomicEvmAmount,
-  type EvmServiceConfig,
-  type EvmTransferParams,
-  type EvmTransferResult,
-  type EvmChainClients,
-  type ChainClientFactory,
-} from "./services/evm.js";
-export {
-  createEvmPayment,
-  type CreateEvmPaymentInput,
-  type EvmPaymentResult,
-} from "./services/evm_payments.js";
+// Z53: EvmService + createEvmPayment quarantined to packages/legacy-custodial/ (HR-CUSTODY).
 export {
   SUPPORTED_EVM_CHAINS,
   EVM_CHAIN_REGISTRY,

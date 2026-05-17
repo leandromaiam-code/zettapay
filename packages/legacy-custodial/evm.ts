@@ -1,3 +1,7 @@
+// DEPRECATED (Z53): quarantined custodial code. Loads EVM_PAYER_PRIVATE_KEY
+// and signs ERC-20 transfers on behalf of merchants — violates HR-CUSTODY.
+// Replacement: xpub-based per-invoice address derivation (see /api/invoices).
+// Do not import. Preserved for git archaeology only.
 import {
   createPublicClient,
   createWalletClient,

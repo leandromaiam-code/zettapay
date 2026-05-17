@@ -22,7 +22,7 @@ import { paymentRouter } from "./routes/payment.js";
 import { refundRouter } from "./routes/refund.js";
 import { privacyRouter } from "./routes/privacy.js";
 import { registryRouter } from "./routes/registry.js";
-import { payEvmRouter } from "./routes/pay_evm.js";
+// Z53: payEvmRouter quarantined to packages/legacy-custodial/ (HR-CUSTODY).
 import { riskRouter } from "./routes/risk.js";
 import { settlementRouter } from "./routes/settlement.js";
 import { shopifyRouter } from "./routes/shopify.js";
@@ -60,7 +60,8 @@ import type {
 import { TreasuryService } from "./services/treasury.js";
 import type { PixProvider } from "./pix/client.js";
 import type { AttestationClient } from "./bridge/attestation.js";
-import type { EvmService } from "./services/evm.js";
+// Z53: EvmService quarantined to packages/legacy-custodial/ (HR-CUSTODY).
+type EvmService = never;
 
 export interface CreateAppOptions {
   db: Db;
@@ -244,9 +245,9 @@ export function createApp(options: CreateAppOptions): Express {
       onAutoPixSettle,
     }),
   );
-  if (evm) {
-    app.use(payEvmRouter(db, evm));
-  }
+  // Z53: payEvmRouter quarantined (HR-CUSTODY). `evm` retained as opaque
+  // CreateAppOptions field for API compat; mounting is intentionally removed.
+  void evm;
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
