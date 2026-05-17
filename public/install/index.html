@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="/theme.css" />
+  <meta name="description" content="ZettaPay install wizard — pick your stack, paste your payout pubkeys, copy 3 files. Ready in under 5 minutes. Non-custodial, open-source, audited." />
+  <meta property="og:title" content="ZettaPay — Install wizard" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>ZettaPay — Install wizard</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'fade-in': 'fadeIn 0.35s ease-out forwards',
+          },
+          keyframes: {
+            fadeUp: { '0%': { opacity: '0', transform: 'translateY(12px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 8s linear infinite;
+    }
+    @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.25);
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.28;
+      pointer-events: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .btn-mint {
+      background: linear-gradient(135deg, #14F195 0%, #0bd87f 100%);
+      color: #0A0A0A;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 24px rgba(20, 241, 149, 0.28);
+    }
+    .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(20, 241, 149, 0.45); }
+
+    /* Stack chooser tiles */
+    .stack-tile {
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.875rem;
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+    .stack-tile:hover { border-color: rgba(79, 107, 255, 0.55); transform: translateY(-2px); }
+    .stack-tile.selected {
+      border-color: #4F6BFF;
+      background: rgba(79, 107, 255, 0.12);
+      box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.14);
+    }
+    .stack-tile .stack-name { font-weight: 600; font-size: 0.95rem; }
+    .stack-tile .stack-meta { font-size: 0.7rem; color: rgba(148, 163, 184, 0.7); font-family: 'JetBrains Mono', monospace; }
+
+    .chain-tile {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      padding: 0.95rem 1rem;
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .chain-tile:hover { border-color: rgba(79, 107, 255, 0.45); }
+    .chain-tile.selected { border-color: #14F195; background: rgba(20, 241, 149, 0.06); }
+    .chain-tile input[type="checkbox"] { accent-color: #14F195; width: 18px; height: 18px; }
+    .chain-tile .chain-locked input { accent-color: #4F6BFF; }
+    .chain-tile .chain-pubkey {
+      display: block;
+      width: 100%;
+      margin-top: 0.65rem;
+      background: rgba(10, 10, 10, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.2);
+      color: #FFFFFF;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.6rem;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+    }
+    .chain-tile .chain-pubkey:focus { outline: none; border-color: rgba(20, 241, 149, 0.5); }
+
+    .step-dot {
+      width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; font-weight: 600;
+      flex-shrink: 0; transition: all 0.3s ease;
+    }
+    .step-dot.active { background: linear-gradient(135deg, #4F6BFF, #6B82FF); color: #fff; box-shadow: 0 0 0 4px rgba(79, 107, 255, 0.18); }
+    .step-dot.done { background: rgba(20, 241, 149, 0.18); color: #14F195; border: 1px solid rgba(20, 241, 149, 0.4); }
+    .step-dot.pending { background: rgba(79, 107, 255, 0.06); color: rgba(148, 163, 184, 0.7); border: 1px solid rgba(79, 107, 255, 0.15); }
+    .step-label { font-size: 0.72rem; color: rgba(148, 163, 184, 0.7); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 0.12em; }
+    .step-label.active { color: #fff; }
+    .step-label.done { color: #14F195; }
+    .progress-track { height: 4px; width: 100%; background: rgba(79, 107, 255, 0.12); border-radius: 9999px; overflow: hidden; }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, #4F6BFF 0%, #14F195 60%, #9945FF 100%); border-radius: 9999px; transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 0 18px rgba(79, 107, 255, 0.5); }
+    .panel { display: none; }
+    .panel.active { display: block; animation: fadeIn 0.35s ease-out forwards; }
+    @keyframes fadeIn { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+
+    /* Code block w/ syntax highlight tokens */
+    .code-block {
+      background: #060606;
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.75rem;
+      padding: 1rem 1.1rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: #e8e8e8;
+      white-space: pre;
+      overflow-x: auto;
+      max-height: 380px;
+    }
+    .code-block .tk-keyword { color: #c084fc; }
+    .code-block .tk-string  { color: #14F195; }
+    .code-block .tk-prop    { color: #6B82FF; }
+    .code-block .tk-comment { color: #64748b; font-style: italic; }
+    .code-block .tk-fn      { color: #f59e0b; }
+    .code-block .tk-num     { color: #FFB454; }
+
+    /* Lock badge */
+    .lock-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(20, 241, 149, 0.08);
+      border: 1px solid rgba(20, 241, 149, 0.32);
+      color: #14F195;
+      padding: 0.18rem 0.55rem;
+      border-radius: 9999px;
+      font-size: 0.62rem;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .lock-pill svg { width: 10px; height: 10px; }
+
+    .verify-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.9rem 1rem;
+      background: rgba(17, 17, 17, 0.55);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      border-radius: 0.7rem;
+    }
+    .verify-step .vs-mark {
+      flex-shrink: 0;
+      width: 22px; height: 22px;
+      border-radius: 9999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(79, 107, 255, 0.1);
+      color: rgba(148, 163, 184, 0.85);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 0.72rem;
+    }
+
+    .file-tab { font-size: 0.72rem; color: rgba(148, 163, 184, 0.8); padding: 0.45rem 0.85rem; border-radius: 0.5rem; cursor: pointer; font-family: 'JetBrains Mono', monospace; transition: all 0.2s; border: 1px solid transparent; }
+    .file-tab:hover { color: #fff; }
+    .file-tab[aria-selected="true"] { background: rgba(79, 107, 255, 0.14); border-color: rgba(79, 107, 255, 0.4); color: #fff; }
+
+    .copy-btn { transition: all 0.2s ease; }
+    .copy-btn.copied { background: rgba(20, 241, 149, 0.2); color: #14F195; border-color: rgba(20, 241, 149, 0.45); }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: rgba(17, 17, 17, 0.95);
+      border: 1px solid rgba(20, 241, 149, 0.4);
+      color: #FFFFFF; padding: 0.75rem 1.25rem;
+      border-radius: 9999px; font-size: 0.85rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      transition: transform 0.3s ease; z-index: 70;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Proof footer mini-cards */
+    .proof-pill {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 0.75rem; border-radius: 9999px;
+      font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+      background: rgba(79, 107, 255, 0.06);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      color: rgba(148, 163, 184, 0.9);
+    }
+    .proof-pill .dot { width: 6px; height: 6px; border-radius: 9999px; background: #14F195; box-shadow: 0 0 8px #14F195; }
+    .proof-pill.warn .dot { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+  </style>
+  <script src="/theme-toggle.js" defer></script>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.14;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 360px; height: 360px; top: 35%; right: 28%; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Back to home</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-32 pb-16 px-4 lg:px-12 relative z-10">
+    <div class="max-w-3xl mx-auto">
+
+      <!-- HEADER -->
+      <div class="text-center mb-8 animate-fade-up">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Plug &amp; play install &middot; under 5 minutes</span>
+        <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 tracking-tight">
+          From zero to <span class="gradient-text">first confirmed payment</span>
+        </h1>
+        <p class="text-muted text-base max-w-2xl mx-auto leading-relaxed">
+          Pick your stack, paste your payout addresses, copy three files. No account required.
+          <span class="text-white font-medium">Your keys stay on your server</span> &mdash; we just watch the chain and ping your webhook.
+        </p>
+        <div class="flex flex-wrap justify-center items-center gap-2 mt-5">
+          <span class="proof-pill"><span class="dot"></span> 100% open-source</span>
+          <span class="proof-pill"><span class="dot"></span> Non-custodial</span>
+          <span class="proof-pill warn"><span class="dot"></span> Audit in progress</span>
+          <a href="https://github.com/leandromaiam-code/zettapay" class="proof-pill hover:!border-royal hover:!text-white transition" target="_blank" rel="noopener">
+            View source on GitHub &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- PROGRESS BAR -->
+      <div class="mb-6">
+        <div class="progress-track"><div class="progress-bar" id="progress" style="width: 25%"></div></div>
+        <div class="grid grid-cols-4 gap-2 mt-3 text-center">
+          <div class="flex flex-col items-center gap-1.5">
+            <span class="step-dot active" data-step-dot="1">1</span>
+            <span class="step-label active" data-step-label="1">Stack</span>
+          </div>
+          <div class="flex flex-col items-center gap-1.5">
+            <span class="step-dot pending" data-step-dot="2">2</span>
+            <span class="step-label" data-step-label="2">Chains</span>
+          </div>
+          <div class="flex flex-col items-center gap-1.5">
+            <span class="step-dot pending" data-step-dot="3">3</span>
+            <span class="step-label" data-step-label="3">Code</span>
+          </div>
+          <div class="flex flex-col items-center gap-1.5">
+            <span class="step-dot pending" data-step-dot="4">4</span>
+            <span class="step-label" data-step-label="4">Verify</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- WIZARD CARD -->
+      <section class="glass-strong rounded-2xl p-6 md:p-9 animate-fade-up">
+
+        <!-- STEP 1: STACK -->
+        <div class="panel active" data-panel="1">
+          <div class="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-2xl font-bold mb-1">Where will you integrate?</h2>
+              <p class="text-sm text-muted">We&rsquo;ll generate code that&rsquo;s drop-in for your stack. You can change this later.</p>
+            </div>
+            <span class="lock-pill" title="Templates are open-source on GitHub">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V5a4 4 0 0 0-4-4Zm-2 7V5a2 2 0 1 1 4 0v3Z"/></svg>
+              Open source
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="stack-grid">
+            <button type="button" class="stack-tile" data-stack="nextjs">
+              <span class="stack-name">Next.js</span>
+              <span class="stack-meta">App Router &middot; TS</span>
+            </button>
+            <button type="button" class="stack-tile" data-stack="express">
+              <span class="stack-name">Express</span>
+              <span class="stack-meta">Node &middot; TS</span>
+            </button>
+            <button type="button" class="stack-tile" data-stack="django">
+              <span class="stack-name">Django</span>
+              <span class="stack-meta">Python 3.10+</span>
+            </button>
+            <button type="button" class="stack-tile" data-stack="laravel">
+              <span class="stack-name">Laravel</span>
+              <span class="stack-meta">PHP 8.2+</span>
+            </button>
+            <button type="button" class="stack-tile" data-stack="rust">
+              <span class="stack-name">Rust / Axum</span>
+              <span class="stack-meta">tokio runtime</span>
+            </button>
+            <button type="button" class="stack-tile" data-stack="other">
+              <span class="stack-name">Other</span>
+              <span class="stack-meta">curl &amp; envelope</span>
+            </button>
+          </div>
+
+          <div class="flex justify-end mt-7">
+            <button type="button" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 disabled:opacity-40" id="to-step-2" disabled>
+              Continue
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 2: CHAINS -->
+        <div class="panel" data-panel="2">
+          <div class="flex items-start justify-between gap-4 mb-6">
+            <div>
+              <h2 class="text-2xl font-bold mb-1">Which chains will you accept?</h2>
+              <p class="text-sm text-muted">Paste the payout address for each chain. <span class="text-white">These stay in your <code class="font-mono text-mint">.env</code> &mdash; we never see your keys.</span></p>
+            </div>
+            <span class="lock-pill">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V5a4 4 0 0 0-4-4Zm-2 7V5a2 2 0 1 1 4 0v3Z"/></svg>
+              Stays in your code
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <label class="chain-tile selected">
+              <input type="checkbox" data-chain="solana" checked />
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="font-semibold text-sm">Solana &middot; USDC</div>
+                    <div class="text-xs text-muted font-mono">sub-second settlement &middot; mint <span class="text-solana">EPjF...t1v</span></div>
+                  </div>
+                  <span class="text-[0.62rem] font-mono uppercase tracking-widest text-mint">Recommended</span>
+                </div>
+                <input type="text" class="chain-pubkey" data-pubkey="solana" placeholder="Your Solana payout address (base58, 32–44 chars)" />
+              </div>
+            </label>
+
+            <label class="chain-tile">
+              <input type="checkbox" data-chain="bitcoin" />
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="font-semibold text-sm">Bitcoin &middot; native</div>
+                    <div class="text-xs text-muted font-mono">on-chain BTC &middot; bech32 or legacy</div>
+                  </div>
+                </div>
+                <input type="text" class="chain-pubkey" data-pubkey="bitcoin" placeholder="Your BTC address (bc1... / 1... / 3...)" disabled />
+              </div>
+            </label>
+
+            <label class="chain-tile">
+              <input type="checkbox" data-chain="ethereum" />
+              <div class="flex-1">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="font-semibold text-sm">Ethereum &middot; Base &middot; Polygon</div>
+                    <div class="text-xs text-muted font-mono">USDC on EVM L2s</div>
+                  </div>
+                </div>
+                <input type="text" class="chain-pubkey" data-pubkey="ethereum" placeholder="Your EVM address (0x...)" disabled />
+              </div>
+            </label>
+          </div>
+
+          <div class="mt-5 text-xs text-muted leading-relaxed">
+            <strong class="text-white">How this works.</strong>
+            Customers send to <em>your</em> address from any wallet they own. We watch the chain, verify the on-chain transfer, and POST a signed webhook to your server.
+            ZettaPay never holds funds. <a class="text-royal-bright hover:underline" href="https://github.com/leandromaiam-code/zettapay/blob/main/docs/concepts/wallet-less.md" target="_blank" rel="noopener">Read the wallet-less spec &rarr;</a>
+          </div>
+
+          <div class="flex justify-between mt-7">
+            <button type="button" class="btn-ghost px-5 py-3 rounded-full font-semibold text-sm" data-prev="1">Back</button>
+            <button type="button" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2 disabled:opacity-40" id="to-step-3" disabled>
+              Generate my code
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: CODE -->
+        <div class="panel" data-panel="3">
+          <div class="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-2xl font-bold mb-1">Copy these <span id="file-count">3</span> files</h2>
+              <p class="text-sm text-muted">Drop them into your repo. Pubkeys are already filled in. Every line has a comment so you can read it before you trust it.</p>
+            </div>
+            <span class="lock-pill">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V5a4 4 0 0 0-4-4Zm-2 7V5a2 2 0 1 1 4 0v3Z"/></svg>
+              Self-hosted secrets
+            </span>
+          </div>
+
+          <div class="mb-3 text-xs text-muted">
+            <span class="font-mono text-mint">// We never custody. Funds flow directly to YOUR address.</span>
+          </div>
+
+          <!-- Install command -->
+          <div class="mb-5">
+            <div class="text-[0.7rem] font-mono uppercase tracking-widest text-muted mb-2">1 &middot; Install the SDK</div>
+            <div class="relative">
+              <pre class="code-block" id="install-cmd"></pre>
+              <button class="copy-btn absolute top-2 right-2 text-xs px-3 py-1.5 rounded-md border border-royal/40 bg-deep/60" data-copy-target="install-cmd">Copy</button>
+            </div>
+          </div>
+
+          <!-- File tabs -->
+          <div class="text-[0.7rem] font-mono uppercase tracking-widest text-muted mb-2">2 &middot; Drop these files in your repo</div>
+          <div class="flex flex-wrap gap-2 mb-3" id="file-tabs"></div>
+
+          <div class="relative">
+            <pre class="code-block" id="file-body"></pre>
+            <button class="copy-btn absolute top-2 right-2 text-xs px-3 py-1.5 rounded-md border border-royal/40 bg-deep/60" data-copy-target="file-body">Copy</button>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 mt-4 text-xs text-muted">
+            <button type="button" class="btn-ghost px-3 py-2 rounded-full font-semibold text-xs" id="copy-all">Copy all files</button>
+            <button type="button" class="btn-ghost px-3 py-2 rounded-full font-semibold text-xs" id="download-zip">Download as .txt bundle</button>
+            <a class="text-royal-bright hover:underline" id="view-source-link" href="https://github.com/leandromaiam-code/zettapay" target="_blank" rel="noopener">View these templates on GitHub &rarr;</a>
+          </div>
+
+          <div class="flex justify-between mt-7">
+            <button type="button" class="btn-ghost px-5 py-3 rounded-full font-semibold text-sm" data-prev="2">Back</button>
+            <button type="button" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2" id="to-step-4">
+              I&rsquo;ve added the files
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 4: VERIFY -->
+        <div class="panel" data-panel="4">
+          <div class="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <h2 class="text-2xl font-bold mb-1">Verify the install</h2>
+              <p class="text-sm text-muted">Five checks. None require an account. None send your keys anywhere.</p>
+            </div>
+            <span class="lock-pill">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 1a4 4 0 0 0-4 4v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2h-2V5a4 4 0 0 0-4-4Zm-2 7V5a2 2 0 1 1 4 0v3Z"/></svg>
+              Signed Ed25519
+            </span>
+          </div>
+
+          <!-- One-shot CLI command preview -->
+          <div class="mb-5">
+            <div class="text-[0.7rem] font-mono uppercase tracking-widest text-muted mb-2">CLI &middot; coming soon</div>
+            <div class="relative">
+              <pre class="code-block"><span class="tk-comment"># single command runs all 5 checks against your local server</span>
+<span class="tk-fn">npx</span> @zettapay/cli verify</pre>
+              <span class="absolute top-2 right-2 text-[0.62rem] font-mono uppercase tracking-widest text-amber bg-amber/10 border border-amber/40 px-2 py-1 rounded">Beta &middot; PR pending</span>
+            </div>
+          </div>
+
+          <div class="text-[0.7rem] font-mono uppercase tracking-widest text-muted mb-3">Manual checklist &middot; works today</div>
+
+          <div class="space-y-3">
+            <div class="verify-step"><span class="vs-mark">1</span><div class="flex-1 text-sm">
+              <div class="font-semibold mb-0.5">SDK installed</div>
+              <div class="text-xs text-muted">Run <code class="font-mono text-mint">npm ls @zettapay/sdk</code> (or your package manager equivalent) and confirm a version appears.</div>
+            </div></div>
+            <div class="verify-step"><span class="vs-mark">2</span><div class="flex-1 text-sm">
+              <div class="font-semibold mb-0.5">Env vars are set</div>
+              <div class="text-xs text-muted">In your dev shell: <code class="font-mono text-mint">echo $ZETTAPAY_WEBHOOK_SECRET</code> should print a hex string. If empty, restart your dev server after editing <code class="font-mono">.env</code>.</div>
+            </div></div>
+            <div class="verify-step"><span class="vs-mark">3</span><div class="flex-1 text-sm">
+              <div class="font-semibold mb-0.5">Pubkeys reach the chain listener</div>
+              <div class="text-xs text-muted">Curl our public listener:
+              <pre class="code-block mt-1"><span class="tk-fn">curl</span> https://zettapay.vercel.app/api/status</pre>
+              Status should return <code class="font-mono text-mint">ok</code> with the chains you selected listed under <code class="font-mono">enabled</code>.</div>
+            </div></div>
+            <div class="verify-step"><span class="vs-mark">4</span><div class="flex-1 text-sm">
+              <div class="font-semibold mb-0.5">Webhook endpoint reachable</div>
+              <div class="text-xs text-muted">From your dev shell run the sample POST shown in the generated handler comments. Your handler should log a 200 OK.</div>
+            </div></div>
+            <div class="verify-step"><span class="vs-mark">5</span><div class="flex-1 text-sm">
+              <div class="font-semibold mb-0.5">Signature verification works</div>
+              <div class="text-xs text-muted">Tamper one byte of the body and re-POST &mdash; your handler should reject with 401. That&rsquo;s Ed25519 doing its job. <span class="text-mint">Your webhook secret never leaves your server.</span></div>
+            </div></div>
+          </div>
+
+          <div class="mt-7 p-5 rounded-xl border border-mint/40 bg-mint/5">
+            <div class="flex items-start gap-3">
+              <span class="text-mint text-2xl leading-none">&#9733;</span>
+              <div>
+                <div class="font-semibold text-mint mb-1">You&rsquo;re live.</div>
+                <div class="text-sm text-muted">Send a test payment to your address from any wallet. The next confirmed transfer will POST to your webhook within seconds. Open the <a class="text-royal-bright hover:underline" href="/status">live status page</a> to watch listener uptime.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex justify-between mt-7">
+            <button type="button" class="btn-ghost px-5 py-3 rounded-full font-semibold text-sm" data-prev="3">Back</button>
+            <a href="/docs" class="btn-mint px-6 py-3 rounded-full font-semibold text-sm flex items-center gap-2">
+              Read the docs
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRUST FOOTER -->
+      <section class="mt-8 text-center text-xs text-muted leading-relaxed">
+        <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mb-3">
+          <span class="proof-pill warn"><span class="dot"></span> Audit pending &middot; <a class="hover:underline ml-1" href="https://github.com/leandromaiam-code/zettapay/issues" target="_blank" rel="noopener">tracking issue &rarr;</a></span>
+          <span class="proof-pill"><span class="dot"></span> Bug bounty &middot; coming via Immunefi</span>
+          <span class="proof-pill"><span class="dot"></span> Static analysis on every PR</span>
+        </div>
+        <div>
+          ZettaPay is <a class="text-royal-bright hover:underline" href="https://github.com/leandromaiam-code/zettapay" target="_blank" rel="noopener">100% open-source</a>.
+          Every endpoint, every signature, every line of code is on GitHub. We never custody &mdash; payments flow directly between your customer&rsquo;s wallet and your address.
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const state = {
+    step: 1,
+    stack: null,
+    chains: { solana: { on: true, key: '' }, bitcoin: { on: false, key: '' }, ethereum: { on: false, key: '' } },
+    activeFile: 0,
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  // ---------- code generators ----------
+  // We hand-write small per-stack templates so the user can read & trust them.
+  // Variables substituted: PLACEHOLDER strings for missing pubkeys.
+
+  function envFile() {
+    const sol = state.chains.solana.on ? (state.chains.solana.key || 'YOUR_SOLANA_PAYOUT_ADDRESS_HERE') : null;
+    const btc = state.chains.bitcoin.on ? (state.chains.bitcoin.key || 'YOUR_BTC_PAYOUT_ADDRESS_HERE') : null;
+    const eth = state.chains.ethereum.on ? (state.chains.ethereum.key || 'YOUR_EVM_PAYOUT_ADDRESS_HERE') : null;
+    const lines = [
+      '# .env.local — these values stay on YOUR server.',
+      '# ZettaPay never sees the webhook secret; it is generated locally on first run.',
+      'ZETTAPAY_API_BASE=https://zettapay.vercel.app',
+      'ZETTAPAY_WEBHOOK_SECRET=replace_with_32_byte_hex',
+    ];
+    if (sol) lines.push('ZETTAPAY_PAYOUT_SOLANA=' + sol);
+    if (btc) lines.push('ZETTAPAY_PAYOUT_BITCOIN=' + btc);
+    if (eth) lines.push('ZETTAPAY_PAYOUT_ETHEREUM=' + eth);
+    return lines.join('\n');
+  }
+
+  // tiny token highlighter — handles only the patterns we emit
+  function highlightTS(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(\/\/[^\n]*|#[^\n]*)/g, '<span class="tk-comment">$1</span>')
+      .replace(/&quot;([^&]*?)&quot;/g, '<span class="tk-string">"$1"</span>')
+      .replace(/&#39;([^&]*?)&#39;/g, '<span class="tk-string">\'$1\'</span>')
+      .replace(/\b(import|export|from|const|let|var|function|return|async|await|if|else|new|class|throw|try|catch|true|false|null)\b/g, '<span class="tk-keyword">$1</span>');
+  }
+  function highlightPy(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(#[^\n]*)/g, '<span class="tk-comment">$1</span>')
+      .replace(/&quot;([^&]*?)&quot;/g, '<span class="tk-string">"$1"</span>')
+      .replace(/&#39;([^&]*?)&#39;/g, '<span class="tk-string">\'$1\'</span>')
+      .replace(/\b(import|from|def|return|class|if|else|elif|None|True|False|raise|try|except)\b/g, '<span class="tk-keyword">$1</span>');
+  }
+  function highlightPHP(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(\/\/[^\n]*|#[^\n]*)/g, '<span class="tk-comment">$1</span>')
+      .replace(/&quot;([^&]*?)&quot;/g, '<span class="tk-string">"$1"</span>')
+      .replace(/&#39;([^&]*?)&#39;/g, '<span class="tk-string">\'$1\'</span>')
+      .replace(/\b(use|class|function|public|return|new|if|else|throw|true|false|null|Route|Request)\b/g, '<span class="tk-keyword">$1</span>');
+  }
+  function highlightRust(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(\/\/[^\n]*)/g, '<span class="tk-comment">$1</span>')
+      .replace(/&quot;([^&]*?)&quot;/g, '<span class="tk-string">"$1"</span>')
+      .replace(/\b(use|fn|async|let|mut|pub|struct|impl|match|if|else|return|true|false|Option|Result|Ok|Err)\b/g, '<span class="tk-keyword">$1</span>');
+  }
+  function highlightEnv(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(^#[^\n]*$)/gm, '<span class="tk-comment">$1</span>')
+      .replace(/^([A-Z_]+)=/gm, '<span class="tk-prop">$1</span>=');
+  }
+  function highlightShell(code) {
+    return code
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/(#[^\n]*)/g, '<span class="tk-comment">$1</span>')
+      .replace(/^(npm|pip|composer|cargo)\b/gm, '<span class="tk-fn">$1</span>');
+  }
+
+  function installCmd() {
+    switch (state.stack) {
+      case 'nextjs':
+      case 'express':
+      case 'other':
+        return '# install the SDK\nnpm install @zettapay/sdk';
+      case 'django':
+        return '# install the SDK\npip install zettapay';
+      case 'laravel':
+        return '# install the SDK\ncomposer require zettapay/laravel';
+      case 'rust':
+        return '# install the SDK\ncargo add zettapay';
+      default:
+        return '# pick a stack first';
+    }
+  }
+
+  function templatesFor(stack) {
+    const env = envFile();
+    const chains = Object.keys(state.chains).filter((c) => state.chains[c].on);
+    const chainsLine = chains.join(', ');
+
+    if (stack === 'nextjs') {
+      return [
+        { name: '.env.local', lang: 'env', body: env },
+        { name: 'lib/zettapay.ts', lang: 'ts', body:
+`// Single shared client. Import this anywhere on the server.
+// Reads your payout addresses from env — never from a database we control.
+import { ZettaPay } from '@zettapay/sdk';
+
+export const zp = new ZettaPay({
+  apiBase: process.env.ZETTAPAY_API_BASE!,
+  webhookSecret: process.env.ZETTAPAY_WEBHOOK_SECRET!,
+  // payout addresses live in YOUR env. We never custody.
+  payouts: {
+${chains.map((c) => `    ${c}: process.env.ZETTAPAY_PAYOUT_${c.toUpperCase()}!,`).join('\n')}
+  },
+});`,
+        },
+        { name: 'app/api/zp/webhook/route.ts', lang: 'ts', body:
+`// Webhook handler. Verifies Ed25519 signature with YOUR secret before
+// trusting the body. Tampered or replayed events are rejected.
+import { NextRequest, NextResponse } from 'next/server';
+import { zp } from '@/lib/zettapay';
+
+export async function POST(req: NextRequest) {
+  const raw = await req.text();
+  const sig = req.headers.get('x-zettapay-signature') ?? '';
+  const event = zp.verifyWebhook(raw, sig); // throws if signature invalid
+
+  // event.type: 'payment.confirmed' | 'payment.failed'
+  // event.data.amount / chain / tx_hash / merchant_id
+  // chains enabled: ${chainsLine}
+
+  if (event.type === 'payment.confirmed') {
+    // fulfill the order here — funds are already in your address.
+  }
+  return NextResponse.json({ ok: true });
+}` },
+      ];
+    }
+
+    if (stack === 'express') {
+      return [
+        { name: '.env', lang: 'env', body: env },
+        { name: 'src/zettapay.ts', lang: 'ts', body:
+`// Single shared client. Mount it from app.ts.
+import { ZettaPay } from '@zettapay/sdk';
+
+export const zp = new ZettaPay({
+  apiBase: process.env.ZETTAPAY_API_BASE!,
+  webhookSecret: process.env.ZETTAPAY_WEBHOOK_SECRET!,
+  payouts: {
+${chains.map((c) => `    ${c}: process.env.ZETTAPAY_PAYOUT_${c.toUpperCase()}!,`).join('\n')}
+  },
+});` },
+        { name: 'src/routes/webhook.ts', lang: 'ts', body:
+`// IMPORTANT: use express.raw() for this route so the raw body stays intact.
+// Signature verification needs the EXACT bytes that were signed.
+import { Router } from 'express';
+import express from 'express';
+import { zp } from '../zettapay';
+
+const router = Router();
+router.post('/api/zp/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.header('x-zettapay-signature') ?? '';
+  const event = zp.verifyWebhook(req.body.toString('utf8'), sig);
+  // chains enabled: ${chainsLine}
+
+  if (event.type === 'payment.confirmed') {
+    // fulfill the order here.
+  }
+  res.json({ ok: true });
+});
+
+export default router;` },
+      ];
+    }
+
+    if (stack === 'django') {
+      return [
+        { name: '.env', lang: 'env', body: env },
+        { name: 'payments/zettapay.py', lang: 'py', body:
+`# Single shared client. Import this anywhere.
+import os
+from zettapay import ZettaPay
+
+zp = ZettaPay(
+    api_base=os.environ["ZETTAPAY_API_BASE"],
+    webhook_secret=os.environ["ZETTAPAY_WEBHOOK_SECRET"],
+    payouts={
+${chains.map((c) => `        "${c}": os.environ["ZETTAPAY_PAYOUT_${c.toUpperCase()}"],`).join('\n')}
+    },
+)` },
+        { name: 'payments/views.py', lang: 'py', body:
+`# Webhook handler. CSRF-exempt — Ed25519 signature is your auth.
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from .zettapay import zp
+
+@csrf_exempt
+@require_POST
+def zp_webhook(request):
+    sig = request.headers.get("X-Zettapay-Signature", "")
+    try:
+        event = zp.verify_webhook(request.body, sig)  # raises on tamper
+    except Exception:
+        return HttpResponseBadRequest("invalid signature")
+    # chains enabled: ${chainsLine}
+    if event.type == "payment.confirmed":
+        pass  # fulfill the order here.
+    return JsonResponse({"ok": True})` },
+      ];
+    }
+
+    if (stack === 'laravel') {
+      return [
+        { name: '.env', lang: 'env', body: env },
+        { name: 'app/Services/ZettaPayService.php', lang: 'php', body:
+`<?php
+// Single shared client. Resolve from the container anywhere.
+namespace App\\Services;
+
+use ZettaPay\\Client;
+
+class ZettaPayService
+{
+    public Client $zp;
+
+    public function __construct()
+    {
+        $this->zp = new Client([
+            'api_base' => env('ZETTAPAY_API_BASE'),
+            'webhook_secret' => env('ZETTAPAY_WEBHOOK_SECRET'),
+            'payouts' => [
+${chains.map((c) => `                '${c}' => env('ZETTAPAY_PAYOUT_${c.toUpperCase()}'),`).join('\n')}
+            ],
+        ]);
+    }
+}` },
+        { name: 'routes/web.php (snippet)', lang: 'php', body:
+`<?php
+// Webhook route — exclude from CSRF in App\\Http\\Middleware\\VerifyCsrfToken.
+use Illuminate\\Http\\Request;
+use App\\Services\\ZettaPayService;
+
+Route::post('/api/zp/webhook', function (Request $request, ZettaPayService $svc) {
+    $event = $svc->zp->verifyWebhook(
+        $request->getContent(),
+        $request->header('X-Zettapay-Signature', '')
+    );
+    // chains enabled: ${chainsLine}
+    if ($event->type === 'payment.confirmed') {
+        // fulfill the order here.
+    }
+    return response()->json(['ok' => true]);
+});` },
+      ];
+    }
+
+    if (stack === 'rust') {
+      return [
+        { name: '.env', lang: 'env', body: env },
+        { name: 'src/zettapay.rs', lang: 'rust', body:
+`// Single shared client. Stash in app state.
+use zettapay::{Client, ClientConfig};
+
+pub fn client() -> Client {
+    Client::new(ClientConfig {
+        api_base: std::env::var("ZETTAPAY_API_BASE").unwrap(),
+        webhook_secret: std::env::var("ZETTAPAY_WEBHOOK_SECRET").unwrap(),
+        payouts: vec![
+${chains.map((c) => `            ("${c}".into(), std::env::var("ZETTAPAY_PAYOUT_${c.toUpperCase()}").unwrap()),`).join('\n')}
+        ].into_iter().collect(),
+    })
+}` },
+        { name: 'src/routes/webhook.rs', lang: 'rust', body:
+`// Axum handler. Reads the raw body — required for Ed25519 verify.
+use axum::{extract::State, http::HeaderMap, Json};
+use crate::zettapay::client;
+
+pub async fn webhook(headers: HeaderMap, body: String) -> Json<serde_json::Value> {
+    let sig = headers.get("x-zettapay-signature").and_then(|v| v.to_str().ok()).unwrap_or("");
+    let event = client().verify_webhook(&body, sig).expect("invalid signature");
+    // chains enabled: ${chainsLine}
+    if event.event_type == "payment.confirmed" {
+        // fulfill the order here.
+    }
+    Json(serde_json::json!({ "ok": true }))
+}` },
+      ];
+    }
+
+    // "other" — minimal envelope: env + a single curl script
+    return [
+      { name: '.env', lang: 'env', body: env },
+      { name: 'verify-webhook.sh', lang: 'sh', body:
+`#!/usr/bin/env bash
+# Reproduce signature verification with stdlib openssl.
+# Whatever language you use, the contract is the same:
+#   sign = ed25519(secret, raw_body); compare to X-Zettapay-Signature header.
+set -euo pipefail
+SECRET="\${ZETTAPAY_WEBHOOK_SECRET:?missing}"
+BODY="\$(cat)"
+SIG_HEADER="\${1:-}"
+# Implement Ed25519 verify in your language of choice — see:
+#   https://github.com/leandromaiam-code/zettapay/blob/main/docs/webhook-signatures.md
+echo "received body length: \${#BODY}"
+echo "signature header: \$SIG_HEADER"
+# chains enabled: ${chainsLine}` },
+    ];
+  }
+
+  function highlight(lang, code) {
+    switch (lang) {
+      case 'ts': return highlightTS(code);
+      case 'py': return highlightPy(code);
+      case 'php': return highlightPHP(code);
+      case 'rust': return highlightRust(code);
+      case 'env': return highlightEnv(code);
+      case 'sh': return highlightShell(code);
+      default: return code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+  }
+
+  // ---------- DOM wiring ----------
+  function setStep(n) {
+    state.step = n;
+    $$('.panel').forEach((p) => p.classList.remove('active'));
+    $(`.panel[data-panel="${n}"]`).classList.add('active');
+    $('#progress').style.width = (25 * n) + '%';
+    [1, 2, 3, 4].forEach((i) => {
+      const dot = document.querySelector(`[data-step-dot="${i}"]`);
+      const lbl = document.querySelector(`[data-step-label="${i}"]`);
+      dot.classList.remove('active', 'done', 'pending');
+      lbl.classList.remove('active', 'done');
+      if (i < n) { dot.classList.add('done'); lbl.classList.add('done'); dot.textContent = '\u2713'; }
+      else if (i === n) { dot.classList.add('active'); lbl.classList.add('active'); dot.textContent = String(i); }
+      else { dot.classList.add('pending'); dot.textContent = String(i); }
+    });
+    if (n === 3) renderCode();
+  }
+
+  function pickStack(stack) {
+    state.stack = stack;
+    $$('.stack-tile').forEach((b) => b.classList.toggle('selected', b.dataset.stack === stack));
+    $('#to-step-2').disabled = false;
+  }
+
+  function toggleChain(name, on) {
+    state.chains[name].on = on;
+    const tile = document.querySelector(`[data-chain="${name}"]`).closest('.chain-tile');
+    tile.classList.toggle('selected', on);
+    const input = document.querySelector(`[data-pubkey="${name}"]`);
+    input.disabled = !on;
+    if (!on) input.value = '';
+    revalidateChains();
+  }
+
+  function revalidateChains() {
+    const enabled = Object.keys(state.chains).filter((c) => state.chains[c].on);
+    const allHaveKeys = enabled.length > 0 && enabled.every((c) => state.chains[c].key.trim().length > 0);
+    $('#to-step-3').disabled = !allHaveKeys;
+  }
+
+  function renderCode() {
+    const files = templatesFor(state.stack || 'nextjs');
+    $('#file-count').textContent = String(files.length);
+    $('#install-cmd').innerHTML = highlightShell(installCmd());
+    const tabsRoot = $('#file-tabs');
+    tabsRoot.innerHTML = '';
+    files.forEach((f, i) => {
+      const t = document.createElement('button');
+      t.type = 'button';
+      t.className = 'file-tab';
+      t.textContent = f.name;
+      t.setAttribute('aria-selected', String(i === state.activeFile));
+      t.addEventListener('click', () => { state.activeFile = i; renderCode(); });
+      tabsRoot.appendChild(t);
+    });
+    const active = files[state.activeFile] || files[0];
+    $('#file-body').innerHTML = highlight(active.lang, active.body);
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } finally { ta.remove(); }
+    return Promise.resolve();
+  }
+  function showToast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  }
+
+  // event wiring
+  $$('.stack-tile').forEach((b) => b.addEventListener('click', () => pickStack(b.dataset.stack)));
+  $$('[data-chain]').forEach((cb) => cb.addEventListener('change', (e) => toggleChain(cb.dataset.chain, e.target.checked)));
+  $$('[data-pubkey]').forEach((input) => input.addEventListener('input', (e) => {
+    const name = input.dataset.pubkey;
+    state.chains[name].key = e.target.value.trim();
+    revalidateChains();
+  }));
+  $('#to-step-2').addEventListener('click', () => setStep(2));
+  $('#to-step-3').addEventListener('click', () => { state.activeFile = 0; setStep(3); });
+  $('#to-step-4').addEventListener('click', () => setStep(4));
+  $$('[data-prev]').forEach((b) => b.addEventListener('click', () => setStep(parseInt(b.dataset.prev, 10))));
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-copy-target]');
+    if (!btn) return;
+    const target = document.getElementById(btn.dataset.copyTarget);
+    if (!target) return;
+    copyText(target.textContent).then(() => {
+      btn.classList.add('copied');
+      const orig = btn.textContent; btn.textContent = 'Copied';
+      showToast('Copied to clipboard');
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 1500);
+    });
+  });
+
+  $('#copy-all').addEventListener('click', () => {
+    const files = templatesFor(state.stack || 'nextjs');
+    const joined = files.map((f) => `\n// ===== ${f.name} =====\n${f.body}`).join('\n');
+    copyText(joined.trim()).then(() => showToast('All files copied'));
+  });
+
+  $('#download-zip').addEventListener('click', () => {
+    const files = templatesFor(state.stack || 'nextjs');
+    const text = files.map((f) => `// ===== ${f.name} =====\n${f.body}\n`).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zettapay-${state.stack || 'nextjs'}-install.txt`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('Bundle downloaded');
+  });
+
+  // initial render so the user sees something even before they pick a stack
+  renderCode();
+})();
+</script>
+</body>
+</html>
