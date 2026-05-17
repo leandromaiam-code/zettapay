@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay — crypto payment protocol for AI agents and humans. USDC on Solana plus Bitcoin and Ethereum. 0.30% fees, <2s on Solana, x402 + MCP native, no wallet connect." />
-  <meta property="og:title" content="ZettaPay — The payment protocol AI agents were waiting for" />
-  <meta property="og:description" content="Crypto payments built for AI agents. USDC on Solana (instant) + Bitcoin + Ethereum. 0.30% fees, x402 + MCP native. 10x cheaper than legacy processors." />
-  <title>ZettaPay — Crypto payments for AI agents</title>
+  <meta name="description" content="ZettaPay — P2P crypto payment protocol that confirms itself. Non-custodial, zero protocol fees. Multi-chain: Bitcoin, Ethereum, USDC on Solana. x402 + MCP native — we watch the chain so your backend doesn't have to." />
+  <meta property="og:title" content="ZettaPay — Crypto payments that confirm themselves" />
+  <meta property="og:description" content="P2P protocol. Zero custody. Zero protocol fees. Paste your pubkey — ZettaPay watches the chain and fires a webhook the moment payment confirms. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
+  <title>ZettaPay — Crypto payments that confirm themselves</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -240,8 +240,8 @@
       </div>
       <div class="flex items-center gap-3">
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
-        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
-        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Sign up</a>
+        <a href="/status" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Logs</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get your pubkey</a>
       </div>
     </div>
   </nav>
@@ -262,44 +262,44 @@
         </a>
 
         <h1 class="text-5xl md:text-7xl lg:text-8xl leading-[1.05] font-bold mb-8 animate-fade-up tracking-tight" style="animation-delay: 0.1s; animation-fill-mode: both;">
-          The <span class="gradient-text">payment protocol</span><br/>
-          AI agents were <span class="gradient-text">waiting for</span>
+          Crypto payments that<br/>
+          <span class="gradient-text">confirm themselves</span>
         </h1>
 
         <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-12 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
-          Crypto payments built for AI agents. <span class="text-white font-semibold">USDC on Solana</span> &middot;
-          <span class="text-white font-semibold">Bitcoin</span> &middot; <span class="text-white font-semibold">Ethereum</span>.
-          <span class="text-white font-semibold">0.30% fees</span>, <span class="text-white font-semibold">&lt;2s on Solana</span>, x402 + MCP native.
-          Pay from any wallet &mdash; <span class="text-white font-semibold">no connect required</span>.
-          <span class="text-royal-bright font-semibold">10&times; cheaper than legacy processors.</span>
+          <span class="text-white font-semibold">P2P protocol. Zero custody. Zero protocol fees.</span>
+          We watch the chain so your backend doesn&rsquo;t have to.
+          Paste your pubkey, ship the checkout, and a verified webhook fires the moment your customer&rsquo;s tx confirms.
+          <span class="text-white font-semibold">Bitcoin</span> &middot; <span class="text-white font-semibold">Ethereum</span> &middot; <span class="text-white font-semibold">USDC on Solana</span>.
+          <span class="text-royal-bright font-semibold">x402 + MCP native &mdash; built for AI agents.</span>
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-up" style="animation-delay: 0.3s; animation-fill-mode: both;">
-          <a href="#demo" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-            Try Demo
+          <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
+            Get your merchant pubkey free
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
           </a>
-          <a href="#code" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">View Code</a>
+          <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>
           <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white text-sm font-mono mt-2 sm:mt-0 sm:ml-4 transition">&#9733; Star on GitHub</a>
         </div>
 
         <!-- Stats bar -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto pt-12 border-t border-royal/10 animate-fade-up" style="animation-delay: 0.4s; animation-fill-mode: both;">
           <div class="text-center">
-            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="0.30" data-suffix="%">0.30%</div>
-            <div class="text-xs uppercase tracking-widest text-muted mt-2">Transaction fee</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">0</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Protocol fee</div>
           </div>
           <div class="text-center">
             <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="2" data-suffix="s">&lt;2s</div>
-            <div class="text-xs uppercase tracking-widest text-muted mt-2">Settlement</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Solana confirm</div>
           </div>
           <div class="text-center">
-            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="65000" data-suffix="">65k</div>
-            <div class="text-xs uppercase tracking-widest text-muted mt-2">Solana TPS</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">3</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Chains supported</div>
           </div>
           <div class="text-center">
-            <div class="text-4xl md:text-5xl font-bold gradient-text">10&times;</div>
-            <div class="text-xs uppercase tracking-widest text-muted mt-2">Cheaper than legacy</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">0</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Custody, ever</div>
           </div>
         </div>
       </div>
@@ -316,13 +316,61 @@
     </div>
   </section>
 
-  <!-- THREE PERSONAS -->
+  <!-- HOW CONFIRMATION WORKS -->
   <section id="how" class="py-28 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">How confirmation works</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Peer-to-peer payments. <span class="gradient-text">Verified for you.</span></h2>
+        <p class="text-muted text-lg leading-relaxed">
+          The hard problem in crypto checkout isn&rsquo;t taking the payment &mdash; it&rsquo;s knowing it landed.
+          ZettaPay listens to the chain and resolves &ldquo;did they pay?&rdquo; without ever holding a single satoshi.
+        </p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6 mb-24">
+        <div class="glass rounded-2xl p-8 reveal">
+          <div class="flex items-center gap-4 mb-5">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-sm text-mint">01</div>
+            <span class="text-xs font-mono text-mint uppercase tracking-widest">Customer pays</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Direct to your pubkey</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            The customer sends the on-chain transaction <span class="text-white">straight from their wallet</span> to your merchant address &mdash; Bitcoin, Ethereum, or USDC on Solana.
+            ZettaPay never touches the funds. The chain itself is the settlement layer.
+          </p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.08s;">
+          <div class="flex items-center gap-4 mb-5">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-royal/30 to-royal/10 flex items-center justify-center font-mono text-sm text-royal-bright">02</div>
+            <span class="text-xs font-mono text-royal-bright uppercase tracking-widest">Listener tracks</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">We watch the chain 24/7</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Our chain listener follows every relevant block and confirms the deposit on the network you chose:
+            <span class="text-white">&lt;2s on Solana</span>, finality on Ethereum L2s, ~10 minutes on Bitcoin.
+            No middleman, no custodial holding pattern &mdash; just verified on-chain truth.
+          </p>
+        </div>
+
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.16s;">
+          <div class="flex items-center gap-4 mb-5">
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center font-mono text-sm text-solana">03</div>
+            <span class="text-xs font-mono text-solana uppercase tracking-widest">Webhook fires</span>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Stripe-grade events</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Your endpoint receives a <span class="text-white">signed webhook</span> with verified amount, currency, chain, and tx hash.
+            Retries, idempotency keys, HMAC signatures &mdash; everything your backend already expects from a payment processor.
+          </p>
+        </div>
+      </div>
+
       <div class="text-center max-w-3xl mx-auto mb-20 reveal">
-        <span class="text-xs font-mono text-mint uppercase tracking-widest">How it works</span>
-        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Built for <span class="gradient-text">three</span> kinds of payers</h2>
-        <p class="text-muted text-lg leading-relaxed">One protocol. Three integrations. Whether your customer is human, autonomous, or programmatic &mdash; ZettaPay just works.</p>
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Who pays</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">One protocol, <span class="gradient-text">three kinds of payers</span></h2>
+        <p class="text-muted text-lg leading-relaxed">Whether your customer is human, autonomous, or programmatic &mdash; ZettaPay confirms it the same way.</p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-6">
@@ -364,7 +412,7 @@ POST /pay
             <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
           </div>
           <h3 class="text-2xl font-bold mb-3 text-solana">Merchants</h3>
-          <p class="text-muted mb-6 leading-relaxed text-sm">Drop-in SDK. Production-grade webhooks with HMAC signing. Three-line integration. Accept payments in minutes.</p>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Just paste your pubkey. No wallet connect, no custody, no protocol fee. Drop-in SDK with HMAC-signed webhooks &mdash; three lines to accept payments on three chains.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 
 <span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>(apiKey);
@@ -397,15 +445,19 @@ POST /pay
                 <span class="font-mono text-white">10.00 USDC</span>
               </div>
               <div class="flex justify-between text-sm">
-                <span class="text-muted">ZettaPay fee (0.30%)</span>
-                <span class="font-mono text-white">0.030 USDC</span>
+                <span class="text-muted">Protocol fee</span>
+                <span class="font-mono text-mint">0 USDC</span>
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-muted">Network</span>
                 <span class="font-mono text-mint">Solana Devnet</span>
               </div>
+              <div class="flex justify-between text-sm">
+                <span class="text-muted">Network gas (payer)</span>
+                <span class="font-mono text-white">~0.000005 SOL</span>
+              </div>
               <div class="flex justify-between text-sm pt-3 border-t border-royal/10">
-                <span class="text-muted">Settlement</span>
+                <span class="text-muted">Confirmed in</span>
                 <span class="font-mono text-mint">~1.4s</span>
               </div>
             </div>
@@ -427,55 +479,105 @@ POST /pay
     </div>
   </section>
 
-  <!-- PRICING COMPARISON -->
-  <section id="pricing" class="py-28 px-4 lg:px-12">
-    <div class="max-w-6xl mx-auto">
-      <div class="text-center max-w-3xl mx-auto mb-20 reveal">
-        <span class="text-xs font-mono text-mint uppercase tracking-widest">Pricing</span>
-        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6"><span class="gradient-text">ZettaPay vs Legacy Processors</span></h2>
-        <p class="text-muted text-lg">Built for the AI agent economy. Where every micro-transaction matters.</p>
+  <!-- FEATURES -->
+  <section id="features" class="py-28 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">What you get</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">A protocol, not a <span class="gradient-text">processor</span></h2>
+        <p class="text-muted text-lg leading-relaxed">
+          Six properties that legacy rails can&rsquo;t match because they fundamentally can&rsquo;t be non-custodial peer-to-peer infrastructure.
+        </p>
       </div>
 
-      <div class="grid md:grid-cols-2 gap-6">
-        <!-- Legacy -->
-        <div class="glass rounded-3xl p-10 opacity-60 reveal">
-          <div class="flex items-center justify-between mb-8">
-            <span class="text-2xl font-bold text-muted/60">Legacy Processors</span>
-            <span class="text-xs uppercase tracking-widest text-muted/40 font-mono">Traditional rails</span>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Non-custodial -->
+        <div class="glass rounded-2xl p-8 reveal">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
-          <div class="text-7xl font-bold text-muted/40 mb-2">2.9%</div>
-          <div class="text-muted/40 mb-8 font-mono">+ $0.30 per transaction</div>
-          <ul class="space-y-3 text-sm text-muted/60">
-            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> 2-3 day ACH settlement</li>
-            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> No native AI agent support</li>
-            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> No MCP integration</li>
-            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> Chargebacks &amp; disputes</li>
-            <li class="flex gap-3"><span class="text-red-400/60">&#10007;</span> KYC required for all flows</li>
-          </ul>
-          <div class="mt-10 pt-6 border-t border-white/5">
-            <div class="text-xs uppercase tracking-widest text-muted/40 mb-2">$1,000 transaction cost</div>
-            <div class="text-3xl font-bold text-muted/40">$29.30</div>
-          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Non-custodial by design</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            ZettaPay never touches the money. Funds move <span class="text-white">directly payer&rarr;merchant</span> on-chain, peer-to-peer.
+            We can&rsquo;t freeze, claw back, or lose your USDC because we never had it. Not a money-services business.
+          </p>
         </div>
 
-        <!-- ZettaPay -->
-        <div class="gradient-border rounded-3xl p-10 reveal" style="transition-delay: 0.1s;">
-          <div class="flex items-center justify-between mb-8">
-            <span class="text-2xl font-bold gradient-text">ZettaPay</span>
-            <span class="text-xs uppercase tracking-widest text-mint font-mono">Built for AI</span>
+        <!-- Multi-chain -->
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.05s;">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-royal/30 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
           </div>
-          <div class="text-7xl font-bold gradient-text mb-2">0.30%</div>
-          <div class="text-muted mb-8 font-mono">+ $0.00 per transaction</div>
-          <ul class="space-y-3 text-sm text-white/80">
-            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Sub-2s Solana settlement</li>
-            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Native x402 + MCP support</li>
-            <li class="flex gap-3"><span class="text-mint">&#10003;</span> AI agents pay autonomously</li>
-            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Cryptographic finality</li>
-            <li class="flex gap-3"><span class="text-mint">&#10003;</span> Open spec, open SDK</li>
-          </ul>
-          <div class="mt-10 pt-6 border-t border-royal/20">
-            <div class="text-xs uppercase tracking-widest text-mint mb-2">$1,000 transaction cost</div>
-            <div class="text-3xl font-bold gradient-text">$3.00</div>
+          <h3 class="text-xl font-bold mb-3 text-white">Multi-chain, one webhook</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Accept <span class="text-white">Bitcoin</span>, <span class="text-white">Ethereum</span> (Base + Polygon), and <span class="text-white">USDC on Solana</span> through a single API.
+            &lt;2s on Solana, finality on EVM L2s, ~10 minutes on Bitcoin. Your code stays the same.
+          </p>
+        </div>
+
+        <!-- Auto-confirmation -->
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.1s;">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Auto-confirmation listener</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            The differentiator: ZettaPay <span class="text-white">tracks every relevant block</span> and resolves &ldquo;did the customer actually pay?&rdquo; for you.
+            Conceptually the same primitive as a Stripe webhook &mdash; but peer-to-peer, on-chain, verifiable.
+          </p>
+        </div>
+
+        <!-- Wallet-less merchant -->
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.15s;">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Wallet-less for merchants</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            <span class="text-white">Paste your pubkey. We watch the chain.</span> No wallet connect, no extension, no browser modal.
+            Sign up in a single input box and your checkout works on any device, any browser, any wallet your customers already use.
+          </p>
+        </div>
+
+        <!-- x402 + MCP -->
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.2s;">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-royal/30 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">x402 + MCP native</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Built for the agent economy. AI agents pay autonomously via the <span class="text-white">x402 header spec</span>,
+            and ZettaPay confirms the on-chain receipt automatically through a first-class <span class="text-white">MCP server</span>. No middleman, no custodied wallet.
+          </p>
+        </div>
+
+        <!-- Open-source -->
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.25s;">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          </div>
+          <h3 class="text-xl font-bold mb-3 text-white">Open protocol, verifiable</h3>
+          <p class="text-muted text-sm leading-relaxed">
+            Protocol spec and SDKs are <span class="text-white">MIT-licensed</span> on GitHub. Read the listener code,
+            audit the webhook signing, run a fork. No lock-in, no proprietary rails &mdash; just open infrastructure.
+          </p>
+        </div>
+      </div>
+
+      <!-- Pricing card -->
+      <div class="gradient-border rounded-3xl p-10 mt-12 max-w-4xl mx-auto reveal" style="transition-delay: 0.3s;">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-8">
+          <div>
+            <span class="text-xs font-mono text-mint uppercase tracking-widest">Pricing</span>
+            <h3 class="text-3xl md:text-4xl font-bold mt-3 mb-2 text-white">Free protocol.</h3>
+            <p class="text-muted text-base leading-relaxed max-w-md">
+              No subscription. No per-transaction take. You pay only network gas &mdash; the same amount any wallet transaction would cost.
+              Zero protocol fee because we are infrastructure, not a middleman.
+            </p>
+          </div>
+          <div class="text-right shrink-0">
+            <div class="text-6xl md:text-7xl font-bold gradient-text leading-none">$0</div>
+            <div class="text-xs uppercase tracking-widest text-mint font-mono mt-2">Protocol fee, forever</div>
           </div>
         </div>
       </div>
@@ -623,14 +725,14 @@ POST /pay
   <!-- FOOTER CTA -->
   <section class="py-28 px-4 lg:px-12">
     <div class="max-w-4xl mx-auto text-center reveal">
-      <h2 class="text-4xl md:text-7xl font-bold mb-6">Ready to <span class="gradient-text">ship</span>?</h2>
-      <p class="text-muted text-lg md:text-xl mb-10">Built in 24 hours. Open source. Multicoin. AI-first.</p>
+      <h2 class="text-4xl md:text-7xl font-bold mb-6">Paste your pubkey.<br/><span class="gradient-text">We&rsquo;ll watch the chain.</span></h2>
+      <p class="text-muted text-lg md:text-xl mb-10">Open protocol. Non-custodial. Multi-chain. AI-native.</p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="https://github.com/leandromaiam-code/zettapay" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          Star on GitHub
+        <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
+          Get your merchant pubkey free
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </a>
-        <a href="/docs/api" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the API</a>
+        <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>
       </div>
       <div class="flex items-center justify-center gap-6 mt-12 text-xs font-mono text-muted/40 uppercase tracking-widest">
         <a href="/healthz" class="hover:text-white transition">Status</a>
@@ -652,7 +754,7 @@ POST /pay
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7 rounded-md" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed max-w-xs">Solana USDC payment protocol for AI agents and humans. Wallet-less, custody-less, 0.30% per transaction.</p>
+        <p class="text-xs text-muted leading-relaxed max-w-xs">Peer-to-peer crypto payment protocol for AI agents and humans. Non-custodial, wallet-less, zero protocol fee. Bitcoin &middot; Ethereum &middot; USDC on Solana.</p>
         <div class="flex items-center gap-3 mt-4">
           <a href="https://github.com/leandromaiam-code/zettapay" aria-label="GitHub" class="text-muted hover:text-white transition">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
@@ -664,8 +766,7 @@ POST /pay
         <ul class="space-y-2 text-sm">
           <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
           <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
-          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
-          <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
+          <li><a href="/status" class="text-muted hover:text-white transition">Status &amp; logs</a></li>
           <li><a href="/launch" class="text-muted hover:text-white transition">Mainnet beta</a></li>
         </ul>
       </div>
@@ -720,11 +821,11 @@ POST /pay
           { t: 600,  msg: '<span class="text-muted">-> Signing with merchant ATA...</span>' },
           { t: 1100, msg: '<span class="text-muted">-> Submitting to RPC (devnet)...</span>' },
           { t: 1500, msg: '<span class="text-mint">-> Tx signature: 4xK9...mP2L</span>' },
-          { t: 1800, msg: '<span class="text-mint">-> Confirmed in 1.42s</span>' },
-          { t: 2100, msg: '<span class="text-muted">-> Webhook dispatched to merchant URL</span>' },
-          { t: 2400, msg: '<span class="text-muted">-> Settlement: 10.00 USDC delivered</span>' },
-          { t: 2700, msg: '<span class="text-royal-bright">-> Fee: 0.030 USDC (0.30%)</span>' },
-          { t: 3100, msg: '\n<span class="text-mint font-bold">&#10003; PAYMENT COMPLETE</span>' },
+          { t: 1800, msg: '<span class="text-mint">-> Listener detected tx on-chain (slot 271843112)</span>' },
+          { t: 2100, msg: '<span class="text-mint">-> Confirmed in 1.42s</span>' },
+          { t: 2400, msg: '<span class="text-muted">-> Verified: 10.00 USDC payer&rarr;merchant (direct)</span>' },
+          { t: 2700, msg: '<span class="text-muted">-> Webhook dispatched (HMAC-signed) to merchant URL</span>' },
+          { t: 3100, msg: '\n<span class="text-mint font-bold">&#10003; PAYMENT COMPLETE &middot; ZERO PROTOCOL FEE</span>' },
           { t: 3300, msg: '<span class="text-muted text-[10px]">    View on Solana Explorer -></span>' },
         ];
         demoOut.innerHTML = '';
