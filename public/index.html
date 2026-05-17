@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay — P2P crypto payment protocol that confirms itself. Non-custodial, zero protocol fees. Multi-chain: Bitcoin, Ethereum, USDC on Solana. x402 + MCP native — we watch the chain so your backend doesn't have to." />
+  <meta name="description" content="ZettaPay — P2P crypto payment protocol that confirms itself. Non-custodial, zero protocol fees. Install in 30 seconds — your pubkey stays in your code, we just watch the chain and ping your webhook. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
   <meta property="og:title" content="ZettaPay — Crypto payments that confirm themselves" />
-  <meta property="og:description" content="P2P protocol. Zero custody. Zero protocol fees. Paste your pubkey — ZettaPay watches the chain and fires a webhook the moment payment confirms. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
+  <meta property="og:description" content="P2P protocol. Install in 30 seconds. Your pubkey stays in your code — we just watch the chain and ping your webhook. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
   <title>ZettaPay — Crypto payments that confirm themselves</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -241,7 +241,7 @@
       <div class="flex items-center gap-3">
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
         <a href="/status" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Logs</a>
-        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get your pubkey</a>
+        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get your API key</a>
       </div>
     </div>
   </nav>
@@ -267,16 +267,15 @@
         </h1>
 
         <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-12 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
-          <span class="text-white font-semibold">P2P protocol. Zero custody. Zero protocol fees.</span>
-          We watch the chain so your backend doesn&rsquo;t have to.
-          Paste your pubkey, ship the checkout, and a verified webhook fires the moment your customer&rsquo;s tx confirms.
+          <span class="text-white font-semibold">P2P protocol. Install in 30 seconds.</span>
+          Your pubkey stays in your code &mdash; we just watch the chain and ping your webhook the moment a payment confirms.
           <span class="text-white font-semibold">Bitcoin</span> &middot; <span class="text-white font-semibold">Ethereum</span> &middot; <span class="text-white font-semibold">USDC on Solana</span>.
           <span class="text-royal-bright font-semibold">x402 + MCP native &mdash; built for AI agents.</span>
         </p>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-up" style="animation-delay: 0.3s; animation-fill-mode: both;">
           <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-            Get your merchant pubkey free
+            Get your API key &middot; free
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
           </a>
           <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>
@@ -412,13 +411,14 @@ POST /pay
             <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
           </div>
           <h3 class="text-2xl font-bold mb-3 text-solana">Merchants</h3>
-          <p class="text-muted mb-6 leading-relaxed text-sm">Just paste your pubkey. No wallet connect, no custody, no protocol fee. Drop-in SDK with HMAC-signed webhooks &mdash; three lines to accept payments on three chains.</p>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Install the SDK. Your pubkey lives in your env vars &mdash; never on our servers. No wallet connect, no custody, no protocol fee. Three lines to accept payments on three chains.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 
-<span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>(apiKey);
-<span class="code-keyword">await</span> zp.merchants.<span class="code-fn">register</span>({
-  name: <span class="code-string">"My Store"</span>
-});</code></pre>
+<span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>({
+  apiKey: process.env.<span class="code-fn">ZETTAPAY_API_KEY</span>,
+  pubkeys: { sol: process.env.<span class="code-fn">MERCHANT_SOL_PUBKEY</span> },
+});
+<span class="code-keyword">await</span> zp.<span class="code-fn">register</span>();</code></pre>
         </div>
       </div>
     </div>
@@ -532,10 +532,10 @@ POST /pay
           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-5">
             <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
-          <h3 class="text-xl font-bold mb-3 text-white">Wallet-less for merchants</h3>
+          <h3 class="text-xl font-bold mb-3 text-white">Wallet-less, dev-native</h3>
           <p class="text-muted text-sm leading-relaxed">
-            <span class="text-white">Paste your pubkey. We watch the chain.</span> No wallet connect, no extension, no browser modal.
-            Sign up in a single input box and your checkout works on any device, any browser, any wallet your customers already use.
+            <span class="text-white">Your pubkey lives in your code, in env vars you control.</span> No wallet connect, no extension, no browser modal.
+            Rotate keys without logging into our site; multi-environment (dev / staging / prod) is just different env files.
           </p>
         </div>
 
@@ -673,19 +673,19 @@ POST /pay
     </div>
   </section>
 
-  <!-- SDK 3-LINE INSTALL -->
+  <!-- HOW INSTALL WORKS -->
   <section id="code" class="py-28 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-20 reveal" id="docs">
-        <span class="text-xs font-mono text-mint uppercase tracking-widest">SDK</span>
-        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Three lines. <span class="gradient-text">One payment.</span></h2>
-        <p class="text-muted text-lg">TypeScript SDK with full type safety. npm install and ship.</p>
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">How install works</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Three steps. <span class="gradient-text">Pubkey in your code.</span></h2>
+        <p class="text-muted text-lg">Install the SDK, configure your wallet addresses in env vars, register once. We watch the chain from there.</p>
       </div>
 
       <div class="grid md:grid-cols-2 gap-6">
         <div class="glass rounded-2xl p-8 reveal">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div class="text-xs font-mono text-mint uppercase tracking-widest">1. Install</div>
+            <div class="text-xs font-mono text-mint uppercase tracking-widest">1. Install the SDK</div>
             <div class="install-tabs flex flex-wrap gap-1 p-1 rounded-full bg-royal/5 border border-royal/15" role="tablist" aria-label="SDK language">
               <button type="button" role="tab" data-install-tab="ts" aria-selected="true" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">TypeScript</button>
               <button type="button" role="tab" data-install-tab="py" aria-selected="false" class="install-tab px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-widest transition">Python</button>
@@ -700,23 +700,33 @@ POST /pay
         </div>
 
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.05s;">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">2. Initialize</div>
-<pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
-<span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>(<span class="code-string">'sk_live_...'</span>);</code></pre>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">2. Your wallet addresses live in your env vars</div>
+<pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-comment"># .env &mdash; stays on your servers, never on ours</span>
+<span class="code-fn">ZETTAPAY_API_KEY</span>=<span class="code-string">sk_live_...</span>
+<span class="code-fn">ZETTAPAY_WEBHOOK_SECRET</span>=<span class="code-string">whsec_...</span>
+<span class="code-fn">MERCHANT_BTC_PUBKEY</span>=<span class="code-string">bc1q...</span>
+<span class="code-fn">MERCHANT_ETH_PUBKEY</span>=<span class="code-string">0x...</span>
+<span class="code-fn">MERCHANT_SOL_PUBKEY</span>=<span class="code-string">7Np41o...</span></code></pre>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal md:col-span-2" style="transition-delay: 0.1s;">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">3. Charge</div>
-<pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-keyword">const</span> payment = <span class="code-keyword">await</span> zp.<span class="code-fn">pay</span>({
-  merchant: <span class="code-string">"@my-store"</span>,
-  amount_usdc: <span class="code-num">42.00</span>,
-  webhook_url: <span class="code-string">"https://my-app.com/zp-webhook"</span>,
-  metadata: { order_id: <span class="code-string">"ord_xyz"</span> }
-});
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">3. Initialize &amp; register &mdash; six lines, copy-paste ready</div>
+<pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 
-<span class="code-comment">// payment.signature -&gt; Solana tx hash
-// payment.status    -&gt; "confirmed" within 2s
-// Webhook fires to your URL with HMAC-SHA256 signature</span></code></pre>
+<span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>({
+  apiKey:        process.env.<span class="code-fn">ZETTAPAY_API_KEY</span>,
+  webhookSecret: process.env.<span class="code-fn">ZETTAPAY_WEBHOOK_SECRET</span>,
+  pubkeys: {
+    btc: process.env.<span class="code-fn">MERCHANT_BTC_PUBKEY</span>,
+    eth: process.env.<span class="code-fn">MERCHANT_ETH_PUBKEY</span>,
+    sol: process.env.<span class="code-fn">MERCHANT_SOL_PUBKEY</span>,
+  },
+  webhookUrl: <span class="code-string">'https://my-app.com/zp/webhook'</span>,
+});
+<span class="code-keyword">await</span> zp.<span class="code-fn">register</span>(); <span class="code-comment">// registers your pubkeys with the ZettaPay chain listener</span>
+
+<span class="code-comment">// Done. ZettaPay watches BTC / ETH / SOL for incoming deposits to your addresses
+// and posts a signed webhook to webhookUrl the moment a transaction confirms.</span></code></pre>
         </div>
       </div>
     </div>
@@ -725,11 +735,11 @@ POST /pay
   <!-- FOOTER CTA -->
   <section class="py-28 px-4 lg:px-12">
     <div class="max-w-4xl mx-auto text-center reveal">
-      <h2 class="text-4xl md:text-7xl font-bold mb-6">Paste your pubkey.<br/><span class="gradient-text">We&rsquo;ll watch the chain.</span></h2>
-      <p class="text-muted text-lg md:text-xl mb-10">Open protocol. Non-custodial. Multi-chain. AI-native.</p>
+      <h2 class="text-4xl md:text-7xl font-bold mb-6">Install in 30 seconds.<br/><span class="gradient-text">We&rsquo;ll watch the chain.</span></h2>
+      <p class="text-muted text-lg md:text-xl mb-10">Open protocol. Non-custodial. Multi-chain. AI-native. Your pubkey stays in your code.</p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
         <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-          Get your merchant pubkey free
+          Get your API key &middot; free
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </a>
         <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>

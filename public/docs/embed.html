@@ -327,8 +327,8 @@
           <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
           <nav class="flex flex-col gap-1" id="toc">
             <a href="#overview" class="toc-link active">Overview</a>
-            <a href="#step-1" class="toc-link">1 · Visit /signup</a>
-            <a href="#step-2" class="toc-link">2 · Paste your address</a>
+            <a href="#step-1" class="toc-link">1 · Get your API key</a>
+            <a href="#step-2" class="toc-link">2 · Set your pubkey env var</a>
             <a href="#step-3" class="toc-link">3 · Copy embed code</a>
             <a href="#step-4" class="toc-link">4 · Paste in &lt;head&gt;</a>
             <a href="#step-5" class="toc-link">5 · Receive USDC</a>
@@ -353,8 +353,9 @@
             Install a <span class="gradient-text">Pay USDC</span> button in five minutes.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            Sign up, paste your public address (Bitcoin, Ethereum or Solana — any of them, all of them), copy
-            one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag, paste it in your site's
+            Get your API key, configure your pubkey in your own env var
+            (<code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code>, etc.), copy one
+            <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag, paste it in your site's
             <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the entire integration.
             ZettaPay watches the chain for the deposit and posts a webhook the moment it confirms. The
             protocol never custodies — the on-chain transfer lands directly in your wallet. No protocol fee
@@ -398,12 +399,14 @@
         <section id="step-1" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">1</div>
-            <h2 class="text-2xl font-bold">Visit <code class="text-mint font-mono text-base">/signup</code></h2>
+            <h2 class="text-2xl font-bold">Get your API key</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
             Open <a class="text-royal-bright underline" href="/signup">zettapay.io/signup</a> in any modern
             browser. The form takes a merchant handle and an email — that is the whole intake. No
-            credit-card form, no KYC.
+            credit-card form, no KYC, and <strong class="text-white">we do not ask for your pubkey here</strong>.
+            You'll receive an <code class="text-mint font-mono text-sm">api_key</code> plus a
+            <code class="text-mint font-mono text-sm">webhook_secret</code>.
           </p>
 
           <figure class="screenshot mb-4">
@@ -411,9 +414,9 @@
               <span class="dot" style="background:#ff5f56"></span>
               <span class="dot" style="background:#ffbd2e"></span>
               <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">zettapay.io/signup</span>
+              <span class="screenshot-url">zettapay.io · onboarding</span>
             </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay signup form">
+            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay onboarding form">
               <defs>
                 <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
                   <stop offset="0" stop-color="#0a0a0a"/>
@@ -430,8 +433,8 @@
                 <circle cx="120" cy="320" r="120" fill="#9945FF" opacity="0.06"/>
               </g>
               <text x="60" y="78" font-family="Inter, sans-serif" font-size="13" fill="#14F195" letter-spacing="2">CREATE A MERCHANT</text>
-              <text x="60" y="118" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#fff">Get paid in USDC</text>
-              <text x="60" y="146" font-family="Inter, sans-serif" font-size="13" fill="#94A3B8">No credit card. No KYC. Paste any Solana address — no wallet connect.</text>
+              <text x="60" y="118" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#fff">Get your API key</text>
+              <text x="60" y="146" font-family="Inter, sans-serif" font-size="13" fill="#94A3B8">No credit card. No KYC. Pubkey lives in your code — you'll set it as an env var next.</text>
               <rect x="60" y="180" width="640" height="44" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.3"/>
               <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">Merchant handle</text>
               <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#fff" opacity="0">@yourshop</text>
@@ -454,54 +457,41 @@
         <section id="step-2" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
-            <h2 class="text-2xl font-bold">Paste your public addresses</h2>
+            <h2 class="text-2xl font-bold">Set your pubkey in an env var</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Paste the public address of <em>any</em> wallet you control — Bitcoin, Ethereum (mainnet or any
-            L2), Solana for USDC. Hardware wallets, exchange withdrawal addresses, mobile wallets all work.
-            <strong class="text-white">ZettaPay never asks to connect.</strong> Your handle
-            <code class="text-mint font-mono text-sm">@yourshop</code> is bound to those addresses; every
-            payment lands directly there, with zero custody on our side. You can add more chains later
-            without re-deploying the script tag.
+            Drop the public address of <em>any</em> wallet you control — Bitcoin, Ethereum (mainnet or any
+            L2), Solana for USDC — into the matching env var in your own
+            <code class="text-mint font-mono text-sm">.env</code>. Hardware wallets, exchange withdrawal
+            addresses, mobile wallets all work. <strong class="text-white">ZettaPay never asks to connect, and
+            your pubkey never touches our database.</strong> Add more chains later by adding more env vars and
+            redeploying — no re-onboarding.
           </p>
 
-          <figure class="screenshot mb-4">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">zettapay.io/signup · paste address</span>
-            </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay signup — paste Solana address">
-              <defs>
-                <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0a0a0a"/>
-                  <stop offset="1" stop-color="#1a1426"/>
-                </linearGradient>
-              </defs>
-              <rect width="760" height="360" fill="url(#bg2)"/>
-              <rect x="200" y="40" width="360" height="280" rx="20" fill="#181024" stroke="#9945FF" stroke-opacity="0.3"/>
-              <circle cx="240" cy="80" r="18" fill="#AB9FF2"/>
-              <text x="268" y="86" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">Phantom</text>
-              <text x="268" y="102" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">zettapay.io · wants to approve</text>
-              <text x="380" y="160" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="600" fill="#fff">Bind merchant handle</text>
-              <text x="380" y="180" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#14F195">@yourshop</text>
-              <rect x="232" y="200" width="296" height="48" rx="8" fill="#0d0918" stroke="#9945FF" stroke-opacity="0.2"/>
-              <text x="246" y="220" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Network fee</text>
-              <text x="514" y="220" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#fff">~0.000005 SOL</text>
-              <text x="246" y="238" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Action</text>
-              <text x="514" y="238" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="11" fill="#fff">memo · bind</text>
-              <rect x="232" y="266" width="140" height="38" rx="999" fill="#26172E" stroke="#9945FF" stroke-opacity="0.3"/>
-              <text x="302" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="500" fill="#94A3B8">Reject</text>
-              <rect x="388" y="266" width="140" height="38" rx="999" fill="#9945FF"/>
-              <text x="458" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="12" font-weight="600" fill="#fff">Approve</text>
-            </svg>
-          </figure>
+          <div class="code-card relative">
+            <button class="copy-btn" data-copy-target="embed-env-snippet">Copy</button>
+<pre id="embed-env-snippet"><span class="tk-c"># .env — your servers, your secrets, your pubkeys</span>
+<span class="tk-t">ZETTAPAY_API_KEY</span>=<span class="tk-s">sk_live_...</span>
+<span class="tk-t">ZETTAPAY_WEBHOOK_SECRET</span>=<span class="tk-s">whsec_...</span>
+
+<span class="tk-c"># Wallet addresses you control — set any subset</span>
+<span class="tk-t">MERCHANT_BTC_PUBKEY</span>=<span class="tk-s">bc1qx5...e92</span>
+<span class="tk-t">MERCHANT_ETH_PUBKEY</span>=<span class="tk-s">0x7a3...4F2</span>
+<span class="tk-t">MERCHANT_SOL_PUBKEY</span>=<span class="tk-s">7Np41oeY...YVhT</span></pre>
+          </div>
+
+          <p class="text-muted leading-relaxed mt-5">
+            The widget reads <code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code> (or its
+            BTC / ETH siblings) at boot from a tiny server endpoint on your side — see step 4 for the
+            <code class="text-mint font-mono text-sm">data-pubkey</code> wiring if you'd rather inline it. You
+            can rotate any of these keys by editing the env file and redeploying; the listener picks up the
+            new address on the next <code class="text-mint font-mono text-sm">zp.register()</code> call.
+          </p>
 
           <div class="callout">
-            <strong>One-time only.</strong> The bind transaction runs once per merchant. After it confirms,
-            your wallet is permanently associated with the handle. The protocol creates the USDC associated
-            token account on your behalf and pays the rent (~0.002 SOL).
+            <strong>No on-chain bind required.</strong> The protocol simply watches the addresses you list.
+            You keep full control of the wallet, can sweep funds whenever you want, and can swap addresses
+            mid-flight without touching the ZettaPay dashboard.
           </div>
         </section>
 
