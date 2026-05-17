@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { findMerchantByEmail, rememberMerchant } from '../_lib/merchant-store.js';
 
 const SERVICE = 'zettapay';
 const RUNTIME = 'vercel-serverless';
@@ -91,8 +92,24 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
     return;
   }
 
+  const existing = findMerchantByEmail(email);
+  if (existing) {
+    res.status(409).json({
+      error: {
+        code: 'email_already_registered',
+        message: 'An account already exists for this email. Recover your credentials instead.',
+      },
+      login_url: '/signup#login',
+      recover_url: '/api/merchants/recover-creds',
+    });
+    return;
+  }
+
   const merchantId = `m_${randomUUID().replace(/-/g, '').slice(0, 24)}`;
   const apiKey = `zp_live_${randomUUID().replace(/-/g, '')}`;
+  const createdAt = new Date().toISOString();
+
+  rememberMerchant({ id: merchantId, email, name, createdAt });
 
   res.status(201).json({
     merchant: {
@@ -102,7 +119,7 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
       email,
       webhookUrl: webhookUrlRaw || null,
       network: 'solana-devnet',
-      createdAt: new Date().toISOString(),
+      createdAt,
     },
     apiKey,
     next: {

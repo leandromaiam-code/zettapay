@@ -387,6 +387,26 @@
           <div id="step1Error" class="hidden mt-4 glass rounded-xl p-4 border border-rose/40">
             <div class="text-sm text-rose font-mono"></div>
           </div>
+
+          <!-- 409 duplicate-email inline recovery -->
+          <div id="step1Duplicate" class="hidden mt-4 glass rounded-xl p-4 border border-amber/40">
+            <div class="flex items-start gap-3">
+              <svg class="w-5 h-5 text-amber flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M12 3a9 9 0 100 18 9 9 0 000-18z"></path></svg>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm text-white font-semibold mb-1">This email is already registered.</div>
+                <div class="text-xs text-muted leading-relaxed mb-3">If you've lost your credentials we can send a fresh magic-link to your inbox.</div>
+                <button type="button" id="recoverCredsBtn" class="btn-ghost px-4 py-2 rounded-lg text-xs font-mono uppercase tracking-widest inline-flex items-center gap-2">
+                  <span id="recoverCredsLabel">Resend access credentials to your inbox</span>
+                  <svg id="recoverCredsSpinner" class="hidden w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                  </svg>
+                  <svg id="recoverCredsArrow" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                </button>
+                <div id="recoverCredsResult" class="hidden mt-3 text-xs font-mono text-mint"></div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <!-- STEP 2 — CREDENTIALS (shown once) -->
@@ -777,10 +797,13 @@
         let body = null;
         try { body = await resp.json(); } catch (e) { body = null; }
         if (!resp.ok) {
-          const msg = body && body.error && body.error.message
-            ? body.error.message
-            : 'Onboarding failed (' + resp.status + ')';
-          throw new Error(msg);
+          const err = new Error(
+            (body && body.error && body.error.message) ||
+              'Onboarding failed (' + resp.status + ')'
+          );
+          err.status = resp.status;
+          err.body = body;
+          throw err;
         }
         return body || {};
       }
@@ -804,12 +827,18 @@
 
       async function submitSignup() {
         clearStep1Error();
+        hideDuplicate();
         setStep1Loading(true);
         const payload = { name: state.shopName, email: state.shopEmail };
         let result;
         try {
           result = await postOnboard(payload);
         } catch (err) {
+          if (err && err.status === 409) {
+            showDuplicate();
+            setStep1Loading(false);
+            return;
+          }
           result = synthesizeFallback();
           showStep1Error((err && err.message ? err.message : 'API unreachable') + ' — showing local preview');
         }
@@ -823,6 +852,75 @@
       }
 
       step1Next.addEventListener('click', submitSignup);
+
+      // ===== Duplicate-email recovery UX =====
+      const step1Duplicate = document.getElementById('step1Duplicate');
+      const recoverCredsBtn = document.getElementById('recoverCredsBtn');
+      const recoverCredsLabel = document.getElementById('recoverCredsLabel');
+      const recoverCredsArrow = document.getElementById('recoverCredsArrow');
+      const recoverCredsSpinner = document.getElementById('recoverCredsSpinner');
+      const recoverCredsResult = document.getElementById('recoverCredsResult');
+
+      function showDuplicate() {
+        step1Duplicate.classList.remove('hidden');
+        recoverCredsResult.classList.add('hidden');
+        recoverCredsResult.textContent = '';
+        recoverCredsBtn.disabled = false;
+        recoverCredsLabel.textContent = 'Resend access credentials to your inbox';
+      }
+      function hideDuplicate() {
+        step1Duplicate.classList.add('hidden');
+        recoverCredsResult.classList.add('hidden');
+        recoverCredsResult.textContent = '';
+      }
+
+      shopEmail.addEventListener('input', hideDuplicate);
+
+      async function requestRecover() {
+        if (!state.shopEmail) return;
+        recoverCredsBtn.disabled = true;
+        recoverCredsArrow.classList.add('hidden');
+        recoverCredsSpinner.classList.remove('hidden');
+        recoverCredsLabel.textContent = 'Sending magic link…';
+        try {
+          const resp = await fetch('/api/merchants/recover-creds', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: state.shopEmail }),
+          });
+          let body = null;
+          try { body = await resp.json(); } catch (e) { body = null; }
+          if (resp.status === 429) {
+            recoverCredsResult.textContent = 'Too many recovery requests. Try again in an hour.';
+            recoverCredsResult.classList.remove('hidden');
+            recoverCredsResult.classList.remove('text-mint');
+            recoverCredsResult.classList.add('text-amber');
+          } else if (!resp.ok) {
+            recoverCredsResult.textContent =
+              (body && body.error && body.error.message) || 'Recovery failed — try again.';
+            recoverCredsResult.classList.remove('hidden');
+            recoverCredsResult.classList.remove('text-mint');
+            recoverCredsResult.classList.add('text-rose');
+          } else {
+            recoverCredsResult.textContent =
+              (body && body.message) ||
+              'If this email is registered, we just sent a magic link to your inbox.';
+            recoverCredsResult.classList.remove('hidden', 'text-amber', 'text-rose');
+            recoverCredsResult.classList.add('text-mint');
+          }
+        } catch (e) {
+          recoverCredsResult.textContent = 'Network error — try again.';
+          recoverCredsResult.classList.remove('hidden');
+          recoverCredsResult.classList.add('text-rose');
+        } finally {
+          recoverCredsSpinner.classList.add('hidden');
+          recoverCredsArrow.classList.remove('hidden');
+          recoverCredsLabel.textContent = 'Resend access credentials to your inbox';
+          recoverCredsBtn.disabled = false;
+        }
+      }
+
+      recoverCredsBtn.addEventListener('click', requestRecover);
 
       // ===== STEP 2 — credentials =====
       const merchantIdValue = document.getElementById('merchantIdValue');
