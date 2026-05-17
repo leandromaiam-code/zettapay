@@ -167,6 +167,12 @@
       ]
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/sweep",
+      "schedule": "0 * * * *"
+    }
+  ],
   "git": {
     "deploymentEnabled": {
       "main": true
