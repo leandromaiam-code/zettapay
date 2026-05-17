@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -124,13 +124,13 @@
   <section class="px-4 lg:px-12 pb-24">
     <div class="max-w-4xl mx-auto glass rounded-2xl p-8 md:p-12 prose-zp">
 
-      <p>This policy describes how ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) handles information when you integrate our payment APIs, use our merchant dashboard, or pay an invoice generated through our infrastructure. We process the minimum data required to operate a Solana USDC payment protocol &mdash; nothing more.</p>
+      <p>This policy describes how ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) handles information when you integrate our payment APIs, use our merchant dashboard, or pay an invoice generated through our infrastructure. We process the minimum data required to operate a Base USDC payment protocol &mdash; nothing more.</p>
 
       <h2>1. Wallet-less by design</h2>
-      <p>ZettaPay <strong>never requests a wallet connection</strong>. We do not custody funds. We do not hold private keys. Every transaction settles directly from payer to merchant on Solana. Our role is limited to:</p>
+      <p>ZettaPay <strong>never requests a wallet connection</strong>. We do not custody funds. We do not hold private keys. Every transaction settles directly from payer to merchant on Base. Our role is limited to:</p>
       <ul>
-        <li>Generating Solana Pay URIs and QR codes from public information.</li>
-        <li>Observing the public Solana ledger to detect confirmed transfers.</li>
+        <li>Generating Base Pay URIs and QR codes from public information.</li>
+        <li>Observing the public Base ledger to detect confirmed transfers.</li>
         <li>Dispatching signed webhooks to merchant endpoints on confirmation.</li>
       </ul>
 
@@ -147,7 +147,7 @@
 
       <h3>2.2 Transaction metadata</h3>
       <ul>
-        <li>Invoice identifiers, amounts (USDC), timestamps, and Solana transaction signatures &mdash; all of which are already public on-chain.</li>
+        <li>Invoice identifiers, amounts (USDC), timestamps, and Base transaction signatures &mdash; all of which are already public on-chain.</li>
         <li>Optional <code>metadata</code> fields you attach to invoices (e.g. order IDs). Treat this surface as semi-public.</li>
       </ul>
 
@@ -168,7 +168,7 @@
 
       <h2>4. How we use information</h2>
       <ul>
-        <li>To route payments, generate QR codes, and confirm settlements on Solana.</li>
+        <li>To route payments, generate QR codes, and confirm settlements on Base.</li>
         <li>To authenticate merchant API calls and dashboard sessions.</li>
         <li>To send transactional notifications (webhook deliveries, daily digests, security alerts).</li>
         <li>To enforce rate limits, detect abuse, and comply with applicable law.</li>
@@ -182,7 +182,7 @@
         <li><strong>Supabase</strong> &mdash; managed Postgres, row-level security.</li>
         <li><strong>Sentry</strong> &mdash; error monitoring (scrubbed payloads).</li>
         <li><strong>MoonPay</strong> &mdash; fiat onramp (operates under its own privacy policy and KYC obligations).</li>
-        <li><strong>Helius / Triton / public Solana RPC</strong> &mdash; read-only access to public ledger state.</li>
+        <li><strong>RPC provider / Triton / public Base RPC</strong> &mdash; read-only access to public ledger state.</li>
       </ul>
 
       <h2>6. Data retention</h2>
@@ -228,7 +228,7 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Base USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
@@ -257,7 +257,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Built with Base &middot; USDC &middot; x402</span>
     </div>
   </footer>
 </body>

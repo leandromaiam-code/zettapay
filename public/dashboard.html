@@ -36,7 +36,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -226,7 +226,7 @@
 
         <div id="login-step-1" class="space-y-3 mb-4">
           <label class="block">
-            <span class="text-xs font-mono uppercase tracking-widest text-muted">1 · Solana address</span>
+            <span class="text-xs font-mono uppercase tracking-widest text-muted">1 · Base address</span>
             <input
               id="login-wallet"
               type="text"
@@ -319,7 +319,7 @@
             <span id="balance-num" class="stat-num text-4xl font-bold">—</span>
             <span class="text-muted text-sm">USDC</span>
           </div>
-          <div id="balance-sub" class="text-xs text-muted mt-2">Loading from Solana RPC…</div>
+          <div id="balance-sub" class="text-xs text-muted mt-2">Loading from Base RPC…</div>
         </div>
         <div class="glass rounded-2xl p-6">
           <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Payments (24h)</div>
@@ -564,7 +564,7 @@
       </div>
 
       <footer class="text-center text-xs text-muted/60 mono py-6 space-y-2">
-        <div>ZettaPay merchant console · 0.30% per tx · Solana <span id="net-tag">devnet</span></div>
+        <div>ZettaPay merchant console · 0.30% per tx · Base <span id="net-tag">devnet</span></div>
         <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
           <a href="/" class="hover:text-white transition">Home</a>
           <a href="/docs" class="hover:text-white transition">Docs</a>
@@ -616,7 +616,7 @@
 
     // -----------------------------------------------------------------------
     // ZettaPay merchant dashboard — wallet-less offline signature login + live data view.
-    // Runs as a static page; talks to Solana RPC (balance) + ZettaPay API
+    // Runs as a static page; talks to Base RPC (balance) + ZettaPay API
     // (payments / settlement) when the merchant supplies an API key.
     //
     // Auth: merchant pastes their pubkey, copies a challenge message, signs it
@@ -625,7 +625,7 @@
     // prompt, no dependency on an injected window provider.
     // -----------------------------------------------------------------------
 
-    const RPC_URL = 'https://api.devnet.solana.com';
+    const RPC_URL = 'https://api.devnet.base.com';
     const USDC_MINT = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
     const SESSION_KEY = 'zettapay.session.v1';
     const PREFS_KEY = 'zettapay.prefs.v1';
@@ -672,7 +672,7 @@
     // Wallet-less offline signature login
     // -----------------------------------------------------------------------
 
-    const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const BASE_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     let pendingChallenge = null; // { pubkey, message, encoded, nonceHex, issuedAt }
 
     function decodeBase58(s) {
@@ -731,7 +731,7 @@
         'Nonce: ' + nonceHex + '\n' +
         'Issued at: ' + issuedAt + '\n' +
         'Domain: ' + window.location.host + '\n' +
-        'Network: solana-devnet';
+        'Network: base-devnet';
       return { pubkey, message, encoded: new TextEncoder().encode(message), nonceHex, issuedAt };
     }
 
@@ -740,7 +740,7 @@
         throw new Error('Build the challenge first');
       }
       const pubkeyBytes = decodeBase58(pubkey);
-      if (pubkeyBytes.length !== 32) throw new Error('Invalid Solana address length');
+      if (pubkeyBytes.length !== 32) throw new Error('Invalid Base address length');
       const ok = window.nacl.sign.detached.verify(pendingChallenge.encoded, signature, pubkeyBytes);
       if (!ok) throw new Error('Signature does not match this wallet + challenge');
       const session = {
@@ -769,7 +769,7 @@
     }
 
     // -----------------------------------------------------------------------
-    // Solana RPC — USDC balance
+    // Base RPC — USDC balance
     // -----------------------------------------------------------------------
 
     async function rpc(method, params) {
@@ -1581,7 +1581,7 @@
 
     async function refreshAll(session, prefs) {
       $('balance-num').textContent = '…';
-      $('balance-sub').textContent = 'Querying Solana RPC…';
+      $('balance-sub').textContent = 'Querying Base RPC…';
 
       try {
         const bal = await fetchUsdcBalance(session.pubkey);
@@ -1649,8 +1649,8 @@
       $('login-build').addEventListener('click', () => {
         showLoginError(null);
         const raw = ($('login-wallet').value || '').trim();
-        if (!SOLANA_ADDRESS_RE.test(raw)) {
-          showLoginError('Paste a valid Solana address (32–44 base58 chars).');
+        if (!BASE_ADDRESS_RE.test(raw)) {
+          showLoginError('Paste a valid Base address (32–44 base58 chars).');
           return;
         }
         pendingChallenge = buildChallenge(raw);

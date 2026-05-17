@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -364,13 +364,17 @@
             ZettaPay is a peer-to-peer, non-custodial payment protocol. The customer's funds move directly
             from their wallet to yours on-chain — the protocol never touches the money. What ZettaPay
             actually <em>does</em> is the part that's hard in pure crypto: <strong class="text-white">it
-            answers "did the customer pay?" automatically</strong>, by running chain listeners on Bitcoin,
-            Ethereum mainnet + L2s (Base, Polygon), and Solana, and posting a signed webhook to your server
-            the instant a deposit matching the invoice is confirmed.
+            answers "did the customer pay?" automatically</strong>, by running chain listeners on four
+            networks — <strong class="text-white">Bitcoin</strong>, <strong class="text-white">USDC on Base</strong>,
+            <strong class="text-white">USDC on Polygon</strong> and <strong class="text-white">USDC on Ethereum</strong> —
+            and posting a signed webhook to your server the instant a deposit matching the invoice is confirmed.
+            You can verify any payment yourself on
+            <a class="text-royal-bright underline" href="https://mempool.space" target="_blank" rel="noopener">mempool.space</a>
+            or <a class="text-royal-bright underline" href="https://basescan.org" target="_blank" rel="noopener">basescan.org</a>.
           </p>
           <div class="callout">
-            <strong>Zero protocol fee.</strong> The customer pays the network's own gas (sub-cent on Solana,
-            a few cents on Ethereum L2s, a few sats on Bitcoin). ZettaPay adds nothing on top.
+            <strong>Zero protocol fee.</strong> The customer pays the network's own gas (a few cents on
+            Base / Polygon, more on Ethereum mainnet, a few sats on Bitcoin). ZettaPay adds nothing on top.
           </div>
         </section>
 
@@ -384,25 +388,30 @@
 
           <pre class="chain-flow" aria-label="ZettaPay chain listener flow"><span class="dim">┌─────────────────┐         ┌────────────────────┐         ┌───────────────────┐         ┌─────────────────┐</span>
 <span class="dim">│</span>  Customer wallet <span class="dim">│  ──TX──▶</span>  Blockchain        <span class="dim">│  ──tx──▶</span>  ZettaPay listener <span class="dim">│  ──POST▶</span> Merchant webhook <span class="dim">│</span>
-<span class="dim">│</span>  (any wallet)    <span class="dim">│         │</span>  BTC / ETH / SOL   <span class="dim">│         │</span>  watches the mempool & │       │ HTTPS · HMAC-signed
+<span class="dim">│</span>  (any wallet)    <span class="dim">│         │</span>  BTC / Base / Poly  <span class="dim">│         │</span>  watches the mempool & │       │ HTTPS · HMAC-signed
 <span class="dim">└─────────────────┘         └────────────────────┘         </span> matches by address+amount<span class="dim"> └─────────────────┘</span>
                                                           <span class="dim">└───────────────────┘</span>          <span class="accent">your code marks order paid</span></pre>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
-            <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Solana (USDC)</div>
-              <div class="text-sm font-semibold">&lt; 2 s</div>
-              <div class="text-xs text-muted mt-1">finalized commitment</div>
-            </div>
-            <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Ethereum &amp; L2s</div>
-              <div class="text-sm font-semibold">~ 12 s</div>
-              <div class="text-xs text-muted mt-1">1 block confirmation</div>
-            </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
             <div class="glass rounded-xl p-4">
               <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Bitcoin</div>
               <div class="text-sm font-semibold">~ 10 min</div>
-              <div class="text-xs text-muted mt-1">1 confirmation (configurable)</div>
+              <div class="text-xs text-muted mt-1">1 confirmation</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">USDC · Base</div>
+              <div class="text-sm font-semibold">~ 24 s</div>
+              <div class="text-xs text-muted mt-1">finalized</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">USDC · Polygon</div>
+              <div class="text-sm font-semibold">~ 2 s</div>
+              <div class="text-xs text-muted mt-1">1 block confirmation</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">USDC · Ethereum</div>
+              <div class="text-sm font-semibold">~ 12 s</div>
+              <div class="text-xs text-muted mt-1">1 block confirmation</div>
             </div>
           </div>
         </section>
@@ -412,7 +421,7 @@
           <h2 class="text-2xl font-bold mb-3">Prerequisites</h2>
           <ul class="space-y-2 text-muted leading-relaxed">
             <li class="flex gap-3"><span class="text-mint">›</span> Node 18+, Python 3.10+, PHP 8.1+, or Rust 1.74+ (pick one)</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> A public address you control on at least one chain you want to accept (BTC, ETH, Solana). The pubkey lives in your <em>own</em> env vars — you never paste it on our site.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> A public address you control on at least one chain you want to accept (BTC, or an EVM address for Base / Polygon / Ethereum). The pubkey lives in your <em>own</em> env vars — you never paste it on our site.</li>
             <li class="flex gap-3"><span class="text-mint">›</span> A publicly reachable HTTPS endpoint to receive webhooks (use <code class="text-mint font-mono text-sm">ngrok</code>, <code class="text-mint font-mono text-sm">cloudflared</code>, or any deploy) — HTTP is rejected</li>
             <li class="flex gap-3"><span class="text-mint">›</span> Devnet / testnet funding (optional) — claim free tokens from the <a class="text-royal-bright underline" href="/docs/faucet">ZettaPay faucet</a></li>
           </ul>
@@ -693,7 +702,7 @@ zp.<span class="tk-f">register</span>().<span class="tk-k">await</span>?;   <spa
   <span class="tk-s">"event"</span>:             <span class="tk-s">"payment.confirmed"</span>,
   <span class="tk-s">"amount"</span>:            <span class="tk-s">"19.90"</span>,
   <span class="tk-s">"currency"</span>:          <span class="tk-s">"USDC"</span>,
-  <span class="tk-s">"network"</span>:           <span class="tk-s">"solana"</span>,        <span class="tk-c">// "bitcoin" | "ethereum" | "base" | "polygon" | "solana"</span>
+  <span class="tk-s">"chain"</span>:             <span class="tk-s">"base"</span>,        <span class="tk-c">// "btc" | "base" | "polygon" | "ethereum"</span>
   <span class="tk-s">"tx_hash"</span>:           <span class="tk-s">"5jkA..."</span>,
   <span class="tk-s">"confirmations"</span>:     <span class="tk-n">1</span>,
   <span class="tk-s">"customer_address"</span>:  <span class="tk-s">"7Np41oeY..."</span>,

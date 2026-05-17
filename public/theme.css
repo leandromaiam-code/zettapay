@@ -17,7 +17,7 @@
   --mint: #00A86B;
   --mint-soft: rgba(0, 168, 107, 0.10);
   --mint-line: rgba(0, 168, 107, 0.35);
-  --solana: #7C3AED;
+  --violet: #7C3AED;
   --warn: #B45309;
   --warn-soft: rgba(180, 83, 9, 0.10);
   --warn-line: rgba(180, 83, 9, 0.35);
@@ -64,7 +64,7 @@
   --mint: #14F195;
   --mint-soft: rgba(20, 241, 149, 0.12);
   --mint-line: rgba(20, 241, 149, 0.35);
-  --solana: #9945FF;
+  --violet: #9945FF;
   --warn: #f59e0b;
   --warn-soft: rgba(245, 158, 11, 0.12);
   --warn-line: rgba(245, 158, 11, 0.35);
@@ -120,7 +120,7 @@ html, body {
 
 /* ---- Gradient text (rainbow accent) ---- */
 .gradient-text {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--mint) 50%, var(--solana) 100%) !important;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--mint) 50%, var(--violet) 100%) !important;
   background-size: 200% auto !important;
   -webkit-background-clip: text !important;
   background-clip: text !important;
@@ -150,13 +150,13 @@ html, body {
 .gradient-border {
   background:
     linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
-    linear-gradient(135deg, var(--accent), var(--mint), var(--solana)) border-box !important;
+    linear-gradient(135deg, var(--accent), var(--mint), var(--violet)) border-box !important;
   border: 1px solid transparent !important;
 }
 .gradient-border:hover {
   background:
     linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
-    linear-gradient(135deg, var(--accent), var(--mint), var(--solana)) border-box !important;
+    linear-gradient(135deg, var(--accent), var(--mint), var(--violet)) border-box !important;
 }
 
 /* ---- Buttons ---- */
@@ -216,7 +216,7 @@ input::placeholder, textarea::placeholder { color: var(--ink-muted) !important; 
 .text-white { color: var(--ink) !important; }
 .text-muted { color: var(--ink-muted) !important; }
 .text-mint { color: var(--mint) !important; }
-.text-solana { color: var(--solana) !important; }
+.text-violet { color: var(--violet) !important; }
 .bg-deep { background-color: var(--bg) !important; }
 .bg-deep-card { background-color: var(--bg-elev) !important; }
 

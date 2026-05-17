@@ -1,7 +1,7 @@
 /**
  * ZettaPay Embed Widget — drop-in <script> tag for any site
  *
- * Wallet-less by design: opens a modal showing a Solana Pay QR code + the
+ * Wallet-less by design: opens a modal showing a Base Pay QR code + the
  * merchant USDC address. The customer pays from their wallet of choice
  * (Phantom, Solflare, hardware wallet, mobile, exchange) — no extension,
  * no connect, no signature prompt from this page.
@@ -28,7 +28,7 @@
     return 'https://zettapay.vercel.app';
   })();
 
-  var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+  var BASE_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   var USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
   var USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v';
   var QR_CDN = 'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js';
@@ -44,7 +44,7 @@
   }
 
   function labelForNetwork(network) {
-    return network === 'mainnet' ? 'Solana Mainnet' : 'Solana Devnet';
+    return network === 'mainnet' ? 'Base mainnet' : 'Base Sepolia';
   }
 
   function getScriptTag() {
@@ -136,19 +136,19 @@
     el.innerHTML =
       '<div class="zettapay-modal-inner">' +
       '<button type="button" class="zettapay-modal-close" data-zp-close>×</button>' +
-      '<h3>Pay with Solana</h3>' +
+      '<h3>Pay with Base</h3>' +
       '<p class="zp-sub">Scan or paste — no wallet connect required.</p>' +
       '<div class="zettapay-row"><span class="label">Merchant</span><span class="value" data-zp-merchant>' + escapeHTML(config.merchant) + '</span></div>' +
       (config.amount ? '<div class="zettapay-row"><span class="label">Amount</span><span class="value">' + escapeHTML(config.amount) + ' ' + escapeHTML(config.currency) + '</span></div>' : '') +
       '<div class="zettapay-row"><span class="label">Network</span><span class="value">' + escapeHTML(labelForNetwork(config.network)) + '</span></div>' +
-      '<div class="zettapay-qr"><img alt="Solana Pay QR" data-zp-qr /></div>' +
+      '<div class="zettapay-qr"><img alt="Base Pay QR" data-zp-qr /></div>' +
       '<div class="zettapay-addr" data-zp-addr>Loading merchant address…</div>' +
       '<div class="zettapay-actions">' +
       '<button type="button" class="zp-btn-secondary" data-zp-copy>Copy address</button>' +
       '<a class="zp-btn-primary" data-zp-open href="#" target="_blank" rel="noopener">Open in wallet</a>' +
       '</div>' +
       '<div class="zettapay-status"><span class="zp-dot"></span><span>Awaiting payment on-chain</span></div>' +
-      '<p class="zettapay-helper">Open any Solana wallet (Phantom, Solflare, hardware wallet, mobile, exchange), scan the QR or paste the address, then send the amount. ZettaPay watches the chain — the merchant is notified on confirmation.</p>' +
+      '<p class="zettapay-helper">Open any Base wallet (Phantom, Solflare, hardware wallet, mobile, exchange), scan the QR or paste the address, then send the amount. ZettaPay watches the chain — the merchant is notified on confirmation.</p>' +
       '<div class="zettapay-error" data-zp-error></div>' +
       '<div class="zettapay-foot">Powered by <a href="' + BASE + '" target="_blank" rel="noopener">ZettaPay</a></div>' +
       '</div>';
@@ -194,7 +194,7 @@
   }
 
   function resolveMerchantWallet(ref, amount) {
-    if (SOLANA_ADDRESS_RE.test(ref)) return Promise.resolve(ref);
+    if (BASE_ADDRESS_RE.test(ref)) return Promise.resolve(ref);
     var url = BASE + '/api/simulate/' + encodeURIComponent(ref) + '?amount=' + (amount || 1);
     return fetch(url)
       .then(function (r) {
@@ -203,21 +203,21 @@
       })
       .then(function (data) {
         var wallet = data && data.merchant && data.merchant.walletAddress;
-        if (!SOLANA_ADDRESS_RE.test(wallet || '')) {
+        if (!BASE_ADDRESS_RE.test(wallet || '')) {
           throw new Error('Merchant has no wallet on file');
         }
         return wallet;
       });
   }
 
-  function buildSolanaPayUri(merchantWallet, amount, label, reference, network) {
+  function buildBasePayUri(merchantWallet, amount, label, reference, network) {
     var params = new URLSearchParams();
     if (amount) params.set('amount', String(amount));
-    params.set('spl-token', mintForNetwork(network));
+    params.set('erc20', mintForNetwork(network));
     params.set('label', 'ZettaPay');
     if (label) params.set('message', label);
     if (reference) params.set('reference', reference);
-    return 'solana:' + merchantWallet + '?' + params.toString();
+    return 'base:' + merchantWallet + '?' + params.toString();
   }
 
   function setQr(modal, dataUrl) {
@@ -238,7 +238,7 @@
   function handleCopy(modal) {
     var el = modal.querySelector('[data-zp-addr]');
     var addr = el ? (el.textContent || '').trim() : '';
-    if (!SOLANA_ADDRESS_RE.test(addr)) return;
+    if (!BASE_ADDRESS_RE.test(addr)) return;
     var flash = function () {
       el.classList.add('zp-copied');
       setTimeout(function () { el.classList.remove('zp-copied'); }, 1200);
@@ -272,7 +272,7 @@
     resolveMerchantWallet(config.merchant, amount)
       .then(function (wallet) {
         setAddress(modal, wallet);
-        var uri = buildSolanaPayUri(wallet, amount, config.label, config.merchant, config.network);
+        var uri = buildBasePayUri(wallet, amount, config.label, config.merchant, config.network);
         setOpenLink(modal, uri);
         return loadQrcodeLib().then(function (lib) {
           return new Promise(function (resolve, reject) {

@@ -168,7 +168,7 @@
       </div>
       <div>
         <dt>Network</dt>
-        <dd>solana-devnet</dd>
+        <dd>base-devnet</dd>
       </div>
     </dl>
     <div id="status" class="status" hidden></div>
@@ -204,7 +204,7 @@
         event.preventDefault();
         var recipient = input.value.trim();
         if (!BASE58_RE.test(recipient)) {
-          setStatus('error', 'That does not look like a base58 Solana pubkey. Double-check the wallet address.');
+          setStatus('error', 'That does not look like a base58 Base pubkey. Double-check the wallet address.');
           return;
         }
         button.disabled = true;

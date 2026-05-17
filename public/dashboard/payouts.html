@@ -29,7 +29,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -198,7 +198,7 @@
 
         <!-- STEP 1: paste pubkey -->
         <div id="auth-step1" class="space-y-3">
-          <label for="auth-pubkey" class="block text-[11px] font-mono uppercase tracking-widest text-muted">Your Solana address</label>
+          <label for="auth-pubkey" class="block text-[11px] font-mono uppercase tracking-widest text-muted">Your Base address</label>
           <input
             type="text"
             id="auth-pubkey"
@@ -476,7 +476,7 @@
     // Offline signature login (shared shape with /dashboard) — no wallet connect
     // -----------------------------------------------------------------------
 
-    const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const BASE_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     let PENDING_CHALLENGE = null;
 
     async function requestChallenge(merchant, wallet) {
@@ -736,7 +736,7 @@
 
     function refreshPubkeyButton() {
       const raw = ($('auth-pubkey').value || '').trim();
-      $('request-challenge-btn').disabled = !SOLANA_ADDRESS_RE.test(raw);
+      $('request-challenge-btn').disabled = !BASE_ADDRESS_RE.test(raw);
     }
 
     function refreshSignatureButton() {
@@ -746,8 +746,8 @@
 
     async function onRequestChallenge() {
       const wallet = ($('auth-pubkey').value || '').trim();
-      if (!SOLANA_ADDRESS_RE.test(wallet)) {
-        setAuthError('Paste a valid base58 Solana address (32–44 chars)');
+      if (!BASE_ADDRESS_RE.test(wallet)) {
+        setAuthError('Paste a valid base58 Base address (32–44 chars)');
         return;
       }
       const btn = $('request-challenge-btn');

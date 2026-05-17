@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay — P2P crypto payment protocol that confirms itself. Non-custodial, zero protocol fees. Install in 30 seconds — your pubkey stays in your code, we just watch the chain and ping your webhook. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
+  <meta name="description" content="ZettaPay — P2P crypto payment protocol that confirms itself. Non-custodial, zero protocol fees. Install in 30 seconds — your pubkey stays in your code, we just watch the chain and ping your webhook. Bitcoin + USDC on Base, Polygon, Ethereum. x402 + MCP native." />
   <meta property="og:title" content="ZettaPay — Crypto payments that confirm themselves" />
-  <meta property="og:description" content="P2P protocol. Install in 30 seconds. Your pubkey stays in your code — we just watch the chain and ping your webhook. Bitcoin, Ethereum, USDC on Solana. x402 + MCP native." />
+  <meta property="og:description" content="P2P protocol. Install in 30 seconds. Non-custodial. We watch the chain so your backend doesn't have to. Bitcoin + USDC on Base, Polygon, Ethereum. x402 + MCP native." />
   <title>ZettaPay — Crypto payments that confirm themselves</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
           animation: {
@@ -262,7 +262,7 @@
         <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-12 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
           <span class="text-white font-semibold">P2P protocol. Install in 30 seconds.</span>
           Your pubkey stays in your code &mdash; we just watch the chain and ping your webhook the moment a payment confirms.
-          <span class="text-white font-semibold">Bitcoin</span> &middot; <span class="text-white font-semibold">Ethereum</span> &middot; <span class="text-white font-semibold">USDC on Solana</span>.
+          <span class="text-white font-semibold">Bitcoin</span> &middot; <span class="text-white font-semibold">USDC on Base, Polygon, Ethereum</span>. Verify any payment yourself on <a class="text-royal-bright underline" href="https://mempool.space" target="_blank" rel="noopener">mempool.space</a> or <a class="text-royal-bright underline" href="https://basescan.org" target="_blank" rel="noopener">basescan.org</a>.
           <span class="text-royal-bright font-semibold">x402 + MCP native &mdash; built for AI agents.</span>
         </p>
 
@@ -285,11 +285,11 @@
             <div class="text-xs uppercase tracking-widest text-muted mt-2">Protocol fee</div>
           </div>
           <div class="text-center">
-            <div class="text-4xl md:text-5xl font-bold gradient-text stat-counter" data-target="2" data-suffix="s">&lt;2s</div>
-            <div class="text-xs uppercase tracking-widest text-muted mt-2">Solana confirm</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">~24s</div>
+            <div class="text-xs uppercase tracking-widest text-muted mt-2">Base confirm</div>
           </div>
           <div class="text-center">
-            <div class="text-4xl md:text-5xl font-bold gradient-text">3</div>
+            <div class="text-4xl md:text-5xl font-bold gradient-text">4</div>
             <div class="text-xs uppercase tracking-widest text-muted mt-2">Chains supported</div>
           </div>
           <div class="text-center">
@@ -305,8 +305,8 @@
   <section class="py-6 border-y border-royal/10 overflow-hidden">
     <div class="scroll-marquee whitespace-nowrap">
       <div class="flex items-center gap-16 px-8 text-muted/40 font-mono text-sm uppercase tracking-widest">
-        <span>Solana</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>Bitcoin</span><span>&middot;</span><span>Ethereum</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Wallet-less</span><span>&middot;</span><span>Anchor framework</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
-        <span>Solana</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>Bitcoin</span><span>&middot;</span><span>Ethereum</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Wallet-less</span><span>&middot;</span><span>Anchor framework</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
+        <span>Bitcoin</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>Base</span><span>&middot;</span><span>Polygon</span><span>&middot;</span><span>Ethereum</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Wallet-less</span><span>&middot;</span><span>HD wallet per invoice</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
+        <span>Bitcoin</span><span>&middot;</span><span>USDC</span><span>&middot;</span><span>Base</span><span>&middot;</span><span>Polygon</span><span>&middot;</span><span>Ethereum</span><span>&middot;</span><span>x402 protocol</span><span>&middot;</span><span>Model Context Protocol</span><span>&middot;</span><span>Wallet-less</span><span>&middot;</span><span>HD wallet per invoice</span><span>&middot;</span><span>TypeScript SDK</span><span>&middot;</span>
       </div>
     </div>
   </section>
@@ -326,12 +326,12 @@
       <div class="grid md:grid-cols-3 gap-6 mb-24">
         <div class="glass rounded-2xl p-8 reveal">
           <div class="flex items-center gap-4 mb-5">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-sm text-mint">01</div>
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center font-mono text-sm text-mint">01</div>
             <span class="text-xs font-mono text-mint uppercase tracking-widest">Customer pays</span>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Direct to your pubkey</h3>
           <p class="text-muted text-sm leading-relaxed">
-            The customer sends the on-chain transaction <span class="text-white">straight from their wallet</span> to your merchant address &mdash; Bitcoin, Ethereum, or USDC on Solana.
+            The customer sends the on-chain transaction <span class="text-white">straight from their wallet</span> to a unique HD-derived address per invoice &mdash; Bitcoin on-chain, or USDC on Base, Polygon, Ethereum.
             ZettaPay never touches the funds. The chain itself is the settlement layer.
           </p>
         </div>
@@ -344,15 +344,15 @@
           <h3 class="text-xl font-bold mb-3 text-white">We watch the chain 24/7</h3>
           <p class="text-muted text-sm leading-relaxed">
             Our chain listener follows every relevant block and confirms the deposit on the network you chose:
-            <span class="text-white">&lt;2s on Solana</span>, finality on Ethereum L2s, ~10 minutes on Bitcoin.
+            <span class="text-white">~24s on Base</span>, ~2s on Polygon, ~12s on Ethereum, ~10 minutes on Bitcoin.
             No middleman, no custodial holding pattern &mdash; just verified on-chain truth.
           </p>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.16s;">
           <div class="flex items-center gap-4 mb-5">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center font-mono text-sm text-solana">03</div>
-            <span class="text-xs font-mono text-solana uppercase tracking-widest">Webhook fires</span>
+            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-violet/20 to-royal/10 flex items-center justify-center font-mono text-sm text-violet">03</div>
+            <span class="text-xs font-mono text-violet uppercase tracking-widest">Webhook fires</span>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Stripe-grade events</h3>
           <p class="text-muted text-sm leading-relaxed">
@@ -371,12 +371,12 @@
       <div class="grid md:grid-cols-3 gap-6">
         <!-- AI AGENTS -->
         <div class="glass rounded-2xl p-8 reveal agent-glow">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-6">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center mb-6">
             <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
           </div>
           <h3 class="text-2xl font-bold mb-3 text-mint">AI Agents</h3>
           <p class="text-muted mb-6 leading-relaxed text-sm">Claude, GPT, Gemini. Pay autonomously via signed transactions in HTTP headers. No keys to custody.</p>
-          <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment"># x402 header with signed Solana tx</span>
+          <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment"># x402 header with signed Base tx</span>
 POST /pay
 <span class="code-keyword">x-402-payment:</span> <span class="code-string">"&lt;signed-tx-blob&gt;"</span>
 
@@ -392,7 +392,7 @@ POST /pay
             <svg class="w-6 h-6 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           </div>
           <h3 class="text-2xl font-bold mb-3 text-royal-bright">Humans</h3>
-          <p class="text-muted mb-6 leading-relaxed text-sm">Scan a QR or paste an address &mdash; no wallet connect, no extension required. Pay from any wallet you already use, on Solana, Bitcoin, or Ethereum. No crypto knowledge required.</p>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Scan a QR or paste an address &mdash; no wallet connect, no extension required. Pay from any wallet you already use, on Base, Bitcoin, or Ethereum. No crypto knowledge required.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-comment">// Wallet-less checkout: QR + address</span>
 <span class="code-keyword">const</span> <span class="code-fn">{ checkoutUrl }</span> = <span class="code-keyword">await</span> zettapay.<span class="code-fn">invoices</span>.<span class="code-fn">create</span>({
   merchant: <span class="code-string">"@store"</span>,
@@ -403,11 +403,11 @@ POST /pay
 
         <!-- MERCHANTS -->
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.2s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-6">
-            <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet/20 to-royal/10 flex items-center justify-center mb-6">
+            <svg class="w-6 h-6 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
           </div>
-          <h3 class="text-2xl font-bold mb-3 text-solana">Merchants</h3>
-          <p class="text-muted mb-6 leading-relaxed text-sm">Install the SDK. Your pubkey lives in your env vars &mdash; never on our servers. No wallet connect, no custody, no protocol fee. Three lines to accept payments on three chains.</p>
+          <h3 class="text-2xl font-bold mb-3 text-violet">Merchants</h3>
+          <p class="text-muted mb-6 leading-relaxed text-sm">Install the SDK. Your pubkey lives in your env vars &mdash; never on our servers. No wallet connect, no custody, no protocol fee. Four chains: Bitcoin + USDC on Base, Polygon, Ethereum.</p>
           <pre class="code-block rounded-lg p-4 text-xs overflow-x-auto"><code><span class="code-keyword">import</span> { ZettaPay } <span class="code-keyword">from</span> <span class="code-string">'@zettapay/sdk'</span>;
 
 <span class="code-keyword">const</span> zp = <span class="code-keyword">new</span> <span class="code-fn">ZettaPay</span>({
@@ -426,7 +426,7 @@ POST /pay
       <div class="text-center max-w-3xl mx-auto mb-16 reveal">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">Live demo</span>
         <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">See a payment <span class="gradient-text">happen</span></h2>
-        <p class="text-muted text-lg">Real Solana devnet transaction. Real USDC airdrop. Real settlement &lt;2s.</p>
+        <p class="text-muted text-lg">Real Base Sepolia transaction. Real USDC airdrop. Real settlement ~24s.</p>
       </div>
 
       <div class="glass rounded-3xl p-6 md:p-12 reveal">
@@ -446,7 +446,7 @@ POST /pay
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-muted">Network</span>
-                <span class="font-mono text-mint">Solana Devnet</span>
+                <span class="font-mono text-mint">Base Sepolia</span>
               </div>
               <div class="flex justify-between text-sm">
                 <span class="text-muted">Network gas (payer)</span>
@@ -467,7 +467,7 @@ POST /pay
           <div>
             <div id="demoOutput" class="code-block rounded-2xl p-6 font-mono text-xs min-h-[280px] overflow-auto">
               <div class="text-muted">$ awaiting demo...</div>
-              <div class="text-muted/50 mt-2">Click "Pay" to execute on Solana devnet</div>
+              <div class="text-muted/50 mt-2">Click "Pay" to execute on Base Sepolia</div>
             </div>
           </div>
         </div>
@@ -489,7 +489,7 @@ POST /pay
       <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Non-custodial -->
         <div class="glass rounded-2xl p-8 reveal">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-5">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center mb-5">
             <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Non-custodial by design</h3>
@@ -506,15 +506,15 @@ POST /pay
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Multi-chain, one webhook</h3>
           <p class="text-muted text-sm leading-relaxed">
-            Accept <span class="text-white">Bitcoin</span>, <span class="text-white">Ethereum</span> (Base + Polygon), and <span class="text-white">USDC on Solana</span> through a single API.
-            &lt;2s on Solana, finality on EVM L2s, ~10 minutes on Bitcoin. Your code stays the same.
+            Accept <span class="text-white">Bitcoin</span> and <span class="text-white">USDC on Base, Polygon, Ethereum</span> through a single API.
+            ~24s on Base, ~2s on Polygon, ~12s on Ethereum, ~10 minutes on Bitcoin. Your code stays the same.
           </p>
         </div>
 
         <!-- Auto-confirmation -->
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.1s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-5">
-            <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet/20 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Auto-confirmation listener</h3>
           <p class="text-muted text-sm leading-relaxed">
@@ -525,7 +525,7 @@ POST /pay
 
         <!-- Wallet-less merchant -->
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.15s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center mb-5">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center mb-5">
             <svg class="w-6 h-6 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Wallet-less, dev-native</h3>
@@ -549,8 +549,8 @@ POST /pay
 
         <!-- Open-source -->
         <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.25s;">
-          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-solana/20 to-royal/10 flex items-center justify-center mb-5">
-            <svg class="w-6 h-6 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-violet/20 to-royal/10 flex items-center justify-center mb-5">
+            <svg class="w-6 h-6 text-violet" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/></svg>
           </div>
           <h3 class="text-xl font-bold mb-3 text-white">Open protocol, verifiable</h3>
           <p class="text-muted text-sm leading-relaxed">
@@ -594,21 +594,21 @@ POST /pay
 
           <div class="space-y-6">
             <div class="flex gap-4 items-start">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">01</div>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">01</div>
               <div>
                 <div class="font-semibold text-white">x402 HTTP Payment Protocol</div>
                 <div class="text-sm text-muted">Open spec for machine-to-machine payments. Sign once, pay anywhere.</div>
               </div>
             </div>
             <div class="flex gap-4 items-start">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">02</div>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">02</div>
               <div>
                 <div class="font-semibold text-white">MCP Tool Definitions</div>
                 <div class="text-sm text-muted">Drop into Claude/GPT instantly. <code class="font-mono text-xs text-mint">pay</code>, <code class="font-mono text-xs text-mint">verify</code>, <code class="font-mono text-xs text-mint">refund</code>.</div>
               </div>
             </div>
             <div class="flex gap-4 items-start">
-              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-solana/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">03</div>
+              <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-mint/20 to-violet/20 flex items-center justify-center font-mono text-xs text-mint flex-shrink-0">03</div>
               <div>
                 <div class="font-semibold text-white">Idempotency &amp; Replay Safety</div>
                 <div class="text-sm text-muted">Agents retry. We dedupe. No double-spend. Cryptographic finality.</div>
@@ -630,7 +630,7 @@ POST /pay
 <span class="code-keyword">const</span> response = <span class="code-keyword">await</span> <span class="code-fn">fetch</span>(<span class="code-string">"https://api.merchant.com/buy"</span>, {
   method: <span class="code-string">"POST"</span>,
   headers: {
-    <span class="code-string">"x-402-payment"</span>: signedSolanaTx,
+    <span class="code-string">"x-402-payment"</span>: signedBaseTx,
     <span class="code-string">"x-402-amount"</span>: <span class="code-string">"2.50"</span>,
     <span class="code-string">"x-402-currency"</span>: <span class="code-string">"USDC"</span>,
   },
@@ -639,7 +639,7 @@ POST /pay
     merchant: <span class="code-string">"@cafe-bot"</span>
   })
 });
-<span class="code-comment">// -&gt; 200 OK, settled in 1.4s on Solana</span></pre>
+<span class="code-comment">// -&gt; 200 OK, settled in 1.4s on Base</span></pre>
           </div>
 
           <!-- MCP code sample -->
@@ -653,7 +653,7 @@ POST /pay
 <pre class="text-xs leading-relaxed"><span class="code-comment">// MCP Tool Definition for Claude/GPT</span>
 {
   <span class="code-string">"name"</span>: <span class="code-string">"pay_with_zettapay"</span>,
-  <span class="code-string">"description"</span>: <span class="code-string">"Send USDC payment on Solana"</span>,
+  <span class="code-string">"description"</span>: <span class="code-string">"Send USDC payment on Base"</span>,
   <span class="code-string">"input_schema"</span>: {
     <span class="code-string">"type"</span>: <span class="code-string">"object"</span>,
     <span class="code-string">"properties"</span>: {
@@ -701,8 +701,7 @@ POST /pay
 <span class="code-fn">ZETTAPAY_API_KEY</span>=<span class="code-string">sk_live_...</span>
 <span class="code-fn">ZETTAPAY_WEBHOOK_SECRET</span>=<span class="code-string">whsec_...</span>
 <span class="code-fn">MERCHANT_BTC_PUBKEY</span>=<span class="code-string">bc1q...</span>
-<span class="code-fn">MERCHANT_ETH_PUBKEY</span>=<span class="code-string">0x...</span>
-<span class="code-fn">MERCHANT_SOL_PUBKEY</span>=<span class="code-string">7Np41o...</span></code></pre>
+<span class="code-fn">MERCHANT_EVM_PUBKEY</span>=<span class="code-string">0x...</span> <span class="code-comment"># one address for Base, Polygon, Ethereum</span></code></pre>
         </div>
 
         <div class="glass rounded-2xl p-8 reveal md:col-span-2" style="transition-delay: 0.1s;">
@@ -714,15 +713,16 @@ POST /pay
   webhookSecret: process.env.<span class="code-fn">ZETTAPAY_WEBHOOK_SECRET</span>,
   pubkeys: {
     btc: process.env.<span class="code-fn">MERCHANT_BTC_PUBKEY</span>,
-    eth: process.env.<span class="code-fn">MERCHANT_ETH_PUBKEY</span>,
-    sol: process.env.<span class="code-fn">MERCHANT_SOL_PUBKEY</span>,
+    evm: process.env.<span class="code-fn">MERCHANT_EVM_PUBKEY</span>,
   },
+  chains: [<span class="code-string">'btc'</span>, <span class="code-string">'base'</span>, <span class="code-string">'polygon'</span>, <span class="code-string">'ethereum'</span>],
   webhookUrl: <span class="code-string">'https://my-app.com/zp/webhook'</span>,
 });
 <span class="code-keyword">await</span> zp.<span class="code-fn">register</span>(); <span class="code-comment">// registers your pubkeys with the ZettaPay chain listener</span>
 
-<span class="code-comment">// Done. ZettaPay watches BTC / ETH / SOL for incoming deposits to your addresses
-// and posts a signed webhook to webhookUrl the moment a transaction confirms.</span></code></pre>
+<span class="code-comment">// Done. ZettaPay derives a unique HD address per invoice on each chain
+// (Bitcoin + Base + Polygon + Ethereum) and posts a signed webhook to
+// webhookUrl the moment a transaction confirms.</span></code></pre>
         </div>
       </div>
     </div>
@@ -763,7 +763,7 @@ POST /pay
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7 rounded-md" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed max-w-xs">Peer-to-peer crypto payment protocol for AI agents and humans. Non-custodial, wallet-less, zero protocol fee. Bitcoin &middot; Ethereum &middot; USDC on Solana.</p>
+        <p class="text-xs text-muted leading-relaxed max-w-xs">Peer-to-peer crypto payment protocol for AI agents and humans. Non-custodial, wallet-less, zero protocol fee. Bitcoin &middot; USDC on Base, Polygon, Ethereum.</p>
         <div class="flex items-center gap-3 mt-4">
           <a href="https://github.com/leandromaiam-code/zettapay" aria-label="GitHub" class="text-muted hover:text-white transition">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
@@ -800,7 +800,7 @@ POST /pay
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol &middot; v1.0</span>
-      <span>Built with <span class="text-mint">Solana</span> &middot; <span class="text-royal-bright">USDC</span> &middot; <span class="text-solana">x402</span></span>
+      <span>Built with <span class="text-mint">Bitcoin</span> &middot; <span class="text-royal-bright">USDC</span> &middot; <span class="text-violet">x402</span></span>
     </div>
   </footer>
 
@@ -823,10 +823,10 @@ POST /pay
       demoBtn.addEventListener('click', async () => {
         demoBtn.disabled = true;
         demoBtn.classList.add('opacity-70');
-        demoBtn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Settling on Solana...';
+        demoBtn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Settling on Base...';
         const lines = [
           { t: 0,    msg: '<span class="text-royal-bright">$ zettapay pay --merchant=@hackathon-demo --amount=10</span>' },
-          { t: 200,  msg: '<span class="text-muted">-> Building Solana transaction...</span>' },
+          { t: 200,  msg: '<span class="text-muted">-> Building Base transaction...</span>' },
           { t: 600,  msg: '<span class="text-muted">-> Signing with merchant ATA...</span>' },
           { t: 1100, msg: '<span class="text-muted">-> Submitting to RPC (devnet)...</span>' },
           { t: 1500, msg: '<span class="text-mint">-> Tx signature: 4xK9...mP2L</span>' },
@@ -835,7 +835,7 @@ POST /pay
           { t: 2400, msg: '<span class="text-muted">-> Verified: 10.00 USDC payer&rarr;merchant (direct)</span>' },
           { t: 2700, msg: '<span class="text-muted">-> Webhook dispatched (HMAC-signed) to merchant URL</span>' },
           { t: 3100, msg: '\n<span class="text-mint font-bold">&#10003; PAYMENT COMPLETE &middot; ZERO PROTOCOL FEE</span>' },
-          { t: 3300, msg: '<span class="text-muted text-[10px]">    View on Solana Explorer -></span>' },
+          { t: 3300, msg: '<span class="text-muted text-[10px]">    View on Basescan -></span>' },
         ];
         demoOut.innerHTML = '';
         for (const l of lines) {

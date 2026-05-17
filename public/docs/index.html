@@ -16,7 +16,7 @@
   <script>
     tailwind.config = { theme: { extend: {
       fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
-      colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+      colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', violet:'#9945FF', muted:'#94A3B8' },
     }}};
   </script>
   <style>
@@ -85,10 +85,11 @@
         Build with <span class="gradient-text">ZettaPay</span>.
       </h1>
       <p class="text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
-        Multi-chain, non-custodial crypto payments that confirm themselves. Install the SDK, configure your pubkey
-        in env vars (<code class="text-mint font-mono text-sm">MERCHANT_BTC_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_ETH_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code>) — we watch the chain
-        and post a signed webhook the moment the customer pays. BTC, ETH (mainnet + L2s), USDC on Solana. Open
-        SDKs in TypeScript, Python, PHP and Rust. x402 + MCP native.
+        Multi-chain, non-custodial crypto payments that confirm themselves. Install the SDK, configure your wallet
+        in env vars (<code class="text-mint font-mono text-sm">MERCHANT_BTC_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_EVM_PUBKEY</code>) — we watch the chain
+        and post a signed webhook the moment the customer pays. Four chains: <strong class="text-white">Bitcoin</strong>,
+        <strong class="text-white">USDC on Base</strong>, <strong class="text-white">USDC on Polygon</strong>,
+        <strong class="text-white">USDC on Ethereum</strong>. Open SDKs in TypeScript, Python, PHP and Rust. x402 + MCP native.
       </p>
     </header>
 
