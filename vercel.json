@@ -146,6 +146,10 @@
     {
       "source": "/install",
       "destination": "/install/index.html"
+    },
+    {
+      "source": "/install/ai",
+      "destination": "/install/ai/index.html"
     }
   ],
   "headers": [
