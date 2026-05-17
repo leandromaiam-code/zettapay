@@ -60,7 +60,6 @@ import type {
 import { TreasuryService } from "./services/treasury.js";
 import type { PixProvider } from "./pix/client.js";
 import type { AttestationClient } from "./bridge/attestation.js";
-import type { EvmService } from "./services/evm.js";
 
 export interface CreateAppOptions {
   db: Db;
@@ -119,9 +118,9 @@ export interface CreateAppOptions {
    * Polygon and route to Solana via CCTP — see premissa I.1 / Z11.
    */
   attestation?: AttestationClient;
-  /** Optional EVM service. When provided, /pay/evm/:merchantRef routes
-   * (Base + Polygon ERC-20 USDC) are mounted. Disabled by default. */
-  evm?: EvmService;
+  /** @deprecated /pay/evm was retired in Z47 — see routes/pay_evm.ts. The
+   * EVM custodial service no longer exists; this option is ignored. */
+  evm?: unknown;
   /** AML monitoring config override (Z21.2). Defaults to env-loaded config.
    * Pass `null` to disable post-payment AML evaluation. */
   amlConfig?: AmlMonitorConfig | null;
@@ -244,9 +243,8 @@ export function createApp(options: CreateAppOptions): Express {
       onAutoPixSettle,
     }),
   );
-  if (evm) {
-    app.use(payEvmRouter(db, evm));
-  }
+  // Z47: /pay/evm now always returns 410 Gone — the custodial flow is dead.
+  app.use(payEvmRouter());
   app.use(verifySignatureRouter(db));
   app.use(analyticsRouter(db));
   app.use(funnelRouter(db));
