@@ -1,0 +1,18 @@
+[Unit]
+Description=Fabric HR-* learning (propose new soft HRs from recurring violations)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/fabric/hr.env
+WorkingDirectory=/opt/veridian-fabric
+ExecStart=/usr/bin/node /opt/veridian-fabric/fabric/bin/hr-learning.js \
+  --workspace-slug zettapay \
+  --window-days 7
+TimeoutStartSec=10min
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

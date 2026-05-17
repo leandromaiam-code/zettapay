@@ -1,0 +1,58 @@
+name: hr-scan
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: 'Base ref to diff against'
+        required: false
+        default: 'origin/main'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Resolve base ref
+        id: base
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags --depth=200 origin "${{ github.base_ref }}"
+            echo "ref=origin/${{ github.base_ref }}" >> "$GITHUB_OUTPUT"
+          else
+            git fetch --no-tags --depth=200 origin main
+            echo "ref=${{ inputs.base_ref || 'origin/main' }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Collect HR overrides from PR labels
+        id: overrides
+        if: github.event_name == 'pull_request'
+        env:
+          LABELS_JSON: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          node -e '
+            const labels = JSON.parse(process.env.LABELS_JSON || "[]");
+            const ids = labels
+              .filter(l => l.startsWith("hr-override:"))
+              .map(l => l.slice("hr-override:".length));
+            if (ids.length) console.log("overrides=" + ids.join(","));
+            else console.log("overrides=");
+          ' >> "$GITHUB_OUTPUT"
+
+      - name: Run HR scan (diff mode)
+        env:
+          ALLOW_HR_OVERRIDE: ${{ steps.overrides.outputs.overrides }}
+        run: node scripts/hr-scan.mjs diff "${{ steps.base.outputs.ref }}"

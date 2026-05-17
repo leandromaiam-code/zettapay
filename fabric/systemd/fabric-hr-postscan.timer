@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Fabric HR-* post-merge scan hourly
+Requires=fabric-hr-postscan.service
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+Unit=fabric-hr-postscan.service
+
+[Install]
+WantedBy=timers.target
