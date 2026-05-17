@@ -95,6 +95,102 @@ curl https://zettapay.vercel.app/simulate/test-merchant
 - MCP endpoint for AI agents
 - Native integration recipes for Anthropic Claude, OpenAI, and Hugging Face — see [docs/concepts/native-integrations](docs/concepts/native-integrations.mdx)
 
+## Z45 master seed setup (HD wallet per-invoice infrastructure)
+
+ZettaPay 2.0 derives every invoice receive address from a single offline-
+generated BIP-39 master mnemonic — BTC under BIP-84 (`m/84'/0'/0'/0/{i}`,
+bech32 P2WPKH) and USDC/EVM under BIP-44 (`m/44'/60'/0'/0/{i}`, EIP-55
+checksum). The same mnemonic + path imported into Sparrow / Electrum /
+Metamask recovers the funds independent of ZettaPay infrastructure.
+
+**Mandatory one-time setup (before any mainnet invoice):**
+
+1. **Generate the mnemonic OFFLINE.** Use a hardware wallet (Trezor /
+   Coldcard / Keystone) or an air-gapped machine running
+   [`bip39`](https://iancoleman.io/bip39/) from a verified release. 24 words
+   give 256 bits of entropy — do not use 12-word seeds in production.
+2. **Paper-backup the mnemonic, twice.** Store one copy in the operator's
+   safe and one in a geographically separate vault (bank deposit box,
+   secondary office safe). Do not photograph. Do not type it into a
+   networked machine after step 3. Loss of all paper copies = loss of every
+   merchant's funds.
+3. **Verify recovery before funding.** Restore the mnemonic on a second
+   air-gapped device and confirm `m/84'/0'/0'/0/0` matches the address
+   produced on the original device. Never trust an unverified backup.
+4. **Upload the mnemonic to Supabase Vault** as the secret named
+   `ZETTAPAY_MASTER_SEED`. The Vault uses `pgsodium` for at-rest encryption;
+   the service-role key decrypts on read. Once uploaded, wipe the mnemonic
+   from any clipboard / shell history (`history -c`, then close the terminal).
+
+```sql
+-- Run once, in the Supabase SQL editor (NOT via Claude / MCP / shell history).
+select vault.create_secret(
+  $secret$<paste your 24-word mnemonic here>$secret$,
+  'ZETTAPAY_MASTER_SEED',
+  'ZettaPay HD wallet master seed — paper backup: vault A + vault B'
+);
+```
+
+5. **Apply the migration.** `supabase/migrations/20260517000000_zettapay_invoices.sql`
+   creates `public.zettapay_invoices`, the `zettapay_invoice_index_counters`
+   table, and the `zettapay_allocate_invoice_index(text)` function that
+   guarantees atomic index allocation under concurrent invoice creation.
+6. **Set the admin gate.** Generate `ZETTAPAY_ADMIN_API_KEY` (≥24 chars)
+   and store it in Vercel project envs. `/admin/invoices` returns 503 until
+   the key is set.
+
+**Recovery drill (run quarterly):**
+
+```bash
+# 1. Restore mnemonic on an air-gapped machine.
+# 2. Derive m/84'/0'/0'/0/0 and m/44'/60'/0'/0/0 in your tool of choice.
+# 3. Confirm those addresses match `select receive_address from
+#    public.zettapay_invoices where derivation_index = 0 order by chain;`
+```
+
+If addresses diverge, the Vault secret has rotated or the seed copy is wrong
+— halt all new invoices and reconcile before further use.
+
+### `POST /admin/invoices`
+
+Allocates the next derivation index for the requested chain, derives the
+receive address from the master seed, and persists an invoice row.
+
+Request:
+```http
+POST /admin/invoices
+Authorization: Bearer <ZETTAPAY_ADMIN_API_KEY>
+Content-Type: application/json
+
+{
+  "merchant_id": "acme",
+  "amount_usd": 12.50,
+  "chain": "base",
+  "ttl_seconds": 1800
+}
+```
+
+For `chain=btc` the body must include `amount_native` (a string with at
+most 8 decimal places, in BTC). For USDC chains the server fills
+`amount_native = amount_usd` rounded down to 6 decimals.
+
+Response (201):
+```json
+{
+  "invoice_id": "8c2…",
+  "receive_address": "0xAbC…",
+  "derivation_path": "m/44'/60'/0'/0/42",
+  "amount_native": "12.500000",
+  "expires_at": "2026-05-17T20:30:00.000Z",
+  "qr_uri": "ethereum:0x833589f…@8453/transfer?address=0xAbC…&uint256=12500000",
+  "chain": "base",
+  "required_confirmations": 5
+}
+```
+
+The listener (Z46/Z47), sweep cron (Z48), checkout UI (Z49), and Solana →
+BTC/USDC migration (Z50) build on top of this foundation.
+
 ## Protocol spec
 
 The public wire-level specification — URI schemes, instruction

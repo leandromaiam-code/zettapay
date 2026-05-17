@@ -107,6 +107,23 @@ export {
   type DeriveEthereumAddressParams,
 } from './derive.js';
 export {
+  KeyManager,
+  InMemoryIndexAllocator,
+  mnemonicToMasterKey,
+  deriveAddressFromMaster,
+  deriveBtcAddressFromMaster,
+  deriveEvmAddressFromMaster,
+  chainToNamespace,
+  btcPathFor,
+  evmPathFor,
+  pathFor,
+  type IndexAllocator,
+  type IndexNamespace,
+  type InvoiceChain,
+  type DerivedInvoiceAddress,
+  type KeyManagerOptions,
+} from './key-manager.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,
