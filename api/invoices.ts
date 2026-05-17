@@ -113,6 +113,7 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
       description:
         'Create a multi-chain invoice. ZettaPay watches the chain and fires a webhook on confirmation.',
       requestBody: {
+        merchant: 'string (optional, merchant ref; alias for merchant_id)',
         merchant_id: 'string (optional, resolved from API key when omitted)',
         amount_usd: 'number (required, positive, ≤1,000,000)',
         chain: `enum: ${SUPPORTED_CHAINS.join(' | ')}`,
@@ -173,12 +174,13 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
   }
 
   let merchantId: string | undefined;
-  if (body.merchant_id !== undefined && body.merchant_id !== null) {
-    if (typeof body.merchant_id !== 'string' || body.merchant_id.length === 0 || body.merchant_id.length > 64) {
+  const merchantField = body.merchant_id ?? body.merchant;
+  if (merchantField !== undefined && merchantField !== null) {
+    if (typeof merchantField !== 'string' || merchantField.length === 0 || merchantField.length > 64) {
       badRequest(res, 'invalid_merchant_id', 'Field "merchant_id" must be a string of 1..64 chars');
       return;
     }
-    merchantId = body.merchant_id;
+    merchantId = merchantField;
   }
 
   let metadata: Record<string, unknown> | undefined;
