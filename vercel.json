@@ -150,6 +150,10 @@
     {
       "source": "/install/ai",
       "destination": "/install/ai/index.html"
+    },
+    {
+      "source": "/admin/invoices",
+      "destination": "/api/admin/invoices"
     }
   ],
   "headers": [
