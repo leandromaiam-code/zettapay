@@ -1,0 +1,339 @@
+/* ZettaPay theme tokens — light default, dark via [data-theme="dark"] on <html>.
+   Loaded AFTER each page's inline <style> block so overrides win. */
+
+:root {
+  --bg: #FAFAF7;
+  --bg-elev: #FFFFFF;
+  --bg-soft: #F1F1ED;
+  --ink: #0E0F12;
+  --ink-soft: #3A3D44;
+  --ink-muted: #6B7280;
+  --line: #E5E7EB;
+  --line-strong: #CBD5E1;
+  --accent: #4F6BFF;
+  --accent-hover: #3A52CC;
+  --accent-bright: #4F6BFF;
+  --accent-soft: #EEF1FF;
+  --mint: #00A86B;
+  --mint-soft: rgba(0, 168, 107, 0.10);
+  --mint-line: rgba(0, 168, 107, 0.35);
+  --solana: #7C3AED;
+  --warn: #B45309;
+  --warn-soft: rgba(180, 83, 9, 0.10);
+  --warn-line: rgba(180, 83, 9, 0.35);
+  --danger: #B91C1C;
+  --danger-soft: rgba(185, 28, 28, 0.10);
+  --danger-line: rgba(185, 28, 28, 0.35);
+  --grid-line: rgba(15, 23, 42, 0.045);
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(15, 23, 42, 0.07);
+  --glass-hover-bg: #FFFFFF;
+  --glass-hover-border: rgba(79, 107, 255, 0.30);
+  --glass-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.05);
+  --hero-glow-1: rgba(79, 107, 255, 0.08);
+  --hero-glow-2: rgba(124, 58, 237, 0.05);
+  --orb-opacity: 0.06;
+  --code-bg: #0E0F12;
+  --code-bg-grad: linear-gradient(135deg, #0E0F12 0%, #14171c 100%);
+  --code-ink: #E5E7EB;
+  --code-border: rgba(255, 255, 255, 0.10);
+  --code-comment: #94A3B8;
+  --code-keyword: #C792EA;
+  --code-string: #82AAFF;
+  --code-fn: #5DE2A8;
+  --code-num: #FFB454;
+  --input-bg: #FFFFFF;
+  --input-border: var(--line-strong);
+  --input-ink: var(--ink);
+  color-scheme: light !important;
+}
+
+[data-theme="dark"] {
+  --bg: #0A0A0A;
+  --bg-elev: #111111;
+  --bg-soft: #1A1A1A;
+  --ink: #FFFFFF;
+  --ink-soft: #D8E1FF;
+  --ink-muted: #94A3B8;
+  --line: rgba(79, 107, 255, 0.15);
+  --line-strong: rgba(79, 107, 255, 0.30);
+  --accent: #4F6BFF;
+  --accent-hover: #6B82FF;
+  --accent-bright: #6B82FF;
+  --accent-soft: rgba(79, 107, 255, 0.10);
+  --mint: #14F195;
+  --mint-soft: rgba(20, 241, 149, 0.12);
+  --mint-line: rgba(20, 241, 149, 0.35);
+  --solana: #9945FF;
+  --warn: #f59e0b;
+  --warn-soft: rgba(245, 158, 11, 0.12);
+  --warn-line: rgba(245, 158, 11, 0.35);
+  --danger: #fb7185;
+  --danger-soft: rgba(251, 113, 133, 0.12);
+  --danger-line: rgba(251, 113, 133, 0.35);
+  --grid-line: rgba(79, 107, 255, 0.04);
+  --glass-bg: rgba(79, 107, 255, 0.05);
+  --glass-border: rgba(79, 107, 255, 0.15);
+  --glass-hover-bg: rgba(79, 107, 255, 0.08);
+  --glass-hover-border: rgba(79, 107, 255, 0.30);
+  --glass-shadow: none;
+  --hero-glow-1: rgba(79, 107, 255, 0.15);
+  --hero-glow-2: rgba(153, 69, 255, 0.08);
+  --orb-opacity: 0.28;
+  --code-bg: #0d0d0d;
+  --code-bg-grad: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+  --code-ink: #d8e1ff;
+  --code-border: rgba(79, 107, 255, 0.15);
+  --code-comment: #64748b;
+  --code-keyword: #9945FF;
+  --code-string: #4F6BFF;
+  --code-fn: #14F195;
+  --code-num: #f97316;
+  --input-bg: rgba(255, 255, 255, 0.04);
+  --input-border: rgba(79, 107, 255, 0.30);
+  --input-ink: #FFFFFF;
+  color-scheme: dark !important;
+}
+
+/* ---- Baseline body ---- */
+html, body {
+  background: var(--bg) !important;
+  color: var(--ink) !important;
+}
+
+/* ---- Grid background ---- */
+.grid-bg {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px) !important;
+}
+
+/* ---- Glow orbs (massive blurred blobs) ---- */
+.glow-orb { opacity: var(--orb-opacity) !important; }
+
+/* ---- Hero gradient (radial blue/purple halo) ---- */
+.hero-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, var(--hero-glow-1) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, var(--hero-glow-2) 0%, transparent 50%) !important;
+}
+
+/* ---- Gradient text (rainbow accent) ---- */
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--mint) 50%, var(--solana) 100%) !important;
+  background-size: 200% auto !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+/* ---- Glass cards ---- */
+.glass {
+  background: var(--glass-bg) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.glass:hover {
+  background: var(--glass-hover-bg) !important;
+  border-color: var(--glass-hover-border) !important;
+}
+.glass-strong, .glass-soft {
+  background: var(--bg-elev) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: var(--glass-shadow);
+}
+
+/* ---- Gradient border card ---- */
+.gradient-border {
+  background:
+    linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+    linear-gradient(135deg, var(--accent), var(--mint), var(--solana)) border-box !important;
+  border: 1px solid transparent !important;
+}
+.gradient-border:hover {
+  background:
+    linear-gradient(var(--bg-elev), var(--bg-elev)) padding-box,
+    linear-gradient(135deg, var(--accent), var(--mint), var(--solana)) border-box !important;
+}
+
+/* ---- Buttons ---- */
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%) !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 4px 18px rgba(79, 107, 255, 0.22);
+}
+.btn-primary:hover {
+  box-shadow: 0 8px 32px rgba(79, 107, 255, 0.35) !important;
+}
+.btn-ghost {
+  background: var(--bg-elev) !important;
+  border: 1px solid var(--line-strong) !important;
+  color: var(--ink) !important;
+}
+.btn-ghost:hover {
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+}
+[data-theme="dark"] .btn-ghost { color: #FFFFFF !important; }
+[data-theme="dark"] .btn-ghost:hover { color: #FFFFFF !important; }
+.btn-secondary, .btn-mint {
+  /* leave as-is unless they target deep colors */
+}
+
+/* ---- Code blocks: ALWAYS dark for legibility per spec ---- */
+.code-block, pre.code-block, .code-card, .code, pre.code {
+  background: var(--code-bg-grad) !important;
+  color: var(--code-ink) !important;
+  border: 1px solid var(--code-border) !important;
+}
+.code-block code, pre.code-block code, .code-card code, .code code {
+  color: var(--code-ink);
+}
+.code-comment { color: var(--code-comment) !important; }
+.code-keyword { color: var(--code-keyword) !important; }
+.code-string  { color: var(--code-string)  !important; }
+.code-fn      { color: var(--code-fn)      !important; }
+.code-num     { color: var(--code-num)     !important; }
+
+/* ---- Inputs ---- */
+.input, .input-field, input[type="text"], input[type="email"], input[type="url"],
+input[type="search"], input[type="password"], input[type="number"], textarea, select {
+  background-color: var(--input-bg) !important;
+  border-color: var(--input-border) !important;
+  color: var(--input-ink) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--ink-muted) !important; opacity: 0.7; }
+
+/* ---- Logo wordmark: black PNG on light, invert for dark ---- */
+.logo-wordmark { filter: none !important; }
+[data-theme="dark"] .logo-wordmark { filter: invert(1) brightness(2) !important; }
+
+/* ---- Tailwind utility overrides (theme-aware) ---- */
+.text-white { color: var(--ink) !important; }
+.text-muted { color: var(--ink-muted) !important; }
+.text-mint { color: var(--mint) !important; }
+.text-solana { color: var(--solana) !important; }
+.bg-deep { background-color: var(--bg) !important; }
+.bg-deep-card { background-color: var(--bg-elev) !important; }
+
+/* btn-primary / .btn-ghost have text-white inside <a> — preserve */
+.btn-primary .text-white, a.btn-primary, button.btn-primary { color: #FFFFFF !important; }
+
+/* Tailwind opacity-modifier variants generated by JIT with literal hex.
+   We need explicit overrides because /N variants don't share the base class rule. */
+.text-muted\/40 { color: rgba(107, 114, 128, 0.55) !important; }
+.text-muted\/50 { color: rgba(107, 114, 128, 0.60) !important; }
+.text-muted\/60 { color: rgba(107, 114, 128, 0.70) !important; }
+.text-muted\/70 { color: rgba(107, 114, 128, 0.78) !important; }
+.text-muted\/80 { color: rgba(107, 114, 128, 0.85) !important; }
+.text-muted\/90 { color: rgba(107, 114, 128, 0.92) !important; }
+.text-white\/80 { color: rgba(14, 15, 18, 0.78) !important; }
+.text-white\/90 { color: rgba(14, 15, 18, 0.88) !important; }
+.bg-deep-card\/40 { background-color: rgba(255, 255, 255, 0.60) !important; }
+
+[data-theme="dark"] .text-muted\/40 { color: rgba(148, 163, 184, 0.40) !important; }
+[data-theme="dark"] .text-muted\/50 { color: rgba(148, 163, 184, 0.50) !important; }
+[data-theme="dark"] .text-muted\/60 { color: rgba(148, 163, 184, 0.60) !important; }
+[data-theme="dark"] .text-muted\/70 { color: rgba(148, 163, 184, 0.70) !important; }
+[data-theme="dark"] .text-muted\/80 { color: rgba(148, 163, 184, 0.80) !important; }
+[data-theme="dark"] .text-muted\/90 { color: rgba(148, 163, 184, 0.90) !important; }
+[data-theme="dark"] .text-white\/80 { color: rgba(255, 255, 255, 0.80) !important; }
+[data-theme="dark"] .text-white\/90 { color: rgba(255, 255, 255, 0.90) !important; }
+[data-theme="dark"] .bg-deep-card\/40 { background-color: rgba(17, 17, 17, 0.40) !important; }
+
+/* ---- Install language tabs ---- */
+.install-tab { color: var(--ink-muted) !important; background: transparent !important; border: 1px solid transparent !important; }
+.install-tab:hover { color: var(--ink) !important; }
+.install-tab[aria-selected="true"] {
+  color: var(--accent) !important;
+  background: var(--accent-soft) !important;
+  border-color: var(--accent) !important;
+  box-shadow: none !important;
+}
+[data-theme="dark"] .install-tab[aria-selected="true"] {
+  color: #FFFFFF !important;
+  background: rgba(79, 107, 255, 0.18) !important;
+  border-color: rgba(79, 107, 255, 0.4) !important;
+  box-shadow: 0 0 18px rgba(79, 107, 255, 0.2) !important;
+}
+
+/* ---- Badges (mint/amber/muted/rose/royal) — soften for light bg ---- */
+.badge-mint  { background: var(--mint-soft)  !important; border-color: var(--mint-line)  !important; color: var(--mint)  !important; }
+.badge-amber { background: var(--warn-soft)  !important; border-color: var(--warn-line)  !important; color: var(--warn)  !important; }
+.badge-rose  { background: var(--danger-soft) !important; border-color: var(--danger-line) !important; color: var(--danger) !important; }
+.badge-muted { background: rgba(107, 114, 128, 0.10) !important; border-color: rgba(107, 114, 128, 0.30) !important; color: var(--ink-muted) !important; }
+.badge-royal { background: var(--accent-soft) !important; border-color: var(--accent) !important; color: var(--accent) !important; }
+[data-theme="dark"] .badge-muted { background: rgba(148, 163, 184, 0.1) !important; border-color: rgba(148, 163, 184, 0.3) !important; color: #94A3B8 !important; }
+
+/* ---- Misc text accents ---- */
+.check { color: var(--mint) !important; }
+.cross { color: var(--ink-muted) !important; }
+[data-theme="dark"] .cross { color: #475569 !important; }
+
+/* ---- Timeline dots (dashboard) ---- */
+.timeline-dot { border-color: var(--bg) !important; }
+.timeline-dot.is-sent { background: var(--mint) !important; }
+.timeline-dot.is-pending { background: var(--warn) !important; }
+.timeline-dot.is-failed { background: var(--danger) !important; }
+.timeline-dot.is-dead { background: var(--ink-muted) !important; }
+
+/* ---- Modal backdrop ---- */
+.modal-backdrop { background: rgba(15, 23, 42, 0.35) !important; }
+[data-theme="dark"] .modal-backdrop { background: rgba(2, 4, 14, 0.72) !important; }
+
+/* ---- Address display (checkout/dashboard) ---- */
+.address-display, .key-value {
+  background: var(--bg-soft) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--ink) !important;
+}
+
+/* ---- Skeleton shimmer ---- */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-soft) 0%, var(--line) 50%, var(--bg-soft) 100%) !important;
+}
+
+/* ---- Compare grid borders (pricing) ---- */
+.compare-cell { border-bottom-color: var(--line) !important; }
+.compare-zp { background: var(--mint-soft) !important; }
+.compare-zp-header { background: linear-gradient(180deg, var(--mint-soft), transparent) !important; }
+
+/* ---- Theme toggle button ---- */
+.theme-toggle {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+.theme-toggle:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.theme-toggle svg { width: 18px; height: 18px; }
+.theme-toggle .icon-sun  { display: none; }
+.theme-toggle .icon-moon { display: block; }
+[data-theme="dark"] .theme-toggle .icon-sun  { display: block; }
+[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+/* ---- Selection ---- */
+::selection { background: var(--accent-soft); color: var(--accent); }
+[data-theme="dark"] ::selection { background: rgba(79, 107, 255, 0.35); color: #fff; }
+
+/* ---- Borders shorthand override for hero/footer separators using deep colors ---- */
+hr { border-color: var(--line) !important; }
+
+/* ---- Pay/checkout cards use bg-deep-card; ensure dark text remains dark ink ---- */
+.bg-deep-card .text-muted { color: var(--ink-muted) !important; }
