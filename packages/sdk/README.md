@@ -8,7 +8,47 @@ Typed TypeScript client for the ZettaPay merchant + X-402 payments API.
 npm install @zettapay/sdk
 ```
 
-## Usage
+## Quickstart — pubkey lives in your code
+
+ZettaPay is a P2P confirmation-tracking protocol. Your wallet addresses live in *your* env vars, not on
+our servers. Sign up at [zettapay.io/signup](https://zettapay.io/signup) for email + shop name to receive
+`api_key` + `webhook_secret`, then configure pubkeys client-side:
+
+```dotenv
+# .env — stays on your servers, never on ours
+ZETTAPAY_API_KEY=sk_live_...
+ZETTAPAY_WEBHOOK_SECRET=whsec_...
+
+# Wallet addresses you control — set any subset
+MERCHANT_BTC_PUBKEY=bc1qx5...e92
+MERCHANT_ETH_PUBKEY=0x7a3...4F2
+MERCHANT_SOL_PUBKEY=7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT
+```
+
+```ts
+import { ZettaPay } from '@zettapay/sdk';
+
+const zp = new ZettaPay({
+  apiKey:        process.env.ZETTAPAY_API_KEY!,
+  webhookSecret: process.env.ZETTAPAY_WEBHOOK_SECRET!,
+  pubkeys: {
+    btc: process.env.MERCHANT_BTC_PUBKEY,
+    eth: process.env.MERCHANT_ETH_PUBKEY,
+    sol: process.env.MERCHANT_SOL_PUBKEY,
+  },
+  webhookUrl: 'https://my-app.com/webhooks/zettapay',
+});
+
+// Idempotent — registers the pubkeys with the ZettaPay chain listener.
+// Call on boot. Re-running with new env vars rotates keys (no dashboard edit).
+await zp.register();
+```
+
+Rotate any key by editing your `.env` and redeploying — the next `zp.register()` call swaps the address the
+chain listener is watching. No login, no support ticket. `dev` / `staging` / `prod` are just three different
+env files.
+
+## Low-level client (advanced)
 
 ```ts
 import { ZettaPayClient, ZettaPayError } from '@zettapay/sdk';

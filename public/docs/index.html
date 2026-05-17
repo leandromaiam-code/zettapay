@@ -83,7 +83,8 @@
         Build with <span class="gradient-text">ZettaPay</span>.
       </h1>
       <p class="text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
-        Multi-chain, non-custodial crypto payments that confirm themselves. Paste your pubkey — we watch the chain
+        Multi-chain, non-custodial crypto payments that confirm themselves. Install the SDK, configure your pubkey
+        in env vars (<code class="text-mint font-mono text-sm">MERCHANT_BTC_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_ETH_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code>) — we watch the chain
         and post a signed webhook the moment the customer pays. BTC, ETH (mainnet + L2s), USDC on Solana. Open
         SDKs in TypeScript, Python, PHP and Rust. x402 + MCP native.
       </p>
@@ -94,7 +95,7 @@
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Start here · no code</div>
         <div class="text-2xl font-bold mb-2">Embed quickstart · 5 min</div>
         <p class="text-muted text-sm leading-relaxed">
-          Sign up with your Solana address, paste one &lt;script&gt; tag in your &lt;head&gt; — done.
+          Get your API key, drop a <code class="text-mint">&lt;script&gt;</code> tag with your pubkey in your <code class="text-mint">&lt;head&gt;</code> — done.
           Recipes for plain HTML, vanilla JS, React and Next.js.
         </p>
       </a>
@@ -103,7 +104,8 @@
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">For developers</div>
         <div class="text-2xl font-bold mb-2">SDK quickstart · 5 min</div>
         <p class="text-muted text-sm leading-relaxed">
-          Sign up, install the SDK, create an invoice, verify the webhook. Snippets in
+          Get your API key, install the SDK, configure your pubkey in env vars
+          (<code class="text-mint">ZETTAPAY_API_KEY</code> + <code class="text-mint">MERCHANT_*_PUBKEY</code>), call <code class="text-mint">zp.register()</code>, verify the webhook. Snippets in
           TypeScript, Python, PHP and Rust.
         </p>
       </a>
