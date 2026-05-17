@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="/theme.css" />
+  <meta name="description" content="Install ZettaPay with an AI assistant. Copy the canonical prompt, paste it in Claude Code, Cursor, Codex, Lovable or Aider, review the PR. Non-custodial, open-source, audited." />
+  <meta property="og:title" content="ZettaPay — Install with AI · 1 minute" />
+  <meta property="og:description" content="Paste one prompt into your AI coding assistant. It detects your stack, wires the SDK, and opens a PR you review and merge." />
+  <meta name="robots" content="index, follow" />
+  <title>ZettaPay — Install with AI · 1 minute</title>
+  <link rel="icon" href="/Logo_symbol.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            royal: '#4F6BFF',
+            'royal-dim': '#3A52CC',
+            'royal-bright': '#6B82FF',
+            'deep': '#0A0A0A',
+            'deep-card': '#111111',
+            'mint': '#14F195',
+            'solana': '#9945FF',
+            'muted': '#94A3B8',
+            'amber': '#f59e0b',
+            'rose': '#fb7185',
+          },
+          animation: {
+            'fade-up': 'fadeUp 0.5s ease-out forwards',
+            'fade-in': 'fadeIn 0.35s ease-out forwards',
+          },
+          keyframes: {
+            fadeUp: { '0%': { opacity: '0', transform: 'translateY(12px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: #0A0A0A;
+      color: #FFFFFF;
+      font-family: 'Inter', ui-sans-serif, system-ui;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #4F6BFF 0%, #14F195 50%, #9945FF 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientShift 8s linear infinite;
+    }
+    @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    .glass {
+      background: rgba(79, 107, 255, 0.05);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+    }
+    .glass-strong {
+      background: rgba(17, 17, 17, 0.92);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(79, 107, 255, 0.25);
+    }
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.28;
+      pointer-events: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 30px rgba(79, 107, 255, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 40px rgba(79, 107, 255, 0.5); }
+    .btn-ghost {
+      background: rgba(79, 107, 255, 0.05);
+      border: 1px solid rgba(79, 107, 255, 0.3);
+      color: #FFFFFF;
+      transition: all 0.25s ease;
+    }
+    .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
+    .btn-mint {
+      background: linear-gradient(135deg, #14F195 0%, #0bd87f 100%);
+      color: #0A0A0A;
+      transition: all 0.25s ease;
+      box-shadow: 0 0 24px rgba(20, 241, 149, 0.28);
+    }
+    .btn-mint:hover { transform: translateY(-1px); box-shadow: 0 8px 36px rgba(20, 241, 149, 0.45); }
+    .logo-wordmark { filter: invert(1) brightness(2); }
+
+    /* TABS */
+    .tool-tab {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.7rem 1.05rem;
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.65rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: rgba(148, 163, 184, 0.85);
+      white-space: nowrap;
+    }
+    .tool-tab:hover { color: #fff; border-color: rgba(79, 107, 255, 0.45); }
+    .tool-tab[aria-selected="true"] {
+      background: rgba(79, 107, 255, 0.14);
+      border-color: rgba(79, 107, 255, 0.55);
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(79, 107, 255, 0.12);
+    }
+    .tool-tab .tool-ico {
+      width: 18px; height: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      background: rgba(79, 107, 255, 0.18);
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #6B82FF;
+      flex-shrink: 0;
+    }
+    .tool-tab[aria-selected="true"] .tool-ico { background: rgba(20, 241, 149, 0.2); color: #14F195; }
+
+    /* STEP */
+    .step-card {
+      background: rgba(17, 17, 17, 0.55);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      border-radius: 0.85rem;
+      padding: 1.1rem 1.25rem;
+    }
+    .step-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 1.6rem; height: 1.6rem;
+      background: rgba(79, 107, 255, 0.18);
+      border: 1px solid rgba(79, 107, 255, 0.4);
+      color: #6B82FF;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 0.78rem;
+      border-radius: 9999px;
+      flex-shrink: 0;
+    }
+
+    /* FORM */
+    .field-label {
+      display: block;
+      font-size: 0.68rem;
+      font-family: 'JetBrains Mono', monospace;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: rgba(148, 163, 184, 0.85);
+      margin-bottom: 0.4rem;
+    }
+    .field-label .opt {
+      color: rgba(148, 163, 184, 0.55);
+      font-weight: 400;
+      text-transform: none;
+      letter-spacing: 0.04em;
+      margin-left: 0.4rem;
+    }
+    .field-input,
+    .field-textarea {
+      width: 100%;
+      background: rgba(10, 10, 10, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.22);
+      color: #FFFFFF;
+      padding: 0.65rem 0.85rem;
+      border-radius: 0.6rem;
+      font-size: 0.85rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .field-input:focus,
+    .field-textarea:focus {
+      outline: none;
+      border-color: rgba(20, 241, 149, 0.55);
+      box-shadow: 0 0 0 3px rgba(20, 241, 149, 0.12);
+    }
+    .field-input::placeholder { color: rgba(148, 163, 184, 0.45); }
+
+    /* PROMPT TEXTAREA */
+    .prompt-area {
+      width: 100%;
+      background: #060606;
+      color: #e8e8e8;
+      border: 1px solid rgba(79, 107, 255, 0.22);
+      border-radius: 0.75rem;
+      padding: 1rem 1.1rem;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 0.78rem;
+      line-height: 1.6;
+      min-height: 400px;
+      resize: vertical;
+      white-space: pre;
+      overflow: auto;
+    }
+    .prompt-area:focus { outline: none; border-color: rgba(20, 241, 149, 0.45); }
+
+    /* COPY */
+    .copy-btn { transition: all 0.2s ease; }
+    .copy-btn.copied {
+      background: rgba(20, 241, 149, 0.2);
+      color: #14F195;
+      border-color: rgba(20, 241, 149, 0.45);
+    }
+
+    /* PILLS */
+    .proof-pill {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.45rem 0.75rem; border-radius: 9999px;
+      font-size: 0.72rem; font-family: 'JetBrains Mono', monospace;
+      background: rgba(79, 107, 255, 0.06);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      color: rgba(148, 163, 184, 0.9);
+    }
+    .proof-pill .dot { width: 6px; height: 6px; border-radius: 9999px; background: #14F195; box-shadow: 0 0 8px #14F195; }
+    .proof-pill.warn .dot { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+
+    .meta-line {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(148, 163, 184, 0.65);
+    }
+
+    .toast {
+      position: fixed; bottom: 1.5rem; left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      background: rgba(17, 17, 17, 0.95);
+      border: 1px solid rgba(20, 241, 149, 0.4);
+      color: #FFFFFF; padding: 0.75rem 1.25rem;
+      border-radius: 9999px; font-size: 0.85rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+      transition: transform 0.3s ease; z-index: 70;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 640px) {
+      .prompt-area { min-height: 420px; font-size: 0.74rem; }
+    }
+  </style>
+  <script src="/theme-toggle.js" defer></script>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
+  <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.14;"></div>
+  <div class="glow-orb" style="background: #9945FF; width: 360px; height: 360px; top: 35%; right: 28%; opacity: 0.08;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3 group" aria-label="ZettaPay home">
+        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark" />
+      </a>
+      <div class="hidden md:flex items-center gap-8 text-sm font-medium">
+        <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
+        <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Back to home</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-32 pb-16 px-4 lg:px-12 relative z-10">
+    <div class="max-w-3xl mx-auto">
+
+      <!-- HEADER -->
+      <header class="text-center mb-8 animate-fade-up">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Install with AI &middot; ~1 minute</span>
+        <h1 class="text-4xl md:text-5xl font-bold mt-3 mb-4 tracking-tight">
+          Paste one prompt. <span class="gradient-text">Review the PR.</span>
+        </h1>
+        <p class="text-muted text-base max-w-2xl mx-auto leading-relaxed">
+          Your AI coding assistant detects this project&rsquo;s stack, wires the ZettaPay SDK, and opens a pull request.
+          <span class="text-white font-medium">You review the diff before merging.</span> No secrets sent to ZettaPay servers.
+        </p>
+        <div class="flex flex-wrap justify-center items-center gap-2 mt-5">
+          <span class="proof-pill"><span class="dot"></span> Full prompt visible &middot; read before pasting</span>
+          <span class="proof-pill"><span class="dot"></span> Non-custodial</span>
+          <span class="proof-pill"><span class="dot"></span> 100% open-source</span>
+          <a href="/install" class="proof-pill hover:!border-royal hover:!text-white transition">Prefer a guided wizard? &rarr;</a>
+        </div>
+      </header>
+
+      <!-- TABS -->
+      <div class="mb-6">
+        <span class="meta-line block mb-3">Choose your AI assistant</span>
+        <div role="tablist" aria-label="AI coding assistant" class="flex flex-wrap gap-2" id="tool-tabs">
+          <button role="tab" type="button" class="tool-tab" data-tool="claude" aria-selected="true" aria-controls="prompt-area" id="tab-claude">
+            <span class="tool-ico">CC</span>Claude Code
+          </button>
+          <button role="tab" type="button" class="tool-tab" data-tool="codex" aria-selected="false" aria-controls="prompt-area" id="tab-codex">
+            <span class="tool-ico">CX</span>Codex / Cursor
+          </button>
+          <button role="tab" type="button" class="tool-tab" data-tool="lovable" aria-selected="false" aria-controls="prompt-area" id="tab-lovable">
+            <span class="tool-ico">LV</span>Lovable
+          </button>
+          <button role="tab" type="button" class="tool-tab" data-tool="aider" aria-selected="false" aria-controls="prompt-area" id="tab-aider">
+            <span class="tool-ico">AD</span>Aider
+          </button>
+        </div>
+      </div>
+
+      <!-- WIZARD -->
+      <section class="glass-strong rounded-2xl p-6 md:p-9 animate-fade-up">
+
+        <!-- STEP 1 -->
+        <div class="step-card flex items-start gap-4 mb-5">
+          <span class="step-num">1</span>
+          <div class="flex-1">
+            <div class="font-semibold text-base mb-0.5">Open your project in <span id="tool-name-1">Claude Code</span></div>
+            <div class="text-sm text-muted" id="tool-hint">
+              Run <code class="font-mono text-mint">claude</code> in the repo you want to add payments to.
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="step-card mb-5">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="step-num">2</span>
+            <div class="flex-1">
+              <div class="font-semibold text-base mb-0.5">Drop in your details</div>
+              <div class="text-sm text-muted">These get embedded in the prompt &mdash; not sent to ZettaPay. Defaults work for demos.</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="md:col-span-2">
+              <label for="f-merchant" class="field-label">Merchant ID <span class="opt">required &middot; from <a href="/signup" class="text-royal-bright hover:underline">/signup</a></span></label>
+              <input id="f-merchant" type="text" class="field-input" placeholder="mch_..." spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label for="f-sol" class="field-label">Solana payout pubkey <span class="opt">required &middot; base58</span></label>
+              <input id="f-sol" type="text" class="field-input" placeholder="Your Solana payout address" spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div>
+              <label for="f-btc" class="field-label">Bitcoin payout <span class="opt">optional</span></label>
+              <input id="f-btc" type="text" class="field-input" placeholder="bc1... / 1... / 3..." spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div>
+              <label for="f-eth" class="field-label">EVM payout <span class="opt">optional</span></label>
+              <input id="f-eth" type="text" class="field-input" placeholder="0x..." spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div>
+              <label for="f-amount" class="field-label">Amount</label>
+              <input id="f-amount" type="number" min="0" step="0.01" class="field-input" placeholder="9.99" />
+            </div>
+
+            <div>
+              <label for="f-currency" class="field-label">Currency</label>
+              <input id="f-currency" type="text" class="field-input" placeholder="USD" maxlength="6" spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div class="md:col-span-2">
+              <label for="f-label" class="field-label">Label / description</label>
+              <input id="f-label" type="text" class="field-input" placeholder="Subscription" spellcheck="false" autocomplete="off" maxlength="60" />
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="step-card mb-5">
+          <div class="flex items-start gap-4 mb-4">
+            <span class="step-num">3</span>
+            <div class="flex-1">
+              <div class="font-semibold text-base mb-0.5">Copy the prompt</div>
+              <div class="text-sm text-muted">Updates as you type. Read it before pasting &mdash; it&rsquo;s the full set of instructions your AI will follow.</div>
+            </div>
+          </div>
+
+          <div class="relative">
+            <textarea id="prompt-area"
+                      class="prompt-area"
+                      aria-labelledby="tab-claude"
+                      spellcheck="false"
+                      autocomplete="off"></textarea>
+            <div class="absolute top-2 right-2 flex items-center gap-2">
+              <span class="meta-line" id="char-count">0 chars</span>
+              <button id="copy-prompt"
+                      class="copy-btn text-xs px-3 py-1.5 rounded-md border border-royal/40 bg-deep/60 font-semibold"
+                      data-copy-target="prompt-area"
+                      data-tool-track="copy_prompt">Copy</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="step-card">
+          <div class="flex items-start gap-4">
+            <span class="step-num">4</span>
+            <div class="flex-1">
+              <div class="font-semibold text-base mb-0.5">Paste it in <span id="tool-name-4">Claude Code</span> chat &middot; press Enter</div>
+              <div class="text-sm text-muted leading-relaxed">
+                Your AI will read the repo, decide between hosted checkout and SDK install, add a payment button, wrap changes with <code class="font-mono text-mint">// ZETTAPAY-START</code> / <code class="font-mono text-mint">// ZETTAPAY-END</code>, and open a PR titled <code class="font-mono">feat: add ZettaPay crypto payments</code>.
+                <span class="block mt-2 text-white">Merge when the diff looks right. That&rsquo;s the install.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TRUST FOOTER -->
+      <section class="mt-8 text-center text-xs text-muted leading-relaxed">
+        <div class="flex flex-wrap justify-center items-center gap-x-4 gap-y-2 mb-3">
+          <span class="proof-pill"><span class="dot"></span> Wallet-less &middot; customer pays from any wallet</span>
+          <span class="proof-pill warn"><span class="dot"></span> Audit pending</span>
+          <a href="https://github.com/leandromaiam-code/zettapay" target="_blank" rel="noopener" class="proof-pill hover:!border-royal hover:!text-white transition">View source on GitHub &rarr;</a>
+        </div>
+        <div>
+          ZettaPay is <a class="text-royal-bright hover:underline" href="https://github.com/leandromaiam-code/zettapay" target="_blank" rel="noopener">100% open-source</a>.
+          The prompt above is the entire integration spec &mdash; nothing hidden, nothing phoned home. Payments flow directly from your customer&rsquo;s wallet to your payout address.
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <div class="toast" id="toast">Copied to clipboard</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- defaults (work even without any user input) ----------
+  const DEFAULTS = {
+    merchant: 'mch_3ba7d521307243ae48fef9ec',
+    sol:      '4QJMgWvoaEy1k35UaFkKxMiHtc9K2k4VQGCUySpw3kPP',
+    btc:      'BC1Q0M80ZHADFC40869672XN96DZ8RU23NER3FVHMV',
+    eth:      '',
+    amount:   '9.99',
+    currency: 'USD',
+    label:    'Subscription',
+  };
+
+  const TOOLS = {
+    claude: {
+      name: 'Claude Code',
+      open: 'Run <code class="font-mono text-mint">claude</code> in the repo you want to add payments to.',
+      tweak:
+`== TOOL-SPECIFIC NOTES (Claude Code) ==
+You may use the Task tool to spawn subagents for parallel file reads when surveying
+the repo — it speeds up stack detection significantly. Keep all edits in the main
+agent. Do not skip the ZETTAPAY-START / ZETTAPAY-END markers.`,
+    },
+    codex: {
+      name: 'Codex / Cursor',
+      open: 'Open your repo in Cursor (or VS Code with Codex). Start a new chat in the AI side panel.',
+      tweak:
+`== TOOL-SPECIFIC NOTES (Codex / Cursor) ==
+Propose changes in diff format. After applying edits, run "git diff" and show
+me the full diff before committing. If type errors appear, fix them in the
+same turn — do not commit a broken build.`,
+    },
+    lovable: {
+      name: 'Lovable',
+      open: 'Open your project in Lovable. Use the chat panel to paste this prompt.',
+      tweak:
+`== TOOL-SPECIFIC NOTES (Lovable) ==
+After applying changes, verify the build passes (Lovable's preview should
+compile without errors). If type errors appear, fix them before opening the
+PR. Keep the new button visually consistent with the project's existing
+design system — use the same component library and tokens already in use.`,
+    },
+    aider: {
+      name: 'Aider',
+      open: 'Run <code class="font-mono text-mint">aider</code> in your repo. /architect mode recommended for the discovery phase.',
+      tweak:
+`== TOOL-SPECIFIC NOTES (Aider) ==
+/architect mode recommended for the initial discovery phase. Use /add for each
+file you discover during exploration so they're in context before edits.
+Switch to /code mode once you've decided the integration strategy. Commit
+the result as one tidy commit with the title above.`,
+    },
+  };
+
+  // ---------- prompt template ----------
+  function buildPrompt(toolKey, vals) {
+    const tool = TOOLS[toolKey];
+    const pubkeyLines = [];
+    pubkeyLines.push(`  sol: "${vals.sol || 'YOUR_SOLANA_PAYOUT_ADDRESS_HERE'}",`);
+    if (vals.btc) pubkeyLines.push(`  btc: "${vals.btc}",`);
+    if (vals.eth) pubkeyLines.push(`  eth: "${vals.eth}",`);
+
+    const chainsEnabled = ['Solana USDC'];
+    if (vals.btc) chainsEnabled.push('Bitcoin');
+    if (vals.eth) chainsEnabled.push('EVM (Ethereum/Base/Polygon)');
+
+    return [
+`Integrate ZettaPay (P2P crypto payments — funds flow direct to merchant,
+ZettaPay never custodies; a hosted listener confirms via signed webhook).
+
+== MY CREDENTIALS ==
+ZP_MERCHANT_ID = "${vals.merchant || 'mch_REPLACE_ME'}"
+ZP_PUBKEYS = {
+${pubkeyLines.join('\n')}
+}
+ZP_AMOUNT = ${vals.amount || '9.99'}
+ZP_CURRENCY = "${vals.currency || 'USD'}"
+ZP_LABEL = "${vals.label || 'Subscription'}"
+ZP_CHAINS = [${chainsEnabled.map((c) => `"${c}"`).join(', ')}]
+
+(ZP_API_KEY + ZP_WEBHOOK_SECRET are SECRETS set later as env vars — never
+inline in client code.)
+
+== TASK ==
+1. Detect stack (Next.js / Vite / Express / Django / Laravel / Rust / etc)
+   and find existing payment flow (grep: stripe, checkout, billing,
+   subscription). Read 1–2 files to learn the pattern before editing.
+2. Pick mode:
+   - Pure-frontend (SPA / static): use HOSTED CHECKOUT — a button opening
+     https://zettapay.vercel.app/checkout with the params below. No SDK, no
+     secrets.
+   - Has server-side: install the SDK (npm install @zettapay/sdk, or
+     pip install zettapay / composer require zettapay/sdk / cargo add
+     zettapay), add the two env secrets, and create /api/zp/webhook that
+     verifies the Ed25519 signature and updates order/subscription state.
+3. Add "Pay with USDC (Solana)" (+ BTC / EVM buttons if those pubkeys are
+   set above) near the existing payment UI. Match the project's existing
+   components and tokens.
+4. WALLET-LESS — never call wallet.connect(), never ask the user to connect
+   anything, never reference window.solana / window.ethereum. The customer
+   pays from whichever wallet they own by pasting/scanning the QR shown on
+   /checkout.
+5. Wrap all new code with markers // ZETTAPAY-START and // ZETTAPAY-END
+   (or the language's equivalent comment syntax) so I can revert with one grep.
+6. Open a PR titled "feat: add ZettaPay crypto payments" whose body lists
+   (a) files changed, (b) env vars I still need to set in Vercel/Render/Fly,
+   and (c) the one-line revert.
+
+== REFERENCE ==
+Hosted checkout URL:
+  https://zettapay.vercel.app/checkout?merchant={ID}&amount={N}&pay_currency=USDC_SOL&to={SOL_PUBKEY}&description={LABEL}&success_url={URL}
+pay_currency: USDC_SOL | BTC | USDC_BASE | USDC_POLYGON | ETH
+Webhook headers: X-ZettaPay-Signature (Ed25519 over raw body),
+X-ZettaPay-Timestamp (unix seconds, 300s replay window).
+Docs: https://zettapay.vercel.app/docs
+
+${tool.tweak}
+
+== START ==
+Read the repo, then implement. If multiple payment flows exist and the
+right one is genuinely ambiguous, ASK before assuming. Do not skip the
+markers or the PR.`
+    ].join('\n');
+  }
+
+  // ---------- DOM ----------
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  const state = { tool: 'claude' };
+
+  function readForm() {
+    const get = (id, fallback) => {
+      const el = document.getElementById(id);
+      const v = el && el.value ? el.value.trim() : '';
+      return v || fallback;
+    };
+    return {
+      merchant: get('f-merchant', DEFAULTS.merchant),
+      sol:      get('f-sol',      DEFAULTS.sol),
+      btc:      get('f-btc',      DEFAULTS.btc),
+      eth:      get('f-eth',      DEFAULTS.eth),
+      amount:   get('f-amount',   DEFAULTS.amount),
+      currency: get('f-currency', DEFAULTS.currency),
+      label:    get('f-label',    DEFAULTS.label),
+    };
+  }
+
+  function render() {
+    const vals = readForm();
+    const prompt = buildPrompt(state.tool, vals);
+    const ta = $('#prompt-area');
+    if (document.activeElement !== ta) ta.value = prompt;
+    else ta.value = prompt;
+    $('#char-count').textContent = prompt.length + ' chars';
+    const tool = TOOLS[state.tool];
+    $('#tool-name-1').textContent = tool.name;
+    $('#tool-name-4').textContent = tool.name;
+    $('#tool-hint').innerHTML = tool.open;
+    ta.setAttribute('aria-labelledby', 'tab-' + state.tool);
+  }
+
+  function selectTool(key) {
+    state.tool = key;
+    $$('.tool-tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tool === key)));
+    render();
+  }
+
+  // tab wiring
+  $$('.tool-tab').forEach((t) => {
+    t.addEventListener('click', () => selectTool(t.dataset.tool));
+    t.addEventListener('keydown', (e) => {
+      const tabs = $$('.tool-tab');
+      const i = tabs.indexOf(t);
+      if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(i + 1) % tabs.length].focus(); tabs[(i + 1) % tabs.length].click(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(i - 1 + tabs.length) % tabs.length].focus(); tabs[(i - 1 + tabs.length) % tabs.length].click(); }
+    });
+  });
+
+  // form wiring (live update)
+  ['f-merchant', 'f-sol', 'f-btc', 'f-eth', 'f-amount', 'f-currency', 'f-label'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', render);
+  });
+
+  // copy
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } finally { ta.remove(); }
+    return Promise.resolve();
+  }
+  function showToast(msg) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+  $('#copy-prompt').addEventListener('click', () => {
+    const text = $('#prompt-area').value;
+    copyText(text).then(() => {
+      const btn = $('#copy-prompt');
+      btn.classList.add('copied');
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      showToast('Prompt copied · paste it in ' + TOOLS[state.tool].name);
+      setTimeout(() => { btn.classList.remove('copied'); btn.textContent = orig; }, 2000);
+    });
+  });
+
+  // initial paint
+  render();
+})();
+</script>
+</body>
+</html>
