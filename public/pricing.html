@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay pricing — free, peer-to-peer protocol. Zero protocol fee, zero custody. You pay only network gas, exactly like any wallet transaction. Multi-chain: Bitcoin, Ethereum, USDC on Solana." />
+  <meta name="description" content="ZettaPay pricing — free, peer-to-peer protocol. Zero protocol fee, zero custody. You pay only network gas, exactly like any wallet transaction. Multi-chain: Bitcoin, Ethereum, USDC on Base." />
   <meta property="og:title" content="ZettaPay pricing — free protocol, network gas only" />
   <meta property="og:description" content="No subscription. No per-transaction take. ZettaPay is non-custodial P2P infrastructure that watches the chain for you. You pay the same network gas any wallet transaction would cost." />
   <meta property="og:type" content="website" />
@@ -31,7 +31,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
           animation: {
@@ -363,16 +363,16 @@
             <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Typical gas (paid by payer, not you)</div>
             <ul class="space-y-3 text-sm">
               <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-mint/5 border border-mint/15">
-                <span class="text-white font-semibold">Solana (USDC)</span>
-                <span class="font-mono text-mint">~0.000005 SOL &middot; confirms in &lt;2s</span>
+                <span class="text-white font-semibold">Base (USDC)</span>
+                <span class="font-mono text-mint">~0.000005 SOL &middot; confirms in ~24s</span>
               </li>
               <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-royal/5 border border-royal/15">
                 <span class="text-white font-semibold">Ethereum (Base / Polygon)</span>
                 <span class="font-mono text-royal-bright">L2 gas &middot; finality in seconds</span>
               </li>
-              <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-solana/5 border border-solana/15">
+              <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-violet/5 border border-violet/15">
                 <span class="text-white font-semibold">Bitcoin</span>
-                <span class="font-mono text-solana">Network fee &middot; ~10 min</span>
+                <span class="font-mono text-violet">Network fee &middot; ~10 min</span>
               </li>
             </ul>
             <p class="text-xs text-muted/70 font-mono mt-4">Gas goes to validators / miners, never to ZettaPay.</p>
@@ -393,7 +393,7 @@
           <p class="text-muted text-sm">Idempotency keys, signed payloads with verified amount and tx hash &mdash; the API you already know.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.1s;">
-          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-3">x402 + MCP native</div>
+          <div class="text-xs font-mono text-violet uppercase tracking-widest mb-3">x402 + MCP native</div>
           <div class="text-lg font-semibold text-white mb-1">AI agents pay autonomously</div>
           <p class="text-muted text-sm">A first-class MCP server and x402 header spec out of the box &mdash; ready for Claude, GPT, and friends.</p>
         </div>
@@ -405,7 +405,7 @@
   <section id="compare" class="py-24 px-4 lg:px-12 border-t border-royal/10">
     <div class="max-w-6xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-12 reveal">
-        <span class="text-xs font-mono text-solana uppercase tracking-widest">Comparison</span>
+        <span class="text-xs font-mono text-violet uppercase tracking-widest">Comparison</span>
         <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">ZettaPay <span class="text-muted font-light">vs</span> <span class="gradient-text">card rails</span></h2>
         <p class="text-muted text-lg leading-relaxed">
           ZettaPay is not a card processor &mdash; it&rsquo;s peer-to-peer settlement infrastructure with a confirmation listener attached.
@@ -453,7 +453,7 @@
 
           <!-- Settlement -->
           <div class="compare-cell cell-row-label">Confirmation time</div>
-          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">&lt;2s</span> on Solana &middot; ~10m on Bitcoin</div>
+          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">~24s</span> on Base &middot; ~10m on Bitcoin</div>
           <div class="compare-cell">2&ndash;7 days</div>
           <div class="compare-cell">1&ndash;3 days</div>
 
@@ -495,7 +495,7 @@
 
           <!-- Currency -->
           <div class="compare-cell cell-row-label">Currency</div>
-          <div class="compare-cell compare-zp">Bitcoin &middot; ETH (Base/Polygon) &middot; USDC Solana</div>
+          <div class="compare-cell compare-zp">Bitcoin &middot; ETH (Base/Polygon) &middot; USDC Base</div>
           <div class="compare-cell">135+ fiat currencies</div>
           <div class="compare-cell">25 fiat currencies</div>
 
@@ -546,7 +546,7 @@
           <p class="text-muted text-sm">SDK and protocol spec are MIT-licensed. Your pubkey is yours; you can leave on any block and your funds never lived here.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.2s;">
-          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-3">Public status</div>
+          <div class="text-xs font-mono text-violet uppercase tracking-widest mb-3">Public status</div>
           <div class="text-lg font-semibold text-white mb-1">Listener health is public</div>
           <p class="text-muted text-sm">Live chain-listener metrics and confirmation latencies are exposed on the <a href="/status" class="text-mint font-mono hover:underline">/status</a> page.</p>
         </div>
@@ -574,7 +574,7 @@
           <div class="faq-body">
             Three steps, ~5 minutes:
             <ol class="list-decimal pl-5 mt-3 space-y-1.5">
-              <li>Hit <a href="/signup" class="text-royal-bright hover:underline">Get your pubkey</a> and paste your <span class="text-white">merchant address</span> (Bitcoin, Ethereum, or Solana) &mdash; no wallet connect, no email, no card.</li>
+              <li>Hit <a href="/signup" class="text-royal-bright hover:underline">Get your pubkey</a> and paste your <span class="text-white">merchant address</span> (Bitcoin, Ethereum, or Base) &mdash; no wallet connect, no email, no card.</li>
               <li>Copy your API key and the <code>&lt;script&gt;</code> tag from the install page, or install <code>@zettapay/sdk</code> on your backend.</li>
               <li>Drop the embed onto your checkout. The listener confirms your first on-chain payment in seconds and fires a signed webhook to your endpoint.</li>
             </ol>
@@ -675,7 +675,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Bitcoin &middot; Ethereum &middot; USDC on Solana</span>
+      <span>Built with Bitcoin &middot; Ethereum &middot; USDC on Base</span>
     </div>
   </footer>
 

@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -321,7 +321,7 @@
             <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
             <tbody>
               <tr><td><code>name</code><span class="req req-req">required</span></td><td>string</td><td>Merchant display name, ≤120 chars.</td></tr>
-              <tr><td><code>walletAddress</code><span class="req req-req">required</span></td><td>string</td><td>Base58 Solana pubkey where USDC settles. Wallet-less — no connect required.</td></tr>
+              <tr><td><code>walletAddress</code><span class="req req-req">required</span></td><td>string</td><td>Base58 Base pubkey where USDC settles. Wallet-less — no connect required.</td></tr>
               <tr><td><code>email</code><span class="req req-req">required</span></td><td>string</td><td>Operational notices, magic-link login.</td></tr>
               <tr><td><code>webhookUrl</code><span class="req req-opt">optional</span></td><td>string</td><td>HTTPS URL. Must serve a valid certificate.</td></tr>
             </tbody>
@@ -418,7 +418,7 @@
             <span class="ep-path">/api/pay</span>
           </div>
           <p class="text-muted text-sm leading-relaxed mb-5">
-            Create a payment intent. Returns a Solana Pay URI and an invoice id. The payer scans the QR (or pastes the address) from any Solana wallet —
+            Create a payment intent. Returns a Base Pay URI and an invoice id. The payer scans the QR (or pastes the address) from any Base wallet —
             no wallet connect, no extension. Settlement is observed on-chain and dispatched as a webhook.
           </p>
           <h3 class="text-xs font-mono text-muted uppercase tracking-widest mb-2">Request body</h3>
@@ -428,7 +428,7 @@
               <tr><td><code>merchantId</code><span class="req req-req">required</span></td><td>string</td><td>≤64 chars.</td></tr>
               <tr><td><code>amount</code><span class="req req-req">required</span></td><td>number</td><td>USDC, positive, ≤1,000,000.</td></tr>
               <tr><td><code>currency</code><span class="req req-opt">optional</span></td><td>string</td><td>Default <code>USDC</code>.</td></tr>
-              <tr><td><code>payerWallet</code><span class="req req-opt">optional</span></td><td>string</td><td>Base58 Solana pubkey. Used to scope the invoice + populate analytics.</td></tr>
+              <tr><td><code>payerWallet</code><span class="req req-opt">optional</span></td><td>string</td><td>Base58 Base pubkey. Used to scope the invoice + populate analytics.</td></tr>
               <tr><td><code>metadata</code><span class="req req-opt">optional</span></td><td>object</td><td>Free-form JSON returned on webhook. Treat as semi-public.</td></tr>
             </tbody>
           </table>
@@ -439,7 +439,7 @@
   <span class="tk-d">"amount"</span>: <span class="tk-n">10</span>,
   <span class="tk-d">"currency"</span>: <span class="tk-s">"USDC"</span>,
   <span class="tk-d">"checkoutUrl"</span>: <span class="tk-s">"https://zettapay.dev/checkout/inv_01H8XK…"</span>,
-  <span class="tk-d">"solanaPayUri"</span>: <span class="tk-s">"solana:4Nd1mYG6X9wQ…?amount=10&amp;spl-token=…&amp;reference=…"</span>,
+  <span class="tk-d">"basePayUri"</span>: <span class="tk-s">"base:4Nd1mYG6X9wQ…?amount=10&amp;erc20=…&amp;reference=…"</span>,
   <span class="tk-d">"expiresAt"</span>: <span class="tk-s">"2026-05-16T20:30:00Z"</span>
 }</pre>
         </article>
@@ -569,7 +569,7 @@
           <table class="params">
             <thead><tr><th>Tool</th><th>Description</th></tr></thead>
             <tbody>
-              <tr><td><code>create_invoice</code></td><td>Mint an invoice and return the Solana Pay URI.</td></tr>
+              <tr><td><code>create_invoice</code></td><td>Mint an invoice and return the Base Pay URI.</td></tr>
               <tr><td><code>get_invoice</code></td><td>Fetch status + on-chain signature for an invoice id.</td></tr>
               <tr><td><code>list_payments</code></td><td>Paginate confirmed payments for the calling agent identity.</td></tr>
               <tr><td><code>resolve_merchant</code></td><td>Look up a merchant card by handle or wallet.</td></tr>
@@ -676,7 +676,7 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Base USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
@@ -705,7 +705,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Built with Base &middot; USDC &middot; x402</span>
     </div>
   </footer>
 

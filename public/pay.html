@@ -6,7 +6,7 @@
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
 <title>Pagar com USDC — ZettaPay</title>
-<meta name="description" content="Pague em USDC na Solana a partir de qualquer carteira. Sem instalar extensão, sem conectar wallet." />
+<meta name="description" content="Pague em USDC na Base a partir de qualquer carteira. Sem instalar extensão, sem conectar wallet." />
 <meta name="robots" content="noindex, nofollow" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,21 +128,21 @@ body {
 
 <div style="margin: 22px 0 4px;">
 <div class="row"><span class="k">Para</span><span class="v" id="merchant-display">—</span></div>
-<div class="row"><span class="k">Rede</span><span class="v">Solana Devnet</span></div>
+<div class="row"><span class="k">Rede</span><span class="v">Base Sepolia</span></div>
 <div class="row"><span class="k">Taxa</span><span class="v" id="fee">— USDC</span></div>
 <div class="row"><span class="k">Settlement</span><span class="v" style="color:#14F195">~2s</span></div>
 </div>
 
 <div id="walletless-block" style="display:none">
-  <div class="qr-wrap"><img id="qr-img" alt="Solana Pay QR" /></div>
+  <div class="qr-wrap"><img id="qr-img" alt="Base Pay QR" /></div>
   <div class="label">Endereço de destino</div>
   <div id="address-display" class="address-display">—</div>
   <div class="btn-row">
     <button id="copy-btn" type="button" class="btn">Copiar endereço</button>
-    <a id="solana-link" class="btn btn-primary" href="#">Abrir na wallet</a>
+    <a id="base-link" class="btn btn-primary" href="#">Abrir na wallet</a>
   </div>
   <div class="status"><span class="dot"></span><span>Aguardando pagamento on-chain</span></div>
-  <p class="helper">Escaneie o QR ou cole o endereço em qualquer wallet Solana (Phantom, Solflare, hardware wallet, exchange) e envie <span id="amount-hint">0</span> USDC. Não pedimos conexão — o merchant é notificado quando a transação aparecer na rede.</p>
+  <p class="helper">Escaneie o QR ou cole o endereço em qualquer wallet Base (Phantom, Solflare, hardware wallet, exchange) e envie <span id="amount-hint">0</span> USDC. Não pedimos conexão — o merchant é notificado quando a transação aparecer na rede.</p>
 </div>
 
 <div class="foot">Powered by <a href="/">ZettaPay</a> · 0,30% fee · No-connect</div>
@@ -158,7 +158,7 @@ body {
 <script>
 'use strict';
 
-var SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+var BASE_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 var USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU';
 
 var qs = new URLSearchParams(location.search);
@@ -185,26 +185,26 @@ function formatAmount(n) {
 }
 
 async function resolveMerchantWallet(ref) {
-  if (SOLANA_ADDRESS_RE.test(ref)) return ref;
+  if (BASE_ADDRESS_RE.test(ref)) return ref;
   try {
     var r = await fetch('/api/simulate/' + encodeURIComponent(ref) + '?amount=' + amount);
     if (!r.ok) return null;
     var data = await r.json();
     var wallet = data && data.merchant && data.merchant.walletAddress;
-    return SOLANA_ADDRESS_RE.test(wallet || '') ? wallet : null;
+    return BASE_ADDRESS_RE.test(wallet || '') ? wallet : null;
   } catch (_e) {
     return null;
   }
 }
 
-function buildSolanaPayUri(merchantWallet) {
+function buildBasePayUri(merchantWallet) {
   var params = new URLSearchParams();
   params.set('amount', formatAmount(amount));
-  params.set('spl-token', USDC_MINT_DEVNET);
+  params.set('erc20', USDC_MINT_DEVNET);
   params.set('label', 'ZettaPay');
   params.set('message', label);
   if (returnUrl) params.set('reference', returnUrl);
-  return 'solana:' + merchantWallet + '?' + params.toString();
+  return 'base:' + merchantWallet + '?' + params.toString();
 }
 
 function renderQr(uri) {
@@ -265,8 +265,8 @@ async function bootCheckout() {
   document.getElementById('merchant-display').textContent = shortAddr(wallet);
   document.getElementById('walletless-block').style.display = 'block';
 
-  var uri = buildSolanaPayUri(wallet);
-  document.getElementById('solana-link').href = uri;
+  var uri = buildBasePayUri(wallet);
+  document.getElementById('base-link').href = uri;
   renderQr(uri);
 
   document.getElementById('copy-btn').addEventListener('click', function () {

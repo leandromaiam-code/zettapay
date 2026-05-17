@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay embed quickstart — install a Pay USDC button on your site in five minutes. Copy a single script tag, paste it in your <head>, get paid in USDC on Solana." />
+  <meta name="description" content="ZettaPay embed quickstart — install a Pay USDC button on your site in five minutes. Copy a single script tag, paste it in your <head>, get paid in USDC on Base." />
   <meta name="theme-color" content="#0A0A0A" />
   <meta property="og:title" content="ZettaPay · Embed quickstart (5 min)" />
   <meta property="og:description" content="Install a Pay USDC button on your site in five minutes. One <script> tag, no backend." />
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -377,7 +377,7 @@
           <p class="text-muted leading-relaxed mb-4">
             The <code class="text-mint font-mono text-sm">@zettapay/widget</code> bundle is a self-mounting
             <code class="text-mint font-mono text-sm">&lt;script&gt;</code> that renders a Pay button anywhere
-            you drop the tag. Click → modal opens → payer scans a Solana Pay QR or copies the merchant
+            you drop the tag. Click → modal opens → payer scans a Base Pay QR or copies the merchant
             address into their own wallet → USDC lands in your wallet. The widget never asks to connect a
             wallet; it just renders the QR and watches the chain. You handle <em>nothing</em>.
           </p>
@@ -388,7 +388,7 @@
             </div>
             <div class="glass rounded-xl p-4">
               <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Settlement</div>
-              <div class="text-sm font-semibold">&lt;2 s SOL · ~12 s ETH · ~10 min BTC</div>
+              <div class="text-sm font-semibold">~24 s SOL · ~12 s ETH · ~10 min BTC</div>
             </div>
             <div class="glass rounded-xl p-4">
               <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Protocol fee</div>
@@ -450,7 +450,7 @@
 
           <div class="callout">
             <strong>Free, no protocol fee.</strong> ZettaPay is a non-custodial protocol — we never touch the
-            funds. The customer pays the network's own gas (a fraction of a cent on Solana, a few cents on
+            funds. The customer pays the network's own gas (a fraction of a cent on Base, a few cents on
             Ethereum L2s, a few sats on Bitcoin). ZettaPay charges nothing on top.
           </div>
         </section>
@@ -463,7 +463,7 @@
           </div>
           <p class="text-muted leading-relaxed mb-5">
             Drop the public address of <em>any</em> wallet you control — Bitcoin, Ethereum (mainnet or any
-            L2), Solana for USDC — into the matching env var in your own
+            L2), Base for USDC — into the matching env var in your own
             <code class="text-mint font-mono text-sm">.env</code>. Hardware wallets, exchange withdrawal
             addresses, mobile wallets all work. <strong class="text-white">ZettaPay never asks to connect, and
             your pubkey never touches our database.</strong> Add more chains later by adding more env vars and
@@ -667,7 +667,7 @@
             A customer clicks the button. The widget opens a modal with a QR code and the merchant address
             for the chain they pick. They pay from whatever wallet they already use (Phantom, Solflare,
             MetaMask, Rainbow, a Bitcoin hardware wallet, an exchange withdrawal — anything). ZettaPay
-            watches the chain for the deposit; Solana confirms in &lt;2 seconds, Ethereum in ~12 seconds,
+            watches the chain for the deposit; Base confirms in ~24 seconds, Ethereum in ~12 seconds,
             Bitcoin in ~10 minutes (1 confirmation). Funds land directly in your wallet — no escrow, no
             holding period, no manual settlement.
           </p>
@@ -703,7 +703,7 @@
               <text x="494" y="252" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#fff">5h2k…fJ8z</text>
               <rect x="252" y="276" width="256" height="22" rx="999" fill="rgba(20,241,149,0.08)"/>
               <circle cx="266" cy="287" r="3" fill="#14F195"/>
-              <text x="278" y="290" font-family="JetBrains Mono, monospace" font-size="9" fill="#14F195">CONFIRMED · 1.8 SEC · SOLANA</text>
+              <text x="278" y="290" font-family="JetBrains Mono, monospace" font-size="9" fill="#14F195">CONFIRMED · 1.8 SEC · BASE</text>
             </svg>
           </figure>
 

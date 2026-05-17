@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -365,8 +365,8 @@
             </div>
 
             <div class="md:col-span-2">
-              <label for="f-sol" class="field-label">Solana payout pubkey <span class="opt">required &middot; base58</span></label>
-              <input id="f-sol" type="text" class="field-input" placeholder="Your Solana payout address" spellcheck="false" autocomplete="off" />
+              <label for="f-sol" class="field-label">Base payout pubkey <span class="opt">required &middot; base58</span></label>
+              <input id="f-sol" type="text" class="field-input" placeholder="Your Base payout address" spellcheck="false" autocomplete="off" />
             </div>
 
             <div>
@@ -515,11 +515,11 @@ the result as one tidy commit with the title above.`,
   function buildPrompt(toolKey, vals) {
     const tool = TOOLS[toolKey];
     const pubkeyLines = [];
-    pubkeyLines.push(`  sol: "${vals.sol || 'YOUR_SOLANA_PAYOUT_ADDRESS_HERE'}",`);
+    pubkeyLines.push(`  sol: "${vals.sol || 'YOUR_BASE_PAYOUT_ADDRESS_HERE'}",`);
     if (vals.btc) pubkeyLines.push(`  btc: "${vals.btc}",`);
     if (vals.eth) pubkeyLines.push(`  eth: "${vals.eth}",`);
 
-    const chainsEnabled = ['Solana USDC'];
+    const chainsEnabled = ['Base USDC'];
     if (vals.btc) chainsEnabled.push('Bitcoin');
     if (vals.eth) chainsEnabled.push('EVM (Ethereum/Base/Polygon)');
 
@@ -552,11 +552,11 @@ inline in client code.)
      pip install zettapay / composer require zettapay/sdk / cargo add
      zettapay), add the two env secrets, and create /api/zp/webhook that
      verifies the Ed25519 signature and updates order/subscription state.
-3. Add "Pay with USDC (Solana)" (+ BTC / EVM buttons if those pubkeys are
+3. Add "Pay with USDC (Base)" (+ BTC / EVM buttons if those pubkeys are
    set above) near the existing payment UI. Match the project's existing
    components and tokens.
 4. WALLET-LESS — never call wallet.connect(), never ask the user to connect
-   anything, never reference window.solana / window.ethereum. The customer
+   anything, never reference window.base / window.ethereum. The customer
    pays from whichever wallet they own by pasting/scanning the QR shown on
    /checkout.
 5. Wrap all new code with markers // ZETTAPAY-START and // ZETTAPAY-END

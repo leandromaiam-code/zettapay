@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -135,14 +135,14 @@
 
       <h2>2. The protocol &mdash; what it is and is not</h2>
       <ul>
-        <li>ZettaPay is non-custodial. Every USDC payment settles directly from payer to merchant on Solana. We never take possession of funds.</li>
+        <li>ZettaPay is non-custodial. Every USDC payment settles directly from payer to merchant on Base. We never take possession of funds.</li>
         <li>ZettaPay is not a money services business, bank, money transmitter, or licensed payment institution.</li>
         <li>Fiat onramp/offramp services, where surfaced, are operated by third parties (e.g. MoonPay) under their own terms.</li>
       </ul>
 
       <h2>3. Merchant account</h2>
       <ul>
-        <li>You provide a Solana <strong>public address</strong> at signup. ZettaPay never requests a wallet connection or private key.</li>
+        <li>You provide a Base <strong>public address</strong> at signup. ZettaPay never requests a wallet connection or private key.</li>
         <li>You are solely responsible for the security of your wallet, seed phrase, and signing devices.</li>
         <li>You will keep your contact email and webhook URL current and reachable.</li>
         <li>API keys are confidential. Treat them like passwords. Rotate immediately on suspected compromise.</li>
@@ -162,7 +162,7 @@
       <h2>5. Fees</h2>
       <ul>
         <li>Protocol fee: <strong>0.30%</strong> of each settled invoice, deducted at the point of settlement.</li>
-        <li>Solana network fees apply per transaction (typically &lt; $0.01).</li>
+        <li>Base network fees apply per transaction (typically &lt; $0.01).</li>
         <li>Fiat onramp partners charge their own fees, disclosed at the point of purchase.</li>
         <li>Free tier: the first 100 transactions per merchant per calendar month are not charged a protocol fee, subject to abuse review.</li>
       </ul>
@@ -170,14 +170,14 @@
 
       <h2>6. Refunds, chargebacks, and disputes</h2>
       <ul>
-        <li>Solana transactions are <strong>final</strong>. There is no chargeback mechanism at the protocol layer.</li>
+        <li>Base transactions are <strong>final</strong>. There is no chargeback mechanism at the protocol layer.</li>
         <li>Refund policy between merchant and payer is set by the merchant. We do not mediate refunds.</li>
         <li>If you intend to issue a refund, send USDC directly back to the payer&apos;s originating address.</li>
         <li>Disputes between payer and merchant are resolved between those parties. We are not a party to commercial disputes.</li>
       </ul>
 
       <h2>7. Service availability</h2>
-      <p>We target high availability and publish real-time component health at <a href="/status">/status</a>. We do not guarantee uninterrupted service. The protocol depends on the Solana network and third-party RPC providers; outages on those networks may affect settlement timing.</p>
+      <p>We target high availability and publish real-time component health at <a href="/status">/status</a>. We do not guarantee uninterrupted service. The protocol depends on the Base network and third-party RPC providers; outages on those networks may affect settlement timing.</p>
 
       <h2>8. Webhooks and integration</h2>
       <ul>
@@ -229,7 +229,7 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Base USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
@@ -258,7 +258,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Built with Base &middot; USDC &middot; x402</span>
     </div>
   </footer>
 </body>

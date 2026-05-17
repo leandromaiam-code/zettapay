@@ -29,7 +29,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -413,16 +413,16 @@
 
           <div class="space-y-3">
             <label class="chain-tile selected">
-              <input type="checkbox" data-chain="solana" checked />
+              <input type="checkbox" data-chain="base" checked />
               <div class="flex-1">
                 <div class="flex items-center justify-between gap-3">
                   <div>
-                    <div class="font-semibold text-sm">Solana &middot; USDC</div>
-                    <div class="text-xs text-muted font-mono">sub-second settlement &middot; mint <span class="text-solana">EPjF...t1v</span></div>
+                    <div class="font-semibold text-sm">Base &middot; USDC</div>
+                    <div class="text-xs text-muted font-mono">sub-second settlement &middot; mint <span class="text-violet">EPjF...t1v</span></div>
                   </div>
                   <span class="text-[0.62rem] font-mono uppercase tracking-widest text-mint">Recommended</span>
                 </div>
-                <input type="text" class="chain-pubkey" data-pubkey="solana" placeholder="Your Solana payout address (base58, 32–44 chars)" />
+                <input type="text" class="chain-pubkey" data-pubkey="base" placeholder="Your Base payout address (base58, 32–44 chars)" />
               </div>
             </label>
 
@@ -613,7 +613,7 @@
   const state = {
     step: 1,
     stack: null,
-    chains: { solana: { on: true, key: '' }, bitcoin: { on: false, key: '' }, ethereum: { on: false, key: '' } },
+    chains: { base: { on: true, key: '' }, bitcoin: { on: false, key: '' }, ethereum: { on: false, key: '' } },
     activeFile: 0,
   };
 
@@ -625,7 +625,7 @@
   // Variables substituted: PLACEHOLDER strings for missing pubkeys.
 
   function envFile() {
-    const sol = state.chains.solana.on ? (state.chains.solana.key || 'YOUR_SOLANA_PAYOUT_ADDRESS_HERE') : null;
+    const sol = state.chains.base.on ? (state.chains.base.key || 'YOUR_BASE_PAYOUT_ADDRESS_HERE') : null;
     const btc = state.chains.bitcoin.on ? (state.chains.bitcoin.key || 'YOUR_BTC_PAYOUT_ADDRESS_HERE') : null;
     const eth = state.chains.ethereum.on ? (state.chains.ethereum.key || 'YOUR_EVM_PAYOUT_ADDRESS_HERE') : null;
     const lines = [
@@ -634,7 +634,7 @@
       'ZETTAPAY_API_BASE=https://zettapay.vercel.app',
       'ZETTAPAY_WEBHOOK_SECRET=replace_with_32_byte_hex',
     ];
-    if (sol) lines.push('ZETTAPAY_PAYOUT_SOLANA=' + sol);
+    if (sol) lines.push('ZETTAPAY_PAYOUT_BASE=' + sol);
     if (btc) lines.push('ZETTAPAY_PAYOUT_BITCOIN=' + btc);
     if (eth) lines.push('ZETTAPAY_PAYOUT_ETHEREUM=' + eth);
     return lines.join('\n');

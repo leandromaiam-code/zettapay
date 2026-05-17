@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay hosted checkout — pay an invoice in USDC on Solana, Bitcoin, or USDC on Base from any wallet. No connection required." />
+  <meta name="description" content="ZettaPay hosted checkout — pay an invoice in USDC on Base, Bitcoin, or USDC on Base from any wallet. No connection required." />
   <meta name="robots" content="noindex, nofollow" />
   <meta property="og:title" content="ZettaPay — Hosted checkout" />
   <title>ZettaPay — Pay invoice</title>
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
             'amber': '#f59e0b',
             'rose': '#fb7185',
@@ -198,7 +198,7 @@
             <span id="amountValue" class="gradient-text">0</span>
             <span id="currencyValue" class="text-2xl md:text-3xl text-white/80 font-bold tracking-tight ml-2">USDC</span>
           </div>
-          <div class="text-xs text-muted font-mono mt-3">on Solana &middot; <span class="text-mint">~2s settlement</span> &middot; 0.30% fee</div>
+          <div class="text-xs text-muted font-mono mt-3">on Base &middot; <span class="text-mint">~2s settlement</span> &middot; 0.30% fee</div>
         </div>
 
         <div id="descriptionBlock" class="hidden mb-6">
@@ -209,7 +209,7 @@
         <div class="currency-selector mb-4">
           <label for="currencySelect" class="text-xs font-mono uppercase tracking-widest text-muted block mb-2">Pay with</label>
           <select id="currencySelect" class="w-full bg-black/40 border border-white/20 rounded-lg p-2 text-white text-sm focus:outline-none focus:border-royal-bright">
-            <option value="USDC_SOL">USDC on Solana (fast, ~15s)</option>
+            <option value="USDC_SOL">USDC on Base (fast, ~15s)</option>
             <option value="BTC">Bitcoin (BTC, ~30 min, 3 confirmations)</option>
             <option value="USDC_BASE">USDC on Base (~1 min)</option>
           </select>
@@ -217,15 +217,15 @@
 
         <!-- Wallet-less pay block -->
         <div id="payBlock" class="glass rounded-2xl p-6 space-y-4">
-          <h2 id="payHeading" class="text-2xl font-bold">Pay with Solana</h2>
+          <h2 id="payHeading" class="text-2xl font-bold">Pay with Base</h2>
           <p class="text-muted">Send <span id="amountValueLabel"></span> <span id="amountAssetLabel">USDC</span> to:</p>
           <div class="address-display p-4 bg-black/40 rounded-lg font-mono text-sm break-all" id="merchantAddress"></div>
           <div class="flex flex-wrap gap-2">
             <button type="button" onclick="copyAddress()" class="btn-secondary px-4 py-2 rounded-lg text-sm">Copy address</button>
-            <a id="solanaPayLink" href="#" class="btn-secondary px-4 py-2 rounded-lg text-sm inline-block">Open in wallet</a>
+            <a id="basePayLink" href="#" class="btn-secondary px-4 py-2 rounded-lg text-sm inline-block">Open in wallet</a>
           </div>
           <div class="qr-container my-4 text-center">
-            <img id="solanaPayQr" src="" alt="Payment QR" class="mx-auto rounded-xl" style="max-width:240px"/>
+            <img id="basePayQr" src="" alt="Payment QR" class="mx-auto rounded-xl" style="max-width:240px"/>
           </div>
           <p id="walletHint" class="text-sm text-muted">Open Phantom, Solflare, or your wallet of choice — scan the QR or paste the address, then send the amount. We monitor the blockchain — confirmation in 5-30s.</p>
           <p id="timingNotice" class="text-xs text-amber font-mono uppercase tracking-widest">Payment confirms in ~15s</p>
@@ -259,17 +259,17 @@
           <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Fee</div>
         </div>
         <div class="glass rounded-xl p-3">
-          <div class="text-base md:text-lg font-bold gradient-text">&lt;2s</div>
+          <div class="text-base md:text-lg font-bold gradient-text">~24s</div>
           <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Settlement</div>
         </div>
         <div class="glass rounded-xl p-3">
           <div class="text-base md:text-lg font-bold gradient-text">USDC</div>
-          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">on Solana</div>
+          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">on Base</div>
         </div>
       </div>
 
       <p class="text-[11px] text-muted/70 text-center mt-6 leading-relaxed">
-        Powered by <a href="/" class="text-royal-bright hover:underline">ZettaPay</a>. Pay from any Solana wallet &mdash; no install or connection required.
+        Powered by <a href="/" class="text-royal-bright hover:underline">ZettaPay</a>. Pay from any Base wallet &mdash; no install or connection required.
       </p>
     </div>
   </main>
@@ -278,7 +278,7 @@
     'use strict';
 
     const ALLOWED_CURRENCIES = ['USDC', 'USD', 'BRL', 'EUR'];
-    const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const BASE_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     const BTC_ADDRESS_RE = /^(bc1[a-zA-HJ-NP-Z0-9]{25,89}|tb1[a-zA-HJ-NP-Z0-9]{25,89}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
     const EVM_ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
     const MERCHANT_REF_RE = /^[a-zA-Z0-9_-]{3,64}$/;
@@ -306,7 +306,7 @@
       USDC_BASE: 'Open your EVM wallet on Base, Polygon, or Arbitrum — scan the QR or paste the address, then send USDC. We monitor the chain for the transfer.',
     };
     const HEADING = {
-      USDC_SOL: 'Pay with Solana',
+      USDC_SOL: 'Pay with Base',
       BTC: 'Pay with Bitcoin',
       USDC_BASE: 'Pay with USDC on Base',
     };
@@ -316,7 +316,7 @@
       USDC_BASE: 'USDC',
     };
     const ADDRESS_VALIDATORS = {
-      USDC_SOL: SOLANA_ADDRESS_RE,
+      USDC_SOL: BASE_ADDRESS_RE,
       BTC: BTC_ADDRESS_RE,
       USDC_BASE: EVM_ADDRESS_RE,
     };
@@ -337,8 +337,8 @@
       amountValueLabel: document.getElementById('amountValueLabel'),
       amountAssetLabel: document.getElementById('amountAssetLabel'),
       merchantAddress: document.getElementById('merchantAddress'),
-      solanaPayQr: document.getElementById('solanaPayQr'),
-      solanaPayLink: document.getElementById('solanaPayLink'),
+      basePayQr: document.getElementById('basePayQr'),
+      basePayLink: document.getElementById('basePayLink'),
       walletHint: document.getElementById('walletHint'),
       timingNotice: document.getElementById('timingNotice'),
       paymentStatus: document.getElementById('paymentStatus'),
@@ -426,7 +426,7 @@
 
     function isValidAddressAnyChain(addr) {
       if (typeof addr !== 'string') return false;
-      return SOLANA_ADDRESS_RE.test(addr) || BTC_ADDRESS_RE.test(addr) || EVM_ADDRESS_RE.test(addr);
+      return BASE_ADDRESS_RE.test(addr) || BTC_ADDRESS_RE.test(addr) || EVM_ADDRESS_RE.test(addr);
     }
 
     function isValidAddressForCurrency(addr, payCurrency) {
@@ -473,9 +473,9 @@
       if (currency === 'USDC_SOL') {
         const params = new URLSearchParams();
         params.set('amount', amt);
-        params.set('spl-token', USDC_MAINNET_MINT);
+        params.set('erc20', USDC_MAINNET_MINT);
         params.set('label', 'ZettaPay');
-        return 'solana:' + address + '?' + params.toString();
+        return 'base:' + address + '?' + params.toString();
       }
       if (currency === 'BTC') {
         return 'bitcoin:' + address + '?amount=' + amt;
@@ -492,7 +492,7 @@
     function buildPaymentURIWithRef(inv) {
       const base = buildPaymentURI(inv.payCurrency, inv.merchantAddress, inv.amount);
       if (!base) return '';
-      // Add a reference param for Solana Pay tracking; harmless for other URIs since we don't append.
+      // Add a reference param for Base Pay tracking; harmless for other URIs since we don't append.
       if (inv.payCurrency === 'USDC_SOL') {
         const sep = base.indexOf('?') >= 0 ? '&' : '?';
         return base + sep + 'reference=' + encodeURIComponent(inv.invoiceId) +
@@ -539,14 +539,14 @@
 
     function renderQr(uri) {
       if (!uri) return;
-      els.solanaPayLink.href = uri;
+      els.basePayLink.href = uri;
       if (typeof window.QRCode === 'undefined') return;
       window.QRCode.toDataURL(
         uri,
         { width: 480, margin: 1, color: { dark: '#0A0A0A', light: '#FFFFFF' } },
         function (err, dataUrl) {
           if (err || !dataUrl) return;
-          els.solanaPayQr.src = dataUrl;
+          els.basePayQr.src = dataUrl;
         },
       );
     }

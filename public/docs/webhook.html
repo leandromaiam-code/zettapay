@@ -19,7 +19,7 @@
     tailwind.config = {
       theme: { extend: {
         fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
-        colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+        colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', violet:'#9945FF', muted:'#94A3B8' },
       }},
     };
   </script>
@@ -304,7 +304,7 @@
   <span class="tk-s">"event"</span>:             <span class="tk-s">"payment.confirmed"</span>,
   <span class="tk-s">"amount"</span>:            <span class="tk-s">"19.90"</span>,
   <span class="tk-s">"currency"</span>:          <span class="tk-s">"USDC"</span>,
-  <span class="tk-s">"network"</span>:           <span class="tk-s">"solana"</span>,
+  <span class="tk-s">"chain"</span>:             <span class="tk-s">"base"</span>,
   <span class="tk-s">"tx_hash"</span>:           <span class="tk-s">"5jkA..."</span>,
   <span class="tk-s">"confirmations"</span>:     <span class="tk-n">1</span>,
   <span class="tk-s">"customer_address"</span>:  <span class="tk-s">"7Np41oeY..."</span>,
@@ -315,7 +315,7 @@
 <span class="tk-s">event</span>             <span class="tk-c">string  · see "Event types" below</span>
 <span class="tk-s">amount</span>            <span class="tk-c">string  · decimal as a string (avoid float drift)</span>
 <span class="tk-s">currency</span>          <span class="tk-c">string  · "BTC" | "ETH" | "USDC"</span>
-<span class="tk-s">network</span>           <span class="tk-c">string  · "bitcoin" | "ethereum" | "base" | "polygon" | "solana"</span>
+<span class="tk-s">chain</span>             <span class="tk-c">string  · "btc" | "base" | "polygon" | "ethereum"</span>
 <span class="tk-s">tx_hash</span>           <span class="tk-c">string  · on-chain transaction hash / signature</span>
 <span class="tk-s">confirmations</span>     <span class="tk-c">number  · confirmations at delivery time</span>
 <span class="tk-s">customer_address</span>  <span class="tk-c">string  · the address that paid</span>
@@ -368,7 +368,7 @@
                 <tr><th>Network</th><th>Default confs</th><th>Typical latency</th></tr>
               </thead>
               <tbody>
-                <tr><td><code>solana</code></td><td class="text-muted"><code>finalized</code> commitment</td><td class="text-muted">&lt; 2 s</td></tr>
+                <tr><td><code>base</code></td><td class="text-muted"><code>finalized</code> commitment</td><td class="text-muted">~ 24 s</td></tr>
                 <tr><td><code>ethereum</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 12 s</td></tr>
                 <tr><td><code>base</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
                 <tr><td><code>polygon</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
@@ -605,7 +605,7 @@ cloudflared tunnel --url http://localhost:3000</pre>
 curl -X POST https://api.zettapay.dev/webhooks/test \
   -H <span class="tk-s">"Authorization: Bearer $ZETTAPAY_API_KEY"</span> \
   -H <span class="tk-s">"Content-Type: application/json"</span> \
-  -d <span class="tk-s">'{ "event": "payment.confirmed", "network": "solana", "amount": "1.00" }'</span></pre>
+  -d <span class="tk-s">'{ "event": "payment.confirmed", "chain": "base", "amount": "1.00" }'</span></pre>
           </div>
         </section>
 
