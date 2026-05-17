@@ -107,19 +107,32 @@ export {
 } from "./lib/webhook-signature.js";
 export { SolanaService, type SolanaConfig } from "./services/solana.js";
 export {
-  EvmService,
-  toAtomicEvmAmount,
-  type EvmServiceConfig,
-  type EvmTransferParams,
-  type EvmTransferResult,
-  type EvmChainClients,
-  type ChainClientFactory,
-} from "./services/evm.js";
+  EvmListener,
+  USDC_BASE_MAINNET,
+  USDC_BASE_SEPOLIA,
+  USDC_POLYGON_MAINNET,
+  USDC_POLYGON_AMOY,
+  BASE_FINALITY_BLOCKS,
+  POLYGON_FINALITY_BLOCKS,
+  BACKFILL_BLOCK_RANGE,
+  REFRESH_DEBOUNCE_MS,
+  RECONNECT_DELAY_MS,
+  ERC20_TRANSFER_EVENT,
+  type EvmListenerChain,
+  type BaseListenerChain,
+  type PendingInvoice,
+  type MatchedTx,
+  type InvoiceStore,
+  type EvmListenerOptions,
+  type ListenerLogger,
+  type ListenerPublicClient,
+} from "./services/evm_listener.js";
 export {
-  createEvmPayment,
-  type CreateEvmPaymentInput,
-  type EvmPaymentResult,
-} from "./services/evm_payments.js";
+  SupabaseInvoiceStore,
+  decimalToAtomicUsdc,
+  loadSupabaseInvoiceStoreFromEnv,
+  type SupabaseInvoiceStoreOptions,
+} from "./services/invoice_store.js";
 export {
   SUPPORTED_EVM_CHAINS,
   EVM_CHAIN_REGISTRY,
