@@ -12,10 +12,6 @@
   },
   "rewrites": [
     {
-      "source": "/pay",
-      "destination": "/pay.html"
-    },
-    {
       "source": "/healthz",
       "destination": "/api/healthz"
     },
