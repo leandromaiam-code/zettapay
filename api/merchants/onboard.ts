@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { findMerchantByEmail, rememberMerchant } from '../_lib/merchant-store.js';
 
 const SERVICE = 'zettapay';
 const RUNTIME = 'vercel-serverless';
@@ -84,17 +85,6 @@ function handlePost(req: VercelRequest, res: VercelResponse): void {
     unknown
   >;
 
-  const wallet =
-    typeof body.wallet === 'string'
-      ? body.wallet.trim()
-      : typeof body.walletAddress === 'string'
-        ? body.walletAddress.trim()
-        : '';
-  if (!SOLANA_ADDRESS_RE.test(wallet)) {
-    badRequest(res, 'invalid_wallet', 'Field "wallet" must be a base58 Solana pubkey');
-    return;
-  }
-
   const name = typeof body.name === 'string' ? body.name.trim() : '';
   if (!name || name.length > 120) {
     badRequest(res, 'invalid_name', 'Field "name" is required and must be ≤120 chars');
@@ -106,6 +96,35 @@ function handlePost(req: VercelRequest, res: VercelResponse): void {
     badRequest(res, 'invalid_email', 'Field "email" must be a valid email address');
     return;
   }
+
+  const existing = findMerchantByEmail(email);
+  if (existing) {
+    res.status(409).json({
+      error: {
+        code: 'email_already_registered',
+        message: 'An account already exists for this email. Recover your credentials instead.',
+      },
+      login_url: '/signup#login',
+      recover_url: '/api/merchants/recover-creds',
+    });
+    return;
+  }
+
+  // Wallet is optional under the wallet-less hard rule (Z36A). The signup
+  // form no longer collects pubkeys; merchants configure them server-side
+  // via env vars and zp.register(). We still accept and validate a wallet
+  // when explicitly provided so older clients keep working.
+  const walletRaw =
+    typeof body.wallet === 'string'
+      ? body.wallet.trim()
+      : typeof body.walletAddress === 'string'
+        ? body.walletAddress.trim()
+        : '';
+  if (walletRaw && !SOLANA_ADDRESS_RE.test(walletRaw)) {
+    badRequest(res, 'invalid_wallet', 'Field "wallet" must be a base58 Solana pubkey');
+    return;
+  }
+  const wallet = walletRaw || null;
 
   const idempotencyHeader = req.headers['idempotency-key'];
   const idemKey = Array.isArray(idempotencyHeader) ? idempotencyHeader[0] : idempotencyHeader;
@@ -122,7 +141,11 @@ function handlePost(req: VercelRequest, res: VercelResponse): void {
   const merchantId = `m_${randomUUID().replace(/-/g, '').slice(0, 24)}`;
   const publicKey = `pk_live_${randomBytes(12).toString('hex')}`;
   const secretKey = `sk_live_${randomBytes(24).toString('hex')}`;
+  const apiKey = `zp_live_${randomBytes(16).toString('hex')}`;
+  const webhookSecret = `whsec_${randomBytes(24).toString('hex')}`;
   const createdAt = new Date().toISOString();
+
+  rememberMerchant({ id: merchantId, email, name, createdAt });
 
   const dashboardUrl = `${origin}/dashboard?merchant=${encodeURIComponent(merchantId)}`;
   const embedCode = buildEmbedSnippet(origin, merchantId, publicKey);
@@ -137,6 +160,8 @@ function handlePost(req: VercelRequest, res: VercelResponse): void {
       status: 'active',
       createdAt,
     },
+    api_key: apiKey,
+    webhook_secret: webhookSecret,
     public_key: publicKey,
     secret_key: secretKey,
     embed_code: embedCode,
