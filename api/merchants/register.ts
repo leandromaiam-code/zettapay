@@ -1,49 +1,84 @@
-import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  getSupabaseAnon,
+  getSupabaseService,
+  isVerificationConfigured,
+} from '../_lib/supabase.js';
 
 const SERVICE = 'zettapay';
 const RUNTIME = 'vercel-serverless';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const HTTPS_RE = /^https:\/\//i;
-const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 type ErrorBody = { error: { code: string; message: string } };
 
-function badRequest(res: VercelResponse, code: string, message: string): void {
+function jsonError(
+  res: VercelResponse,
+  status: number,
+  code: string,
+  message: string,
+): void {
   const body: ErrorBody = { error: { code, message } };
-  res.status(400).json(body);
+  res.status(status).json(body);
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse): void {
-  if (req.method === 'GET' || req.method === 'HEAD') {
-    res.status(200).json({
-      service: SERVICE,
-      runtime: RUNTIME,
-      endpoint: '/api/merchants/register',
-      method: 'POST',
-      description:
-        'Register a merchant: returns a deterministic merchant id, API key handle, and webhook receipt URL. Idempotent via the Idempotency-Key header.',
-      requestBody: {
-        name: 'string (required, max 120 chars)',
-        walletAddress: 'string (required, base58 Solana pubkey)',
-        email: 'string (required, valid email)',
-        webhookUrl: 'string (optional, https:// URL)',
-      },
-      headers: {
-        'Idempotency-Key': 'string (recommended, ≤128 chars)',
-      },
-      responses: {
-        '201': 'merchant created (or replayed via idempotency)',
-        '400': 'invalid input',
-      },
-    });
-    return;
-  }
+function readString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
 
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'GET, HEAD, POST');
-    res.status(405).json({ error: { code: 'method_not_allowed', message: 'POST or GET only' } });
+async function lookupExistingUser(email: string): Promise<
+  | { ok: true; status: 'none' | 'pending' | 'active' }
+  | { ok: false; message: string }
+> {
+  const svc = getSupabaseService();
+  if (!svc.ok) {
+    return { ok: true, status: 'none' };
+  }
+  try {
+    const lower = email.toLowerCase();
+    const { data, error } = await svc.client.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (error) return { ok: false, message: error.message };
+    const match = (data.users ?? []).find((u) => (u.email ?? '').toLowerCase() === lower);
+    if (!match) return { ok: true, status: 'none' };
+    if (match.email_confirmed_at) return { ok: true, status: 'active' };
+    return { ok: true, status: 'pending' };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : 'lookup_failed' };
+  }
+}
+
+function handleGet(res: VercelResponse): void {
+  res.status(200).json({
+    service: SERVICE,
+    runtime: RUNTIME,
+    endpoint: '/api/merchants/register',
+    method: 'POST',
+    description:
+      'Start merchant signup: sends a 6-digit OTP to the email via Supabase Auth. ' +
+      'Credentials are NOT issued here — POST /api/merchants/verify with the code to receive them.',
+    requestBody: {
+      email: 'string (required, valid email)',
+      shop_name: 'string (required, 2-120 chars)',
+    },
+    responses: {
+      '200': 'OTP sent (or resent for a pending merchant)',
+      '400': 'invalid input',
+      '409': 'email already active — use /verify or rotate via the dashboard',
+      '503': 'verification_disabled — SUPABASE_URL / SUPABASE_ANON_KEY missing',
+    },
+    configured: isVerificationConfigured(),
+  });
+}
+
+async function handlePost(req: VercelRequest, res: VercelResponse): Promise<void> {
+  const sb = getSupabaseAnon();
+  if (!sb.ok) {
+    jsonError(
+      res,
+      503,
+      'verification_disabled',
+      'Email verification is not configured (SUPABASE_URL / SUPABASE_ANON_KEY missing).',
+    );
     return;
   }
 
@@ -52,62 +87,62 @@ export default function handler(req: VercelRequest, res: VercelResponse): void {
     unknown
   >;
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
-  if (!name || name.length > 120) {
-    badRequest(res, 'invalid_name', 'Field "name" is required and must be ≤120 chars');
-    return;
-  }
-
-  const walletAddress = typeof body.walletAddress === 'string' ? body.walletAddress.trim() : '';
-  if (!SOLANA_ADDRESS_RE.test(walletAddress)) {
-    badRequest(
-      res,
-      'invalid_wallet_address',
-      'Field "walletAddress" must be a base58 Solana pubkey',
-    );
-    return;
-  }
-
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  const email = readString(body.email).toLowerCase();
   if (!EMAIL_RE.test(email) || email.length > 254) {
-    badRequest(res, 'invalid_email', 'Field "email" must be a valid email address');
+    jsonError(res, 400, 'invalid_email', 'Field "email" must be a valid email address');
     return;
   }
 
-  const webhookUrlRaw = typeof body.webhookUrl === 'string' ? body.webhookUrl.trim() : '';
-  if (webhookUrlRaw && !HTTPS_RE.test(webhookUrlRaw)) {
-    badRequest(res, 'invalid_webhook_url', 'Field "webhookUrl" must be an https:// URL');
+  const shopName = readString(body.shop_name) || readString(body.shopName) || readString(body.name);
+  if (shopName.length < 2 || shopName.length > 120) {
+    jsonError(res, 400, 'invalid_shop_name', 'Field "shop_name" must be between 2 and 120 characters');
     return;
   }
 
-  const idempotencyKey = req.headers['idempotency-key'];
-  const idemKey = Array.isArray(idempotencyKey) ? idempotencyKey[0] : idempotencyKey;
-  if (idemKey !== undefined && (typeof idemKey !== 'string' || idemKey.length > 128)) {
-    badRequest(
+  const existing = await lookupExistingUser(email);
+  if (existing.ok && existing.status === 'active') {
+    jsonError(
       res,
-      'invalid_idempotency_key',
-      'Header "Idempotency-Key" must be a string ≤128 chars',
+      409,
+      'merchant_already_active',
+      'A verified merchant already exists for this email. Rotate credentials from the dashboard.',
     );
     return;
   }
 
-  const merchantId = `m_${randomUUID().replace(/-/g, '').slice(0, 24)}`;
-  const apiKey = `zp_live_${randomUUID().replace(/-/g, '')}`;
-
-  res.status(201).json({
-    merchant: {
-      id: merchantId,
-      name,
-      walletAddress,
-      email,
-      webhookUrl: webhookUrlRaw || null,
-      network: 'solana-devnet',
-      createdAt: new Date().toISOString(),
-    },
-    apiKey,
-    next: {
-      onboard: `/api/merchants/onboard?merchant=${encodeURIComponent(merchantId)}`,
-      embedSnippet: `/dashboard?merchant=${encodeURIComponent(merchantId)}`,
+  const { error } = await sb.client.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: true,
+      data: { shop_name: shopName },
     },
   });
+
+  if (error) {
+    const status = /rate.?limit/i.test(error.message) ? 429 : 400;
+    jsonError(res, status, 'otp_send_failed', error.message);
+    return;
+  }
+
+  res.status(200).json({
+    ok: true,
+    email,
+    shop_name: shopName,
+    status: 'pending_verification',
+    message: 'Verification code sent. Check your inbox (and spam) — the code expires in 30 minutes.',
+    next: '/api/merchants/verify',
+  });
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (req.method === 'POST') {
+    await handlePost(req, res);
+    return;
+  }
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    handleGet(res);
+    return;
+  }
+  res.setHeader('Allow', 'GET, HEAD, POST');
+  jsonError(res, 405, 'method_not_allowed', 'POST or GET only');
 }

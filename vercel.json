@@ -48,6 +48,14 @@
       "destination": "/api/merchants/onboard"
     },
     {
+      "source": "/merchants/verify",
+      "destination": "/api/merchants/verify"
+    },
+    {
+      "source": "/merchants/issue-creds",
+      "destination": "/api/merchants/issue-creds"
+    },
+    {
       "source": "/mcp",
       "destination": "/api/mcp"
     },
