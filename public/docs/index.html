@@ -83,7 +83,9 @@
         Build with <span class="gradient-text">ZettaPay</span>.
       </h1>
       <p class="text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
-        Solana-native USDC payments for humans and AI agents. Open SDKs, x402 native, sub-second settlement.
+        Multi-chain, non-custodial crypto payments that confirm themselves. Paste your pubkey — we watch the chain
+        and post a signed webhook the moment the customer pays. BTC, ETH (mainnet + L2s), USDC on Solana. Open
+        SDKs in TypeScript, Python, PHP and Rust. x402 + MCP native.
       </p>
     </header>
 
@@ -101,24 +103,49 @@
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">For developers</div>
         <div class="text-2xl font-bold mb-2">SDK quickstart · 5 min</div>
         <p class="text-muted text-sm leading-relaxed">
-          Register a merchant, sign your first USDC payment, verify the receipt.
-          Code in TypeScript, Python, Go and cURL.
+          Sign up, install the SDK, create an invoice, verify the webhook. Snippets in
+          TypeScript, Python, PHP and Rust.
+        </p>
+      </a>
+
+      <a href="/docs/webhook" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Reference</div>
+        <div class="text-2xl font-bold mb-2">Webhook spec</div>
+        <p class="text-muted text-sm leading-relaxed">
+          HMAC-SHA256 signature, 300 s tolerance window, idempotent by <code class="text-mint">tx_hash</code>,
+          exponential-backoff retries.
         </p>
       </a>
 
       <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK</div>
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · TypeScript</div>
         <div class="text-2xl font-bold mb-2">@zettapay/sdk</div>
         <p class="text-muted text-sm leading-relaxed">
-          The TypeScript reference client. Full API surface, on-chain helpers, Anchor IDL.
+          <code class="text-mint">npm install @zettapay/sdk</code> — full API surface, webhook verifier, on-chain helpers.
         </p>
       </a>
 
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-go" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK</div>
-        <div class="text-2xl font-bold mb-2">Go SDK</div>
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-python" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · Python</div>
+        <div class="text-2xl font-bold mb-2">zettapay (PyPI)</div>
         <p class="text-muted text-sm leading-relaxed">
-          Native Go client. Context on every method, retries with exponential backoff, zero deps.
+          <code class="text-mint">pip install zettapay</code> — typed client, <code class="text-mint">verify_webhook</code> helper.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-php" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · PHP</div>
+        <div class="text-2xl font-bold mb-2">zettapay/sdk</div>
+        <p class="text-muted text-sm leading-relaxed">
+          <code class="text-mint">composer require zettapay/sdk</code> — PSR-18 HTTP client, <code class="text-mint">Webhook::verify</code> helper.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-rust" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · Rust</div>
+        <div class="text-2xl font-bold mb-2">zettapay (crates.io)</div>
+        <p class="text-muted text-sm leading-relaxed">
+          <code class="text-mint">cargo add zettapay</code> — async tokio client, constant-time webhook verifier.
         </p>
       </a>
 
@@ -130,19 +157,21 @@
         </p>
       </a>
 
-      <a href="/dashboard" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Console</div>
-        <div class="text-2xl font-bold mb-2">Merchant dashboard</div>
+      <a href="/docs/embed" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">No code</div>
+        <div class="text-2xl font-bold mb-2">Embed quickstart</div>
         <p class="text-muted text-sm leading-relaxed">
-          Offline-signature login, USDC balance, payment history, payouts and webhook replay.
+          Paste one <code class="text-mint">&lt;script&gt;</code> tag in your <code class="text-mint">&lt;head&gt;</code>. Pay button, QR
+          code, address, all bundled.
         </p>
       </a>
 
       <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-2xl p-7 block">
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Spec</div>
-        <div class="text-2xl font-bold mb-2">x402 protocol</div>
+        <div class="text-2xl font-bold mb-2">x402 + MCP</div>
         <p class="text-muted text-sm leading-relaxed">
-          The open header standard for AI-agent and machine-to-machine payments. ZettaPay is x402 native.
+          AI agents pay autonomously via the open x402 header. ZettaPay also exposes a
+          <code class="text-mint">pay_with_zettapay</code> MCP tool.
         </p>
       </a>
 
@@ -160,7 +189,7 @@
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open Solana payment protocol</span>
+        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

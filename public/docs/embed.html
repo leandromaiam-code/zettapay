@@ -353,9 +353,12 @@
             Install a <span class="gradient-text">Pay USDC</span> button in five minutes.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            Sign up, paste your Solana address, copy one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag,
-            paste it in your site's <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the
-            entire integration. Settlement is sub-second, fees are 0.30%, no servers required.
+            Sign up, paste your public address (Bitcoin, Ethereum or Solana — any of them, all of them), copy
+            one <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag, paste it in your site's
+            <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the entire integration.
+            ZettaPay watches the chain for the deposit and posts a webhook the moment it confirms. The
+            protocol never custodies — the on-chain transfer lands directly in your wallet. No protocol fee
+            on top of network gas. No servers required.
           </p>
           <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted">
             <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Plain HTML</span>
@@ -382,11 +385,11 @@
             </div>
             <div class="glass rounded-xl p-4">
               <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Settlement</div>
-              <div class="text-sm font-semibold">~2 sec on Solana</div>
+              <div class="text-sm font-semibold">&lt;2 s SOL · ~12 s ETH · ~10 min BTC</div>
             </div>
             <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Fees</div>
-              <div class="text-sm font-semibold">0.30% per transaction</div>
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Protocol fee</div>
+              <div class="text-sm font-semibold">0% — only the network's own gas</div>
             </div>
           </div>
         </section>
@@ -441,8 +444,9 @@
           </figure>
 
           <div class="callout">
-            <strong>Free tier.</strong> First 100 transactions per month are free. After that, fees are 0.30%
-            per transaction (compare: Stripe 2.9% + 30¢).
+            <strong>Free, no protocol fee.</strong> ZettaPay is a non-custodial protocol — we never touch the
+            funds. The customer pays the network's own gas (a fraction of a cent on Solana, a few cents on
+            Ethereum L2s, a few sats on Bitcoin). ZettaPay charges nothing on top.
           </div>
         </section>
 
@@ -450,14 +454,15 @@
         <section id="step-2" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
-            <h2 class="text-2xl font-bold">Paste your Solana address</h2>
+            <h2 class="text-2xl font-bold">Paste your public addresses</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Copy the public address of <em>any</em> Solana wallet you control — Phantom, Solflare, a hardware
-            wallet, or even an exchange withdrawal address — and paste it into the form.
+            Paste the public address of <em>any</em> wallet you control — Bitcoin, Ethereum (mainnet or any
+            L2), Solana for USDC. Hardware wallets, exchange withdrawal addresses, mobile wallets all work.
             <strong class="text-white">ZettaPay never asks to connect.</strong> Your handle
-            <code class="text-mint font-mono text-sm">@yourshop</code> is bound to this address; every USDC
-            payment to it lands directly in that wallet, with zero custody on our side.
+            <code class="text-mint font-mono text-sm">@yourshop</code> is bound to those addresses; every
+            payment lands directly there, with zero custody on our side. You can add more chains later
+            without re-deploying the script tag.
           </p>
 
           <figure class="screenshot mb-4">
@@ -667,9 +672,12 @@
             <h2 class="text-2xl font-bold">Receive USDC</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            A customer clicks the button. The widget opens a modal with a QR code (mobile) and a Phantom
-            deeplink (desktop). They sign the transfer. Solana confirms in ~2 seconds. USDC lands in your
-            wallet — no escrow, no holding period, no manual settlement.
+            A customer clicks the button. The widget opens a modal with a QR code and the merchant address
+            for the chain they pick. They pay from whatever wallet they already use (Phantom, Solflare,
+            MetaMask, Rainbow, a Bitcoin hardware wallet, an exchange withdrawal — anything). ZettaPay
+            watches the chain for the deposit; Solana confirms in &lt;2 seconds, Ethereum in ~12 seconds,
+            Bitcoin in ~10 minutes (1 confirmation). Funds land directly in your wallet — no escrow, no
+            holding period, no manual settlement.
           </p>
 
           <figure class="screenshot mb-4">
@@ -716,9 +724,9 @@
           </p>
 
           <div class="callout">
-            <strong>Compare:</strong> Stripe takes 2-3 days to settle to your bank, charges 2.9% + 30¢, and
-            disputes ride your account for weeks. ZettaPay settles in seconds, charges 0.30%, and the
-            transaction is final on-chain.
+            <strong>Compare:</strong> Stripe takes 2-3 days to settle to your bank and disputes ride your
+            account for weeks. ZettaPay settles directly on-chain in seconds, charges no protocol fee on top
+            of network gas, and the transaction is final — there is no party in the middle to dispute with.
           </div>
         </section>
 
@@ -955,7 +963,7 @@ open({ merchantId: <span class="tk-s">'@yourshop'</span>, amount: <span class="t
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open Solana payment protocol</span>
+        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="ZettaPay quickstart — accept your first USDC payment in under 5 minutes. Code samples in TypeScript, Python, Go and cURL." />
+  <meta name="description" content="ZettaPay quickstart — accept your first crypto payment in under 5 minutes. SDK install + invoice + webhook in TypeScript, Python, PHP and Rust." />
   <meta name="theme-color" content="#0A0A0A" />
   <meta property="og:title" content="ZettaPay · Quickstart" />
-  <meta property="og:description" content="Accept your first USDC payment in 5 minutes. TypeScript, Python, Go and cURL samples." />
+  <meta property="og:description" content="From signup to confirmed webhook in 5 minutes. SDKs in TypeScript, Python, PHP and Rust." />
   <title>ZettaPay · Quickstart (5 min)</title>
   <link rel="icon" href="/Logo_symbol.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -263,6 +263,21 @@
       font-size: 12px;
       color: #6B82FF;
     }
+
+    .chain-flow {
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #c0c8d4;
+      background: linear-gradient(135deg, #0d0d0d 0%, #131313 100%);
+      border: 1px solid rgba(79, 107, 255, 0.15);
+      border-radius: 12px;
+      padding: 22px 24px;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .chain-flow .accent { color: #14F195; }
+    .chain-flow .dim { color: #64748b; }
   </style>
 </head>
 <body class="grid-bg">
@@ -301,12 +316,14 @@
           <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
           <nav class="flex flex-col gap-1" id="toc">
             <a href="#overview" class="toc-link active">Overview</a>
+            <a href="#how-it-works" class="toc-link">How confirmation works</a>
             <a href="#prerequisites" class="toc-link">Prerequisites</a>
-            <a href="#step-1" class="toc-link">1 · Install the SDK</a>
-            <a href="#step-2" class="toc-link">2 · Register a merchant</a>
-            <a href="#step-3" class="toc-link">3 · Build a payment</a>
-            <a href="#step-4" class="toc-link">4 · Submit via x402</a>
-            <a href="#step-5" class="toc-link">5 · Verify the receipt</a>
+            <a href="#step-1" class="toc-link">1 · Sign up</a>
+            <a href="#step-2" class="toc-link">2 · Install the SDK</a>
+            <a href="#step-3" class="toc-link">3 · Create an invoice</a>
+            <a href="#step-4" class="toc-link">4 · Customer pays</a>
+            <a href="#step-5" class="toc-link">5 · Verify the webhook</a>
+            <a href="#agents" class="toc-link">AI agents (x402 + MCP)</a>
             <a href="#whats-next" class="toc-link">What's next</a>
             <a href="#api-reference" class="toc-link">API reference</a>
           </nav>
@@ -316,20 +333,21 @@
       <!-- CONTENT -->
       <article class="max-w-3xl">
         <header class="mb-10">
-          <span class="badge mb-5"><span class="badge-dot"></span>Quickstart · 5 min</span>
+          <span class="badge mb-5"><span class="badge-dot"></span>Quickstart · 5 min · non-custodial</span>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
-            Accept your first <span class="gradient-text">USDC payment</span> in five minutes.
+            Accept your first <span class="gradient-text">crypto payment</span> in five minutes.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            From zero to live merchant on Solana devnet — no smart-contract experience required.
-            Pick your stack, copy the snippet, run it. Receipts confirm in under a second.
+            Sign up, paste your public addresses (BTC, ETH and/or USDC on Solana), create an invoice, point
+            the customer at the payment URL. ZettaPay watches the chain and posts a webhook the moment the
+            transaction confirms. We never hold the funds.
           </p>
 
           <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted">
             <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">TypeScript</span>
             <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Python</span>
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Go</span>
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">cURL</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">PHP</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Rust</span>
           </div>
         </header>
 
@@ -337,14 +355,49 @@
         <section id="overview" class="scroll-mt-32 mb-16">
           <h2 class="text-2xl font-bold mb-3">Overview</h2>
           <p class="text-muted leading-relaxed mb-4">
-            ZettaPay is a Solana-native payment protocol. Merchants register a wallet, payers sign a
-            standard SPL token transfer, and the API submits it via the open <code class="text-mint font-mono text-sm">x-402-payment</code>
-            header. There is no escrow — funds move payer → merchant directly.
+            ZettaPay is a peer-to-peer, non-custodial payment protocol. The customer's funds move directly
+            from their wallet to yours on-chain — the protocol never touches the money. What ZettaPay
+            actually <em>does</em> is the part that's hard in pure crypto: <strong class="text-white">it
+            answers "did the customer pay?" automatically</strong>, by running chain listeners on Bitcoin,
+            Ethereum mainnet + L2s (Base, Polygon), and Solana, and posting a signed webhook to your server
+            the instant a deposit matching the invoice is confirmed.
           </p>
           <div class="callout">
-            <strong>Devnet only.</strong> This guide targets Solana devnet (USDC mint
-            <code class="text-mint font-mono text-xs">4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU</code>).
-            Mainnet ships post-audit.
+            <strong>Zero protocol fee.</strong> The customer pays the network's own gas (sub-cent on Solana,
+            a few cents on Ethereum L2s, a few sats on Bitcoin). ZettaPay adds nothing on top.
+          </div>
+        </section>
+
+        <!-- HOW IT WORKS -->
+        <section id="how-it-works" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">How confirmation works</h2>
+          <p class="text-muted leading-relaxed mb-5">
+            The flow is the same Stripe-style webhook pattern you already know — only the source of truth is
+            the blockchain itself instead of a payment processor's ledger.
+          </p>
+
+          <pre class="chain-flow" aria-label="ZettaPay chain listener flow"><span class="dim">┌─────────────────┐         ┌────────────────────┐         ┌───────────────────┐         ┌─────────────────┐</span>
+<span class="dim">│</span>  Customer wallet <span class="dim">│  ──TX──▶</span>  Blockchain        <span class="dim">│  ──tx──▶</span>  ZettaPay listener <span class="dim">│  ──POST▶</span> Merchant webhook <span class="dim">│</span>
+<span class="dim">│</span>  (any wallet)    <span class="dim">│         │</span>  BTC / ETH / SOL   <span class="dim">│         │</span>  watches the mempool & │       │ HTTPS · HMAC-signed
+<span class="dim">└─────────────────┘         └────────────────────┘         </span> matches by address+amount<span class="dim"> └─────────────────┘</span>
+                                                          <span class="dim">└───────────────────┘</span>          <span class="accent">your code marks order paid</span></pre>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6">
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Solana (USDC)</div>
+              <div class="text-sm font-semibold">&lt; 2 s</div>
+              <div class="text-xs text-muted mt-1">finalized commitment</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Ethereum &amp; L2s</div>
+              <div class="text-sm font-semibold">~ 12 s</div>
+              <div class="text-xs text-muted mt-1">1 block confirmation</div>
+            </div>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Bitcoin</div>
+              <div class="text-sm font-semibold">~ 10 min</div>
+              <div class="text-xs text-muted mt-1">1 confirmation (configurable)</div>
+            </div>
           </div>
         </section>
 
@@ -352,10 +405,10 @@
         <section id="prerequisites" class="scroll-mt-32 mb-16">
           <h2 class="text-2xl font-bold mb-3">Prerequisites</h2>
           <ul class="space-y-2 text-muted leading-relaxed">
-            <li class="flex gap-3"><span class="text-mint">›</span> Node 18+, Python 3.10+, or Go 1.22+ (pick one)</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> A Solana wallet (Phantom recommended) on devnet</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> Devnet funding — claim 1000 USDC + 1 SOL hourly from the <a class="text-royal-bright underline" href="/docs/faucet">ZettaPay devnet faucet</a></li>
-            <li class="flex gap-3"><span class="text-mint">›</span> A ZettaPay API base URL — defaults to <code class="text-mint font-mono text-sm">https://api.zettapay.dev</code></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> Node 18+, Python 3.10+, PHP 8.1+, or Rust 1.74+ (pick one)</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> A public address you control on any chain you want to accept (BTC, ETH, Solana — paste at least one)</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> A publicly reachable HTTPS endpoint to receive webhooks (use <code class="text-mint font-mono text-sm">ngrok</code>, <code class="text-mint font-mono text-sm">cloudflared</code>, or any deploy) — HTTP is rejected</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> Devnet / testnet funding (optional) — claim free tokens from the <a class="text-royal-bright underline" href="/docs/faucet">ZettaPay faucet</a></li>
           </ul>
         </section>
 
@@ -363,26 +416,21 @@
         <section id="step-1" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">1</div>
-            <h2 class="text-2xl font-bold">Install the SDK</h2>
+            <h2 class="text-2xl font-bold">Sign up · get your keys</h2>
           </div>
-          <p class="text-muted leading-relaxed mb-5">Pick the language you ship in.</p>
-
-          <div class="code-card relative" data-tabs="install">
-            <div class="tabs">
-              <button class="tab-btn active" data-tab="ts">TypeScript</button>
-              <button class="tab-btn" data-tab="py">Python</button>
-              <button class="tab-btn" data-tab="go">Go</button>
-              <button class="tab-btn" data-tab="curl">cURL</button>
-            </div>
-            <button class="copy-btn" data-copy>Copy</button>
-            <pre data-pane="ts" class="block"><span class="tk-c"># Install the official TypeScript SDK</span>
-npm install @zettapay/sdk</pre>
-            <pre data-pane="py" class="hidden"><span class="tk-c"># Use the standard requests library — Python SDK ships in Z16.3</span>
-pip install requests</pre>
-            <pre data-pane="go" class="hidden"><span class="tk-c">// Native Go SDK — zero third-party dependencies</span>
-go get github.com/leandromaiam-code/zettapay/packages/sdk-go</pre>
-            <pre data-pane="curl" class="hidden"><span class="tk-c"># No install — every endpoint is plain JSON over HTTPS</span>
-curl --version</pre>
+          <p class="text-muted leading-relaxed mb-5">
+            Open <a class="text-royal-bright underline" href="/signup">zettapay.io/signup</a>, pick a merchant
+            handle, paste the public addresses you want to receive at, and paste the HTTPS URL your server will
+            listen on. <strong class="text-white">You never connect a wallet.</strong> The form returns:
+          </p>
+          <ul class="space-y-2 text-muted leading-relaxed mb-5">
+            <li class="flex gap-3"><span class="text-mint">›</span> <code class="text-mint font-mono text-sm">merchant_id</code> — used in API calls</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <code class="text-mint font-mono text-sm">api_key</code> — bearer token for server-side calls</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <code class="text-mint font-mono text-sm">webhook_secret</code> — shared secret for HMAC signature verification</li>
+          </ul>
+          <div class="callout">
+            <strong>Store the webhook secret server-side only.</strong> Treat it like an API key. You'll use it
+            in step 5 to verify every event ZettaPay posts to you.
           </div>
         </section>
 
@@ -390,90 +438,29 @@ curl --version</pre>
         <section id="step-2" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
-            <h2 class="text-2xl font-bold">Register a merchant</h2>
+            <h2 class="text-2xl font-bold">Install the SDK</h2>
           </div>
-          <p class="text-muted leading-relaxed mb-5">
-            Bind your wallet on-chain via the memo program. The protocol pays the rent
-            (~0.002 SOL) for your USDC associated token account. Save the returned
-            <code class="text-mint font-mono text-sm">apiKey</code> — you'll need it next.
-          </p>
+          <p class="text-muted leading-relaxed mb-5">Pick the language you ship in. All four SDKs share the same surface area.</p>
 
-          <div class="code-card relative" data-tabs="register">
+          <div class="code-card relative" data-tabs="install">
             <div class="tabs">
               <button class="tab-btn active" data-tab="ts">TypeScript</button>
               <button class="tab-btn" data-tab="py">Python</button>
-              <button class="tab-btn" data-tab="go">Go</button>
-              <button class="tab-btn" data-tab="curl">cURL</button>
+              <button class="tab-btn" data-tab="php">PHP</button>
+              <button class="tab-btn" data-tab="rs">Rust</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ts" class="block"><span class="tk-k">import</span> { <span class="tk-t">ZettaPayClient</span> } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/sdk'</span>;
-
-<span class="tk-k">const</span> client = <span class="tk-k">new</span> <span class="tk-f">ZettaPayClient</span>({
-  baseURL: <span class="tk-s">'https://api.zettapay.dev'</span>,
-});
-
-<span class="tk-k">const</span> merchant = <span class="tk-k">await</span> client.<span class="tk-f">registerMerchant</span>({
-  name: <span class="tk-s">'Acme Coffee'</span>,
-  email: <span class="tk-s">'owner@acme.coffee'</span>,
-  walletAddress: <span class="tk-s">'7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT'</span>,
-});
-
-console.<span class="tk-f">log</span>(merchant.id, merchant.apiKey);</pre>
-<pre data-pane="py" class="hidden"><span class="tk-k">import</span> requests
-
-resp = requests.<span class="tk-f">post</span>(
-    <span class="tk-s">"https://api.zettapay.dev/merchants/register"</span>,
-    json={
-        <span class="tk-s">"name"</span>: <span class="tk-s">"Acme Coffee"</span>,
-        <span class="tk-s">"email"</span>: <span class="tk-s">"owner@acme.coffee"</span>,
-        <span class="tk-s">"walletAddress"</span>: <span class="tk-s">"7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"</span>,
-    },
-    timeout=<span class="tk-n">15</span>,
-)
-resp.<span class="tk-f">raise_for_status</span>()
-merchant = resp.<span class="tk-f">json</span>()
-<span class="tk-f">print</span>(merchant[<span class="tk-s">"merchant"</span>][<span class="tk-s">"id"</span>], merchant[<span class="tk-s">"apiKey"</span>])</pre>
-<pre data-pane="go" class="hidden"><span class="tk-k">package</span> main
-
-<span class="tk-k">import</span> (
-    <span class="tk-s">"context"</span>
-    <span class="tk-s">"log"</span>
-    <span class="tk-s">"time"</span>
-
-    zettapay <span class="tk-s">"github.com/leandromaiam-code/zettapay/packages/sdk-go"</span>
-)
-
-<span class="tk-k">func</span> <span class="tk-f">main</span>() {
-    client, _ := zettapay.<span class="tk-f">NewClient</span>(zettapay.<span class="tk-t">ClientConfig</span>{
-        BaseURL: <span class="tk-s">"https://api.zettapay.dev"</span>,
-        Retry:   zettapay.<span class="tk-f">DefaultRetryPolicy</span>(),
-    })
-
-    ctx, cancel := context.<span class="tk-f">WithTimeout</span>(context.<span class="tk-f">Background</span>(), <span class="tk-n">15</span>*time.Second)
-    <span class="tk-k">defer</span> <span class="tk-f">cancel</span>()
-
-    merchant, err := client.<span class="tk-f">RegisterMerchant</span>(ctx, zettapay.<span class="tk-t">RegisterMerchantInput</span>{
-        Name:          <span class="tk-s">"Acme Coffee"</span>,
-        Email:         <span class="tk-s">"owner@acme.coffee"</span>,
-        WalletAddress: <span class="tk-s">"7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"</span>,
-    })
-    <span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
-    log.<span class="tk-f">Println</span>(merchant.ID, merchant.APIKey)
-}</pre>
-<pre data-pane="curl" class="hidden">curl -X POST https://api.zettapay.dev/merchants/register \
-  -H <span class="tk-s">"Content-Type: application/json"</span> \
-  -H <span class="tk-s">"Idempotency-Key: $(uuidgen)"</span> \
-  -d <span class="tk-s">'{
-    "name": "Acme Coffee",
-    "email": "owner@acme.coffee",
-    "walletAddress": "7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT"
-  }'</span></pre>
-          </div>
-
-          <div class="callout mt-5">
-            <strong>Idempotency.</strong> Every write endpoint accepts an
-            <code class="text-mint font-mono text-xs">Idempotency-Key</code> header. The TypeScript and Go SDKs
-            send one automatically; for Python and cURL pass any UUID v4.
+            <pre data-pane="ts" class="block"><span class="tk-c"># Official TypeScript / JavaScript SDK</span>
+npm install @zettapay/sdk
+<span class="tk-c"># or: pnpm add @zettapay/sdk · yarn add @zettapay/sdk · bun add @zettapay/sdk</span></pre>
+            <pre data-pane="py" class="hidden"><span class="tk-c"># Official Python SDK</span>
+pip install zettapay
+<span class="tk-c"># or: poetry add zettapay · uv add zettapay</span></pre>
+            <pre data-pane="php" class="hidden"><span class="tk-c"># Official PHP SDK (Composer)</span>
+composer require zettapay/sdk</pre>
+            <pre data-pane="rs" class="hidden"><span class="tk-c"># Official Rust crate</span>
+cargo add zettapay
+<span class="tk-c"># or in Cargo.toml: zettapay = "0.1"</span></pre>
           </div>
         </section>
 
@@ -481,105 +468,77 @@ merchant = resp.<span class="tk-f">json</span>()
         <section id="step-3" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">3</div>
-            <h2 class="text-2xl font-bold">Build a signed payment</h2>
+            <h2 class="text-2xl font-bold">Create an invoice</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            ZettaPay never custodies funds. The payer signs a standard SPL transfer transaction
-            client-side; you then base64-encode the signed bytes and forward them to the API.
+            An invoice locks in the amount + currency + a stable
+            <code class="text-mint font-mono text-sm">customer_ref</code> of your choice (order id, user id,
+            anything). The SDK returns a payment URL — host it, redirect to it, or embed it.
           </p>
 
-          <div class="code-card relative" data-tabs="build">
+          <div class="code-card relative" data-tabs="invoice">
             <div class="tabs">
               <button class="tab-btn active" data-tab="ts">TypeScript</button>
               <button class="tab-btn" data-tab="py">Python</button>
-              <button class="tab-btn" data-tab="go">Go</button>
-              <button class="tab-btn" data-tab="curl">cURL</button>
+              <button class="tab-btn" data-tab="php">PHP</button>
+              <button class="tab-btn" data-tab="rs">Rust</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ts" class="block"><span class="tk-k">import</span> {
-  <span class="tk-t">Connection</span>, <span class="tk-t">PublicKey</span>, <span class="tk-t">Transaction</span>, <span class="tk-t">clusterApiUrl</span>,
-} <span class="tk-k">from</span> <span class="tk-s">'@solana/web3.js'</span>;
-<span class="tk-k">import</span> {
-  <span class="tk-f">createTransferCheckedInstruction</span>, <span class="tk-f">getAssociatedTokenAddress</span>,
-} <span class="tk-k">from</span> <span class="tk-s">'@solana/spl-token'</span>;
+<pre data-pane="ts" class="block"><span class="tk-k">import</span> { <span class="tk-t">ZettaPay</span> } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/sdk'</span>;
 
-<span class="tk-k">const</span> connection = <span class="tk-k">new</span> <span class="tk-f">Connection</span>(<span class="tk-f">clusterApiUrl</span>(<span class="tk-s">'devnet'</span>));
-<span class="tk-k">const</span> usdcMint = <span class="tk-k">new</span> <span class="tk-f">PublicKey</span>(<span class="tk-s">'4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'</span>);
+<span class="tk-k">const</span> zp = <span class="tk-k">new</span> <span class="tk-f">ZettaPay</span>({ apiKey: process.env.<span class="tk-t">ZETTAPAY_API_KEY</span>! });
 
-<span class="tk-k">const</span> payerAta    = <span class="tk-k">await</span> <span class="tk-f">getAssociatedTokenAddress</span>(usdcMint, payer.publicKey);
-<span class="tk-k">const</span> merchantAta = <span class="tk-k">await</span> <span class="tk-f">getAssociatedTokenAddress</span>(usdcMint, merchantPubkey);
+<span class="tk-k">const</span> invoice = <span class="tk-k">await</span> zp.invoices.<span class="tk-f">create</span>({
+  amount:       <span class="tk-s">'19.90'</span>,           <span class="tk-c">// string for precise decimals</span>
+  currency:     <span class="tk-s">'USDC'</span>,            <span class="tk-c">// 'BTC' | 'ETH' | 'USDC'</span>
+  customer_ref: <span class="tk-s">'order_42'</span>,
+});
 
-<span class="tk-k">const</span> ix = <span class="tk-f">createTransferCheckedInstruction</span>(
-  payerAta, usdcMint, merchantAta, payer.publicKey,
-  <span class="tk-n">1_500_000</span>,   <span class="tk-c">// 1.50 USDC (6 decimals)</span>
-  <span class="tk-n">6</span>,
-);
+<span class="tk-c">// Send the customer here:</span>
+console.<span class="tk-f">log</span>(invoice.payment_url);   <span class="tk-c">// https://pay.zettapay.io/inv_01HM...</span>
+console.<span class="tk-f">log</span>(invoice.id);            <span class="tk-c">// inv_01HM...</span></pre>
+<pre data-pane="py" class="hidden"><span class="tk-k">import</span> os
+<span class="tk-k">from</span> zettapay <span class="tk-k">import</span> <span class="tk-t">ZettaPay</span>
 
-<span class="tk-k">const</span> tx = <span class="tk-k">new</span> <span class="tk-f">Transaction</span>().<span class="tk-f">add</span>(ix);
-tx.feePayer = payer.publicKey;
-tx.recentBlockhash = (<span class="tk-k">await</span> connection.<span class="tk-f">getLatestBlockhash</span>()).blockhash;
-tx.<span class="tk-f">sign</span>(payer);
+zp = <span class="tk-t">ZettaPay</span>(api_key=os.environ[<span class="tk-s">"ZETTAPAY_API_KEY"</span>])
 
-<span class="tk-k">const</span> signedBase64 = tx.<span class="tk-f">serialize</span>().<span class="tk-f">toString</span>(<span class="tk-s">'base64'</span>);</pre>
-<pre data-pane="py" class="hidden"><span class="tk-k">import</span> base64
-<span class="tk-k">from</span> solders.keypair <span class="tk-k">import</span> Keypair
-<span class="tk-k">from</span> solders.pubkey <span class="tk-k">import</span> Pubkey
-<span class="tk-k">from</span> solana.rpc.api <span class="tk-k">import</span> Client
-<span class="tk-k">from</span> solana.transaction <span class="tk-k">import</span> Transaction
-<span class="tk-k">from</span> spl.token.instructions <span class="tk-k">import</span> transfer_checked, <span class="tk-t">TransferCheckedParams</span>
-<span class="tk-k">from</span> spl.token.constants <span class="tk-k">import</span> TOKEN_PROGRAM_ID
-
-USDC = <span class="tk-t">Pubkey</span>.<span class="tk-f">from_string</span>(<span class="tk-s">"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"</span>)
-client = <span class="tk-t">Client</span>(<span class="tk-s">"https://api.devnet.solana.com"</span>)
-
-ix = <span class="tk-f">transfer_checked</span>(<span class="tk-t">TransferCheckedParams</span>(
-    program_id=TOKEN_PROGRAM_ID,
-    source=payer_ata,
-    mint=USDC,
-    dest=merchant_ata,
-    owner=payer.pubkey(),
-    amount=<span class="tk-n">1_500_000</span>,   <span class="tk-c"># 1.50 USDC</span>
-    decimals=<span class="tk-n">6</span>,
-    signers=[],
-))
-
-tx = <span class="tk-t">Transaction</span>().<span class="tk-f">add</span>(ix)
-tx.recent_blockhash = client.<span class="tk-f">get_latest_blockhash</span>().value.blockhash
-tx.<span class="tk-f">sign</span>(payer)
-
-signed_b64 = base64.<span class="tk-f">b64encode</span>(<span class="tk-f">bytes</span>(tx)).<span class="tk-f">decode</span>()</pre>
-<pre data-pane="go" class="hidden"><span class="tk-c">// Use github.com/gagliardetto/solana-go for signing.</span>
-<span class="tk-k">import</span> (
-    <span class="tk-s">"encoding/base64"</span>
-    solana <span class="tk-s">"github.com/gagliardetto/solana-go"</span>
-    <span class="tk-s">"github.com/gagliardetto/solana-go/programs/token"</span>
-    <span class="tk-s">"github.com/gagliardetto/solana-go/rpc"</span>
+invoice = zp.invoices.<span class="tk-f">create</span>(
+    amount=<span class="tk-s">"19.90"</span>,
+    currency=<span class="tk-s">"USDC"</span>,         <span class="tk-c"># "BTC" | "ETH" | "USDC"</span>
+    customer_ref=<span class="tk-s">"order_42"</span>,
 )
 
-usdc := solana.<span class="tk-f">MustPublicKeyFromBase58</span>(<span class="tk-s">"4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"</span>)
-client := rpc.<span class="tk-f">New</span>(rpc.DevNet_RPC)
+<span class="tk-f">print</span>(invoice.payment_url)   <span class="tk-c"># https://pay.zettapay.io/inv_01HM...</span>
+<span class="tk-f">print</span>(invoice.id)</pre>
+<pre data-pane="php" class="hidden"><span class="tk-k">use</span> <span class="tk-t">ZettaPay\Client</span>;
 
-ix := token.<span class="tk-f">NewTransferCheckedInstruction</span>(
-    <span class="tk-n">1_500_000</span>, <span class="tk-n">6</span>,         <span class="tk-c">// 1.50 USDC</span>
-    payerATA, usdc, merchantATA, payer.PublicKey(),
-    []solana.PublicKey{},
-).<span class="tk-f">Build</span>()
+<span class="tk-s">$zp</span> = <span class="tk-k">new</span> <span class="tk-t">Client</span>([<span class="tk-s">'api_key'</span> =&gt; <span class="tk-f">getenv</span>(<span class="tk-s">'ZETTAPAY_API_KEY'</span>)]);
 
-recent, _ := client.<span class="tk-f">GetLatestBlockhash</span>(ctx, rpc.CommitmentFinalized)
-tx, _ := solana.<span class="tk-f">NewTransaction</span>(
-    []solana.Instruction{ix},
-    recent.Value.Blockhash,
-    solana.<span class="tk-f">TransactionPayer</span>(payer.PublicKey()),
-)
-_, _ = tx.<span class="tk-f">Sign</span>(<span class="tk-k">func</span>(k solana.PublicKey) *solana.PrivateKey { <span class="tk-k">return</span> &payer })
+<span class="tk-s">$invoice</span> = <span class="tk-s">$zp</span>-&gt;invoices-&gt;<span class="tk-f">create</span>([
+    <span class="tk-s">'amount'</span>       =&gt; <span class="tk-s">'19.90'</span>,
+    <span class="tk-s">'currency'</span>     =&gt; <span class="tk-s">'USDC'</span>,    <span class="tk-c">// 'BTC' | 'ETH' | 'USDC'</span>
+    <span class="tk-s">'customer_ref'</span> =&gt; <span class="tk-s">'order_42'</span>,
+]);
 
-raw, _ := tx.<span class="tk-f">MarshalBinary</span>()
-signedB64 := base64.StdEncoding.<span class="tk-f">EncodeToString</span>(raw)</pre>
-<pre data-pane="curl" class="hidden"><span class="tk-c"># cURL doesn't sign Solana transactions. Use any of the SDK examples</span>
-<span class="tk-c"># on the left to produce $SIGNED_TX_BASE64, then continue at step 4.</span>
-<span class="tk-c"># Most teams use the Phantom in-browser signer; the resulting</span>
-<span class="tk-c"># transaction.serialize() output is the value you need.</span>
-SIGNED_TX_BASE64=<span class="tk-s">"AQABAj4...&lt;truncated&gt;"</span></pre>
+<span class="tk-f">echo</span> <span class="tk-s">$invoice</span>-&gt;payment_url; <span class="tk-c">// https://pay.zettapay.io/inv_01HM...</span></pre>
+<pre data-pane="rs" class="hidden"><span class="tk-k">use</span> zettapay::{<span class="tk-t">Client</span>, <span class="tk-t">CreateInvoice</span>, <span class="tk-t">Currency</span>};
+
+<span class="tk-k">let</span> zp = <span class="tk-t">Client</span>::<span class="tk-f">from_env</span>()?;     <span class="tk-c">// reads ZETTAPAY_API_KEY</span>
+
+<span class="tk-k">let</span> invoice = zp.invoices().<span class="tk-f">create</span>(<span class="tk-t">CreateInvoice</span> {
+    amount:       <span class="tk-s">"19.90"</span>.<span class="tk-f">into</span>(),
+    currency:     <span class="tk-t">Currency</span>::USDC,    <span class="tk-c">// Currency::BTC | ETH | USDC</span>
+    customer_ref: <span class="tk-s">"order_42"</span>.<span class="tk-f">into</span>(),
+    ..<span class="tk-t">Default</span>::<span class="tk-f">default</span>()
+}).<span class="tk-k">await</span>?;
+
+<span class="tk-f">println!</span>(<span class="tk-s">"{}"</span>, invoice.payment_url); <span class="tk-c">// https://pay.zettapay.io/inv_01HM...</span></pre>
+          </div>
+
+          <div class="callout mt-5">
+            <strong>Idempotency.</strong> Pass an
+            <code class="text-mint font-mono text-xs">idempotency_key</code> when you'd retry on network
+            errors. The SDKs auto-generate one per call; you can override it to dedupe at your own boundary.
           </div>
         </section>
 
@@ -587,121 +546,233 @@ SIGNED_TX_BASE64=<span class="tk-s">"AQABAj4...&lt;truncated&gt;"</span></pre>
         <section id="step-4" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">4</div>
-            <h2 class="text-2xl font-bold">Submit via the x402 header</h2>
+            <h2 class="text-2xl font-bold">Customer pays</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            ZettaPay implements the open <a class="text-royal-bright underline" href="https://github.com/coinbase/x402" target="_blank" rel="noopener">x402 spec</a>:
-            the signed transaction travels in the <code class="text-mint font-mono text-sm">x-402-payment</code> header,
-            base64-encoded. The API broadcasts, confirms, and returns a typed receipt.
+            Send the customer to <code class="text-mint font-mono text-sm">invoice.payment_url</code>. The
+            page shows the merchant's deposit address for the chosen chain, the exact amount, a QR code, and
+            a copyable string. The customer pays from whatever wallet they prefer — Phantom, Solflare,
+            MetaMask, Rainbow, a Bitcoin hardware wallet, a mobile wallet, an exchange withdrawal — anything
+            that can send to a plain address. <strong class="text-white">They never connect their wallet to
+            ZettaPay.</strong>
           </p>
 
-          <div class="code-card relative" data-tabs="pay">
-            <div class="tabs">
-              <button class="tab-btn active" data-tab="ts">TypeScript</button>
-              <button class="tab-btn" data-tab="py">Python</button>
-              <button class="tab-btn" data-tab="go">Go</button>
-              <button class="tab-btn" data-tab="curl">cURL</button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Customer side</div>
+              <div class="text-sm">Scans QR or copies the address. Pays. Done.</div>
             </div>
-            <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ts" class="block"><span class="tk-k">const</span> receipt = <span class="tk-k">await</span> client.<span class="tk-f">pay</span>({ transaction: signedBase64 });
-
-console.<span class="tk-f">log</span>(receipt.paymentId);   <span class="tk-c">// pay_01HM...</span>
-console.<span class="tk-f">log</span>(receipt.status);      <span class="tk-c">// "confirmed"</span>
-console.<span class="tk-f">log</span>(receipt.signature);   <span class="tk-c">// on-chain tx signature</span></pre>
-<pre data-pane="py" class="hidden">resp = requests.<span class="tk-f">post</span>(
-    <span class="tk-s">"https://api.zettapay.dev/pay"</span>,
-    headers={
-        <span class="tk-s">"x-402-payment"</span>: signed_b64,
-        <span class="tk-s">"Idempotency-Key"</span>: str(uuid.<span class="tk-f">uuid4</span>()),
-    },
-    timeout=<span class="tk-n">30</span>,
-)
-resp.<span class="tk-f">raise_for_status</span>()
-receipt = resp.<span class="tk-f">json</span>()
-<span class="tk-f">print</span>(receipt[<span class="tk-s">"paymentId"</span>], receipt[<span class="tk-s">"status"</span>])</pre>
-<pre data-pane="go" class="hidden">receipt, err := client.<span class="tk-f">PayBase64</span>(ctx, signedB64)
-<span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
-
-log.<span class="tk-f">Println</span>(receipt.PaymentID, receipt.Status, receipt.Signature)</pre>
-<pre data-pane="curl" class="hidden">curl -X POST https://api.zettapay.dev/pay \
-  -H <span class="tk-s">"x-402-payment: $SIGNED_TX_BASE64"</span> \
-  -H <span class="tk-s">"Idempotency-Key: $(uuidgen)"</span>
-
-<span class="tk-c"># {
-#   "paymentId": "pay_01HM...",
-#   "status":    "confirmed",
-#   "signature": "5jkA...",
-#   "merchantId":"mer_01HM...",
-#   "amount":    "1.50",
-#   "currency":  "USDC"
-# }</span></pre>
+            <div class="glass rounded-xl p-4">
+              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Your side</div>
+              <div class="text-sm">Wait for the webhook. Don't poll.</div>
+            </div>
           </div>
+
+          <p class="text-muted leading-relaxed">
+            ZettaPay's listener detects the inbound transaction, matches it to the invoice (by destination
+            address + amount + memo where supported), and fires a signed webhook to the URL you registered at
+            signup. Step 5 shows how to verify it.
+          </p>
         </section>
 
         <!-- STEP 5 -->
         <section id="step-5" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">5</div>
-            <h2 class="text-2xl font-bold">Verify the receipt</h2>
+            <h2 class="text-2xl font-bold">Verify the webhook · mark the order paid</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Receipts are immutable and queryable. Confirmation typically lands in
-            <strong class="text-white">under one second</strong> on devnet — verify with the payment id from step 4.
+            ZettaPay POSTs a JSON body with two headers: an HMAC-SHA256
+            <code class="text-mint font-mono text-sm">X-ZettaPay-Signature</code> over
+            <code class="text-mint font-mono text-sm">timestamp.body</code>, and a
+            <code class="text-mint font-mono text-sm">X-ZettaPay-Timestamp</code> for replay protection.
+            Verify both. Then idempotently mark the order paid by
+            <code class="text-mint font-mono text-sm">tx_hash</code>.
           </p>
 
-          <div class="code-card relative" data-tabs="verify">
+          <div class="code-card relative mb-3" data-tabs="webhook-body">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="json">Event payload</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="json" class="block">{
+  <span class="tk-s">"invoice_id"</span>:        <span class="tk-s">"inv_01HMABCD..."</span>,
+  <span class="tk-s">"event"</span>:             <span class="tk-s">"payment.confirmed"</span>,
+  <span class="tk-s">"amount"</span>:            <span class="tk-s">"19.90"</span>,
+  <span class="tk-s">"currency"</span>:          <span class="tk-s">"USDC"</span>,
+  <span class="tk-s">"network"</span>:           <span class="tk-s">"solana"</span>,        <span class="tk-c">// "bitcoin" | "ethereum" | "base" | "polygon" | "solana"</span>
+  <span class="tk-s">"tx_hash"</span>:           <span class="tk-s">"5jkA..."</span>,
+  <span class="tk-s">"confirmations"</span>:     <span class="tk-n">1</span>,
+  <span class="tk-s">"customer_address"</span>:  <span class="tk-s">"7Np41oeY..."</span>,
+  <span class="tk-s">"customer_ref"</span>:      <span class="tk-s">"order_42"</span>,
+  <span class="tk-s">"created_at"</span>:        <span class="tk-s">"2026-05-17T12:34:56Z"</span>
+}</pre>
+          </div>
+
+          <div class="code-card relative" data-tabs="webhook">
             <div class="tabs">
               <button class="tab-btn active" data-tab="ts">TypeScript</button>
               <button class="tab-btn" data-tab="py">Python</button>
-              <button class="tab-btn" data-tab="go">Go</button>
-              <button class="tab-btn" data-tab="curl">cURL</button>
+              <button class="tab-btn" data-tab="php">PHP</button>
+              <button class="tab-btn" data-tab="rs">Rust</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ts" class="block"><span class="tk-k">const</span> record = <span class="tk-k">await</span> client.<span class="tk-f">getPayment</span>(receipt.paymentId);
-console.<span class="tk-f">log</span>(record.status, record.amount, record.signature);</pre>
-<pre data-pane="py" class="hidden">payment = requests.<span class="tk-f">get</span>(
-    <span class="tk-s">f"https://api.zettapay.dev/payments/{receipt['paymentId']}"</span>,
-    timeout=<span class="tk-n">10</span>,
-).<span class="tk-f">json</span>()
+<pre data-pane="ts" class="block"><span class="tk-c">// Express handler · TypeScript</span>
+<span class="tk-k">import</span> express <span class="tk-k">from</span> <span class="tk-s">'express'</span>;
+<span class="tk-k">import</span> { verifyWebhook } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/sdk'</span>;
 
-<span class="tk-f">print</span>(payment[<span class="tk-s">"status"</span>], payment[<span class="tk-s">"amount"</span>])</pre>
-<pre data-pane="go" class="hidden">payment, err := client.<span class="tk-f">GetPayment</span>(ctx, receipt.PaymentID)
-<span class="tk-k">if</span> err != <span class="tk-k">nil</span> { log.<span class="tk-f">Fatal</span>(err) }
-log.<span class="tk-f">Println</span>(payment.Status, payment.Amount, payment.Signature)</pre>
-<pre data-pane="curl" class="hidden">curl https://api.zettapay.dev/payments/pay_01HM...</pre>
+<span class="tk-k">const</span> app = <span class="tk-f">express</span>();
+
+<span class="tk-c">// IMPORTANT: keep the raw body — JSON parsing destroys the signature</span>
+app.<span class="tk-f">post</span>(
+  <span class="tk-s">'/webhooks/zettapay'</span>,
+  express.<span class="tk-f">raw</span>({ type: <span class="tk-s">'application/json'</span> }),
+  (req, res) =&gt; {
+    <span class="tk-k">try</span> {
+      <span class="tk-k">const</span> event = <span class="tk-f">verifyWebhook</span>({
+        body:      req.body,                              <span class="tk-c">// Buffer</span>
+        signature: req.<span class="tk-f">header</span>(<span class="tk-s">'X-ZettaPay-Signature'</span>)!,
+        timestamp: req.<span class="tk-f">header</span>(<span class="tk-s">'X-ZettaPay-Timestamp'</span>)!,
+        secret:    process.env.<span class="tk-t">ZETTAPAY_WEBHOOK_SECRET</span>!,
+        toleranceSec: <span class="tk-n">300</span>,                            <span class="tk-c">// reject if older than 5 min</span>
+      });
+
+      <span class="tk-k">if</span> (event.event === <span class="tk-s">'payment.confirmed'</span>) {
+        <span class="tk-c">// Idempotent by tx_hash — same hash is never delivered twice,</span>
+        <span class="tk-c">// but you should still de-dupe on your side as defense in depth.</span>
+        markOrderPaid(event.customer_ref, event.tx_hash);
+      }
+      res.<span class="tk-f">status</span>(<span class="tk-n">200</span>).<span class="tk-f">send</span>(<span class="tk-s">'ok'</span>);
+    } <span class="tk-k">catch</span> (err) {
+      res.<span class="tk-f">status</span>(<span class="tk-n">400</span>).<span class="tk-f">send</span>(<span class="tk-s">'invalid signature'</span>);
+    }
+  },
+);</pre>
+<pre data-pane="py" class="hidden"><span class="tk-c"># Flask handler · Python</span>
+<span class="tk-k">import</span> os
+<span class="tk-k">from</span> flask <span class="tk-k">import</span> <span class="tk-t">Flask</span>, request, abort
+<span class="tk-k">from</span> zettapay <span class="tk-k">import</span> verify_webhook, <span class="tk-t">WebhookError</span>
+
+app = <span class="tk-t">Flask</span>(__name__)
+SECRET = os.environ[<span class="tk-s">"ZETTAPAY_WEBHOOK_SECRET"</span>]
+
+<span class="tk-k">@app.post</span>(<span class="tk-s">"/webhooks/zettapay"</span>)
+<span class="tk-k">def</span> <span class="tk-f">on_event</span>():
+    <span class="tk-k">try</span>:
+        event = <span class="tk-f">verify_webhook</span>(
+            body=request.get_data(),                       <span class="tk-c"># raw bytes, NOT request.json</span>
+            signature=request.headers[<span class="tk-s">"X-ZettaPay-Signature"</span>],
+            timestamp=request.headers[<span class="tk-s">"X-ZettaPay-Timestamp"</span>],
+            secret=SECRET,
+            tolerance_sec=<span class="tk-n">300</span>,
+        )
+    <span class="tk-k">except</span> <span class="tk-t">WebhookError</span>:
+        <span class="tk-f">abort</span>(<span class="tk-n">400</span>)
+
+    <span class="tk-k">if</span> event[<span class="tk-s">"event"</span>] == <span class="tk-s">"payment.confirmed"</span>:
+        <span class="tk-f">mark_order_paid</span>(event[<span class="tk-s">"customer_ref"</span>], event[<span class="tk-s">"tx_hash"</span>])
+
+    <span class="tk-k">return</span> <span class="tk-s">"ok"</span>, <span class="tk-n">200</span></pre>
+<pre data-pane="php" class="hidden"><span class="tk-c">// Slim / vanilla PHP handler</span>
+<span class="tk-k">use</span> <span class="tk-t">ZettaPay\Webhook</span>;
+<span class="tk-k">use</span> <span class="tk-t">ZettaPay\WebhookException</span>;
+
+<span class="tk-s">$secret</span> = <span class="tk-f">getenv</span>(<span class="tk-s">'ZETTAPAY_WEBHOOK_SECRET'</span>);
+<span class="tk-s">$body</span>   = <span class="tk-f">file_get_contents</span>(<span class="tk-s">'php://input'</span>);   <span class="tk-c">// raw body</span>
+
+<span class="tk-k">try</span> {
+    <span class="tk-s">$event</span> = <span class="tk-t">Webhook</span>::<span class="tk-f">verify</span>(
+        <span class="tk-s">$body</span>,
+        <span class="tk-s">$_SERVER</span>[<span class="tk-s">'HTTP_X_ZETTAPAY_SIGNATURE'</span>],
+        <span class="tk-s">$_SERVER</span>[<span class="tk-s">'HTTP_X_ZETTAPAY_TIMESTAMP'</span>],
+        <span class="tk-s">$secret</span>,
+        <span class="tk-n">300</span>,                                <span class="tk-c">// tolerance seconds</span>
+    );
+} <span class="tk-k">catch</span> (<span class="tk-t">WebhookException</span> <span class="tk-s">$e</span>) {
+    <span class="tk-f">http_response_code</span>(<span class="tk-n">400</span>);
+    <span class="tk-k">exit</span>(<span class="tk-s">'invalid signature'</span>);
+}
+
+<span class="tk-k">if</span> (<span class="tk-s">$event</span>[<span class="tk-s">'event'</span>] === <span class="tk-s">'payment.confirmed'</span>) {
+    <span class="tk-f">mark_order_paid</span>(<span class="tk-s">$event</span>[<span class="tk-s">'customer_ref'</span>], <span class="tk-s">$event</span>[<span class="tk-s">'tx_hash'</span>]);
+}
+<span class="tk-f">echo</span> <span class="tk-s">'ok'</span>;</pre>
+<pre data-pane="rs" class="hidden"><span class="tk-c">// Axum handler · Rust</span>
+<span class="tk-k">use</span> axum::{extract::<span class="tk-t">State</span>, http::<span class="tk-t">HeaderMap</span>, response::<span class="tk-t">IntoResponse</span>};
+<span class="tk-k">use</span> zettapay::webhook::{verify, <span class="tk-t">VerifyParams</span>};
+
+<span class="tk-k">async fn</span> <span class="tk-f">on_event</span>(
+    headers: <span class="tk-t">HeaderMap</span>,
+    body: axum::body::<span class="tk-t">Bytes</span>,
+) -&gt; <span class="tk-k">impl</span> <span class="tk-t">IntoResponse</span> {
+    <span class="tk-k">let</span> secret = std::env::<span class="tk-f">var</span>(<span class="tk-s">"ZETTAPAY_WEBHOOK_SECRET"</span>).<span class="tk-f">unwrap</span>();
+
+    <span class="tk-k">let</span> event = <span class="tk-k">match</span> <span class="tk-f">verify</span>(<span class="tk-t">VerifyParams</span> {
+        body: &amp;body,
+        signature: headers.<span class="tk-f">get</span>(<span class="tk-s">"X-ZettaPay-Signature"</span>).<span class="tk-f">unwrap</span>().<span class="tk-f">to_str</span>().<span class="tk-f">unwrap</span>(),
+        timestamp: headers.<span class="tk-f">get</span>(<span class="tk-s">"X-ZettaPay-Timestamp"</span>).<span class="tk-f">unwrap</span>().<span class="tk-f">to_str</span>().<span class="tk-f">unwrap</span>(),
+        secret: &amp;secret,
+        tolerance_sec: <span class="tk-n">300</span>,
+    }) {
+        <span class="tk-t">Ok</span>(e)  =&gt; e,
+        <span class="tk-t">Err</span>(_) =&gt; <span class="tk-k">return</span> (axum::http::<span class="tk-t">StatusCode</span>::BAD_REQUEST, <span class="tk-s">"invalid"</span>),
+    };
+
+    <span class="tk-k">if</span> event.event == <span class="tk-s">"payment.confirmed"</span> {
+        <span class="tk-f">mark_order_paid</span>(&amp;event.customer_ref, &amp;event.tx_hash).<span class="tk-k">await</span>;
+    }
+    (axum::http::<span class="tk-t">StatusCode</span>::OK, <span class="tk-s">"ok"</span>)
+}</pre>
           </div>
 
           <div class="callout mt-5">
-            <strong>Webhooks.</strong> For production, subscribe to the
-            <code class="text-mint font-mono text-xs">payment.confirmed</code> event instead of polling.
-            Signatures are HMAC-SHA256 over the body — see the
-            <a class="text-royal-bright underline" href="#api-reference">webhook reference</a>.
+            <strong>Replay &amp; idempotency.</strong> Reject events whose timestamp is older than 300 s.
+            ZettaPay never re-delivers a successful event with the same <code>tx_hash</code>; on retries you
+            get the same <code>tx_hash</code> + <code>invoice_id</code>, so a unique constraint on either is
+            sufficient. Full spec: <a class="text-royal-bright underline" href="/docs/webhook">webhook reference</a>.
           </div>
+        </section>
+
+        <!-- AGENTS -->
+        <section id="agents" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">AI agents · x402 + MCP</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay is x402- and MCP-native. If your API returns
+            <code class="text-mint font-mono text-sm">HTTP 402 Payment Required</code> with a
+            <code class="text-mint font-mono text-sm">ZettaPay-Pay</code> header pointing at an invoice URL,
+            an x402-aware agent (Claude, GPT, any compliant client) pays autonomously from its own wallet and
+            retries. The protocol confirms the payment exactly the same way as a human checkout — on-chain
+            listener → webhook.
+          </p>
+          <p class="text-muted leading-relaxed mb-4">
+            ZettaPay also exposes a <code class="text-mint font-mono text-sm">pay_with_zettapay</code> MCP
+            tool that any agent runtime can call directly — see <a class="text-royal-bright underline" href="/docs/api#mcp">/docs/api#mcp</a>.
+          </p>
         </section>
 
         <!-- WHAT'S NEXT -->
         <section id="whats-next" class="scroll-mt-32 mb-16">
           <h2 class="text-2xl font-bold mb-4">What's next</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">SDK reference</div>
-              <div class="font-semibold mb-1">@zettapay/sdk</div>
-              <div class="text-sm text-muted">Full TypeScript surface area, on-chain helpers, Anchor IDL.</div>
+            <a href="/docs/webhook" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Reference</div>
+              <div class="font-semibold mb-1">Webhook spec</div>
+              <div class="text-sm text-muted">Every event type, header, retry policy and signature scheme.</div>
             </a>
-            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-go" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Go SDK</div>
-              <div class="font-semibold mb-1">sdk-go</div>
-              <div class="text-sm text-muted">Native Go client, context-aware, retries with full jitter.</div>
+            <a href="/docs/embed" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">No code</div>
+              <div class="font-semibold mb-1">Embed widget</div>
+              <div class="text-sm text-muted">Drop a Pay button on any page with one &lt;script&gt; tag.</div>
             </a>
-            <a href="/dashboard" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Dashboard</div>
-              <div class="font-semibold mb-1">Merchant console</div>
-              <div class="text-sm text-muted">Phantom login, USDC balance, payment history, Coinflow settlement.</div>
+            <a href="/docs/api" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Reference</div>
+              <div class="font-semibold mb-1">HTTP API</div>
+              <div class="text-sm text-muted">REST endpoints, errors, idempotency, rate limits.</div>
             </a>
             <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-xl p-5 hover:border-royal/40 transition">
               <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Spec</div>
               <div class="font-semibold mb-1">x402 protocol</div>
-              <div class="text-sm text-muted">The open header spec ZettaPay implements end-to-end.</div>
+              <div class="text-sm text-muted">The open header spec ZettaPay implements end-to-end for agents.</div>
             </a>
           </div>
         </section>
@@ -717,26 +788,27 @@ log.<span class="tk-f">Println</span>(payment.Status, payment.Amount, payment.Si
                 </tr>
               </thead>
               <tbody>
-                <tr><td><code>POST</code></td><td><code>/merchants/register</code></td><td class="text-muted">Bind wallet on-chain, create USDC ATA, return API key.</td></tr>
-                <tr><td><code>POST</code></td><td><code>/pay</code></td><td class="text-muted">Submit signed tx via <code>x-402-payment</code> header.</td></tr>
-                <tr><td><code>GET</code></td><td><code>/payments/:id</code></td><td class="text-muted">Fetch a recorded payment by id.</td></tr>
-                <tr><td><code>GET</code></td><td><code>/payments</code></td><td class="text-muted">Paginated payment list (filter by merchant).</td></tr>
-                <tr><td><code>POST</code></td><td><code>/webhooks</code></td><td class="text-muted">Register a TLS endpoint for <code>payment.confirmed</code>.</td></tr>
+                <tr><td><code>POST</code></td><td><code>/merchants/register</code></td><td class="text-muted">Create merchant; returns api_key + webhook_secret.</td></tr>
+                <tr><td><code>POST</code></td><td><code>/invoices</code></td><td class="text-muted">Create an invoice; returns <code>payment_url</code>.</td></tr>
+                <tr><td><code>GET</code></td><td><code>/invoices/:id</code></td><td class="text-muted">Fetch invoice + payment status.</td></tr>
+                <tr><td><code>POST</code></td><td><code>/webhooks</code></td><td class="text-muted">Update the HTTPS endpoint that receives events.</td></tr>
+                <tr><td><code>POST</code></td><td><code>/webhooks/test</code></td><td class="text-muted">Send a synthetic event to your endpoint.</td></tr>
                 <tr><td><code>GET</code></td><td><code>/healthz</code></td><td class="text-muted">Liveness probe (200 = OK).</td></tr>
               </tbody>
             </table>
           </div>
           <p class="text-sm text-muted mt-4">
-            All write endpoints accept an <code class="text-mint font-mono text-xs">Idempotency-Key</code> header.
-            Rate limits are per API key (sliding window). Errors mirror
+            All write endpoints accept an <code class="text-mint font-mono text-xs">Idempotency-Key</code>
+            header. Rate limits are per API key (sliding window). Errors follow
             <code class="text-mint font-mono text-xs">{ code, message, details }</code>.
+            See <a class="text-royal-bright underline" href="/docs/api">/docs/api</a> for the full surface.
           </p>
         </section>
 
         <!-- FOOTER NAV -->
         <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
-          <a href="/" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← Home</a>
-          <a href="/dashboard" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Open dashboard →</a>
+          <a href="/docs" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← All docs</a>
+          <a href="/docs/webhook" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Webhook reference →</a>
         </div>
       </article>
     </div>
@@ -746,7 +818,7 @@ log.<span class="tk-f">Println</span>(payment.Status, payment.Amount, payment.Si
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open Solana payment protocol</span>
+        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

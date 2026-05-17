@@ -226,9 +226,8 @@
           <a href="#x402" class="toc-link">x402 spec</a>
           <a href="#mcp" class="toc-link">MCP (JSON-RPC)</a>
 
-          <div class="toc-group">Fiat</div>
-          <a href="#onramp" class="toc-link">POST /onramp</a>
-          <a href="#onramp-webhook" class="toc-link">POST /onramp/webhook</a>
+          <div class="toc-group">Optional integrations</div>
+          <a href="#onramp" class="toc-link">Third-party fiat onramp</a>
 
           <div class="toc-group">Health & status</div>
           <a href="#healthz" class="toc-link">GET /healthz</a>
@@ -586,28 +585,25 @@
 }</pre>
         </article>
 
-        <!-- FIAT -->
-        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Fiat onramp</span><span class="text-xs font-mono text-muted">MoonPay</span></h2>
+        <!-- OPTIONAL INTEGRATIONS -->
+        <h2 class="text-3xl font-bold pt-4 flex items-center gap-3"><span class="gradient-text">Optional integrations</span><span class="text-xs font-mono text-muted">third-party · BYO</span></h2>
 
         <article id="onramp" class="ep-card glass rounded-2xl p-6 md:p-8">
-          <div class="flex items-center gap-3 mb-2 flex-wrap">
-            <span class="pill pill-post">POST</span>
-            <span class="ep-path">/api/onramp</span>
-          </div>
-          <p class="text-muted text-sm leading-relaxed">
-            Open a MoonPay-powered fiat → USDC purchase flow for a specific invoice. Returns a signed deep-link the payer can scan.
-            KYC, when required, is performed by MoonPay under its own policy.
+          <h3 class="text-xl font-bold mb-2">Third-party fiat onramp</h3>
+          <p class="text-muted text-sm leading-relaxed mb-3">
+            ZettaPay does <em>not</em> ship a built-in fiat onramp. The protocol is non-custodial: the customer must already hold the
+            cryptocurrency they pay with. If a fraction of your audience needs fiat→crypto, embed any onramp you trust
+            (<a class="text-royal-bright hover:underline" href="https://www.moonpay.com" target="_blank" rel="noopener">MoonPay</a>,
+            <a class="text-royal-bright hover:underline" href="https://ramp.network" target="_blank" rel="noopener">Ramp</a>,
+            <a class="text-royal-bright hover:underline" href="https://transak.com" target="_blank" rel="noopener">Transak</a>,
+            <a class="text-royal-bright hover:underline" href="https://www.coinbase.com/onramp" target="_blank" rel="noopener">Coinbase Onramp</a>,
+            etc.) alongside the ZettaPay widget — pass the invoice's destination address to the onramp's deposit-address parameter so the
+            purchased crypto lands at the merchant's wallet.
           </p>
-        </article>
-
-        <article id="onramp-webhook" class="ep-card glass rounded-2xl p-6 md:p-8">
-          <div class="flex items-center gap-3 mb-2 flex-wrap">
-            <span class="pill pill-post">POST</span>
-            <span class="ep-path">/api/onramp/webhook</span>
-          </div>
           <p class="text-muted text-sm leading-relaxed">
-            Endpoint that MoonPay posts to once fiat clears and USDC has been delivered to the payer wallet. ZettaPay then matches the deposit
-            to the originating invoice and triggers <code>payment.confirmed</code>.
+            ZettaPay's chain listener detects the deposit on-chain just like any other payment and posts your standard
+            <code>payment.confirmed</code> webhook — there is no special onramp event type. KYC, fees, currencies, and regional
+            restrictions are governed entirely by the onramp provider.
           </p>
         </article>
 
