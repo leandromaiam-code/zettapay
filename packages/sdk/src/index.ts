@@ -107,6 +107,18 @@ export {
   type DeriveEthereumAddressParams,
 } from './derive.js';
 export {
+  SUPPORTED_CHAINS,
+  InvoicesResource,
+  isSupportedChain,
+  normalizeWebhookChain,
+  type Chain,
+  type WebhookChain,
+  type InvoiceStatus as MultiChainInvoiceStatus,
+  type CreateInvoiceInput,
+  type Invoice as MultiChainInvoice,
+  type WebhookInvoicePayload,
+} from './invoices.js';
+export {
   parseWebhook,
   dedupe,
   MemoryEventStore,

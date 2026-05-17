@@ -84,6 +84,23 @@ Errors thrown by the SDK are `ZettaPayError` instances exposing `code`, `status`
 | `getPayment(id)` | `GET /payments/:id` | Fetch a recorded payment. |
 | `listPayments(opts)` | `GET /payments` | Paginated payment list. |
 | `health()` | `GET /healthz` | Liveness probe. |
+| `invoices.create(input)` | `POST /api/invoices` | Multi-chain invoice (BTC / Base / Polygon / Ethereum). |
+| `invoices.get(id)` | `GET /api/invoices/:id` | Fetch a multi-chain invoice. |
+
+## Multi-chain invoices
+
+```ts
+const invoice = await zp.invoices.create({
+  amount_usd: 29,
+  chain: 'base', // 'btc' | 'base' | 'polygon' | 'ethereum'
+  metadata: { order_id: 'xyz' },
+});
+console.log(invoice.receive_address, invoice.amount_native);
+```
+
+Webhook payloads on multi-chain invoices include a `chain` field. Legacy
+events emit `chain: 'unknown'` — use `normalizeWebhookChain()` for safe
+parsing.
 
 ## On-chain helpers (Z9 — Anchor program)
 

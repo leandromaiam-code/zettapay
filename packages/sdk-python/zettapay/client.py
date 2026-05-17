@@ -7,6 +7,7 @@ from typing import Any, Dict, Mapping, Optional, Union
 
 from . import _http
 from .errors import ZettaPayError
+from .invoices import Invoices
 from .types import (
     HealthStatus,
     ListMerchantsResponse,
@@ -79,6 +80,7 @@ class ZettaPayClient:
         self._retry = retry or RetryPolicy.disabled()
         self._user_agent = user_agent or _http.USER_AGENT
         self._extra_headers: Dict[str, str] = dict(headers or {})
+        self.invoices = Invoices(self)
 
     # ---- public surface --------------------------------------------------
 

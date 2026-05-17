@@ -8,6 +8,7 @@ use serde::Serialize;
 use url::Url;
 
 use crate::error::Error;
+use crate::invoices::{Chain, CreateInvoiceInput, Invoice};
 use crate::retry::RetryPolicy;
 use crate::types::{
     ApiErrorEnvelope, HealthStatus, ListMerchantsResponse, ListPaymentsResponse, Merchant,
@@ -298,6 +299,44 @@ impl Client {
         headers.insert(X402_HEADER.to_string(), trimmed.to_string());
         self.request_json(Method::POST, "/pay", None, NoBody, false, Some(headers))
             .await
+    }
+
+    /// `POST /api/invoices` — create a multi-chain invoice (Z52).
+    ///
+    /// `chain` is required and must be one of [`Chain`]. The server rejects
+    /// `solana` (and any other value) with `400`.
+    pub async fn create_invoice(&self, input: CreateInvoiceInput) -> Result<Invoice, Error> {
+        if !input.amount_usd.is_finite() || input.amount_usd <= 0.0 {
+            return Err(Error::new(
+                "validation_error",
+                "create_invoice: amount_usd must be a positive number",
+            ));
+        }
+        self.request_json(
+            Method::POST,
+            "/api/invoices",
+            None,
+            Some(&input),
+            false,
+            None,
+        )
+        .await
+    }
+
+    /// Convenience wrapper around [`create_invoice`] with explicit fields.
+    pub async fn create_invoice_with(
+        &self,
+        amount_usd: f64,
+        chain: Chain,
+    ) -> Result<Invoice, Error> {
+        self.create_invoice(CreateInvoiceInput {
+            amount_usd,
+            chain,
+            merchant_id: None,
+            ttl_seconds: None,
+            metadata: None,
+        })
+        .await
     }
 
     /// `GET /payments/:id`.

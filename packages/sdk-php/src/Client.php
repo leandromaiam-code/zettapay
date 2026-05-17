@@ -21,6 +21,7 @@ use ZettaPay\Model\Merchant;
 use ZettaPay\Model\PaginatedList;
 use ZettaPay\Model\PayResponse;
 use ZettaPay\Model\Payment;
+use ZettaPay\Resource\Invoices;
 use ZettaPay\Resource\Merchants;
 use ZettaPay\Resource\Payments;
 
@@ -52,6 +53,8 @@ final class Client
 
     public readonly Payments $payments;
 
+    public readonly Invoices $invoices;
+
     public function __construct(
         public readonly ClientConfig $config,
     ) {
@@ -64,6 +67,7 @@ final class Client
         };
         $this->merchants = new Merchants($this);
         $this->payments = new Payments($this);
+        $this->invoices = new Invoices($this);
     }
 
     /**

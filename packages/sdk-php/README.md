@@ -66,6 +66,22 @@ printf("merchant id=%d created at %d\n", $merchant->id, $merchant->createdAt);
 | `$c->payments->get(id)` | `GET /payments/:id` | Fetch a recorded payment. |
 | `$c->payments->list(limit, offset)` | `GET /payments` | Paginated payment list. |
 | `$c->health()` | `GET /healthz` | Liveness probe. |
+| `$c->invoices->create(...)` | `POST /api/invoices` | Multi-chain invoice (BTC / Base / Polygon / Ethereum). |
+| `$c->invoices->get(id)` | `GET /api/invoices/:id` | Fetch a multi-chain invoice. |
+
+### Multi-chain invoices
+
+```php
+$invoice = $client->invoices->create(
+    amountUsd: 29,
+    chain: 'base', // 'btc' | 'base' | 'polygon' | 'ethereum'
+    metadata: ['order_id' => 'xyz'],
+);
+echo $invoice->receiveAddress, ' ', $invoice->amountNative, PHP_EOL;
+```
+
+Webhook payloads on multi-chain invoices include a `chain` field. Legacy
+events resolve to `'unknown'` via `Invoice::normalizeWebhookChain()`.
 
 ## Bring your own HTTP stack
 

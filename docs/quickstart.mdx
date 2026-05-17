@@ -152,6 +152,63 @@ function verify(req) {
 
 Full reference at [Handling webhooks](/guides/handling-webhooks).
 
+## Create a multi-chain invoice
+
+ZettaPay watches BTC + USDC across Base, Polygon, and Ethereum. Specify the
+`chain` when you create an invoice; the API returns a per-invoice receive
+address. See the [Invoices reference](/api-reference/invoices) for the full
+contract.
+
+<CodeGroup>
+
+```ts TypeScript
+const invoice = await zp.invoices.create({
+  amount_usd: 29,
+  chain: "base", // 'btc' | 'base' | 'polygon' | 'ethereum'
+  metadata: { order_id: "xyz" },
+});
+console.log(invoice.receive_address, invoice.amount_native);
+```
+
+```python Python
+invoice = client.invoices.create(
+    amount_usd=29,
+    chain="base",
+    metadata={"order_id": "xyz"},
+)
+print(invoice.receive_address, invoice.amount_native)
+```
+
+```php PHP
+$invoice = $client->invoices->create(
+    amountUsd: 29,
+    chain: 'base',
+    metadata: ['order_id' => 'xyz'],
+);
+echo $invoice->receiveAddress, ' ', $invoice->amountNative, PHP_EOL;
+```
+
+```rust Rust
+use zettapay::{Chain, CreateInvoiceInput};
+
+let invoice = client
+    .create_invoice(CreateInvoiceInput {
+        amount_usd: 29.0,
+        chain: Chain::Base,
+        merchant_id: None,
+        ttl_seconds: None,
+        metadata: Some(serde_json::json!({ "order_id": "xyz" })),
+    })
+    .await?;
+println!("{} {}", invoice.receive_address, invoice.amount_native);
+```
+
+</CodeGroup>
+
+Swap `chain` for `btc` to collect Bitcoin, `polygon` for Polygon USDC, or
+`ethereum` for L1 USDC — the response shape is identical and the same webhook
+fires on confirmation.
+
 ## Next steps
 
 <CardGroup cols={2}>

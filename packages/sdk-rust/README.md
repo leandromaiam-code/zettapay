@@ -65,6 +65,27 @@ async fn main() -> Result<(), zettapay::Error> {
 | `get_payment(id)` | `GET /payments/:id` | Fetch a recorded payment. |
 | `list_payments(opts)` | `GET /payments` | Paginated payment list. |
 | `health()` | `GET /healthz` | Liveness probe. |
+| `create_invoice(input)` | `POST /api/invoices` | Multi-chain invoice (BTC / Base / Polygon / Ethereum). |
+
+### Multi-chain invoices
+
+```rust
+use zettapay::{Chain, CreateInvoiceInput};
+
+let invoice = client
+    .create_invoice(CreateInvoiceInput {
+        amount_usd: 29.0,
+        chain: Chain::Base, // Chain::Btc | Chain::Base | Chain::Polygon | Chain::Ethereum
+        merchant_id: None,
+        ttl_seconds: None,
+        metadata: Some(serde_json::json!({ "order_id": "xyz" })),
+    })
+    .await?;
+println!("{} {}", invoice.receive_address, invoice.amount_native);
+```
+
+Webhook payloads on multi-chain invoices include a `chain` field. Legacy
+events deserialize to `WebhookChain::Unknown`.
 
 ## Errors
 
