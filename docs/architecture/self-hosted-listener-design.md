@@ -286,6 +286,14 @@ Every mission in the self-hosted listener family MUST link the specific section(
 
 > Implements `StorageAdapter` JSON adapter conforming to `docs/architecture/self-hosted-listener-design.md#2-json-storage-layout` and `#1-storageadapter-interface`. Passes contract suite `packages/listener/test/storage-contract.ts`.
 
+### Z56 — `JsonFileStorage` conformance
+
+- All writes go through `<file>.tmp.<pid>.<rand>` followed by `fs.rename` — atomic on POSIX. No code path ever calls `fs.writeFile` on a final destination.
+- `nextChildIndex` is race-safe under 100 parallel in-process callers: an internal promise queue coalesces concurrent callers into a single lock acquisition queue, and `proper-lockfile.lock(merchant.json)` guarantees cross-process safety. The contract test (`StorageAdapter contract: json > nextChildIndex is atomic …`) asserts `{0..99}` distinct indexes for 100 parallel callers.
+- File-system reads tolerate `ENOENT` (return `null`) and corrupted JSON (`StorageCorruptionError`); `listPendingInvoices` logs + skips corrupted files rather than aborting.
+- `init()` is idempotent and never overwrites an existing `merchant.json`.
+- The adapter never imports `@supabase/*`, `better-sqlite3`, or `pg` (HR-OPTIONAL-DEPS). `fs` / `fs/promises` imports are confined to `packages/listener/src/storage/json.ts` (HR-STORAGE-ADAPTER).
+
 Mission-to-section map (forward planning):
 
 | mission | sections | deliverable                                       |

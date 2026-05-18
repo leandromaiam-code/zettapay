@@ -10,8 +10,11 @@ import type {
   WebhookEvent,
   WebhookEventInput,
 } from '../types.js';
+import { JsonFileStorage } from './json.js';
 
 export { MissingStorageDependencyError } from '../types.js';
+export { JsonFileStorage } from './json.js';
+export type { JsonFileStorageOptions } from './json.js';
 
 export interface StorageAdapter {
   getMerchant(id: string): Promise<Merchant | null>;
@@ -44,16 +47,49 @@ export interface StorageFactoryOptions {
 }
 
 /**
- * Lazy factory. Concrete adapters land in Z56-Z59; here we only enforce the
- * contract that loading a non-default adapter triggers a dynamic import gated
- * on the matching optional peer dep (HR-OPTIONAL-DEPS).
+ * Resolve a StorageAdapter from a kind discriminator. Z56 ships the JSON
+ * adapter; SQLite / Supabase / Postgres land in Z57+ and throw a clear
+ * not-yet-implemented error here.
  */
 export async function createStorageAdapter(
-  _opts: StorageFactoryOptions,
+  opts: StorageFactoryOptions,
 ): Promise<StorageAdapter> {
-  throw new Error(
-    'createStorageAdapter: no adapter implemented in Z55. ' +
-      'JSON adapter lands in Z56, SQLite in Z57, Supabase in Z58, Postgres in Z59. ' +
-      'See docs/architecture/self-hosted-listener-design.md#3-dependency-graph',
-  );
+  switch (opts.kind) {
+    case 'json':
+      return new JsonFileStorage({ dataDir: opts.dataDir });
+    case 'sqlite':
+    case 'supabase':
+    case 'postgres':
+      throw new Error(
+        `@zettapay/listener: storage adapter '${opts.kind}' not yet implemented (coming in Z57+). ` +
+          `See docs/architecture/self-hosted-listener-design.md#3-dependency-graph`,
+      );
+    default: {
+      const exhaustive: never = opts.kind;
+      throw new Error(`@zettapay/listener: unknown storage kind '${exhaustive}'`);
+    }
+  }
+}
+
+/**
+ * Env-driven factory used by the CLI bootstrap (Z60). Reads `STORAGE`
+ * (default `json`) + `ZETTAPAY_DATA_DIR` and instantiates the matching
+ * adapter synchronously.
+ */
+export function createStorage(env: NodeJS.ProcessEnv = process.env): StorageAdapter {
+  const kindRaw = (env.STORAGE ?? 'json').toLowerCase();
+  switch (kindRaw) {
+    case 'json':
+      return new JsonFileStorage({ dataDir: env.ZETTAPAY_DATA_DIR });
+    case 'sqlite':
+    case 'supabase':
+    case 'postgres':
+      throw new Error(
+        `@zettapay/listener: storage adapter '${kindRaw}' not yet implemented (coming in Z57+).`,
+      );
+    default:
+      throw new Error(
+        `@zettapay/listener: unknown STORAGE='${kindRaw}'. Expected one of: json, sqlite, supabase, postgres.`,
+      );
+  }
 }

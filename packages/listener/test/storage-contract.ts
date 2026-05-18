@@ -166,14 +166,21 @@ export function describeStorageContract(
 
     it('invoice fixture serializes to a canonical string (schema-drift detector)', async () => {
       const created = await adapter.createInvoice(makeInvoiceFixture(merchant.id, { id: 'inv_snapshot_schema' }));
-      // strip volatile timestamps for the snapshot
-      const { created_at: _c, updated_at: _u, ...stable } = created;
+      // strip volatile timestamps for the snapshot (created_at/updated_at/expires_at all non-deterministic)
+      const { created_at: _c, updated_at: _u, expires_at: _e, ...stable } = created;
       const canonical = canonicalJson(stable);
-      expect(canonical).toMatchInlineSnapshot(
-        `"{\\"address\\":\\"bc1qexampleaddressdoesnotresolvetoanyutxo\\",\\"amount\\":\\"0.00050000\\",\\"asset\\":\\"BTC\\",\\"chain\\":\\"btc\\",\\"child_index\\":0,\\"id\\":\\"inv_snapshot_schema\\",\\"merchant_id\\":${JSON.stringify(merchant.id)},\\"paid_at\\":null,\\"status\\":\\"pending\\",\\"tx_hash\\":null}"`
-          .replace(/\s+/g, ' ')
-          .trim(),
-      );
+      const expected =
+        '{"address":"bc1qexampleaddressdoesnotresolvetoanyutxo",' +
+        '"amount":"0.00050000",' +
+        '"asset":"BTC",' +
+        '"chain":"btc",' +
+        '"child_index":0,' +
+        '"id":"inv_snapshot_schema",' +
+        `"merchant_id":${JSON.stringify(merchant.id)},` +
+        '"paid_at":null,' +
+        '"status":"pending",' +
+        '"tx_hash":null}';
+      expect(canonical).toBe(expected);
     });
   });
 }
