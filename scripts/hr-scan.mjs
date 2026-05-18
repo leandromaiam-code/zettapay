@@ -46,17 +46,52 @@ const PATH_ALLOWLIST = [
 
 const SEVERITY_EXIT = { soft: 0, hard: 1, blocker: 2 };
 
+function globToRegex(pattern) {
+  let src = '^';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '*' && pattern[i + 1] === '*') {
+      if (pattern[i + 2] === '/') {
+        src += '(?:.*/)?';
+        i += 2;
+      } else {
+        src += '.*';
+        i += 1;
+      }
+    } else if (c === '*') {
+      src += '[^/]*';
+    } else if (c === '?') {
+      src += '[^/]';
+    } else if ('.+()|^$[]{}\\'.includes(c)) {
+      src += '\\' + c;
+    } else {
+      src += c;
+    }
+  }
+  if (pattern.endsWith('/')) src += '.*';
+  return new RegExp(src);
+}
+
 function loadRules() {
   const raw = readFileSync(RULES_PATH, 'utf8');
   const parsed = JSON.parse(raw);
   return parsed.rules.map((r) => ({
     ...r,
     regexes: r.detection_patterns.map((p) => new RegExp(p, 'i')),
+    allowlistGlobs: Array.isArray(r.allowlist_paths)
+      ? r.allowlist_paths.map((g) => { try { return globToRegex(g); } catch { return null; } }).filter(Boolean)
+      : [],
   }));
 }
 
 function isAllowlisted(path) {
   return PATH_ALLOWLIST.some((re) => re.test(path));
+}
+
+function isRuleAllowlisted(path, rule) {
+  const globs = rule.allowlistGlobs;
+  if (!globs || globs.length === 0) return false;
+  return globs.some((re) => re.test(path));
 }
 
 function parseOverrides() {
@@ -204,6 +239,7 @@ function run() {
     const hits = checkLine(c.text, rules);
     for (const hit of hits) {
       if (overrides.has(hit.rule.id)) continue;
+      if (isRuleAllowlisted(c.file, hit.rule)) continue;
       violations.push({
         file: c.file,
         line: c.line,

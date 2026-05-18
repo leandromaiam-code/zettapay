@@ -1,0 +1,54 @@
+{
+  "name": "@zettapay/listener",
+  "version": "0.0.1",
+  "description": "Self-hosted, non-custodial payment listener. Watches BTC + EVM addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zettapay-listener": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./storage": {
+      "types": "./dist/storage/index.d.ts",
+      "import": "./dist/storage/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "proper-lockfile": "^4.1.2",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "*",
+    "better-sqlite3": "*",
+    "pg": "*"
+  },
+  "peerDependenciesMeta": {
+    "@supabase/supabase-js": { "optional": true },
+    "better-sqlite3": { "optional": true },
+    "pg": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/proper-lockfile": "^4.1.4",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}

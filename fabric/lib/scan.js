@@ -30,6 +30,41 @@ function isAllowlisted(path, allowlist = DEFAULT_PATH_ALLOWLIST) {
   return allowlist.some((re) => re.test(path));
 }
 
+// Convert a minimal-glob path pattern (used in HR.allowlist_paths) to RegExp.
+// Supports: `**/` (any depth), `*` (single segment), `?`, trailing `/` (prefix
+// match for directories). Anchored at start of path.
+function globToRegex(pattern) {
+  let src = '^';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    if (c === '*' && pattern[i + 1] === '*') {
+      if (pattern[i + 2] === '/') {
+        src += '(?:.*/)?';
+        i += 2;
+      } else {
+        src += '.*';
+        i += 1;
+      }
+    } else if (c === '*') {
+      src += '[^/]*';
+    } else if (c === '?') {
+      src += '[^/]';
+    } else if ('.+()|^$[]{}\\'.includes(c)) {
+      src += '\\' + c;
+    } else {
+      src += c;
+    }
+  }
+  if (pattern.endsWith('/')) src += '.*';
+  return new RegExp(src);
+}
+
+function isRuleAllowlisted(path, compiledRule) {
+  const globs = compiledRule.allowlistGlobs;
+  if (!globs || globs.length === 0) return false;
+  return globs.some((re) => re.test(path));
+}
+
 function looksLikePlaceholderSecret(text, regex) {
   const m = text.match(regex);
   if (!m) return false;
@@ -44,12 +79,20 @@ function looksLikePlaceholderSecret(text, regex) {
 }
 
 function compileRule(rule) {
+  const allowlistPaths = Array.isArray(rule.allowlist_paths) ? rule.allowlist_paths : [];
   return {
     id: rule.id,
     severity: rule.severity || 'soft',
     title: rule.title || rule.id,
     body: rule.body || '',
     patterns: (rule.detection_patterns || []).map((p) => ({ src: p, re: new RegExp(p, 'i') })),
+    allowlistGlobs: allowlistPaths.map((g) => {
+      try {
+        return globToRegex(g);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean),
   };
 }
 
@@ -78,6 +121,7 @@ function scanFiles(filesWithContent, rules, opts = {}) {
       const text = lines[i];
       for (const hit of checkLine(text, compiled)) {
         if (overrides.has(hit.rule.id)) continue;
+        if (isRuleAllowlisted(path, hit.rule)) continue;
         violations.push({
           file: path,
           line: i + 1,
@@ -105,6 +149,8 @@ module.exports = {
   DEFAULT_PATH_ALLOWLIST,
   SEVERITY_EXIT,
   isAllowlisted,
+  globToRegex,
+  isRuleAllowlisted,
   compileRule,
   checkLine,
   scanFiles,
