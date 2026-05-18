@@ -16,16 +16,50 @@ A small daemon a merchant runs on their own infrastructure to:
 - **Not wallet-coupled.** No `wallet.connect`, no Phantom/MetaMask UI, no browser-side signing. See `HR-WALLET-LESS`.
 - **No phone-home.** The listener MUST NOT contact `zettapay.vercel.app`, `zettapay.dev`, `zettapay.com`, or `api.zettapay.*`. Outbound traffic is limited to `mempool.space` (and any merchant-configured chain RPC), the merchant's configured `MERCHANT_WEBHOOK_URL`, and the `STORAGE` adapter URL when the merchant chooses Supabase or Postgres. See `HR-PHONE-HOME`.
 
-## Status — Z55
+## Status — Z56
 
-This release lands the **architectural foundation only**:
+- `StorageAdapter` interface + type definitions (Z55).
+- Contract test suite at `test/storage-contract.ts` (Z55).
+- **`JsonFileStorage` (the default adapter)** — Z56, zero extra deps.
+- Optional peer-dep adapters (SQLite / Supabase / Postgres) land in Z57–Z59.
+- CLI, watcher, and webhook dispatcher land in Z60–Z62.
 
-- `StorageAdapter` interface
-- Type definitions (`Merchant`, `Invoice`, `WebhookEvent`, ...)
-- A contract test suite (`test/storage-contract.ts`) future adapters must satisfy
-- Package skeleton with **all storage backends declared as optional peer dependencies** so the default JSON mode boots with zero extra installs
+## Storage adapters
 
-No concrete adapter, CLI, watcher, or webhook-dispatcher business logic is implemented in this release. Those land in Z56–Z62.
+| adapter           | status                  | install                                  |
+|-------------------|-------------------------|------------------------------------------|
+| `json` (default)  | available (Z56)         | zero extra deps                          |
+| `sqlite`          | coming soon (Z57)       | `npm install better-sqlite3`             |
+| `supabase`        | coming soon (Z58)       | `npm install @supabase/supabase-js`      |
+| `postgres`        | coming soon (Z59)       | `npm install pg`                         |
+
+### `JsonFileStorage` (default)
+
+Persists all merchant + invoice + webhook state under
+`~/.zettapay/data/` (override via `--data-dir` / `ZETTAPAY_DATA_DIR`):
+
+```
+~/.zettapay/data/
+├── merchant.json
+├── invoices/inv_<id>.json
+├── webhook_events/evt_<id>.json
+└── .lock                       # proper-lockfile sentinel
+```
+
+Atomic-write guarantees:
+
+- every write goes through `<file>.tmp.<pid>.<rand>` → `rename(2)` — atomic on POSIX.
+- `nextChildIndex` is serialized in-process (promise queue) **and** across processes (`proper-lockfile` on `merchant.json`). 100 parallel callers receive `{0..99}` distinct indexes, no duplicates.
+
+Programmatic construction:
+
+```ts
+import { JsonFileStorage, createStorage } from '@zettapay/listener';
+
+const storage = new JsonFileStorage({ dataDir: process.env.ZETTAPAY_DATA_DIR });
+// or, env-driven:
+const fromEnv = createStorage(process.env); // STORAGE defaults to 'json'
+```
 
 ## Design doc
 
@@ -40,7 +74,9 @@ See [`docs/architecture/self-hosted-listener-design.md`](../../docs/architecture
 | `supabase` | `@supabase/supabase-js`       | `npm install @supabase/supabase-js`    |
 | `postgres` | `pg`                          | `npm install pg`                       |
 
-A missing optional peer throws `MissingStorageDependencyError` with the exact install hint.
+`proper-lockfile` is a hard dependency — it is what makes the default JSON
+adapter race-safe. A missing optional peer (for the non-default adapters)
+throws `MissingStorageDependencyError` with the exact install hint.
 
 ## License
 

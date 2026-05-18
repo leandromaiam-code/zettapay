@@ -1,17 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { MissingStorageDependencyError, createStorageAdapter } from '../src/storage/index.js';
-import type { Chain, InvoiceStatus } from '../src/types.js';
+import type { Chain, InvoiceStatus, StorageKind } from '../src/types.js';
 
-// Z55 ships the architectural skeleton only. The describeStorageContract
-// function is exported from ./storage-contract for Z56-Z59 to consume from
-// their adapter packages — those PRs will add a test file calling
-//   describeStorageContract('json', () => makeJsonAdapter(...))
-// which will exercise the seven contract cases listed below as todos.
+// Z56 lands the JSON adapter; SQLite / Supabase / Postgres still throw a
+// clear not-yet-implemented error here. The full StorageAdapter contract is
+// exercised for the JSON adapter from ./json-storage.test.ts via
+// describeStorageContract.
 
-describe('@zettapay/listener — Z55 architectural skeleton', () => {
-  it('createStorageAdapter rejects with a clear Z55-aware not-yet-implemented error', async () => {
-    await expect(createStorageAdapter({ kind: 'json' })).rejects.toThrow(/Z55|Z56|adapter/i);
+describe('@zettapay/listener — factory + types', () => {
+  it('createStorageAdapter resolves a JSON adapter (Z56 default)', async () => {
+    const adapter = await createStorageAdapter({ kind: 'json', dataDir: undefined });
+    expect(adapter).toBeDefined();
+    expect(typeof adapter.createMerchant).toBe('function');
+    expect(typeof adapter.nextChildIndex).toBe('function');
   });
+
+  it.each<StorageKind>(['sqlite', 'supabase', 'postgres'])(
+    'createStorageAdapter still rejects for %s (Z57+)',
+    async (kind) => {
+      await expect(createStorageAdapter({ kind })).rejects.toThrow(/Z57/);
+    },
+  );
 
   it('MissingStorageDependencyError carries kind + peer install hint', () => {
     const err = new MissingStorageDependencyError('sqlite', 'better-sqlite3');
@@ -27,14 +36,4 @@ describe('@zettapay/listener — Z55 architectural skeleton', () => {
     expect(chains).toHaveLength(3);
     expect(statuses).toHaveLength(5);
   });
-
-  // StorageAdapter contract cases — implemented as it.todo in Z55, exercised
-  // for real in Z56-Z59 via describeStorageContract(name, factory).
-  it.todo('StorageAdapter contract: createMerchant + getMerchant round-trip');
-  it.todo('StorageAdapter contract: nextChildIndex atomic under 100 concurrent callers');
-  it.todo('StorageAdapter contract: createInvoice + listPendingInvoices filter by status');
-  it.todo('StorageAdapter contract: updateInvoiceStatus preserves untouched fields');
-  it.todo('StorageAdapter contract: getWebhookEventsDue filters by next_retry_at <= now');
-  it.todo('StorageAdapter contract: crash-safety via tmp + rename atomic');
-  it.todo('StorageAdapter contract: invoice fixture serializes to canonical schema string');
 });
