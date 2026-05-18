@@ -7,7 +7,7 @@ async function loadWorkspaceHrs(sb, workspaceId) {
     '/rest/v1/fabric_layer0_premissas' +
     '?workspace_id=eq.' + encodeURIComponent(workspaceId) +
     '&premissa_kind=eq.HR' +
-    '&select=id,title,body,severity,detection_patterns';
+    '&select=id,title,body,severity,detection_patterns,allowlist_paths';
   const rows = await sb('GET', path);
   return Array.isArray(rows) ? rows : [];
 }

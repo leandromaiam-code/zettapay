@@ -60,6 +60,68 @@
         "ghp_[a-zA-Z0-9]{30,}",
         "0x[a-fA-F0-9]{64}\\s*(//|$)"
       ]
+    },
+    {
+      "id": "HR-PHONE-HOME",
+      "title": "Self-hosted listener never phones home to ZettaPay-controlled domains",
+      "severity": "hard",
+      "body": "O package @zettapay/listener, quando em modo self-hosted, nao pode fazer outbound HTTP para zettapay.vercel.app, zettapay.dev, zettapay.com ou api.zettapay.* (qualquer subdomain). Trafego permitido: mempool.space, MERCHANT_WEBHOOK_URL configurado pelo merchant, e Supabase/Postgres URL se merchant escolheu adapter=supabase|postgres.",
+      "allowlist_paths": [
+        "examples/",
+        "docs/",
+        "**/README*",
+        "**/*.test.ts",
+        "packages/sdk/"
+      ],
+      "detection_patterns": [
+        "zettapay\\.(vercel\\.app|dev|com)",
+        "api\\.zettapay\\.",
+        "https://zettapay\\."
+      ]
+    },
+    {
+      "id": "HR-OPTIONAL-DEPS",
+      "title": "Dependencias de storage adapter sao OPTIONAL peer deps",
+      "severity": "hard",
+      "body": "O listener self-hosted precisa bootar com STORAGE=json SEM ter @supabase/supabase-js, better-sqlite3 ou pg instalados. Essas libs vivem em peerDependenciesMeta.<dep>.optional=true no package.json do @zettapay/listener. Imports devem ser lazy/conditional (dynamic import baseado em STORAGE env). Falha de import vira erro claro sugerindo npm install do peer dep correspondente.",
+      "allowlist_paths": [
+        "packages/listener/src/storage/supabase.ts",
+        "packages/listener/src/storage/sqlite.ts",
+        "packages/listener/src/storage/postgres.ts",
+        "packages/api/",
+        "packages/legacy-custodial/",
+        "packages/legacy-solana/"
+      ],
+      "detection_patterns": [
+        "from ['\"]@supabase/supabase-js['\"]",
+        "from ['\"]better-sqlite3['\"]",
+        "from ['\"]pg['\"]",
+        "require\\(['\"]@supabase/supabase-js['\"]\\)",
+        "require\\(['\"]better-sqlite3['\"]\\)",
+        "require\\(['\"]pg['\"]\\)"
+      ]
+    },
+    {
+      "id": "HR-STORAGE-ADAPTER",
+      "title": "Toda persistencia do listener passa por StorageAdapter",
+      "severity": "hard",
+      "body": "Nenhum codigo do listener fora de packages/listener/src/storage/<adapter>.ts pode chamar fs.writeFile/readFile (para JSON), supabase.from, sqlite.prepare ou pg.query diretamente. Tudo via interface abstrata StorageAdapter. Garante swappability JSON->SQLite->Cloud sem refactor de business logic.",
+      "allowlist_paths": [
+        "packages/listener/src/storage/",
+        "examples/",
+        "**/*.test.ts",
+        "packages/api/",
+        "packages/legacy-custodial/",
+        "packages/legacy-solana/",
+        "scripts/"
+      ],
+      "detection_patterns": [
+        "fs\\.(write|read)File",
+        "supabase\\.from\\(",
+        "sqlite.*\\.prepare\\(",
+        "\\bpg\\.query\\(",
+        "\\.prepare\\(.*\\)\\.(run|get|all)"
+      ]
     }
   ]
 }
