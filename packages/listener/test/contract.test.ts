@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { MissingStorageDependencyError, createStorageAdapter } from '../src/storage/index.js';
+import {
+  MissingStorageDependencyError,
+  StorageConfigError,
+  createStorageAdapter,
+} from '../src/storage/index.js';
 import type { Chain, InvoiceStatus, StorageKind } from '../src/types.js';
 
-// Z56 lands the JSON adapter; SQLite / Supabase / Postgres still throw a
-// clear not-yet-implemented error here. The full StorageAdapter contract is
-// exercised for the JSON adapter from ./json-storage.test.ts via
-// describeStorageContract.
+// Z56 landed the JSON adapter; Z57 added the Supabase adapter (fetch REST,
+// no Supabase JS SDK peer dep). SQLite + Postgres are still on the roadmap
+// and continue to throw a clear not-yet-implemented error here.
 
 describe('@zettapay/listener — factory + types', () => {
   it('createStorageAdapter resolves a JSON adapter (Z56 default)', async () => {
@@ -15,10 +18,27 @@ describe('@zettapay/listener — factory + types', () => {
     expect(typeof adapter.nextChildIndex).toBe('function');
   });
 
-  it.each<StorageKind>(['sqlite', 'supabase', 'postgres'])(
-    'createStorageAdapter still rejects for %s (Z57+)',
+  it('createStorageAdapter resolves a Supabase adapter when credentials are present (Z57)', async () => {
+    const adapter = await createStorageAdapter({
+      kind: 'supabase',
+      supabaseUrl: 'https://example.supabase.co',
+      supabaseServiceRoleKey: 'sb-test-key',
+    });
+    expect(adapter).toBeDefined();
+    expect(typeof adapter.findInvoiceByAddress).toBe('function');
+    expect(typeof adapter.getMerchantByEmail).toBe('function');
+  });
+
+  it('createStorageAdapter rejects supabase without credentials', async () => {
+    await expect(createStorageAdapter({ kind: 'supabase' })).rejects.toBeInstanceOf(
+      StorageConfigError,
+    );
+  });
+
+  it.each<StorageKind>(['sqlite', 'postgres'])(
+    'createStorageAdapter still rejects for %s (Z58+)',
     async (kind) => {
-      await expect(createStorageAdapter({ kind })).rejects.toThrow(/Z57/);
+      await expect(createStorageAdapter({ kind })).rejects.toThrow(/Z58/);
     },
   );
 
@@ -30,10 +50,17 @@ describe('@zettapay/listener — factory + types', () => {
     expect(err.peer).toBe('better-sqlite3');
   });
 
-  it('Chain + InvoiceStatus enums are the canonical set', () => {
+  it('Chain + InvoiceStatus enums cover the canonical statuses', () => {
     const chains: Chain[] = ['btc', 'polygon', 'eth'];
-    const statuses: InvoiceStatus[] = ['pending', 'partial', 'confirmed', 'expired', 'failed'];
+    const statuses: InvoiceStatus[] = [
+      'pending',
+      'partial',
+      'detected',
+      'confirmed',
+      'expired',
+      'failed',
+    ];
     expect(chains).toHaveLength(3);
-    expect(statuses).toHaveLength(5);
+    expect(statuses).toHaveLength(6);
   });
 });

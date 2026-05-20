@@ -16,12 +16,13 @@ A small daemon a merchant runs on their own infrastructure to:
 - **Not wallet-coupled.** No `wallet.connect`, no Phantom/MetaMask UI, no browser-side signing. See `HR-WALLET-LESS`.
 - **No phone-home.** The listener MUST NOT contact `zettapay.vercel.app`, `zettapay.dev`, `zettapay.com`, or `api.zettapay.*`. Outbound traffic is limited to `mempool.space` (and any merchant-configured chain RPC), the merchant's configured `MERCHANT_WEBHOOK_URL`, and the `STORAGE` adapter URL when the merchant chooses Supabase or Postgres. See `HR-PHONE-HOME`.
 
-## Status — Z56
+## Status — Z57
 
 - `StorageAdapter` interface + type definitions (Z55).
 - Contract test suite at `test/storage-contract.ts` (Z55).
 - **`JsonFileStorage` (the default adapter)** — Z56, zero extra deps.
-- Optional peer-dep adapters (SQLite / Supabase / Postgres) land in Z57–Z59.
+- **`SupabaseStorage` (via `fetch` REST, zero peer deps)** — Z57.
+- SQLite + Postgres land in Z58/Z59.
 - CLI, watcher, and webhook dispatcher land in Z60–Z62.
 
 ## Storage adapters
@@ -29,8 +30,8 @@ A small daemon a merchant runs on their own infrastructure to:
 | adapter           | status                  | install                                  |
 |-------------------|-------------------------|------------------------------------------|
 | `json` (default)  | available (Z56)         | zero extra deps                          |
-| `sqlite`          | coming soon (Z57)       | `npm install better-sqlite3`             |
-| `supabase`        | coming soon (Z58)       | `npm install @supabase/supabase-js`      |
+| `supabase`        | available (Z57)         | zero extra deps (uses `fetch` + PostgREST) |
+| `sqlite`          | coming soon (Z58)       | `npm install better-sqlite3`             |
 | `postgres`        | coming soon (Z59)       | `npm install pg`                         |
 
 ### `JsonFileStorage` (default)
@@ -70,8 +71,8 @@ See [`docs/architecture/self-hosted-listener-design.md`](../../docs/architecture
 | `STORAGE=` | required peer dep             | install command                        |
 |------------|-------------------------------|----------------------------------------|
 | `json`     | (none — default)              | —                                      |
+| `supabase` | (none — uses `fetch` + PostgREST) | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` env vars |
 | `sqlite`   | `better-sqlite3`              | `npm install better-sqlite3`           |
-| `supabase` | `@supabase/supabase-js`       | `npm install @supabase/supabase-js`    |
 | `postgres` | `pg`                          | `npm install pg`                       |
 
 `proper-lockfile` is a hard dependency — it is what makes the default JSON

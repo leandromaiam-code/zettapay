@@ -79,6 +79,35 @@ export class JsonFileStorage implements StorageAdapter {
     return this.readMerchantOrNull();
   }
 
+  async getMerchantByEmail(email: string): Promise<Merchant | null> {
+    await this.init();
+    const merchant = await this.readMerchantOrNull();
+    if (!merchant) return null;
+    return merchant.email.toLowerCase() === email.toLowerCase() ? merchant : null;
+  }
+
+  async findInvoiceByAddress(address: string): Promise<Invoice | null> {
+    await this.init();
+    const entries = await fs.readdir(this.invoicesDir).catch(() => [] as string[]);
+    let best: Invoice | null = null;
+    for (const entry of entries) {
+      if (!entry.endsWith('.json')) continue;
+      const filePath = path.join(this.invoicesDir, entry);
+      let inv: Invoice | null;
+      try {
+        inv = await this.readJsonOrNull<Invoice>(filePath);
+      } catch {
+        continue;
+      }
+      if (!inv) continue;
+      if (inv.address !== address && inv.receive_address !== address) continue;
+      if (!best || Date.parse(inv.created_at) > Date.parse(best.created_at)) {
+        best = inv;
+      }
+    }
+    return best;
+  }
+
   async createMerchant(input: MerchantInput): Promise<Merchant> {
     await this.init();
     const existing = await this.readMerchantOrNull();

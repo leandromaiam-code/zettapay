@@ -1,29 +1,16 @@
-// Z53: invoice status polling. When Supabase is configured, returns the
-// persisted row (status, confirmations, tx_hash). Falls back to the
-// `_simulate=` query for the legacy SDK demos when Supabase isn't wired up.
+// Z57: invoice status polling. When the StorageAdapter is configured (i.e.
+// SUPABASE_URL is set), returns the persisted row (status, confirmations,
+// tx_hash). Falls back to the `_simulate=` query for the legacy SDK demos
+// when persistence isn't wired up.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { loadSupabaseConfig, supabase, SupabaseError } from '../_lib/supabase.js';
+import {
+  createStorage,
+  StoragePersistenceError,
+  type StorageAdapter,
+} from '@zettapay/listener';
 
 const INVOICE_ID_RE = /^inv_[0-9a-f]{32}$/;
-
-interface InvoiceRow {
-  id: string;
-  merchant_id: string;
-  chain: string;
-  receive_address: string;
-  amount_usd: number;
-  amount_btc: string | null;
-  required_confirmations: number;
-  status: string;
-  confirmations: number;
-  tx_hash: string | null;
-  detected_at: string | null;
-  confirmed_at: string | null;
-  expires_at: string;
-  created_at: string;
-  metadata: Record<string, unknown> | null;
-}
 
 function readInvoiceId(req: VercelRequest): string {
   const raw = req.query?.id;
@@ -35,6 +22,10 @@ function readSimulate(req: VercelRequest): string {
   const raw = req.query?._simulate;
   const v = Array.isArray(raw) ? raw[0] : raw;
   return typeof v === 'string' ? v.toLowerCase() : '';
+}
+
+function isSupabaseConfigured(): boolean {
+  return Boolean((process.env.SUPABASE_URL ?? '').trim());
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -52,16 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  const supabaseCfg = loadSupabaseConfig();
-  if (supabaseCfg) {
+  const storage: StorageAdapter | null = isSupabaseConfigured() ? createStorage(process.env) : null;
+  if (storage) {
     try {
-      const rows = await supabase.select<InvoiceRow>(
-        supabaseCfg,
-        'zettapay_invoices',
-        { id: invoiceId },
-        { limit: 1 },
-      );
-      const row = rows[0];
+      const row = await storage.getInvoice(invoiceId);
       if (!row) {
         res.status(404).json({
           error: { code: 'invoice_not_found', message: `No invoice with id "${invoiceId}"` },
@@ -72,22 +57,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
         invoice_id: row.id,
         merchant_id: row.merchant_id,
         chain: row.chain,
-        receive_address: row.receive_address,
-        amount_usd: Number(row.amount_usd),
-        amount_btc: row.amount_btc,
+        receive_address: row.receive_address ?? row.address,
+        amount_usd: row.amount_usd ?? null,
+        amount_btc: row.amount_btc ?? null,
         status: row.status,
-        confirmations: row.confirmations,
-        required_confirmations: row.required_confirmations,
+        confirmations: row.confirmations ?? null,
+        required_confirmations: row.required_confirmations ?? null,
         tx_hash: row.tx_hash,
-        detected_at: row.detected_at,
-        confirmed_at: row.confirmed_at,
+        detected_at: row.detected_at ?? null,
+        confirmed_at: row.confirmed_at ?? null,
         expires_at: row.expires_at,
         created_at: row.created_at,
-        metadata: row.metadata,
+        metadata: row.metadata ?? null,
       });
       return;
     } catch (err) {
-      if (err instanceof SupabaseError) {
+      if (err instanceof StoragePersistenceError) {
         res.status(502).json({
           error: { code: 'persistence_failed', message: err.message },
         });
@@ -97,7 +82,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
-  // Dev fallback: simulate-driven response when Supabase isn't configured.
   const sim = readSimulate(req);
   const required = 3;
   let status: 'pending' | 'detected' | 'confirmed' = 'pending';

@@ -1,4 +1,4 @@
-// Z53: trigger a test webhook for an invoice. Two modes:
+// Z57: trigger a test webhook for an invoice. Two modes:
 //
 //   POST                — sign + (optionally) POST to the merchant's
 //                         configured webhook_url. Body of the merchant POST is
@@ -10,33 +10,20 @@
 //                              payload + signature so the caller can verify
 //                              HMAC locally (used by the acceptance test).
 //
-// Persists the event to `zettapay_webhook_events` so the audit trail records
-// the manual test.
+// Persistence is mediated by the StorageAdapter interface — no direct
+// supabase coupling here.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  createStorage,
+  StoragePersistenceError,
+  type Invoice,
+  type Merchant,
+  type StorageAdapter,
+} from '@zettapay/listener';
 import { signWebhook, verifyWebhook, ZETTAPAY_SIGNATURE_HEADER } from '../../../_lib/hmac.js';
-import { loadSupabaseConfig, supabase, SupabaseError } from '../../../_lib/supabase.js';
 
 const INVOICE_ID_RE = /^inv_[0-9a-f]{32}$/;
-
-interface InvoiceRow {
-  id: string;
-  merchant_id: string;
-  chain: string;
-  receive_address: string;
-  amount_usd: number;
-  amount_btc: string | null;
-  required_confirmations: number;
-  status: string;
-  confirmations: number;
-  tx_hash: string | null;
-}
-
-interface MerchantRow {
-  id: string;
-  webhook_url: string | null;
-  webhook_secret: string | null;
-}
 
 interface BodyShape {
   echo?: boolean;
@@ -65,6 +52,10 @@ function readInvoiceId(req: VercelRequest): string {
   return typeof id === 'string' ? id : '';
 }
 
+function isSupabaseConfigured(): boolean {
+  return Boolean((process.env.SUPABASE_URL ?? '').trim());
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -81,31 +72,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const body = readBody(req);
-  const supabaseCfg = loadSupabaseConfig();
+  const storage: StorageAdapter | null = isSupabaseConfigured() ? createStorage(process.env) : null;
 
-  let invoice: InvoiceRow | null = null;
-  let merchant: MerchantRow | null = null;
+  let invoice: Invoice | null = null;
+  let merchant: Merchant | null = null;
 
-  if (supabaseCfg) {
+  if (storage) {
     try {
-      const invRows = await supabase.select<InvoiceRow>(
-        supabaseCfg,
-        'zettapay_invoices',
-        { id: invoiceId },
-        { limit: 1 },
-      );
-      invoice = invRows[0] ?? null;
+      invoice = await storage.getInvoice(invoiceId);
       if (invoice) {
-        const merchRows = await supabase.select<MerchantRow>(
-          supabaseCfg,
-          'zettapay_merchants',
-          { id: invoice.merchant_id },
-          { select: 'id,webhook_url,webhook_secret', limit: 1 },
-        );
-        merchant = merchRows[0] ?? null;
+        merchant = await storage.getMerchant(invoice.merchant_id);
       }
     } catch (err) {
-      if (err instanceof SupabaseError) {
+      if (err instanceof StoragePersistenceError) {
         res.status(502).json({
           error: { code: 'persistence_failed', message: err.message },
         });
@@ -115,58 +94,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
-  // Fallback: synthesize an invoice when no DB. Useful for the echo path.
-  if (!invoice) {
-    invoice = {
-      id: invoiceId,
-      merchant_id: '00000000-0000-0000-0000-000000000000',
-      chain: 'btc',
-      receive_address: 'bc1qsynthetic',
-      amount_usd: 10,
-      amount_btc: '0.00010000',
-      required_confirmations: 1,
-      status: 'confirmed',
-      confirmations: 1,
-      tx_hash: body.tx_hash_override ?? '0'.repeat(64),
-    };
-  }
+  const receiveAddress = invoice?.receive_address ?? invoice?.address ?? 'bc1qsynthetic';
+  const chain = invoice?.chain ?? 'btc';
+  const amountUsd = invoice?.amount_usd ?? 10;
+  const amountBtc = invoice?.amount_btc ?? '0.00010000';
+  const requiredConfs = invoice?.required_confirmations ?? 1;
+  const txHashFromInvoice = invoice?.tx_hash ?? '0'.repeat(64);
+  const confirmationsFromInvoice = invoice?.confirmations ?? 1;
+  const merchantIdForPayload = invoice?.merchant_id ?? '00000000-0000-0000-0000-000000000000';
 
   const payload = {
-    invoice_id: invoice.id,
-    merchant_id: invoice.merchant_id,
-    chain: invoice.chain,
-    receive_address: invoice.receive_address,
-    amount_usd: Number(invoice.amount_usd),
-    amount_btc: body.amount_btc_override ?? invoice.amount_btc,
-    tx_hash: body.tx_hash_override ?? invoice.tx_hash ?? '0'.repeat(64),
-    confirmations: body.confirmations_override ?? invoice.confirmations ?? 1,
-    required_confirmations: invoice.required_confirmations,
+    invoice_id: invoice?.id ?? invoiceId,
+    merchant_id: merchantIdForPayload,
+    chain,
+    receive_address: receiveAddress,
+    amount_usd: Number(amountUsd),
+    amount_btc: body.amount_btc_override ?? amountBtc,
+    tx_hash: body.tx_hash_override ?? txHashFromInvoice,
+    confirmations: body.confirmations_override ?? confirmationsFromInvoice,
+    required_confirmations: requiredConfs,
     event_type: 'invoice.confirmed.test',
     timestamp: new Date().toISOString(),
   };
   const rawBody = JSON.stringify(payload);
 
+  const merchantSecret = merchant?.webhook_secret_hash || null;
   const secret =
-    body.webhook_secret_override ?? merchant?.webhook_secret ?? 'whsec_dev_fallback_secret';
+    body.webhook_secret_override ?? merchantSecret ?? 'whsec_dev_fallback_secret';
   const signature = signWebhook(secret, rawBody);
-
-  // Persist the event for audit when DB is configured.
-  if (supabaseCfg && merchant) {
-    try {
-      await supabase.insertReturning(supabaseCfg, 'zettapay_webhook_events', {
-        invoice_id: invoice.id,
-        merchant_id: invoice.merchant_id,
-        event_type: 'invoice.confirmed.test',
-        attempt: 0,
-        max_attempts: 1,
-        payload,
-        signature,
-        status: body.echo ? 'echoed' : 'pending',
-      });
-    } catch {
-      // Don't fail the test endpoint on audit insert failures.
-    }
-  }
 
   const webhookUrl = body.webhook_url_override ?? merchant?.webhook_url ?? null;
   let delivered: { status: number; ok: boolean; body: string } | null = null;
@@ -187,11 +142,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     }
   }
 
-  // Round-trip the verifier so the caller can confirm the HMAC pair is symmetric.
   const verifier_check = verifyWebhook(secret, rawBody, signature);
 
   res.status(200).json({
-    invoice_id: invoice.id,
+    invoice_id: payload.invoice_id,
     signature_header: ZETTAPAY_SIGNATURE_HEADER,
     signature,
     payload,
