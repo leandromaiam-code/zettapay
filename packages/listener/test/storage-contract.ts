@@ -166,8 +166,23 @@ export function describeStorageContract(
 
     it('invoice fixture serializes to a canonical string (schema-drift detector)', async () => {
       const created = await adapter.createInvoice(makeInvoiceFixture(merchant.id, { id: 'inv_snapshot_schema' }));
-      // strip volatile timestamps for the snapshot (created_at/updated_at/expires_at all non-deterministic)
-      const { created_at: _c, updated_at: _u, expires_at: _e, ...stable } = created;
+      // strip volatile timestamps + optional production-only passthrough
+      // fields (Z57 — receive_address / amount_usd / confirmations / metadata)
+      // so the snapshot remains a stable schema-drift detector across adapters
+      const {
+        created_at: _c,
+        updated_at: _u,
+        expires_at: _e,
+        receive_address: _ra,
+        amount_usd: _au,
+        amount_btc: _ab,
+        required_confirmations: _rc,
+        confirmations: _cf,
+        detected_at: _da,
+        confirmed_at: _ca,
+        metadata: _md,
+        ...stable
+      } = created;
       const canonical = canonicalJson(stable);
       const expected =
         '{"address":"bc1qexampleaddressdoesnotresolvetoanyutxo",' +

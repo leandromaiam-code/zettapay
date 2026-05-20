@@ -1,35 +1,27 @@
-// Z53: non-custodial merchant signup. Accepts only the three fields the
-// product needs to operate (HR-PII-MINIMAL): email, shop_name, xpub. The
-// xpub MUST be public (xprv/zprv/yprv/tprv/uprv/vprv refused with 400). The
-// matching private key never leaves the merchant — they retain it in
-// Sparrow, Electrum, a hardware wallet, etc.
+// Z57: non-custodial merchant signup. Persistence is now mediated by the
+// @zettapay/listener `StorageAdapter` interface — production runs against
+// the Supabase adapter, local dev (no SUPABASE_URL) keeps the deterministic
+// in-memory fallback so the acceptance test still returns ok=true on a
+// preview environment without a database.
 //
-// When SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are configured the merchant
-// is persisted to `zettapay_merchants` and the response includes a freshly
-// generated `webhook_secret` for the merchant to verify webhook HMACs. When
-// Supabase isn't configured (local dev, preview) we still validate + accept
-// the input and return a deterministic merchant_id so the SDK / acceptance
-// test can run end-to-end without a database.
+// HR-CUSTODY: zero signing code. HR-PII-MINIMAL: only email + shop_name +
+// xpub + webhook_url are accepted from the caller. HR-STORAGE-ADAPTER:
+// this handler never imports a concrete adapter — only `createStorage` +
+// the `StorageAdapter` interface.
 
 import { randomUUID } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import {
+  createStorage,
+  StoragePersistenceError,
+  type StorageAdapter,
+} from '@zettapay/listener';
 import { parseMerchantXpub, XpubValidationError } from '../_lib/xpub.js';
-import { loadSupabaseConfig, supabase, SupabaseError } from '../_lib/supabase.js';
 import { freshWebhookSecret } from '../_lib/hmac.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SHOP_NAME_MAX = 120;
 const HTTPS_RE = /^https:\/\//i;
-
-interface MerchantRow {
-  id: string;
-  email: string;
-  shop_name: string;
-  next_child_index: number;
-  webhook_secret: string | null;
-  webhook_url: string | null;
-  created_at: string;
-}
 
 function badRequest(res: VercelResponse, code: string, message: string): void {
   res.status(400).json({ error: { code, message } });
@@ -48,6 +40,10 @@ function readBody(req: VercelRequest): Record<string, unknown> {
     }
   }
   return typeof req.body === 'object' ? (req.body as Record<string, unknown>) : {};
+}
+
+function isSupabaseConfigured(): boolean {
+  return Boolean((process.env.SUPABASE_URL ?? '').trim());
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
@@ -97,8 +93,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // HR-PII-MINIMAL: actively reject any field beyond the three allowed ones.
-  // This protects against drift where a future caller passes name/doc/etc.
   const allowed = new Set(['email', 'shop_name', 'xpub', 'webhook_url']);
   for (const key of Object.keys(body)) {
     if (!allowed.has(key)) {
@@ -138,11 +132,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
   }
 
   const webhookSecret = freshWebhookSecret();
-  const supabaseCfg = loadSupabaseConfig();
+  const storage: StorageAdapter | null = isSupabaseConfigured() ? createStorage(process.env) : null;
 
-  if (!supabaseCfg) {
-    // No DB configured — issue a deterministic id from email so the acceptance
-    // test still passes in environments without Supabase wired up.
+  if (!storage) {
     const merchantId = randomUUID();
     res.status(201).json({
       merchant_id: merchantId,
@@ -159,21 +151,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
     return;
   }
 
-  // Persist to Supabase. Email uniqueness is enforced via index — if a row
-  // already exists, return the existing merchant (without overwriting webhook
-  // secret, so prior secrets stay valid).
+  const xpub = typeof body.xpub === 'string' ? body.xpub.trim() : '';
+
   try {
-    const inserted = await supabase.insertReturning<MerchantRow>(
-      supabaseCfg,
-      'zettapay_merchants',
-      {
-        email,
-        shop_name: shopName,
-        xpub: typeof body.xpub === 'string' ? body.xpub.trim() : '',
-        webhook_url: webhookUrl,
-        webhook_secret: webhookSecret,
-      },
-    );
+    const existing = await storage.getMerchantByEmail(email);
+    if (existing) {
+      res.status(200).json({
+        merchant_id: existing.id,
+        email: existing.email,
+        shop_name: existing.shop_name,
+        xpub_network: parsed.network,
+        xpub_prefix: parsed.prefix,
+        next_child_index: existing.next_child_index,
+        webhook_url: existing.webhook_url || null,
+        webhook_secret: existing.webhook_secret_hash || null,
+        persisted: true,
+        created_at: existing.created_at,
+        already_exists: true,
+      });
+      return;
+    }
+
+    const inserted = await storage.createMerchant({
+      email,
+      shop_name: shopName,
+      xpub,
+      webhook_url: webhookUrl ?? '',
+      webhook_secret_hash: webhookSecret,
+    });
     res.status(201).json({
       merchant_id: inserted.id,
       email: inserted.email,
@@ -181,42 +186,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse): 
       xpub_network: parsed.network,
       xpub_prefix: parsed.prefix,
       next_child_index: inserted.next_child_index,
-      webhook_url: inserted.webhook_url,
+      webhook_url: inserted.webhook_url || null,
       webhook_secret: webhookSecret,
       persisted: true,
       created_at: inserted.created_at,
     });
   } catch (err) {
-    if (err instanceof SupabaseError && err.status === 409) {
-      // Duplicate email — surface the existing merchant.
-      const existing = await supabase.select<MerchantRow>(
-        supabaseCfg,
-        'zettapay_merchants',
-        { email },
-        { limit: 1 },
-      );
-      const row = existing[0];
-      if (row) {
-        res.status(200).json({
-          merchant_id: row.id,
-          email: row.email,
-          shop_name: row.shop_name,
-          xpub_network: parsed.network,
-          xpub_prefix: parsed.prefix,
-          next_child_index: row.next_child_index,
-          webhook_url: row.webhook_url,
-          webhook_secret: row.webhook_secret,
-          persisted: true,
-          created_at: row.created_at,
-          already_exists: true,
-        });
-        return;
-      }
+    if (err instanceof StoragePersistenceError) {
+      res.status(502).json({
+        error: { code: 'persistence_failed', message: err.message },
+      });
+      return;
     }
     res.status(502).json({
       error: {
         code: 'persistence_failed',
-        message: err instanceof Error ? err.message : 'unknown supabase error',
+        message: err instanceof Error ? err.message : 'unknown storage error',
       },
     });
   }

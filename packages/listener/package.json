@@ -36,12 +36,10 @@
     "zod": "^3.23.8"
   },
   "peerDependencies": {
-    "@supabase/supabase-js": "*",
     "better-sqlite3": "*",
     "pg": "*"
   },
   "peerDependenciesMeta": {
-    "@supabase/supabase-js": { "optional": true },
     "better-sqlite3": { "optional": true },
     "pg": { "optional": true }
   },
