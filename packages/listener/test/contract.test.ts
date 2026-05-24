@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { MissingStorageDependencyError, createStorageAdapter } from '../src/storage/index.js';
 import type { Chain, InvoiceStatus, StorageKind } from '../src/types.js';
 
-// Z56 lands the JSON adapter; SQLite / Supabase / Postgres still throw a
-// clear not-yet-implemented error here. The full StorageAdapter contract is
-// exercised for the JSON adapter from ./json-storage.test.ts via
+// Z56 lands JSON; Z59 lands SQLite. Supabase / Postgres still throw a clear
+// not-yet-implemented error here. The full StorageAdapter contract is
+// exercised per-adapter from ./<adapter>-storage.test.ts via
 // describeStorageContract.
 
 describe('@zettapay/listener — factory + types', () => {
@@ -15,10 +15,18 @@ describe('@zettapay/listener — factory + types', () => {
     expect(typeof adapter.nextChildIndex).toBe('function');
   });
 
-  it.each<StorageKind>(['sqlite', 'supabase', 'postgres'])(
-    'createStorageAdapter still rejects for %s (Z57+)',
+  it('createStorageAdapter resolves a SQLite adapter (Z59)', async () => {
+    const adapter = await createStorageAdapter({ kind: 'sqlite', sqliteFilename: ':memory:' });
+    expect(adapter).toBeDefined();
+    expect(typeof adapter.createMerchant).toBe('function');
+    expect(typeof adapter.nextChildIndex).toBe('function');
+    if (adapter.close) await adapter.close();
+  });
+
+  it.each<StorageKind>(['supabase', 'postgres'])(
+    'createStorageAdapter still rejects for %s (Z60+)',
     async (kind) => {
-      await expect(createStorageAdapter({ kind })).rejects.toThrow(/Z57/);
+      await expect(createStorageAdapter({ kind })).rejects.toThrow(/Z60/);
     },
   );
 
