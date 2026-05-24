@@ -150,6 +150,35 @@
     }
     .tool-tab[aria-selected="true"] .tool-ico { background: rgba(20, 241, 149, 0.2); color: #14F195; }
 
+    /* MODE (Cloud vs Self-hosted) */
+    .mode-tab {
+      text-align: left;
+      padding: 1rem 1.15rem;
+      background: rgba(17, 17, 17, 0.6);
+      border: 1px solid rgba(79, 107, 255, 0.18);
+      border-radius: 0.85rem;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+    .mode-tab:hover { border-color: rgba(79, 107, 255, 0.45); }
+    .mode-tab[aria-selected="true"] {
+      background: rgba(20, 241, 149, 0.08);
+      border-color: rgba(20, 241, 149, 0.55);
+      box-shadow: 0 0 0 3px rgba(20, 241, 149, 0.10);
+    }
+    .mode-tab-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #FFFFFF;
+      margin-bottom: 0.25rem;
+    }
+    .mode-tab-sub {
+      font-size: 0.78rem;
+      color: rgba(148, 163, 184, 0.85);
+      line-height: 1.45;
+    }
+    .mode-tab[aria-selected="true"] .mode-tab-title { color: #14F195; }
+
     /* STEP */
     .step-card {
       background: rgba(17, 17, 17, 0.55);
@@ -314,6 +343,21 @@
           <a href="/install" class="proof-pill hover:!border-royal hover:!text-white transition">Prefer a guided wizard? &rarr;</a>
         </div>
       </header>
+
+      <!-- MODE TOGGLE: Cloud vs Self-hosted -->
+      <div class="mb-6">
+        <span class="meta-line block mb-3">Pick your install path</span>
+        <div role="tablist" aria-label="Install path" class="grid grid-cols-1 md:grid-cols-2 gap-3" id="mode-tabs">
+          <button role="tab" type="button" class="mode-tab" data-mode="cloud" aria-selected="true" aria-controls="prompt-area" id="tab-mode-cloud">
+            <div class="mode-tab-title">Cloud &middot; managed</div>
+            <div class="mode-tab-sub">Hosted checkout + hosted listener. Free up to 1k tx/month. Signup &rarr; merchant_id &rarr; integrate.</div>
+          </button>
+          <button role="tab" type="button" class="mode-tab" data-mode="self" aria-selected="false" aria-controls="prompt-area" id="tab-mode-self">
+            <div class="mode-tab-title">Self-hosted &middot; npm</div>
+            <div class="mode-tab-sub">Run <code class="font-mono text-mint">@zettapay/listener</code> on your own box. Free forever, zero deps, you keep all keys.</div>
+          </button>
+        </div>
+      </div>
 
       <!-- TABS -->
       <div class="mb-6">
@@ -527,8 +571,8 @@ with the title above.`,
     },
   };
 
-  // ---------- prompt template ----------
-  function buildPrompt(toolKey, vals) {
+  // ---------- prompt template (CLOUD) ----------
+  function buildPromptCloud(toolKey, vals) {
     const tool = TOOLS[toolKey];
     const merchantId = vals.merchant || 'mch_REPLACE_ME';
     const webhookUrl = vals.webhook || 'https://your-site.com/api/zp/webhook';
@@ -747,11 +791,255 @@ Do not skip the markers, the env-var hygiene rules, or the PR.`
     ].join('\n');
   }
 
+  // ---------- prompt template (SELF-HOSTED) ----------
+  function buildPromptSelf(toolKey, vals) {
+    const tool = TOOLS[toolKey];
+    const webhookUrl = vals.webhook || 'https://your-site.com/api/zp/webhook';
+    const chain = vals.chain || 'btc';
+    const amount = vals.amount || '9.99';
+    const currency = vals.currency || 'USD';
+    const label = vals.label || 'Subscription';
+
+    return [
+`Integrate ZettaPay in SELF-HOSTED mode. The merchant runs the @zettapay/listener
+package on their OWN infrastructure: it watches BIP-84 addresses derived from
+their xpub on mempool.space, then POSTs HMAC-SHA256-signed webhooks to a
+handler in their app. ZettaPay has ZERO runtime role — nothing phones home.
+
+== HARD CONSTRAINTS — DO NOT VIOLATE ==
+(a) HR-WALLET-LESS — No wallet UI anywhere. Never call wallet.connect(),
+    never depend on window.ethereum / window.solana / any injected provider,
+    never add "Connect Wallet" / "Connect Phantom" / "Connect MetaMask"
+    buttons, never import @wallet-adapter-* UI packages. The customer pays
+    by scanning the QR or copying the receive address that YOUR app renders.
+(b) HR-CUSTODY — The listener accepts ONLY the merchant's PUBLIC xpub
+    (BIP-84 zpub for mainnet, vpub for testnet). Never accept, store, log,
+    or transmit the mnemonic, seed, xprv, or any signing material. The
+    private extended key stays in the merchant's wallet software (Sparrow,
+    Electrum, hardware wallet) and is never typed into a terminal that
+    runs this listener.
+(c) HR-PHONE-HOME — The listener MUST NOT call zettapay.* hosts at runtime.
+    Its only outbound traffic is mempool.space (BTC tip + tx data) and the
+    merchant's own MERCHANT_WEBHOOK_URL.
+(d) HR-SECRETS-IN-GIT — MERCHANT_WEBHOOK_SECRET lives ONLY in server-side
+    env vars (.env, systemd EnvironmentFile, Docker --env, Railway/Fly
+    secrets manager). Never commit a real value; .env.example placeholders
+    only.
+
+== MY SETUP — fill these BEFORE generating any code ==
+MERCHANT_XPUB              = "zpub6...REPLACE_WITH_YOUR_BIP84_ZPUB"  # public only
+MERCHANT_WEBHOOK_URL       = "${webhookUrl}"                          # https only
+MERCHANT_SHOP_NAME         = "${label}"
+MERCHANT_EMAIL             = "you@example.com"
+STORAGE                    = "json"                                   # default (tier-1)
+ZETTAPAY_DATA_DIR          = "/var/lib/zettapay/data"                 # listener state
+HEALTH_PORT                = "8787"
+PRIMARY_CHAIN              = "${chain}"
+DISPLAY_AMOUNT_USD         = ${amount}
+DISPLAY_CURRENCY           = "${currency}"
+
+The xpub is the merchant's BIP-84 account-level PUBLIC key, exported
+OFFLINE from their wallet (Sparrow → Account Settings → Show xpub;
+Electrum → Wallet → Information → Master Public Key). NEVER ask for the
+mnemonic.
+
+== TASK ==
+
+0. SANITY CHECK first — bail out if the package surface is unhealthy:
+     curl -s -o /dev/null -w "%{http_code}\\n" \\
+       https://zettapay.vercel.app/api/test/acceptance/self-hosted-listener
+   If the HTTP status is not 200, STOP and report — do not open a PR.
+
+1. Install the listener as a sibling package or in a dedicated directory:
+     npm install @zettapay/listener
+   (Optional storage upgrades, install only when needed:
+     npm install better-sqlite3        # STORAGE=sqlite, tier-2
+     npm install @supabase/supabase-js # STORAGE=supabase, tier-3
+     npm install pg                    # STORAGE=postgres, tier-3)
+
+2. Bootstrap the listener config in a directory the merchant controls. The
+   CLI is non-interactive when every flag is passed:
+     npx zettapay-listener init \\
+       --xpub        "$MERCHANT_XPUB" \\
+       --shop-name   "$MERCHANT_SHOP_NAME" \\
+       --email       "$MERCHANT_EMAIL" \\
+       --webhook-url "$MERCHANT_WEBHOOK_URL" \\
+       --storage     "$STORAGE" \\
+       --data-dir    "$ZETTAPAY_DATA_DIR" \\
+       --health-port "$HEALTH_PORT"
+   This writes a .env (chmod 0600) and seeds merchant.json. The CLI REFUSES
+   any xprv/yprv/zprv prefix or BIP-39 mnemonic (HR-CUSTODY) — surface the
+   error and do NOT retry with a wider regex if it rejects.
+
+3. Run the listener as a long-lived process. Pick ONE of these deploy paths
+   based on the merchant's infrastructure:
+
+   (A) systemd (Linux VM / bare metal):
+       Generate /etc/systemd/system/zettapay-listener.service:
+         [Unit]
+         Description=ZettaPay Listener
+         After=network-online.target
+         [Service]
+         Type=simple
+         User=zettapay
+         EnvironmentFile=/etc/zettapay/.env
+         ExecStart=/usr/bin/zettapay-listener start
+         Restart=always
+         RestartSec=5
+         [Install]
+         WantedBy=multi-user.target
+       Then: sudo systemctl enable --now zettapay-listener
+   (B) Docker:
+       Pull or build the published image, then:
+         docker run -d --restart unless-stopped \\
+           -p 8787:8787 \\
+           -v zettapay-data:/data \\
+           --env-file ./.env \\
+           ghcr.io/leandromaiam-code/zettapay-listener:latest
+   (C) Railway / Fly / Render:
+       Set the env vars from the generated .env in the platform dashboard
+       (never commit them), then deploy with the start command:
+         zettapay-listener start
+
+4. Verify it's healthy. Curl the health endpoint:
+     curl -fsS http://localhost:$HEALTH_PORT/health
+   Expected shape:
+     { "ok": true, "ws_connected": true, "subscribed_count": <int>,
+       "last_event_at": <ms>, "last_block_height": <int>, "uptime_s": <int> }
+
+5. Add the webhook handler to the merchant's existing app — wrap with
+   ZETTAPAY-START / ZETTAPAY-END markers so a one-shot revert is possible.
+
+   POST  /api/zp/webhook   (or platform-equivalent path)
+   Verify HMAC-SHA256 in exactly this order:
+     1. Read the RAW request body BEFORE any JSON.parse / express.json /
+        bodyParser. Use raw Buffer / await req.text() / context.request.text().
+     2. expected = hex(hmac_sha256(MERCHANT_WEBHOOK_SECRET, rawBody))
+     3. Compare expected vs header "X-ZettaPay-Signature" using a
+        CONSTANT-TIME comparison (crypto.timingSafeEqual on equal-length
+        Buffers, or the platform equivalent). On mismatch → 401.
+     4. Read header "X-ZettaPay-Timestamp" as unix-MILLISECONDS, reject when
+        |now() - timestamp| > 300000 (replay window 5 min).
+     5. Idempotency — keep a table keyed by header "X-ZettaPay-Event-Id"
+        (the listener sends a stable event id per delivery). If the event
+        id is already processed, return 200 immediately, no side effects.
+     6. Update the matching order / subscription in YOUR DB.
+     7. Return 200 with body "{\\"ok\\":true}". Any non-2xx triggers the
+        listener's retry curve (1s → 5s → 30s → 2m → 10m → 30m → 1h → 3h
+        → 12h → 24h, then dead-letter).
+
+   Webhook PAYLOAD (listener → merchant, JSON body):
+     {
+       "event":         "invoice.confirmed",
+       "invoice_id":    string,
+       "merchant_id":   string,
+       "chain":         "btc" | "polygon" | "eth",
+       "asset":         "BTC" | "USDC" | "ETH",
+       "amount":        string,                  // decimal string, native units
+       "address":       string,                  // per-invoice BIP-84 child address
+       "tx_hash":       string,
+       "confirmations": number,
+       "confirmed_at":  string                   // ISO-8601
+     }
+
+6. Implement the customer-facing payment trigger using the @zettapay/listener
+   storage APIs directly (no upstream HTTP needed — the merchant's app owns
+   the data layer):
+   - On "Pay with crypto" click, the backend:
+       (i)  derives the next receive address from MERCHANT_XPUB via BIP-84
+            at child index = merchant.next_child_index (use @scure/bip32 +
+            @scure/base + @noble/hashes; mirror the helper in the listener
+            test at packages/listener/test/install-acceptance.test.ts).
+       (ii) creates an invoice row through the StorageAdapter from
+            @zettapay/listener/storage with { id, merchant_id, chain,
+            asset, amount, address, child_index, expires_at }.
+       (iii)increments merchant.next_child_index ATOMICALLY via
+            storage.nextChildIndex(merchantId).
+   - The frontend then renders the QR code + receive address. There is no
+     hosted /checkout in self-hosted mode — the merchant owns the entire
+     payment page. The listener confirms on-chain, fires the webhook, and
+     the order flips to "paid" in step 5 above.
+
+7. Update .env.example with placeholder lines (do NOT commit real values):
+     STORAGE=json
+     ZETTAPAY_DATA_DIR=/var/lib/zettapay/data
+     MERCHANT_XPUB=zpub_replace_me
+     MERCHANT_WEBHOOK_URL=https://your-site.com/api/zp/webhook
+     MERCHANT_WEBHOOK_SECRET=whsec_replace_me
+     HEALTH_PORT=8787
+
+8. Wrap ALL new code with markers ZETTAPAY-START / ZETTAPAY-END. Use the
+   language's comment syntax. One revert grep removes the whole integration:
+     git grep -l ZETTAPAY-START
+
+9. Open a PR titled "feat: add ZettaPay self-hosted non-custodial payments".
+   PR body must list:
+     (a) every file changed,
+     (b) the deploy choice (systemd / Docker / Railway / Fly / Render) and
+         exact commands the merchant runs once,
+     (c) the env vars they must set (server-side only — never browser),
+     (d) the one-line revert command,
+     (e) a self-check confirming HR-WALLET-LESS, HR-CUSTODY, HR-PHONE-HOME,
+         HR-SECRETS-IN-GIT all hold.
+
+== ACCEPTANCE CHECKS the PR MUST satisfy ==
+Run these before opening the PR — if any fails, fix and re-check:
+  - grep -r "wallet.connect\\|window.ethereum\\|Connect Wallet\\|Connect MetaMask" src/ app/
+      → MUST be empty (HR-WALLET-LESS).
+  - grep -r "mnemonic\\|seed phrase\\|extended private key\\|xprv\\|zprv" src/ app/
+      → MUST be empty (HR-CUSTODY).
+  - grep -r "zettapay.vercel.app\\|api.zettapay" src/ app/
+      → MUST be empty in the listener code path (HR-PHONE-HOME). The webhook
+      handler itself never reaches outward; the listener only talks to
+      mempool.space + MERCHANT_WEBHOOK_URL.
+  - grep -r "MERCHANT_WEBHOOK_SECRET=" .  excluding .env.example
+      → MUST be empty (HR-SECRETS-IN-GIT).
+  - Webhook handler reads RAW body BEFORE JSON.parse, uses HMAC-SHA256
+    with constant-time compare, enforces ±300000ms on X-ZettaPay-Timestamp,
+    and is idempotent on X-ZettaPay-Event-Id.
+
+== REFERENCE — package surface (already published) ==
+  npm    @zettapay/listener
+  bin    zettapay-listener  (subcommands: init | start | healthcheck |
+                             verify-config | migrate)
+  exports
+         import { JsonFileStorage, SqliteStorage } from '@zettapay/listener/storage';
+         import { BtcListener, WebhookDispatcher, HealthServer } from '@zettapay/listener';
+  health GET http://localhost:HEALTH_PORT/health
+  docs   https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener#readme
+  design https://github.com/leandromaiam-code/zettapay/blob/main/docs/architecture/self-hosted-listener-design.md
+  health probe (public, deploy-time):
+         GET https://zettapay.vercel.app/api/test/acceptance/self-hosted-listener
+
+Webhook signing (identical to cloud mode):
+  Algorithm    HMAC-SHA256, hex output
+  Sig header   X-ZettaPay-Signature  = hex(hmac_sha256(MERCHANT_WEBHOOK_SECRET, rawBody))
+  Time header  X-ZettaPay-Timestamp  = unix epoch MILLISECONDS  (tolerance ±300000)
+  Event header X-ZettaPay-Event-Id   = stable id for idempotency
+  Attempt hdr  X-ZettaPay-Attempt    = 1-indexed retry counter
+  Comparison   constant-time on equal-length hex strings
+
+${tool.tweak}
+
+== START ==
+Read the repo first, run the sanity check, install @zettapay/listener, run
+the init wizard with the merchant's xpub, pick the deploy path, then wire
+the webhook handler. If the merchant's runtime (Lambda / Workers / etc)
+cannot host a long-lived process, ASK before defaulting to cloud mode.`
+    ].join('\n');
+  }
+
+  function buildPrompt(toolKey, vals) {
+    return state.mode === 'self'
+      ? buildPromptSelf(toolKey, vals)
+      : buildPromptCloud(toolKey, vals);
+  }
+
   // ---------- DOM ----------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  const state = { tool: 'claude' };
+  const state = { tool: 'claude', mode: 'cloud' };
 
   function readForm() {
     const get = (id, fallback) => {
@@ -789,11 +1077,35 @@ Do not skip the markers, the env-var hygiene rules, or the PR.`
     render();
   }
 
+  function selectMode(mode) {
+    if (mode !== 'cloud' && mode !== 'self') return;
+    state.mode = mode;
+    $$('.mode-tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.mode === mode)));
+    // Merchant ID input only matters in cloud mode — fade it in self-hosted.
+    const merchantField = document.getElementById('f-merchant');
+    if (merchantField) {
+      const wrap = merchantField.closest('.md\\:col-span-2') || merchantField.parentElement;
+      if (wrap) wrap.style.display = mode === 'self' ? 'none' : '';
+    }
+    render();
+  }
+
   // tab wiring
   $$('.tool-tab').forEach((t) => {
     t.addEventListener('click', () => selectTool(t.dataset.tool));
     t.addEventListener('keydown', (e) => {
       const tabs = $$('.tool-tab');
+      const i = tabs.indexOf(t);
+      if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(i + 1) % tabs.length].focus(); tabs[(i + 1) % tabs.length].click(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(i - 1 + tabs.length) % tabs.length].focus(); tabs[(i - 1 + tabs.length) % tabs.length].click(); }
+    });
+  });
+
+  // mode wiring (Cloud vs Self-hosted)
+  $$('.mode-tab').forEach((t) => {
+    t.addEventListener('click', () => selectMode(t.dataset.mode));
+    t.addEventListener('keydown', (e) => {
+      const tabs = $$('.mode-tab');
       const i = tabs.indexOf(t);
       if (e.key === 'ArrowRight') { e.preventDefault(); tabs[(i + 1) % tabs.length].focus(); tabs[(i + 1) % tabs.length].click(); }
       if (e.key === 'ArrowLeft')  { e.preventDefault(); tabs[(i - 1 + tabs.length) % tabs.length].focus(); tabs[(i - 1 + tabs.length) % tabs.length].click(); }
