@@ -20,7 +20,13 @@ import type {
   WebhookEvent,
   WebhookEventInput,
 } from '../types.js';
-import type { StorageAdapter } from './index.js';
+import type {
+  BulkExport,
+  BulkImportInput,
+  BulkImportResult,
+  BulkPortable,
+  StorageAdapter,
+} from './index.js';
 
 export interface JsonFileStorageOptions {
   /** Defaults to ~/.zettapay/data */
@@ -32,7 +38,7 @@ const LOCK_RETRY_OPTS = {
   stale: 10_000,
 } as const;
 
-export class JsonFileStorage implements StorageAdapter {
+export class JsonFileStorage implements StorageAdapter, BulkPortable {
   private readonly dataDir: string;
   private readonly invoicesDir: string;
   private readonly webhookEventsDir: string;
@@ -268,6 +274,44 @@ export class JsonFileStorage implements StorageAdapter {
 
   async close(): Promise<void> {
     this.initPromise = null;
+  }
+
+  async exportAll(): Promise<BulkExport> {
+    await this.init();
+    const merchant = await this.readMerchantOrNull();
+    const invoices: Invoice[] = [];
+    for (const entry of await fs.readdir(this.invoicesDir).catch(() => [] as string[])) {
+      if (!entry.endsWith('.json')) continue;
+      const inv = await this.readJsonOrNull<Invoice>(path.join(this.invoicesDir, entry));
+      if (inv) invoices.push(inv);
+    }
+    const webhookEvents: WebhookEvent[] = [];
+    for (const entry of await fs.readdir(this.webhookEventsDir).catch(() => [] as string[])) {
+      if (!entry.endsWith('.json')) continue;
+      const evt = await this.readJsonOrNull<WebhookEvent>(path.join(this.webhookEventsDir, entry));
+      if (evt) webhookEvents.push(evt);
+    }
+    return { merchant, invoices, webhookEvents };
+  }
+
+  async importBulk(data: BulkImportInput): Promise<BulkImportResult> {
+    await this.init();
+    let merchants = 0;
+    if (data.merchant) {
+      await this.atomicWrite(this.merchantPath, data.merchant);
+      merchants = 1;
+    }
+    let invoices = 0;
+    for (const inv of data.invoices ?? []) {
+      await this.atomicWrite(this.invoicePath(inv.id), inv);
+      invoices += 1;
+    }
+    let webhookEvents = 0;
+    for (const evt of data.webhookEvents ?? []) {
+      await this.atomicWrite(this.webhookEventPath(evt.id), evt);
+      webhookEvents += 1;
+    }
+    return { merchants, invoices, webhookEvents };
   }
 
   private invoicePath(id: string): string {

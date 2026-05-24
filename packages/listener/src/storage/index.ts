@@ -45,6 +45,43 @@ export interface StorageAdapter {
   close?(): Promise<void>;
 }
 
+export interface BulkExport {
+  merchant: Merchant | null;
+  invoices: Invoice[];
+  webhookEvents: WebhookEvent[];
+}
+
+export interface BulkImportInput {
+  merchant?: Merchant;
+  invoices?: Invoice[];
+  webhookEvents?: WebhookEvent[];
+}
+
+export interface BulkImportResult {
+  merchants: number;
+  invoices: number;
+  webhookEvents: number;
+}
+
+/**
+ * Side-channel used by `zettapay-listener migrate` (Z60). Lets an adapter
+ * dump and re-ingest *whole records* — preserving id, timestamps, counters —
+ * so a json → sqlite → json round-trip is value-equivalent. Re-importing
+ * already-present records is a no-op (UPSERT on `id`). NOT part of the
+ * runtime listener-core surface; do not call from watcher/dispatcher code.
+ */
+export interface BulkPortable {
+  exportAll(): Promise<BulkExport>;
+  importBulk(data: BulkImportInput): Promise<BulkImportResult>;
+}
+
+export function isBulkPortable(s: StorageAdapter): s is StorageAdapter & BulkPortable {
+  return (
+    typeof (s as Partial<BulkPortable>).exportAll === 'function' &&
+    typeof (s as Partial<BulkPortable>).importBulk === 'function'
+  );
+}
+
 export interface StorageFactoryOptions {
   kind: StorageKind;
   dataDir?: string;
