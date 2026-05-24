@@ -303,13 +303,13 @@ Mission-to-section map (actual shipping order — diverged from the original Z56
 | Z57     | §1, §6   | Supabase adapter (peer: `@supabase/supabase-js`)                       | in flight (PR #289)       |
 | Z58     | §3, §5   | listener-core: `BtcListener` + `WebhookDispatcher` + `HealthServer` + `zettapay-listener start` bin + Dockerfile | shipped (PR #292)         |
 | Z59     | §1, §6   | SQLite adapter (peer: `better-sqlite3`, ACID single-file)              | shipped (PR #293)         |
-| Z60     | §4       | Full `zettapay-listener init / start / migrate / healthcheck / verify-config` CLI | in flight                 |
+| Z60     | §4       | Full `zettapay-listener init / start / migrate / healthcheck / verify-config` CLI | shipped (PR #295)         |
 | Z61     | §4       | Deploy artifacts (systemd / docker / Railway) + README rewrite + `0.2.0` cut | this PR                   |
 | Z62     | §1, §6   | Postgres adapter (peer: `pg`)                                          | upcoming                  |
 
 Notes on the reorder:
 
-- Z58 shipped the watcher + dispatcher + bin first (against `JsonFileStorage`) because deploy paths were operator-blocked. The CLI surface in §4 above is the **contract** the future `init / migrate / healthcheck` work must satisfy; until then, merchants bootstrap a merchant row by writing `merchant.json` directly (JSON adapter) or by calling `createMerchant()` against the chosen `StorageAdapter`.
+- Z58 shipped the watcher + dispatcher + bin first (against `JsonFileStorage`) because deploy paths were operator-blocked. Z60 then back-filled the full CLI (`init` / `verify-config` / `migrate` / `healthcheck`) against the §4 contract, so merchants no longer hand-edit `merchant.json` — `zettapay-listener init` does it.
 - The Supabase adapter (Z57) and Postgres adapter (Z62) are blocked on the same `StorageAdapter` interface as JSON / SQLite; field names and types in §6 remain canonical.
 - All shipped adapters pass the contract suite in `packages/listener/test/storage-contract.ts`. New adapters MUST do the same.
 

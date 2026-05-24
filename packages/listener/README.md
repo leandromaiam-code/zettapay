@@ -66,25 +66,16 @@ What flows where:
 # 1. Install the daemon
 npm install -g @zettapay/listener
 
-# 2. Bootstrap your data dir with a merchant record (one-time)
-mkdir -p ~/.zettapay/data
-cat > ~/.zettapay/data/merchant.json <<'EOF'
-{
-  "id": "m_local_dev",
-  "shop_name": "Your Shop",
-  "email": "you@your.shop",
-  "xpub": "zpub6r…",
-  "webhook_url": "https://your.shop/zettapay",
-  "webhook_secret_hash": "sha256:…",
-  "next_child_index": 0,
-  "created_at": "2026-01-01T00:00:00.000Z"
-}
-EOF
+# 2. Bootstrap config + merchant row (writes ./.env + ~/.zettapay/data/merchant.json)
+zettapay-listener init \
+  --xpub zpub6r… \
+  --shop-name "Your Shop" \
+  --email you@your.shop \
+  --webhook-url https://your.shop/zettapay \
+  --storage json
 
-# 3. Export the two required env vars + the merchant id
-export MERCHANT_ID=m_local_dev
-export MERCHANT_WEBHOOK_URL=https://your.shop/zettapay
-export MERCHANT_WEBHOOK_SECRET=whsec_replace_me
+# 3. Sanity-check the config before booting the watcher
+zettapay-listener verify-config
 
 # 4. Start the listener
 zettapay-listener start
@@ -93,11 +84,22 @@ zettapay-listener start
 Verify it's alive:
 
 ```bash
+zettapay-listener healthcheck
+# or, raw:
 curl http://127.0.0.1:8787/health
 # {"ok":true,"ws_connected":true,"subscribed_count":0,"last_event_at":null,"last_block_height":850123,"uptime_s":7}
 ```
 
-> **Note on `init`.** A guided `zettapay-listener init / migrate / healthcheck` CLI lands in the next release. For now you bootstrap the merchant row by writing `merchant.json` directly (the file shape is documented in [`docs/architecture/self-hosted-listener-design.md`](../../docs/architecture/self-hosted-listener-design.md#2-json-storage-layout)) or by calling `JsonFileStorage.createMerchant()` from a small script. SQLite users can run the same `createMerchant()` call against a `SqliteStorage` instance — the columns mirror the JSON layout 1-for-1.
+`zettapay-listener init` is interactive — run it with no flags to be prompted for each value. It generates a strong `MERCHANT_WEBHOOK_SECRET`, writes `./.env` in the prompt's cwd, and seeds the chosen storage adapter (e.g. `merchant.json` for `STORAGE=json`). It is idempotent: pass `--force` to overwrite an existing `.env`, otherwise the existing file is left alone.
+
+To migrate state between adapters later — e.g. graduating from `json` to `sqlite`:
+
+```bash
+zettapay-listener migrate --from json --to sqlite --dry-run
+zettapay-listener migrate --from json --to sqlite
+```
+
+Migrate is reversible: `--from sqlite --to json` round-trips back to byte-equivalent JSON (modulo key order).
 
 ---
 
@@ -142,18 +144,13 @@ Useful for: a quick VPS, your laptop, a Raspberry Pi.
 # Prereqs: Node ≥ 18.18, a merchant xpub, an HTTPS webhook URL.
 npm install -g @zettapay/listener
 
-# Bootstrap data dir (one-time)
-mkdir -p ~/.zettapay/data
-$EDITOR ~/.zettapay/data/merchant.json   # see quickstart for the schema
+# One-time bootstrap (writes ./.env + ~/.zettapay/data/merchant.json)
+zettapay-listener init --storage json
 
-# Export config
-export MERCHANT_ID=m_<your-id>
-export MERCHANT_WEBHOOK_URL=https://your.shop/zettapay
-export MERCHANT_WEBHOOK_SECRET=whsec_<your-secret>
-export STORAGE=json                       # or sqlite — see "Storage adapter"
-export ZETTAPAY_DATA_DIR=$HOME/.zettapay/data
+# Confirm the storage + env are valid before booting the watcher
+zettapay-listener verify-config
 
-# Run in foreground (Ctrl-C to stop)
+# Run in foreground (Ctrl-C to stop). `start` auto-loads ./.env from cwd.
 zettapay-listener start
 
 # Or under nohup / tmux / screen for a quick background run
@@ -184,8 +181,9 @@ sudoedit /etc/zettapay/listener.env       # fill MERCHANT_WEBHOOK_URL + SECRET +
 sudo install -m 0644 \
   deploy/systemd/zettapay-listener.service /etc/systemd/system/
 
-# Bootstrap the merchant row (one-time)
-sudo -u zettapay $EDITOR /var/lib/zettapay/data/merchant.json
+# Bootstrap the merchant row as the service user (one-time)
+sudo -u zettapay bash -lc \
+  'cd /var/lib/zettapay && zettapay-listener init --storage json --data-dir /var/lib/zettapay/data'
 
 # Enable + start
 sudo systemctl daemon-reload
@@ -371,19 +369,16 @@ These rules are enforced by the `HR-*` hard rules in [`fabric/seed/zettapay_hrs.
 
 ## Status & release line
 
-This release wraps the Z55–Z59 line, plus deploy artifacts:
+This release wraps the Z55–Z60 line, plus deploy artifacts:
 
 - Z55 — `StorageAdapter` interface + contract test suite + design doc.
 - Z56 — `JsonFileStorage` (default, zero deps, atomic-rename writes + `proper-lockfile`).
 - Z57 — `SupabaseStorage` adapter (in flight).
 - Z58 — `BtcListener` + `WebhookDispatcher` + `HealthServer` + `zettapay-listener start` bin + Dockerfile.
 - Z59 — `SqliteStorage` (ACID single-file via `better-sqlite3`, lazy peer).
-- Z60 — `zettapay-listener` CLI: `init` / `start` / `migrate` / `healthcheck` / `verify-config` (in flight).
+- Z60 — `zettapay-listener` CLI: `init` / `start` / `migrate` / `healthcheck` / `verify-config`.
 - Z61 — this release: deploy artifacts (systemd / docker / Railway) + docs + `0.2.0` version cut.
 - Z62 — `PostgresStorage` adapter (planned).
-
-Once Z60 merges the README quickstart drops the hand-edited `merchant.json`
-step in favour of `zettapay-listener init --xpub ...`.
 
 ## License
 
