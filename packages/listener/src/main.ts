@@ -1,12 +1,18 @@
 #!/usr/bin/env node
-// Entrypoint for the standalone `zettapay-listener` binary. Reads env, wires
-// StorageAdapter + BtcListener + WebhookDispatcher + HealthServer, and waits
-// for SIGTERM/SIGINT for a graceful shutdown.
+// `zettapay-listener` CLI entrypoint. Dispatches to subcommands. The legacy
+// behavior (no subcommand → start the watcher) is preserved so existing
+// Dockerfile + systemd units keep working.
 
 import { createStorage } from './storage/index.js';
 import { BtcListener, type Logger } from './listener.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
 import { HealthServer, DEFAULT_HEALTH_PORT } from './health-server.js';
+import { runInit } from './cli/init.js';
+import { runHealthcheck } from './cli/healthcheck.js';
+import { runVerifyConfig } from './cli/verify-config.js';
+import { runMigrate } from './cli/migrate.js';
+import { c, parseFlags, flagBool, flagString, readEnvFile } from './cli/util.js';
+import * as path from 'node:path';
 
 interface ResolvedConfig {
   merchantId: string;
@@ -66,7 +72,26 @@ function log(level: 'info' | 'warn' | 'error', msg: string, meta?: unknown): voi
   else process.stdout.write(line + '\n');
 }
 
-export async function run(): Promise<void> {
+/**
+ * Hydrate process.env with a `.env` file from cwd if one exists. We do not
+ * support shell-style `${VAR}` expansion — intentional, to keep behavior
+ * obvious.
+ */
+async function loadDotEnv(cwd: string): Promise<void> {
+  const file = await readEnvFile(path.join(cwd, '.env'));
+  if (!file) return;
+  for (const [k, v] of Object.entries(file)) {
+    if (process.env[k] === undefined) process.env[k] = v;
+  }
+}
+
+export async function run(argv: readonly string[] = []): Promise<void> {
+  const { flags } = parseFlags(argv);
+  const healthPortOverride = flagString(flags, 'health-port');
+  if (healthPortOverride) process.env.HEALTH_PORT = healthPortOverride;
+  const logLevel = flagString(flags, 'log-level');
+  if (logLevel) process.env.LOG_LEVEL = logLevel;
+
   const cfg = readEnv();
   const storage = createStorage(process.env);
 
@@ -75,7 +100,7 @@ export async function run(): Promise<void> {
     const m = await storage.getMerchant('default');
     if (!m) {
       throw new Error(
-        '@zettapay/listener: no merchant in storage. Set MERCHANT_ID or run init (Z60).',
+        '@zettapay/listener: no merchant in storage. Set MERCHANT_ID or run `zettapay-listener init`.',
       );
     }
     merchantId = m.id;
@@ -125,17 +150,83 @@ export async function run(): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-const argv = process.argv.slice(2);
-const subcommand = argv[0];
-if (subcommand && subcommand !== 'start') {
-  process.stderr.write(
-    `@zettapay/listener: unknown command "${subcommand}". Only "start" is implemented in this release.\n` +
-      `init/migrate/healthcheck commands ship in Z60.\n`,
-  );
-  process.exit(2);
+function topLevelHelp(): string {
+  return [
+    `${c.bold('zettapay-listener')} — self-hosted, non-custodial BTC payment watcher`,
+    '',
+    'Usage: zettapay-listener <command> [flags]',
+    '',
+    'Commands:',
+    `  ${c.cyan('init')}            interactive setup wizard (.env + merchant.json)`,
+    `  ${c.cyan('start')}           run watcher + webhook dispatcher (default)`,
+    `  ${c.cyan('healthcheck')}     probe the local health server (exit 0/1)`,
+    `  ${c.cyan('verify-config')}   validate .env without starting`,
+    `  ${c.cyan('migrate')}         copy storage between adapters`,
+    '',
+    'Run `zettapay-listener <command> --help` for command flags.',
+    '',
+  ].join('\n');
 }
 
-run().catch((err) => {
-  process.stderr.write(`zettapay-listener fatal: ${(err as Error).message}\n`);
-  process.exit(1);
-});
+async function dispatch(argv: readonly string[]): Promise<number> {
+  await loadDotEnv(process.cwd());
+  const [sub, ...rest] = argv;
+  // No subcommand: print help unless --help/--version not asked, OR default to start.
+  // We default to `start` so the existing Dockerfile CMD ["start"] / bare
+  // invocation both work.
+  if (!sub || sub === 'start') {
+    if (flagBool(parseFlags(rest).flags, 'help')) {
+      process.stdout.write(
+        `${c.bold('zettapay-listener start')} — run the watcher\n\n` +
+          '  --health-port <n>   Override HEALTH_PORT\n' +
+          '  --log-level <lvl>   info | debug | warn | error\n\n',
+      );
+      return 0;
+    }
+    await run(rest);
+    return 0; // run() never returns under SIGTERM, but tests can mock.
+  }
+  if (sub === '--help' || sub === '-h' || sub === 'help') {
+    process.stdout.write(topLevelHelp());
+    return 0;
+  }
+  if (sub === '--version' || sub === '-v' || sub === 'version') {
+    const v = process.env.npm_package_version ?? '0.1.0';
+    process.stdout.write(`zettapay-listener ${v}\n`);
+    return 0;
+  }
+  switch (sub) {
+    case 'init':
+      return runInit(rest);
+    case 'healthcheck':
+      return runHealthcheck(rest);
+    case 'verify-config':
+      return runVerifyConfig(rest);
+    case 'migrate':
+      return runMigrate(rest);
+    default:
+      process.stderr.write(
+        c.red(`unknown command "${sub}"`) +
+          '\n\n' +
+          topLevelHelp(),
+      );
+      return 2;
+  }
+}
+
+const invokedAsScript =
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith('/main.js') === true ||
+  process.argv[1]?.endsWith('\\main.js') === true;
+
+if (invokedAsScript) {
+  dispatch(process.argv.slice(2)).then(
+    (code) => {
+      if (code !== 0) process.exit(code);
+    },
+    (err) => {
+      process.stderr.write(`zettapay-listener fatal: ${(err as Error).message}\n`);
+      process.exit(1);
+    },
+  );
+}

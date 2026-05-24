@@ -20,7 +20,13 @@ import {
   type WebhookEvent,
   type WebhookEventInput,
 } from '../types.js';
-import type { StorageAdapter } from './index.js';
+import type {
+  BulkExport,
+  BulkImportInput,
+  BulkImportResult,
+  BulkPortable,
+  StorageAdapter,
+} from './index.js';
 
 interface RunResult {
   changes: number;
@@ -118,7 +124,7 @@ CREATE INDEX IF NOT EXISTS idx_webhook_events_due
  * `./index.ts` lazy-requires it only when `STORAGE=sqlite` — listeners
  * running with `STORAGE=json` boot without it installed (HR-OPTIONAL-DEPS).
  */
-export class SqliteStorage implements StorageAdapter {
+export class SqliteStorage implements StorageAdapter, BulkPortable {
   private readonly opts: SqliteStorageOptions;
   private db: DatabaseLike | null = null;
   private initPromise: Promise<void> | null = null;
@@ -433,6 +439,125 @@ export class SqliteStorage implements StorageAdapter {
       this.db = null;
     }
     this.initPromise = null;
+  }
+
+  async exportAll(): Promise<BulkExport> {
+    await this.init();
+    const db = this.requireDb();
+    const merchantRow = db.prepare('SELECT * FROM merchants LIMIT 1').get();
+    const merchant = merchantRow ? rowToMerchant(merchantRow as Record<string, unknown>) : null;
+    const invoiceRows = db.prepare('SELECT * FROM invoices').all();
+    const invoices = invoiceRows.map((r) => rowToInvoice(r as Record<string, unknown>));
+    const eventRows = db.prepare('SELECT * FROM webhook_events').all();
+    const webhookEvents = eventRows.map((r) => rowToWebhookEvent(r as Record<string, unknown>));
+    return { merchant, invoices, webhookEvents };
+  }
+
+  async importBulk(data: BulkImportInput): Promise<BulkImportResult> {
+    await this.init();
+    const db = this.requireDb();
+    let merchants = 0;
+    let invoices = 0;
+    let webhookEvents = 0;
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      if (data.merchant) {
+        const m = data.merchant;
+        db.prepare(
+          `INSERT INTO merchants (id, shop_name, email, xpub, webhook_url, webhook_secret_hash, next_child_index, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             shop_name = excluded.shop_name,
+             email = excluded.email,
+             xpub = excluded.xpub,
+             webhook_url = excluded.webhook_url,
+             webhook_secret_hash = excluded.webhook_secret_hash,
+             next_child_index = excluded.next_child_index,
+             created_at = excluded.created_at`,
+        ).run(
+          m.id,
+          m.shop_name,
+          m.email,
+          m.xpub,
+          m.webhook_url,
+          m.webhook_secret_hash,
+          m.next_child_index,
+          m.created_at,
+        );
+        merchants = 1;
+      }
+      const upsertInvoice = db.prepare(
+        `INSERT INTO invoices (id, merchant_id, chain, asset, amount, address, child_index, status,
+                               expires_at, paid_at, tx_hash, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           merchant_id = excluded.merchant_id,
+           chain = excluded.chain,
+           asset = excluded.asset,
+           amount = excluded.amount,
+           address = excluded.address,
+           child_index = excluded.child_index,
+           status = excluded.status,
+           expires_at = excluded.expires_at,
+           paid_at = excluded.paid_at,
+           tx_hash = excluded.tx_hash,
+           created_at = excluded.created_at,
+           updated_at = excluded.updated_at`,
+      );
+      for (const inv of data.invoices ?? []) {
+        upsertInvoice.run(
+          inv.id,
+          inv.merchant_id,
+          inv.chain,
+          inv.asset,
+          inv.amount,
+          inv.address,
+          inv.child_index,
+          inv.status,
+          inv.expires_at,
+          inv.paid_at,
+          inv.tx_hash,
+          inv.created_at,
+          inv.updated_at,
+        );
+        invoices += 1;
+      }
+      const upsertEvent = db.prepare(
+        `INSERT INTO webhook_events (id, invoice_id, payload_json, attempts, next_retry_at,
+                                     delivered_at, last_status_code, last_error)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           invoice_id = excluded.invoice_id,
+           payload_json = excluded.payload_json,
+           attempts = excluded.attempts,
+           next_retry_at = excluded.next_retry_at,
+           delivered_at = excluded.delivered_at,
+           last_status_code = excluded.last_status_code,
+           last_error = excluded.last_error`,
+      );
+      for (const evt of data.webhookEvents ?? []) {
+        upsertEvent.run(
+          evt.id,
+          evt.invoice_id,
+          evt.payload_json,
+          evt.attempts,
+          evt.next_retry_at,
+          evt.delivered_at,
+          evt.last_status_code,
+          evt.last_error,
+        );
+        webhookEvents += 1;
+      }
+      db.exec('COMMIT');
+    } catch (err) {
+      try {
+        db.exec('ROLLBACK');
+      } catch {
+        // already rolled back
+      }
+      throw err;
+    }
+    return { merchants, invoices, webhookEvents };
   }
 }
 
