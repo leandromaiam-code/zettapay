@@ -1,7 +1,7 @@
 {
   "name": "@zettapay/listener",
-  "version": "0.0.1",
-  "description": "Self-hosted, non-custodial payment listener. Watches BTC + EVM addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
+  "version": "0.1.0",
+  "description": "Self-hosted, non-custodial BTC payment listener. Watches BIP-84 addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
   "license": "MIT",
   "private": false,
   "type": "module",
@@ -9,7 +9,7 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "zettapay-listener": "./dist/cli.js"
+    "zettapay-listener": "./dist/main.js"
   },
   "exports": {
     ".": {
@@ -24,15 +24,22 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "Dockerfile"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "npm run build",
+    "start": "node ./dist/main.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "proper-lockfile": "^4.1.2",
+    "ws": "^8.18.0",
     "zod": "^3.23.8"
   },
   "peerDependencies": {
@@ -48,7 +55,27 @@
   "devDependencies": {
     "@types/node": "^22.10.2",
     "@types/proper-lockfile": "^4.1.4",
+    "@types/ws": "^8.5.13",
     "typescript": "^5.6.3",
     "vitest": "^2.1.8"
-  }
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leandromaiam-code/zettapay.git",
+    "directory": "packages/listener"
+  },
+  "homepage": "https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener#readme",
+  "keywords": [
+    "bitcoin",
+    "btc",
+    "payments",
+    "webhooks",
+    "self-hosted",
+    "non-custodial",
+    "mempool.space",
+    "zettapay"
+  ]
 }
