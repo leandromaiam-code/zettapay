@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import type {
   Invoice,
   InvoiceInput,
@@ -10,11 +11,15 @@ import type {
   WebhookEvent,
   WebhookEventInput,
 } from '../types.js';
+import { MissingStorageDependencyError } from '../types.js';
 import { JsonFileStorage } from './json.js';
+import { SqliteStorage } from './sqlite.js';
 
 export { MissingStorageDependencyError } from '../types.js';
 export { JsonFileStorage } from './json.js';
 export type { JsonFileStorageOptions } from './json.js';
+export { SqliteStorage } from './sqlite.js';
+export type { SqliteStorageOptions } from './sqlite.js';
 
 export interface StorageAdapter {
   getMerchant(id: string): Promise<Merchant | null>;
@@ -44,12 +49,14 @@ export interface StorageFactoryOptions {
   kind: StorageKind;
   dataDir?: string;
   connectionString?: string;
+  /** SQLite-specific override; falls back to `<dataDir>/zettapay.db`. */
+  sqliteFilename?: string;
 }
 
 /**
- * Resolve a StorageAdapter from a kind discriminator. Z56 ships the JSON
- * adapter; SQLite / Supabase / Postgres land in Z57+ and throw a clear
- * not-yet-implemented error here.
+ * Resolve a StorageAdapter from a kind discriminator. Z56 ships JSON;
+ * Z59 ships SQLite. Supabase / Postgres still throw a clear
+ * not-yet-implemented error.
  */
 export async function createStorageAdapter(
   opts: StorageFactoryOptions,
@@ -58,10 +65,14 @@ export async function createStorageAdapter(
     case 'json':
       return new JsonFileStorage({ dataDir: opts.dataDir });
     case 'sqlite':
+      return new SqliteStorage({
+        filename: opts.sqliteFilename,
+        dataDir: opts.dataDir,
+      });
     case 'supabase':
     case 'postgres':
       throw new Error(
-        `@zettapay/listener: storage adapter '${opts.kind}' not yet implemented (coming in Z57+). ` +
+        `@zettapay/listener: storage adapter '${opts.kind}' not yet implemented (coming in Z60+). ` +
           `See docs/architecture/self-hosted-listener-design.md#3-dependency-graph`,
       );
     default: {
@@ -73,19 +84,38 @@ export async function createStorageAdapter(
 
 /**
  * Env-driven factory used by the CLI bootstrap (Z60). Reads `STORAGE`
- * (default `json`) + `ZETTAPAY_DATA_DIR` and instantiates the matching
- * adapter synchronously.
+ * (default `json`) + `ZETTAPAY_DATA_DIR` + `ZETTAPAY_SQLITE_FILE` and
+ * instantiates the matching adapter. For SQLite the peer dep
+ * `better-sqlite3` is checked eagerly so misconfigured deployments fail
+ * fast with the exact `npm install better-sqlite3` hint.
  */
 export function createStorage(env: NodeJS.ProcessEnv = process.env): StorageAdapter {
   const kindRaw = (env.STORAGE ?? 'json').toLowerCase();
   switch (kindRaw) {
     case 'json':
       return new JsonFileStorage({ dataDir: env.ZETTAPAY_DATA_DIR });
-    case 'sqlite':
+    case 'sqlite': {
+      try {
+        createRequire(import.meta.url)('better-sqlite3');
+      } catch (err) {
+        if (
+          err instanceof Error &&
+          'code' in err &&
+          (err as NodeJS.ErrnoException).code === 'MODULE_NOT_FOUND'
+        ) {
+          throw new MissingStorageDependencyError('sqlite', 'better-sqlite3');
+        }
+        throw err;
+      }
+      return new SqliteStorage({
+        filename: env.ZETTAPAY_SQLITE_FILE,
+        dataDir: env.ZETTAPAY_DATA_DIR,
+      });
+    }
     case 'supabase':
     case 'postgres':
       throw new Error(
-        `@zettapay/listener: storage adapter '${kindRaw}' not yet implemented (coming in Z57+).`,
+        `@zettapay/listener: storage adapter '${kindRaw}' not yet implemented (coming in Z60+).`,
       );
     default:
       throw new Error(

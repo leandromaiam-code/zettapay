@@ -16,12 +16,13 @@ A small daemon a merchant runs on their own infrastructure to:
 - **Not wallet-coupled.** No `wallet.connect`, no Phantom/MetaMask UI, no browser-side signing. See `HR-WALLET-LESS`.
 - **No phone-home.** The listener MUST NOT contact `zettapay.vercel.app`, `zettapay.dev`, `zettapay.com`, or `api.zettapay.*`. Outbound traffic is limited to `mempool.space` (and any merchant-configured chain RPC), the merchant's configured `MERCHANT_WEBHOOK_URL`, and the `STORAGE` adapter URL when the merchant chooses Supabase or Postgres. See `HR-PHONE-HOME`.
 
-## Status — Z58
+## Status — Z59
 
 - `StorageAdapter` interface + type definitions (Z55).
 - Contract test suite at `test/storage-contract.ts` (Z55).
-- **`JsonFileStorage` (the default adapter)** — Z56, zero extra deps.
-- Optional peer-dep adapters (SQLite / Supabase / Postgres) — Z57–Z59 (in progress).
+- **`JsonFileStorage`** — Z56, the zero-deps default (tier-1).
+- **`SqliteStorage`** — Z59, ACID single-file via `better-sqlite3` (tier-2).
+- Cloud adapters (Supabase / Postgres) — Z58 / Z60 (in progress).
 - **`BtcListener` + `WebhookDispatcher` + `HealthServer` + `zettapay-listener` bin + Dockerfile** — Z58.
 - Full `zettapay-listener init / migrate / healthcheck` CLI — Z60.
 
@@ -82,12 +83,25 @@ docker run --rm -p 8787:8787 \
 
 ## Storage adapters
 
-| adapter           | status                  | install                                  |
-|-------------------|-------------------------|------------------------------------------|
-| `json` (default)  | available (Z56)         | zero extra deps                          |
-| `sqlite`          | coming soon (Z57)       | `npm install better-sqlite3`             |
-| `supabase`        | coming soon (Z58)       | `npm install @supabase/supabase-js`      |
-| `postgres`        | coming soon (Z59)       | `npm install pg`                         |
+| adapter           | status                  | tier      | best for                                  | install                                  |
+|-------------------|-------------------------|-----------|-------------------------------------------|------------------------------------------|
+| `json` (default)  | available (Z56)         | tier-1    | up to ~1k invoices/month, single host     | zero extra deps                          |
+| `sqlite`          | available (Z59)         | tier-2    | up to ~100k invoices/month, single host   | `npm install better-sqlite3`             |
+| `supabase`        | coming soon (Z58)       | tier-3    | unlimited, hosted Postgres + auth         | `npm install @supabase/supabase-js`      |
+| `postgres`        | coming soon (Z60)       | tier-3    | unlimited, self-hosted Postgres           | `npm install pg`                         |
+
+### Choosing an adapter
+
+```
+< 1k invoices / month          → json     (default; no install)
+1k–100k invoices / month       → sqlite   (single file; ACID; ~100x faster than json on hot paths)
+> 100k invoices / month        → supabase / postgres
+multi-host listener fleet      → supabase / postgres (shared DB)
+```
+
+JSON, SQLite, Supabase and Postgres all share the **same column names and
+types** — `zettapay-listener migrate --from <a> --to <b>` is a pure
+round-trip (see design doc §6).
 
 ### `JsonFileStorage` (default)
 
@@ -116,6 +130,31 @@ const storage = new JsonFileStorage({ dataDir: process.env.ZETTAPAY_DATA_DIR });
 // or, env-driven:
 const fromEnv = createStorage(process.env); // STORAGE defaults to 'json'
 ```
+
+### `SqliteStorage` (tier-2, ACID, single-file)
+
+Persists everything in a single `<dataDir>/zettapay.db` SQLite file
+(override via `filename` or the `ZETTAPAY_SQLITE_FILE` env var). Schema is
+identical to the JSON adapter's logical layout — `migrate --from json --to
+sqlite` is byte-equivalent round-trip-safe.
+
+```ts
+import { SqliteStorage, createStorage } from '@zettapay/listener';
+
+const storage = new SqliteStorage({ filename: '/var/lib/zettapay.db' });
+// or, env-driven:
+process.env.STORAGE = 'sqlite';
+const fromEnv = createStorage(process.env);
+```
+
+Atomicity:
+
+- `journal_mode = WAL` for crash safety on POSIX (silently ignored for `:memory:`).
+- `nextChildIndex` uses `BEGIN IMMEDIATE` so 100 in-process concurrent callers
+  receive `{0..99}` distinct indexes, no duplicates (same conformance bar as JSON).
+- `better-sqlite3` is loaded lazily via `createRequire` — listeners running
+  with `STORAGE=json` (the default) boot without it installed (HR-OPTIONAL-DEPS).
+  A missing peer surfaces as `MissingStorageDependencyError` with the install hint.
 
 ## Design doc
 

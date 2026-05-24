@@ -5,9 +5,11 @@ export {
   createStorageAdapter,
   JsonFileStorage,
   MissingStorageDependencyError,
+  SqliteStorage,
 } from './storage/index.js';
 export type {
   JsonFileStorageOptions,
+  SqliteStorageOptions,
   StorageAdapter,
   StorageFactoryOptions,
 } from './storage/index.js';
