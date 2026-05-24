@@ -9,18 +9,40 @@ Open-source universal payment protocol on Solana for humans and AI agents.
 
 ## Install
 
+Two install paths — pick whichever fits your infra:
+
+**Cloud (managed):** Sign up at https://zettapay.vercel.app/signup, paste your
+BIP-84 xpub, get a `merchant_id`, integrate the SDK. ZettaPay runs the listener
+for you. Free up to 1k transactions/month.
+
+**Self-hosted (npm):** Run [`@zettapay/listener`](./packages/listener#readme) on
+your own infrastructure. Free forever, zero runtime fees, you keep all keys.
+Watches BIP-84 addresses derived from your xpub on `mempool.space`, dispatches
+HMAC-SHA256 webhooks to your app. No phone-home. systemd, Docker, Railway, and
+Fly recipes in the package README.
+
 ```bash
+# Cloud SDK + UI components
 npm install @zettapay/sdk
-# drop-in checkout button + modal + Phantom deeplink + hosted flow
 npm install @zettapay/widget
-# lean ~5 kB embed — QR + address + on-chain polling, zero runtime deps
 npm install @zettapay/embed
+
+# Self-hosted listener (run as a long-lived process on your box)
+npm install @zettapay/listener
+npx zettapay-listener init     # prompts for xpub + webhook URL + storage backend
+npx zettapay-listener start    # long-running watcher + webhook dispatcher
 ```
 
-All three packages are published from this monorepo. A push of a `v<version>`
+The install wizard at [/install/ai](https://zettapay.vercel.app/install/ai)
+generates a canonical AI-assistant prompt for either path — pick **Cloud** or
+**Self-hosted** at the top, paste in Claude Code / Cursor / Codex / Lovable
+/ Aider, review the PR. Health gate: `GET /api/test/acceptance/self-hosted-listener`
+reports npm publish status + repo artifact presence + design-doc availability.
+
+All packages are published from this monorepo. A push of a `v<version>`
 git tag triggers [`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml),
-which builds and publishes `@zettapay/sdk`, `@zettapay/widget`, and
-`@zettapay/embed` with npm provenance attestations.
+which builds and publishes `@zettapay/sdk`, `@zettapay/widget`,
+`@zettapay/embed`, and `@zettapay/listener` with npm provenance attestations.
 
 ## Live deployment
 

@@ -50,6 +50,25 @@ ZettaPay V1 is intentionally narrow so the surface area stays auditable:
   never holds funds.
 - **TLS-only webhooks.** HTTP webhook URLs are rejected at registration.
 
+## Pick your install path
+
+<CardGroup cols={2}>
+  <Card title="Cloud — managed" icon="cloud">
+    Sign up, paste your BIP-84 xpub, integrate the SDK. ZettaPay runs the
+    listener. Free up to 1k tx/month. Best for small merchants and AI
+    agent builders who want zero ops.
+  </Card>
+  <Card title="Self-hosted — npm" icon="server">
+    `npm install @zettapay/listener` and run it on your own box (systemd,
+    Docker, Railway, Fly). Free forever, you keep all keys, zero phone-home.
+    Best for high-volume merchants and anyone who must own the full stack.
+  </Card>
+</CardGroup>
+
+The [/install/ai](https://zettapay.vercel.app/install/ai) wizard generates a
+canonical AI-assistant prompt for either path — pick **Cloud** or **Self-hosted**
+at the top, paste in Claude Code / Cursor / Codex / Lovable / Aider, review the PR.
+
 ## Pick your path
 
 <CardGroup cols={3}>
