@@ -294,16 +294,23 @@ Every mission in the self-hosted listener family MUST link the specific section(
 - `init()` is idempotent and never overwrites an existing `merchant.json`.
 - The adapter never imports `@supabase/*`, `better-sqlite3`, or `pg` (HR-OPTIONAL-DEPS). `fs` / `fs/promises` imports are confined to `packages/listener/src/storage/json.ts` (HR-STORAGE-ADAPTER).
 
-Mission-to-section map (forward planning):
+Mission-to-section map (actual shipping order — diverged from the original Z56→Z62 forecast as missions reordered around peer-dep availability and operator priorities):
 
-| mission | sections | deliverable                                       |
-|---------|----------|---------------------------------------------------|
-| Z56     | §1, §2   | JSON adapter (default, zero deps)                 |
-| Z57     | §1, §6   | SQLite adapter (peer: better-sqlite3)             |
-| Z58     | §1, §6   | Supabase adapter (peer: @supabase/supabase-js)    |
-| Z59     | §1, §6   | Postgres adapter (peer: pg)                       |
-| Z60     | §3, §4   | listener-core + CLI surface                       |
-| Z61     | §3, §5   | Watcher business logic (mempool.space + EVM RPC)  |
-| Z62     | §3, §5   | Webhook dispatcher (HMAC sign + retry policy)     |
+| mission | sections | deliverable                                                            | status                    |
+|---------|----------|------------------------------------------------------------------------|---------------------------|
+| Z55     | all      | Interface + contract test harness + this design doc                    | shipped (PR #287)         |
+| Z56     | §1, §2   | JSON adapter (default, zero deps)                                      | shipped (PR #288)         |
+| Z57     | §1, §6   | Supabase adapter (peer: `@supabase/supabase-js`)                       | in flight (PR #289)       |
+| Z58     | §3, §5   | listener-core: `BtcListener` + `WebhookDispatcher` + `HealthServer` + `zettapay-listener start` bin + Dockerfile | shipped (PR #292)         |
+| Z59     | §1, §6   | SQLite adapter (peer: `better-sqlite3`, ACID single-file)              | shipped (PR #293)         |
+| Z60     | §4       | Full `zettapay-listener init / start / migrate / healthcheck / verify-config` CLI | shipped (PR #295)         |
+| Z61     | §4       | Deploy artifacts (systemd / docker / Railway) + README rewrite + `0.2.0` cut | this PR                   |
+| Z62     | §1, §6   | Postgres adapter (peer: `pg`)                                          | upcoming                  |
+
+Notes on the reorder:
+
+- Z58 shipped the watcher + dispatcher + bin first (against `JsonFileStorage`) because deploy paths were operator-blocked. Z60 then back-filled the full CLI (`init` / `verify-config` / `migrate` / `healthcheck`) against the §4 contract, so merchants no longer hand-edit `merchant.json` — `zettapay-listener init` does it.
+- The Supabase adapter (Z57) and Postgres adapter (Z62) are blocked on the same `StorageAdapter` interface as JSON / SQLite; field names and types in §6 remain canonical.
+- All shipped adapters pass the contract suite in `packages/listener/test/storage-contract.ts`. New adapters MUST do the same.
 
 PRs that touch listener code without citing a section are blocked by review.

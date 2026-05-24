@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/listener",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Self-hosted, non-custodial BTC payment listener. Watches BIP-84 addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
   "license": "MIT",
   "private": false,
@@ -23,6 +23,7 @@
   },
   "files": [
     "dist",
+    "deploy",
     "README.md",
     "LICENSE",
     "Dockerfile"

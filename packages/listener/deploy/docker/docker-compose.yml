@@ -1,0 +1,45 @@
+# @zettapay/listener — docker-compose template.
+#
+# Quickstart:
+#   cp .env.example .env   # then edit MERCHANT_WEBHOOK_URL + MERCHANT_WEBHOOK_SECRET
+#   docker compose up -d
+#   docker compose logs -f listener
+#   curl http://localhost:8787/health
+#
+# The default STORAGE=json adapter persists everything under ./data/, mounted
+# read-write into the container at /data. The container runs as the unprivileged
+# `node` user — `./data` must be writable by uid 1000 (or set ownership to match).
+
+services:
+  listener:
+    image: zettapay-listener:latest
+    # To build from this repo instead of pulling a published image, swap to:
+    # build:
+    #   context: ../..               # packages/listener
+    #   dockerfile: Dockerfile
+    container_name: zettapay-listener
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      # Storage adapter. json = zero-deps default; switch via .env override.
+      STORAGE: ${STORAGE:-json}
+      ZETTAPAY_DATA_DIR: /data
+      HEALTH_PORT: ${HEALTH_PORT:-8787}
+
+    ports:
+      - "${HEALTH_PORT:-8787}:8787"
+
+    volumes:
+      # Only needed when STORAGE=json or STORAGE=sqlite. Cloud adapters
+      # (supabase/postgres) keep state remote — this volume can be omitted.
+      - ./data:/data
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
