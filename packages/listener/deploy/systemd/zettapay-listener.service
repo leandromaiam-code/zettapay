@@ -1,0 +1,56 @@
+; @zettapay/listener — systemd unit.
+;
+; Install:
+;   sudo useradd --system --home /var/lib/zettapay --shell /usr/sbin/nologin zettapay
+;   sudo mkdir -p /var/lib/zettapay/data /etc/zettapay
+;   sudo chown -R zettapay:zettapay /var/lib/zettapay
+;   sudo install -m 0640 -o root -g zettapay deploy/systemd/zettapay-listener.env /etc/zettapay/listener.env
+;   sudo install -m 0644 deploy/systemd/zettapay-listener.service /etc/systemd/system/zettapay-listener.service
+;   sudo systemctl daemon-reload
+;   sudo systemctl enable --now zettapay-listener.service
+;
+; Logs:  journalctl -u zettapay-listener -f
+; Status: systemctl status zettapay-listener
+
+[Unit]
+Description=ZettaPay self-hosted payment listener (non-custodial, no phone-home)
+Documentation=https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zettapay
+Group=zettapay
+WorkingDirectory=/var/lib/zettapay
+
+; Required env: MERCHANT_WEBHOOK_URL, MERCHANT_WEBHOOK_SECRET.
+; Optional: STORAGE, ZETTAPAY_DATA_DIR, HEALTH_PORT, MERCHANT_ID, MEMPOOL_WS_URL, MEMPOOL_REST_URL.
+EnvironmentFile=/etc/zettapay/listener.env
+
+ExecStart=/usr/bin/zettapay-listener start
+
+; Post-start health probe — give the listener up to 30s to bind HEALTH_PORT.
+ExecStartPost=/bin/sh -c 'for i in $(seq 1 30); do curl -fsS "http://127.0.0.1:${HEALTH_PORT:-8787}/health" >/dev/null && exit 0; sleep 1; done; echo "zettapay-listener: /health never came up" >&2; exit 1'
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+; Hardening — listener never needs root, never writes outside /var/lib/zettapay.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/zettapay
+LockPersonality=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
