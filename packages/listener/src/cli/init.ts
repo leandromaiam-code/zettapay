@@ -34,6 +34,13 @@ import {
   type Prompter,
   type EnvFile,
 } from './util.js';
+import {
+  ALL_NETWORKS,
+  defaultNetworkForXpubKind,
+  isNetwork,
+  isNetworkCompatibleWithXpub,
+  type Network,
+} from '../network.js';
 
 export interface InitOptions {
   cwd?: string;
@@ -50,6 +57,7 @@ function helpText(): string {
     '',
     'Interactive wizard. Pass any of the following flags to skip prompts:',
     '  --xpub <zpub>           Account-level BIP-84 public key',
+    '  --network <n>           mainnet | testnet | signet | regtest (defaults to xpub kind)',
     '  --shop-name <name>',
     '  --email <addr>',
     '  --webhook-url <url>     HTTPS URL on your backend',
@@ -108,7 +116,7 @@ export async function runInit(
     while (true) {
       if (!xpubInput) {
         xpubInput = await prompter.ask(
-          `${c.bold('xpub')} (BIP-84 zpub for mainnet, or vpub for testnet):`,
+          `${c.bold('xpub')} (BIP-84 zpub for mainnet, or vpub for testnet/signet):`,
         );
       }
       try {
@@ -128,6 +136,51 @@ export async function runInit(
         xpubInput = undefined;
       }
     }
+
+    // ----- (a.5) network -----
+    // Default: derive from xpub kind. A mainnet xpub locks to mainnet; a
+    // testnet-family xpub can target testnet|signet|regtest. We persist the
+    // selected Network (not just kind) so `verify-config` + the listener
+    // boot path can pick the right mempool.space cluster without re-asking.
+    let network: Network;
+    const networkFlag = flagString(flags, 'network');
+    if (networkFlag) {
+      if (!isNetwork(networkFlag)) {
+        process.stdout.write(
+          c.red(`  ✗ unknown --network "${networkFlag}". Expected one of: ${ALL_NETWORKS.join(', ')}`) + '\n',
+        );
+        return 2;
+      }
+      if (!isNetworkCompatibleWithXpub(networkFlag, xpubKind)) {
+        process.stdout.write(
+          c.red(
+            `  ✗ --network ${networkFlag} is incompatible with a ${xpubKind} xpub. ` +
+              (xpubKind === 'mainnet'
+                ? 'mainnet xpub only watches mainnet.'
+                : 'testnet xpub watches testnet|signet|regtest.'),
+          ) + '\n',
+        );
+        return 2;
+      }
+      network = networkFlag;
+    } else if (xpubKind === 'mainnet') {
+      network = 'mainnet';
+    } else {
+      // Interactive prompt — signet default keeps "test before mainnet" cheap.
+      while (true) {
+        const reply = await prompter.ask(
+          `${c.bold('network')} (testnet|signet|regtest):`,
+          { default: 'signet' },
+        );
+        const cand = reply.toLowerCase();
+        if (isNetwork(cand) && isNetworkCompatibleWithXpub(cand, xpubKind)) {
+          network = cand;
+          break;
+        }
+        process.stdout.write(c.red(`  ✗ "${reply}" is not a testnet-family network`) + '\n');
+      }
+    }
+    process.stdout.write(c.green(`  ✓ network=${network}`) + '\n');
 
     // ----- (b) storage backend -----
     let storage = flagString(flags, 'storage') as StorageKind | undefined;
@@ -213,7 +266,7 @@ export async function runInit(
       MERCHANT_SHOP_NAME: shopName,
       MERCHANT_EMAIL: email,
       MERCHANT_XPUB: xpubInput as string,
-      MERCHANT_NETWORK: xpubKind,
+      MERCHANT_NETWORK: network,
       HEALTH_PORT: healthPort,
     };
     if (merchantId) envValues.MERCHANT_ID = merchantId;

@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/receiver",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Webhook receiver test tool for the ZettaPay protocol. Stands up a local HTTP server, verifies HMAC-SHA256 signatures, and prints decoded payloads \u2014 used during dev/QA to validate a merchant integration before plugging it into production.",
   "license": "MIT",
   "private": false,

@@ -61,9 +61,22 @@ export interface Bip84Parsed {
   hdkey: HDKey;
 }
 
+/**
+ * Optional bech32 HRP override. Default mapping is bc/tb based on the xpub
+ * prefix; signet and regtest reuse testnet derivation rules but use a
+ * different HRP (regtest uses `bcrt`, signet still uses `tb`).
+ */
+export type Bech32Hrp = 'bc' | 'tb' | 'bcrt';
+
 export interface DeriveBip84Params {
   xpub: string;
   index: number;
+  /**
+   * Override the bech32 HRP. If omitted, derives from the xpub's network
+   * (mainnet → 'bc', testnet/signet → 'tb'). Passing `bcrt` flips a vpub
+   * derivation onto the regtest address space without changing the key.
+   */
+  hrp?: Bech32Hrp;
 }
 
 export interface DerivedBip84 {
@@ -102,13 +115,17 @@ export function parseExtendedPublicKey(xpub: string): Bip84Parsed {
   }
   const isNativeSegwit = version === VERSIONS.zpub || version === VERSIONS.vpub;
 
+  // @scure/bip32's HDKey.fromExtendedKey only accepts the mainnet xpub version
+  // out of the box. The BIP-32 public-key material is network-agnostic — only
+  // the 4 version bytes encode the network. Always re-encode to the canonical
+  // xpub version for HDKey parsing; the original network is preserved in the
+  // `network` field for the HRP picker downstream.
   const canonical = new Uint8Array(decoded.length);
   canonical.set(decoded);
-  const canonicalVersion = network === 'mainnet' ? VERSIONS.xpub : VERSIONS.tpub;
-  canonical[0] = (canonicalVersion >>> 24) & 0xff;
-  canonical[1] = (canonicalVersion >>> 16) & 0xff;
-  canonical[2] = (canonicalVersion >>> 8) & 0xff;
-  canonical[3] = canonicalVersion & 0xff;
+  canonical[0] = (VERSIONS.xpub >>> 24) & 0xff;
+  canonical[1] = (VERSIONS.xpub >>> 16) & 0xff;
+  canonical[2] = (VERSIONS.xpub >>> 8) & 0xff;
+  canonical[3] = VERSIONS.xpub & 0xff;
 
   const reEncoded = sha256x2.encode(canonical);
   let hdkey: HDKey;
@@ -153,7 +170,7 @@ export function deriveBip84Address(params: DeriveBip84Params): DerivedBip84 {
   }
   const compressed = child.publicKey;
   const pubkeyHash = ripemd160(sha256(compressed));
-  const hrp = parsed.network === 'mainnet' ? 'bc' : 'tb';
+  const hrp = params.hrp ?? (parsed.network === 'mainnet' ? 'bc' : 'tb');
   const address = bech32EncodeP2wpkh(pubkeyHash, hrp);
   return {
     path,
