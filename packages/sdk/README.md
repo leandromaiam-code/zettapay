@@ -231,3 +231,100 @@ await sweep({
 | `getInvoiceStatus({ connection, invoice })` | `{ status: 'pending' \| 'paid' \| 'expired', receipt }` | Polls the receipt PDA. Returns parsed amount + tx signature when paid. |
 | `listenPaymentEvents(params)` | `{ id, close() }` | WebSocket subscription filtered to a single merchant's receipts. |
 | `sweep(params)` | `{ signature, amount, source, destinationTokenAccount, noop }` | Drain an SPL token ATA to a destination wallet/account using `transferChecked`. |
+
+## Receiving webhooks
+
+Imported from `@zettapay/sdk/server` (Node-only). Verifies the HMAC-SHA256
+signature in `X-ZettaPay-Signature`, enforces a 5-minute timestamp tolerance
+(replay protection), and returns a typed `ZettaPayEvent` you can branch on by
+`event.type`.
+
+Pass the **raw** request body. Re-serializing JSON changes byte order and
+breaks the signature.
+
+### Next.js (App Router)
+
+```ts
+// app/api/zettapay/webhook/route.ts
+import {
+  verifyWebhookSignature,
+  WebhookSignatureError,
+} from '@zettapay/sdk/server';
+
+export async function POST(req: Request) {
+  const body = await req.text();
+  const sig = req.headers.get('x-zettapay-signature');
+  const ts = req.headers.get('x-zettapay-timestamp');
+  if (!sig || !ts) return new Response('missing headers', { status: 400 });
+
+  try {
+    const event = verifyWebhookSignature(
+      body,
+      sig,
+      ts,
+      process.env.ZETTAPAY_WEBHOOK_SECRET!,
+    );
+
+    if (event.type === 'invoice.confirmed') {
+      await markInvoicePaid(event.data.invoice_id, event.data.tx_hash);
+    }
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    if (err instanceof WebhookSignatureError) {
+      return Response.json({ ok: false, code: err.code }, { status: 401 });
+    }
+    throw err;
+  }
+}
+```
+
+### Express
+
+```ts
+import express from 'express';
+import {
+  verifyWebhookSignature,
+  WebhookSignatureError,
+} from '@zettapay/sdk/server';
+
+const app = express();
+// raw body is required for HMAC — do not use express.json() on this route
+app.post(
+  '/api/zettapay/webhook',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const sig = req.header('x-zettapay-signature');
+    const ts = req.header('x-zettapay-timestamp');
+    if (!sig || !ts) return res.status(400).send('missing headers');
+
+    try {
+      const event = verifyWebhookSignature(
+        (req.body as Buffer).toString('utf8'),
+        sig,
+        ts,
+        process.env.ZETTAPAY_WEBHOOK_SECRET!,
+      );
+      // ...handle event by event.type
+      res.json({ ok: true });
+    } catch (err) {
+      if (err instanceof WebhookSignatureError) {
+        return res.status(401).json({ ok: false, code: err.code });
+      }
+      throw err;
+    }
+  },
+);
+```
+
+### Event types
+
+| `event.type` | Shape of `event.data` |
+| --- | --- |
+| `invoice.confirmed` | `{ invoice_id, address, amount_sats, tx_hash, confirmations, paid_at }` |
+| `invoice.pending` | `{ invoice_id, address, amount_sats, tx_hash, confirmations, seen_at }` |
+| `invoice.expired` | `{ invoice_id, address, amount_sats, expired_at }` |
+| `invoice.underpaid` | `{ invoice_id, address, amount_sats, received_sats, tx_hash, seen_at }` |
+
+`WebhookSignatureError.code` is one of `invalid_signature`, `timestamp_too_old`,
+or `malformed`.

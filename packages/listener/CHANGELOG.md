@@ -4,6 +4,10 @@
 
 ### Added
 
+- Workspace version alignment with `@zettapay/sdk`, `@zettapay/widget`, and
+  `@zettapay/embed` — the `v0.1.2` tag now publishes all four packages
+  together. See `packages/sdk/CHANGELOG.md` for the new
+  `@zettapay/sdk/server` webhook verifier merchants pair with the listener.
 - **`http://localhost` webhook exception.** `MERCHANT_WEBHOOK_URL` now
   accepts `http://localhost`, `http://127.0.0.1`, and `http://[::1]` in
   addition to the standard `https://` requirement. Everything else
