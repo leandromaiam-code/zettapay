@@ -14,6 +14,12 @@ import {
   validateXpubFormat,
   XpubFormatError,
 } from './util.js';
+import {
+  ALL_NETWORKS,
+  isNetwork,
+  isNetworkCompatibleWithXpub,
+  type Network,
+} from '../network.js';
 
 export interface VerifyOptions {
   cwd?: string;
@@ -66,11 +72,13 @@ export async function runVerifyConfig(
 
   // xpub format
   const xpub = env.MERCHANT_XPUB?.trim();
+  let xpubKind: 'mainnet' | 'testnet' | null = null;
   if (!xpub) {
     checks.push({ label: 'MERCHANT_XPUB parseable', ok: false, detail: 'missing' });
   } else {
     try {
       const ck = validateXpubFormat(xpub);
+      xpubKind = ck.kind;
       checks.push({
         label: 'MERCHANT_XPUB parseable',
         ok: true,
@@ -79,6 +87,36 @@ export async function runVerifyConfig(
     } catch (err) {
       const msg = err instanceof XpubFormatError ? err.message : String(err);
       checks.push({ label: 'MERCHANT_XPUB parseable', ok: false, detail: msg });
+    }
+  }
+
+  // MERCHANT_NETWORK is optional (defaults to mainnet for zpub, signet for
+  // vpub). When set, it MUST be a recognized network AND compatible with the
+  // xpub kind — that mismatch is the #1 footgun copying a Sparrow signet
+  // vpub into a config that left MERCHANT_NETWORK=mainnet.
+  const networkRaw = env.MERCHANT_NETWORK?.trim().toLowerCase();
+  if (networkRaw) {
+    if (!isNetwork(networkRaw)) {
+      checks.push({
+        label: 'MERCHANT_NETWORK valid',
+        ok: false,
+        detail: `unknown "${networkRaw}" (expected: ${ALL_NETWORKS.join(', ')})`,
+      });
+    } else if (xpubKind && !isNetworkCompatibleWithXpub(networkRaw as Network, xpubKind)) {
+      checks.push({
+        label: 'MERCHANT_NETWORK matches xpub kind',
+        ok: false,
+        detail: `${xpubKind} xpub cannot run on "${networkRaw}" — ` +
+          (xpubKind === 'mainnet'
+            ? 'set MERCHANT_NETWORK=mainnet (or use a vpub for signet/testnet/regtest)'
+            : 'set MERCHANT_NETWORK=signet|testnet|regtest (or use a zpub for mainnet)'),
+      });
+    } else {
+      checks.push({
+        label: 'MERCHANT_NETWORK matches xpub kind',
+        ok: true,
+        detail: networkRaw,
+      });
     }
   }
 

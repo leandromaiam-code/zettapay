@@ -57,6 +57,80 @@ zettapay-listener derive-address --index 7 # explicit child index
 (`xprv` / `zprv` / `tprv` / ...). Only the public `xpub` / `zpub` /
 `tpub` / `vpub` family is accepted.
 
+## Testing before mainnet
+
+Don't risk real BTC. The listener runs the exact same code path on signet
+(free coins, real network) — the only thing you change is one env var.
+
+### 1. Generate a signet vpub
+
+Sparrow Wallet → **File → New Wallet → Network: Signet → Single Sig
+(Native SegWit)** → generate seed → the wallet shows a `vpub...` in the
+Settings tab. Copy it. The seed never leaves Sparrow — the listener only
+sees the public key.
+
+### 2. Init the listener for signet
+
+```bash
+zettapay-listener init \
+  --xpub <your vpub> \
+  --network signet \
+  --webhook-url http://127.0.0.1:9876/webhook \
+  --shop-name "Signet Test" \
+  --email test@example.com \
+  --storage json
+zettapay-listener start &
+```
+
+`--network` accepts `mainnet | testnet | signet | regtest`. The listener
+refuses mainnet/testnet xpub mixups (`zpub` only watches mainnet,
+`vpub`/`tpub`/`upub` only watch testnet / signet / regtest).
+
+### 3. Start a webhook receiver
+
+```bash
+npm install -g @zettapay/receiver
+zettapay-receiver listen --port 9876 --secret "$WEBHOOK_SECRET" --pretty
+```
+
+### 4. Create an invoice and get the address
+
+```bash
+zettapay-listener create-invoice --amount-sats 10000 --memo "signet test"
+# → invoice_id: inv_...
+# → address:    tb1q...
+# → bip21_uri:  bitcoin:tb1q...?amount=0.0001&label=signet+test
+```
+
+### 5. Send signet coins from a faucet
+
+- <https://signet.bc-2.jp/>
+- <https://signetfaucet.com>
+
+Paste the `tb1q...` address from step 4.
+
+### 6. Watch the flow
+
+- Block explorer: `https://mempool.space/signet/address/<your tb1q...>`
+- Listener log: `tail -f listener.log`
+- Receiver log: terminal where step 3 is running
+
+Within roughly one signet block time (~10 min on average), the listener
+detects the tx in mempool, advances it to confirmed once the depth
+threshold is hit, fires the webhook, and the receiver prints the
+HMAC-validated payload.
+
+Same code, same dispatcher, same HMAC contract. To flip to mainnet,
+change `MERCHANT_NETWORK=mainnet` and supply a mainnet `zpub`. Nothing
+else changes.
+
+### Regtest (optional)
+
+For fully offline development, point `REGTEST_WS_URL` / `REGTEST_REST_URL`
+at a local electrs / esplora instance and run with `--network regtest`.
+The address HRP becomes `bcrt1q...`. No public faucet — you mine your
+own coins.
+
 ## What it is
 
 A small daemon a merchant runs on their own infrastructure to:

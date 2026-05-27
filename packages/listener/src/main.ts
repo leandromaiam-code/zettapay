@@ -14,6 +14,7 @@ import { runMigrate } from './cli/migrate.js';
 import { runDeriveAddress } from './cli/derive-address.js';
 import { runCreateInvoice } from './cli/create-invoice.js';
 import { c, parseFlags, flagBool, flagString, readEnvFile } from './cli/util.js';
+import { getNetworkConfig, readNetwork, type Network } from './network.js';
 import { readFileSync, realpathSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
@@ -23,8 +24,9 @@ interface ResolvedConfig {
   webhookUrl: string;
   webhookSecret: string;
   healthPort: number;
-  wsUrl?: string;
-  restBase?: string;
+  network: Network;
+  wsUrl: string;
+  restBase: string;
 }
 
 function readEnv(env: NodeJS.ProcessEnv = process.env): ResolvedConfig {
@@ -48,13 +50,17 @@ function readEnv(env: NodeJS.ProcessEnv = process.env): ResolvedConfig {
     throw new Error(`@zettapay/listener: invalid HEALTH_PORT="${portRaw}"`);
   }
 
+  const network = readNetwork(env);
+  const profile = getNetworkConfig(network, env);
+
   return {
     merchantId: merchantIdRaw ?? '',
     webhookUrl: webhookUrl!,
     webhookSecret: webhookSecret!,
     healthPort,
-    wsUrl: env.MEMPOOL_WS_URL?.trim() || undefined,
-    restBase: env.MEMPOOL_REST_URL?.trim() || undefined,
+    network,
+    wsUrl: env.MEMPOOL_WS_URL?.trim() || profile.ws,
+    restBase: env.MEMPOOL_REST_URL?.trim() || profile.rest,
   };
 }
 
@@ -154,6 +160,8 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     merchant_id: merchantId,
     health_port: cfg.healthPort,
     storage: process.env.STORAGE ?? 'json',
+    network: cfg.network,
+    ws_url: cfg.wsUrl,
   });
 
   const shutdown = async (signal: string) => {

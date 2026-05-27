@@ -1,5 +1,33 @@
 # Changelog — @zettapay/listener
 
+## 0.1.3
+
+### Added
+
+- **Signet + testnet + regtest support.** New `MERCHANT_NETWORK` env var
+  (and `--network` flag on `init` / `derive-address`) routes the watcher
+  to the corresponding `mempool.space` cluster (`mempool.space`,
+  `mempool.space/testnet`, `mempool.space/signet`) and picks the right
+  bech32 prefix (`bc1` / `tb1` / `bcrt1`). The codepath is the same as
+  mainnet — merchants can prove the full pipeline end-to-end against
+  zero-value coins before flipping to mainnet.
+- **Network ↔ xpub guard.** `verify-config` + `init` + `derive-address`
+  refuse mismatched combinations (e.g. a mainnet `zpub` with
+  `--network signet`, or a `vpub` with `--network mainnet`).
+- **README section "Testing before mainnet".** Copy-pasteable signet
+  walkthrough: Sparrow → init → receiver → faucet → confirmed webhook.
+- **Automated CI test gate.** A new `.github/workflows/test.yml` runs
+  `npm test --workspaces` on every PR. Tests cover BIP-84 official
+  vectors, HMAC sign/verify roundtrip (listener ↔ receiver), end-to-end
+  invoice lifecycle against a stubbed `mempool.space` surface, and
+  storage atomicity under 500 parallel `nextChildIndex` callers.
+
+### Changed
+
+- `MERCHANT_NETWORK` is now persisted by `init` (previously it inferred
+  from the xpub at boot). Run `zettapay-listener verify-config` after
+  upgrading.
+
 ## 0.1.2
 
 ### Added
