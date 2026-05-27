@@ -56,6 +56,38 @@ describe('runVerifyConfig', () => {
     expect(code).toBe(1);
   });
 
+  it('passes on http://localhost webhook URL (dev exception)', async () => {
+    const cwd = await makeTmpDir();
+    const dataDir = await makeTmpDir();
+    await fs.writeFile(path.join(dataDir, 'merchant.json'), '{"id":"m_test"}');
+    await writeEnvFile(path.join(cwd, '.env'), {
+      MERCHANT_XPUB: VALID_ZPUB,
+      MERCHANT_WEBHOOK_URL: 'http://localhost:9876/webhook',
+      MERCHANT_WEBHOOK_SECRET: 'whsec_aaaaaaaaaaaaaaaaaa',
+      HEALTH_PORT: '8787',
+      STORAGE: 'json',
+      ZETTAPAY_DATA_DIR: dataDir,
+    });
+    const code = await runVerifyConfig([], { cwd });
+    expect(code).toBe(0);
+  });
+
+  it('passes on http://127.0.0.1 webhook URL (dev exception)', async () => {
+    const cwd = await makeTmpDir();
+    const dataDir = await makeTmpDir();
+    await fs.writeFile(path.join(dataDir, 'merchant.json'), '{"id":"m_test"}');
+    await writeEnvFile(path.join(cwd, '.env'), {
+      MERCHANT_XPUB: VALID_ZPUB,
+      MERCHANT_WEBHOOK_URL: 'http://127.0.0.1:9876/webhook',
+      MERCHANT_WEBHOOK_SECRET: 'whsec_aaaaaaaaaaaaaaaaaa',
+      HEALTH_PORT: '8787',
+      STORAGE: 'json',
+      ZETTAPAY_DATA_DIR: dataDir,
+    });
+    const code = await runVerifyConfig([], { cwd });
+    expect(code).toBe(0);
+  });
+
   it('fails when xpub is xprv', async () => {
     const cwd = await makeTmpDir();
     const dataDir = await makeTmpDir();

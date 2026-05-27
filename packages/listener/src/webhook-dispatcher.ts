@@ -9,6 +9,7 @@ import { createHmac } from 'node:crypto';
 import type { StorageAdapter } from './storage/index.js';
 import type { WebhookEvent } from './types.js';
 import type { Logger } from './listener.js';
+import { classifyWebhookUrl } from './cli/util.js';
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -82,10 +83,16 @@ export class WebhookDispatcher {
     this.timeoutMs = opts.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.log = opts.logger ?? noopLogger;
-    if (!/^https:\/\//i.test(this.url)) {
+    const policy = classifyWebhookUrl(this.url);
+    if (!policy.ok) {
       throw new Error(
-        '@zettapay/listener: MERCHANT_WEBHOOK_URL must use https:// (TLS required, HR rule).',
+        '@zettapay/listener: MERCHANT_WEBHOOK_URL must use https:// (TLS required, HR rule). ' +
+          'The only exception is http://localhost / 127.0.0.1 / ::1 for dev/test against @zettapay/receiver.',
       );
+    }
+    if (policy.mode === 'localhost-http') {
+      // Single warning at boot; do not re-emit per delivery.
+      this.log.warn('webhook_dispatcher.dev_mode_http', { url: this.url, message: policy.warning });
     }
   }
 

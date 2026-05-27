@@ -3,7 +3,9 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import {
+  classifyWebhookUrl,
   generateWebhookSecret,
+  isAllowedWebhookUrl,
   parseEnv,
   parseFlags,
   readEnvFile,
@@ -123,6 +125,53 @@ describe('readEnvFile / writeEnvFile', () => {
     expect(st.mode & 0o077).toBe(0);
     const back = await readEnvFile(file);
     expect(back).toEqual({ SECRET: 'whsec_abc' });
+  });
+});
+
+describe('classifyWebhookUrl', () => {
+  it('accepts https://', () => {
+    const r = classifyWebhookUrl('https://acme.test/hook');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.mode).toBe('https');
+  });
+
+  it('accepts http://localhost', () => {
+    const r = classifyWebhookUrl('http://localhost:9876/webhook');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.mode).toBe('localhost-http');
+  });
+
+  it('accepts http://127.0.0.1', () => {
+    const r = classifyWebhookUrl('http://127.0.0.1:9876/webhook');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.mode).toBe('localhost-http');
+  });
+
+  it('accepts http://[::1]', () => {
+    const r = classifyWebhookUrl('http://[::1]:9876/webhook');
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.mode).toBe('localhost-http');
+  });
+
+  it('rejects http on a public hostname', () => {
+    const r = classifyWebhookUrl('http://acme.test/hook');
+    expect(r.ok).toBe(false);
+  });
+
+  it('rejects ftp://', () => {
+    const r = classifyWebhookUrl('ftp://example.test/hook');
+    expect(r.ok).toBe(false);
+  });
+
+  it('rejects unparseable URL', () => {
+    const r = classifyWebhookUrl('not-a-url');
+    expect(r.ok).toBe(false);
+  });
+
+  it('isAllowedWebhookUrl matches classifyWebhookUrl.ok', () => {
+    expect(isAllowedWebhookUrl('https://acme.test/hook')).toBe(true);
+    expect(isAllowedWebhookUrl('http://localhost/x')).toBe(true);
+    expect(isAllowedWebhookUrl('http://acme.test/hook')).toBe(false);
   });
 });
 
