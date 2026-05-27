@@ -1,0 +1,60 @@
+{
+  "name": "@zettapay/receiver",
+  "version": "0.1.0",
+  "description": "Webhook receiver test tool for the ZettaPay protocol. Stands up a local HTTP server, verifies HMAC-SHA256 signatures, and prints decoded payloads — used during dev/QA to validate a merchant integration before plugging it into production.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zettapay-receiver": "./dist/cli/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build",
+    "start": "node ./dist/cli/main.js listen"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leandromaiam-code/zettapay.git",
+    "directory": "packages/receiver"
+  },
+  "homepage": "https://github.com/leandromaiam-code/zettapay/tree/main/packages/receiver#readme",
+  "keywords": [
+    "zettapay",
+    "webhook",
+    "receiver",
+    "hmac",
+    "test-tool",
+    "developer-tools",
+    "stripe-grade",
+    "self-hosted"
+  ]
+}

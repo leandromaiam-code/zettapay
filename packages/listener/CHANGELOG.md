@@ -1,5 +1,17 @@
 # Changelog — @zettapay/listener
 
+## 0.1.2
+
+### Added
+
+- **`http://localhost` webhook exception.** `MERCHANT_WEBHOOK_URL` now
+  accepts `http://localhost`, `http://127.0.0.1`, and `http://[::1]` in
+  addition to the standard `https://` requirement. Everything else
+  remains rejected. Pairs with `@zettapay/receiver` for local
+  integration testing. The listener prints a single boot-time warning
+  when running in dev-mode HTTP: `DEV MODE: webhook over plain http
+  allowed for localhost. Use https for production.`
+
 ## 0.1.1
 
 ### Fixed

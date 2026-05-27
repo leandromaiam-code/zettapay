@@ -30,6 +30,8 @@ jobs:
             path: packages/embed
           - name: '@zettapay/listener'
             path: packages/listener
+          - name: '@zettapay/receiver'
+            path: packages/receiver
     steps:
       - uses: actions/checkout@v4
 

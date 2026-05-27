@@ -62,6 +62,35 @@ describe('WebhookDispatcher', () => {
     ).toThrow(/https/);
   });
 
+  it('allows http://localhost as a documented dev exception', async () => {
+    const storage = new JsonFileStorage({ dataDir: await makeTmpDir() });
+    const warnings: Array<{ msg: string; meta?: unknown }> = [];
+    expect(() =>
+      new WebhookDispatcher({
+        storage,
+        webhookUrl: 'http://localhost:9876/webhook',
+        webhookSecret: 'whsec_test',
+        logger: {
+          info: () => {},
+          warn: (msg, meta) => warnings.push({ msg, meta }),
+          error: () => {},
+        },
+      }),
+    ).not.toThrow();
+    expect(warnings[0]?.msg).toBe('webhook_dispatcher.dev_mode_http');
+  });
+
+  it('allows http://127.0.0.1 as a documented dev exception', async () => {
+    const storage = new JsonFileStorage({ dataDir: await makeTmpDir() });
+    expect(() =>
+      new WebhookDispatcher({
+        storage,
+        webhookUrl: 'http://127.0.0.1:9876/webhook',
+        webhookSecret: 'whsec_test',
+      }),
+    ).not.toThrow();
+  });
+
   it('POSTs payload with HMAC-SHA256 of raw body in X-ZettaPay-Signature', async () => {
     const storage = new JsonFileStorage({ dataDir: await makeTmpDir() });
     const payload = { event: 'invoice.confirmed', invoice_id: 'inv_wd_001' };

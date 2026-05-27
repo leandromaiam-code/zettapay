@@ -6,6 +6,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import {
   c,
+  classifyWebhookUrl,
   flagBool,
   flagString,
   parseFlags,
@@ -81,23 +82,31 @@ export async function runVerifyConfig(
     }
   }
 
-  // webhook URL is https
+  // webhook URL is https (or http://localhost as a documented dev exception)
   const webhookUrl = env.MERCHANT_WEBHOOK_URL?.trim();
+  let webhookWarning: string | null = null;
   if (!webhookUrl) {
     checks.push({ label: 'MERCHANT_WEBHOOK_URL is https://', ok: false, detail: 'missing' });
   } else {
-    try {
-      const u = new URL(webhookUrl);
+    const policy = classifyWebhookUrl(webhookUrl);
+    if (policy.ok && policy.mode === 'https') {
       checks.push({
         label: 'MERCHANT_WEBHOOK_URL is https://',
-        ok: u.protocol === 'https:',
-        detail: u.protocol === 'https:' ? webhookUrl : `protocol=${u.protocol}`,
+        ok: true,
+        detail: policy.url,
       });
-    } catch {
+    } else if (policy.ok && policy.mode === 'localhost-http') {
+      checks.push({
+        label: 'MERCHANT_WEBHOOK_URL is https:// (localhost http allowed)',
+        ok: true,
+        detail: policy.url,
+      });
+      webhookWarning = policy.warning;
+    } else {
       checks.push({
         label: 'MERCHANT_WEBHOOK_URL is https://',
         ok: false,
-        detail: `cannot parse "${webhookUrl}"`,
+        detail: !policy.ok ? policy.reason : 'unknown',
       });
     }
   }
@@ -144,6 +153,9 @@ export async function runVerifyConfig(
     if (!ck.ok) failed += 1;
   }
   process.stdout.write('\n');
+  if (webhookWarning) {
+    process.stdout.write(c.yellow('warning: ' + webhookWarning) + '\n');
+  }
   if (failed === 0) {
     process.stdout.write(c.green(`all ${checks.length} checks passed`) + '\n');
     return 0;

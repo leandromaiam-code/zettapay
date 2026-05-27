@@ -253,3 +253,58 @@ export function flagString(flags: FlagMap, name: string): string | undefined {
 export function flagBool(flags: FlagMap, name: string): boolean {
   return flags[name] === true || flags[name] === 'true';
 }
+
+// ---------- webhook URL policy ----------
+//
+// Webhooks default to TLS — non-https targets are dangerous on the open
+// internet (no body confidentiality, attackers can MITM the HMAC envelope
+// and replay arbitrary state-changing payloads). The single documented
+// exception is `http://localhost` / `http://127.0.0.1` / `http://[::1]`,
+// which lands in `@zettapay/receiver` running on the merchant's laptop or
+// CI box during integration testing.
+//
+// Other webhook providers (Stripe CLI, Plaid sandbox, Twilio dev mode)
+// carve the same dev exception. We do the same instead of forcing
+// merchants to fight self-signed certs just to round-trip a test event.
+
+export type WebhookUrlPolicy =
+  | { ok: true; mode: 'https'; url: string }
+  | { ok: true; mode: 'localhost-http'; url: string; warning: string }
+  | { ok: false; reason: string };
+
+const LOCALHOST_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+export const LOCALHOST_HTTP_WARNING =
+  'DEV MODE: webhook over plain http allowed for localhost. Use https for production.';
+
+/**
+ * Classify a webhook URL according to ZettaPay's TLS policy. Returns enough
+ * information for the caller to (a) accept it, (b) accept with a warning,
+ * or (c) reject with a precise reason.
+ */
+export function classifyWebhookUrl(raw: string): WebhookUrlPolicy {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    return { ok: false, reason: `cannot parse "${raw}"` };
+  }
+  if (u.protocol === 'https:') {
+    return { ok: true, mode: 'https', url: raw };
+  }
+  if (u.protocol === 'http:' && LOCALHOST_HOSTS.has(u.hostname)) {
+    return {
+      ok: true,
+      mode: 'localhost-http',
+      url: raw,
+      warning: LOCALHOST_HTTP_WARNING,
+    };
+  }
+  return { ok: false, reason: `protocol=${u.protocol} host=${u.hostname || '(none)'}` };
+}
+
+/**
+ * Boolean shortcut used by the webhook dispatcher's constructor guard.
+ */
+export function isAllowedWebhookUrl(raw: string): boolean {
+  return classifyWebhookUrl(raw).ok === true;
+}
