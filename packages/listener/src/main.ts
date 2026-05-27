@@ -11,7 +11,11 @@ import { runInit } from './cli/init.js';
 import { runHealthcheck } from './cli/healthcheck.js';
 import { runVerifyConfig } from './cli/verify-config.js';
 import { runMigrate } from './cli/migrate.js';
+import { runDeriveAddress } from './cli/derive-address.js';
+import { runCreateInvoice } from './cli/create-invoice.js';
 import { c, parseFlags, flagBool, flagString, readEnvFile } from './cli/util.js';
+import { readFileSync, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import * as path from 'node:path';
 
 interface ResolvedConfig {
@@ -85,6 +89,23 @@ async function loadDotEnv(cwd: string): Promise<void> {
   }
 }
 
+/**
+ * Resolve our own package.json version once. Used by `--version` and the
+ * banner. Falls back to '0.0.0' if the file isn't readable (e.g., bundled).
+ */
+export function packageVersion(): string {
+  try {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const pkgPath = path.join(here, '..', 'package.json');
+    const raw = readFileSync(pkgPath, 'utf8');
+    const parsed = JSON.parse(raw) as { version?: string };
+    if (parsed.version) return parsed.version;
+  } catch {
+    /* ignore */
+  }
+  return process.env.npm_package_version ?? '0.0.0';
+}
+
 export async function run(argv: readonly string[] = []): Promise<void> {
   const { flags } = parseFlags(argv);
   const healthPortOverride = flagString(flags, 'health-port');
@@ -150,30 +171,45 @@ export async function run(argv: readonly string[] = []): Promise<void> {
   process.on('SIGINT', () => void shutdown('SIGINT'));
 }
 
-function topLevelHelp(): string {
+function topLevelHelp(version: string): string {
   return [
-    `${c.bold('zettapay-listener')} — self-hosted, non-custodial BTC payment watcher`,
+    `${c.bold('zettapay-listener')} ${c.dim('v' + version)} — self-hosted, non-custodial BTC payment watcher`,
     '',
     'Usage: zettapay-listener <command> [flags]',
     '',
     'Commands:',
-    `  ${c.cyan('init')}            interactive setup wizard (.env + merchant.json)`,
-    `  ${c.cyan('start')}           run watcher + webhook dispatcher (default)`,
-    `  ${c.cyan('healthcheck')}     probe the local health server (exit 0/1)`,
-    `  ${c.cyan('verify-config')}   validate .env without starting`,
-    `  ${c.cyan('migrate')}         copy storage between adapters`,
+    `  ${c.cyan('init')}             interactive setup wizard (.env + merchant.json)`,
+    `  ${c.cyan('start')}            run watcher + webhook dispatcher (default)`,
+    `  ${c.cyan('healthcheck')}      probe the local health server (exit 0/1)`,
+    `  ${c.cyan('verify-config')}    validate .env without starting`,
+    `  ${c.cyan('migrate')}          copy storage between adapters`,
+    `  ${c.cyan('derive-address')}   derive a BIP-84 receive address (read-only)`,
+    `  ${c.cyan('create-invoice')}   allocate next address + write invoice to storage`,
     '',
     'Run `zettapay-listener <command> --help` for command flags.',
+    'Run `zettapay-listener --version` to print the installed version.',
     '',
   ].join('\n');
 }
 
-async function dispatch(argv: readonly string[]): Promise<number> {
+export async function dispatch(argv: readonly string[]): Promise<number> {
   await loadDotEnv(process.cwd());
   const [sub, ...rest] = argv;
-  // No subcommand: print help unless --help/--version not asked, OR default to start.
-  // We default to `start` so the existing Dockerfile CMD ["start"] / bare
-  // invocation both work.
+  const version = packageVersion();
+
+  // Top-level help / version BEFORE the start-default branch so
+  // `zettapay-listener --help` doesn't fall into `run()` with empty env.
+  if (sub === '--help' || sub === '-h' || sub === 'help') {
+    process.stdout.write(topLevelHelp(version));
+    return 0;
+  }
+  if (sub === '--version' || sub === '-v' || sub === 'version') {
+    process.stdout.write(`zettapay-listener ${version}\n`);
+    return 0;
+  }
+
+  // No subcommand OR explicit `start`: boot the watcher. We default to `start`
+  // so the existing Dockerfile CMD ["start"] / bare invocation both work.
   if (!sub || sub === 'start') {
     if (flagBool(parseFlags(rest).flags, 'help')) {
       process.stdout.write(
@@ -186,42 +222,70 @@ async function dispatch(argv: readonly string[]): Promise<number> {
     await run(rest);
     return 0; // run() never returns under SIGTERM, but tests can mock.
   }
-  if (sub === '--help' || sub === '-h' || sub === 'help') {
-    process.stdout.write(topLevelHelp());
-    return 0;
-  }
-  if (sub === '--version' || sub === '-v' || sub === 'version') {
-    const v = process.env.npm_package_version ?? '0.1.0';
-    process.stdout.write(`zettapay-listener ${v}\n`);
-    return 0;
-  }
+
   switch (sub) {
     case 'init':
-      return runInit(rest);
+      return await runInit(rest);
     case 'healthcheck':
-      return runHealthcheck(rest);
+      return await runHealthcheck(rest);
     case 'verify-config':
-      return runVerifyConfig(rest);
+      return await runVerifyConfig(rest);
     case 'migrate':
-      return runMigrate(rest);
+      return await runMigrate(rest);
+    case 'derive-address':
+      return await runDeriveAddress(rest);
+    case 'create-invoice':
+      return await runCreateInvoice(rest);
     default:
       process.stderr.write(
         c.red(`unknown command "${sub}"`) +
           '\n\n' +
-          topLevelHelp(),
+          topLevelHelp(version),
       );
       return 2;
   }
 }
 
-const invokedAsScript =
-  import.meta.url === `file://${process.argv[1]}` ||
-  process.argv[1]?.endsWith('/main.js') === true ||
-  process.argv[1]?.endsWith('\\main.js') === true;
+/**
+ * Detect whether we were invoked as a CLI (vs imported as a module). The
+ * `bin` shim installed by npm is a symlink in `<prefix>/bin/zettapay-listener`
+ * pointing at `<install-dir>/dist/main.js`. Node resolves `process.argv[1]`
+ * to the **symlink** path, NOT the target — so a `argv[1].endsWith('main.js')`
+ * check alone misses every global install. We compare realpath(argv[1])
+ * against the resolved path of this module, which is robust regardless of how
+ * the CLI was invoked.
+ */
+function invokedAsScript(): boolean {
+  const argv1 = process.argv[1];
+  if (!argv1) return false;
+  const myFile = fileURLToPath(import.meta.url);
+  if (argv1 === myFile) return true;
+  try {
+    if (realpathSync(argv1) === myFile) return true;
+  } catch {
+    /* argv[1] isn't a real path — fall through to suffix matches below. */
+  }
+  // Conservative suffix fallbacks for unusual invocations (esbuild bundles,
+  // direct node invocations, Windows shims).
+  return (
+    argv1.endsWith(`${path.sep}main.js`) ||
+    argv1.endsWith('/main.js') ||
+    argv1.endsWith('\\main.js') ||
+    argv1.endsWith(`${path.sep}zettapay-listener`) ||
+    argv1.endsWith('/zettapay-listener') ||
+    argv1.endsWith('\\zettapay-listener')
+  );
+}
 
-if (invokedAsScript) {
+if (invokedAsScript()) {
   dispatch(process.argv.slice(2)).then(
     (code) => {
+      // Set the exit code but do NOT call process.exit(0) eagerly. Long-lived
+      // subcommands (start) intentionally hold the event loop open via active
+      // servers; short subcommands exit naturally once the loop drains. Only
+      // force a hard exit on non-zero codes so error reporting flushes
+      // synchronously.
+      process.exitCode = code;
       if (code !== 0) process.exit(code);
     },
     (err) => {

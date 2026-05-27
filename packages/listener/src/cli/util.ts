@@ -66,6 +66,15 @@ export function createPrompter(): Prompter {
     },
     close() {
       rl.close();
+      // readline.createInterface() calls stdin.resume() internally; close()
+      // does NOT pause it, so without an explicit unref the event loop hangs
+      // forever waiting for input that will never arrive. Manifests as
+      // `init --force` printing "wrote .env" then never returning.
+      try {
+        stdin.unref();
+      } catch {
+        /* noop — some test harnesses replace stdin with a non-unref-able stream */
+      }
     },
   };
 }
