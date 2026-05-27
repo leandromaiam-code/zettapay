@@ -1,7 +1,7 @@
 {
   "name": "@zettapay/widget",
-  "version": "0.1.2",
-  "description": "ZettaPay drop-in embed widget — single <script> tag renders a Pay X USDC button that opens a modal with QR + Phantom deeplink + checkout flow.",
+  "version": "0.1.3",
+  "description": "ZettaPay drop-in embed widget \u2014 single <script> tag renders a Pay X USDC button that opens a modal with QR + Phantom deeplink + checkout flow.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/widget.esm.js",
@@ -53,5 +53,14 @@
     "solana-pay",
     "x402",
     "stablecoin"
-  ]
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leandromaiam-code/zettapay.git",
+    "directory": "packages/widget"
+  },
+  "bugs": {
+    "url": "https://github.com/leandromaiam-code/zettapay/issues"
+  },
+  "homepage": "https://github.com/leandromaiam-code/zettapay/tree/main/packages/widget#readme"
 }
