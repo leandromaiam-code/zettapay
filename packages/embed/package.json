@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/embed",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "ZettaPay lean embed.js \u2014 ~5KB vanilla drop-in that reads Solana on-chain invoices via public RPC and detects payment with zero runtime dependencies. Mainnet by default; auto-detects testnet via flag.",
   "license": "MIT",
   "type": "module",
