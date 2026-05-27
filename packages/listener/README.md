@@ -16,6 +16,47 @@ zettapay-listener start
 
 Registry: <https://www.npmjs.com/package/@zettapay/listener>
 
+## Standalone mode (no SDK required)
+
+The listener ships its own BIP-84 derivation, so a merchant can run the
+full accept-payment loop from a single binary — no `@zettapay/sdk`, no
+hosted infrastructure:
+
+```bash
+# 1. Install + bootstrap (writes .env + seeds merchant.json)
+npm install -g @zettapay/listener
+zettapay-listener init \
+  --xpub <zpub|vpub|xpub> \
+  --shop-name "My Shop" \
+  --email ops@my.shop \
+  --webhook-url https://my.shop/zettapay/hook \
+  --storage json
+
+# 2. Sanity-check the config
+zettapay-listener verify-config
+
+# 3. Create an invoice + print the address to show the customer
+zettapay-listener create-invoice --amount-sats 1000 --memo "Coffee"
+# → invoice_id: inv_...
+# → address:    bc1q...
+# → bip21_uri:  bitcoin:bc1q...?amount=0.00001&label=Coffee
+
+# 4. Boot the watcher — webhook fires on confirmation
+zettapay-listener start &
+```
+
+`derive-address` (read-only) is handy when you just want to inspect the
+next address without writing an invoice:
+
+```bash
+zettapay-listener derive-address           # next index from merchant.json
+zettapay-listener derive-address --index 7 # explicit child index
+```
+
+`HR-CUSTODY`: every subcommand refuses extended PRIVATE keys
+(`xprv` / `zprv` / `tprv` / ...). Only the public `xpub` / `zpub` /
+`tpub` / `vpub` family is accepted.
+
 ## What it is
 
 A small daemon a merchant runs on their own infrastructure to:

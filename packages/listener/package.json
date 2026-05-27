@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/listener",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Self-hosted, non-custodial BTC payment listener. Watches BIP-84 addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
   "license": "MIT",
   "private": false,
@@ -24,6 +24,7 @@
   "files": [
     "dist",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "Dockerfile"
   ],
@@ -38,6 +39,9 @@
     "access": "public"
   },
   "dependencies": {
+    "@noble/hashes": "^1.8.0",
+    "@scure/base": "^1.2.6",
+    "@scure/bip32": "^1.7.0",
     "proper-lockfile": "^4.1.2",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
@@ -53,9 +57,6 @@
     "pg": { "optional": true }
   },
   "devDependencies": {
-    "@noble/hashes": "^1.8.0",
-    "@scure/base": "^1.2.6",
-    "@scure/bip32": "^1.7.0",
     "@types/node": "^22.10.2",
     "@types/proper-lockfile": "^4.1.4",
     "@types/ws": "^8.5.13",
