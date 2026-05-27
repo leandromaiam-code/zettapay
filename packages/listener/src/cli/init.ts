@@ -22,10 +22,12 @@ import * as path from 'node:path';
 import {
   banner,
   c,
+  classifyWebhookUrl,
   createPrompter,
   flagBool,
   flagString,
   generateWebhookSecret,
+  isAllowedWebhookUrl,
   parseFlags,
   readEnvFile,
   validateXpubFormat,
@@ -219,17 +221,30 @@ export async function runInit(
       (await prompter.ask(c.bold('Operator email:')));
 
     // ----- (d) webhook URL -----
+    // Policy lives in classifyWebhookUrl: https everywhere, plus a documented
+    // localhost-http carve-out for @zettapay/receiver running on the merchant's
+    // laptop/CI. Mirrors the dispatcher guard so init never rejects a URL the
+    // running daemon would happily POST to (Z65 contract).
     let webhookUrl = flagString(flags, 'webhook-url');
-    while (!webhookUrl || !isHttpsUrl(webhookUrl)) {
+    while (!webhookUrl || !isAllowedWebhookUrl(webhookUrl)) {
       if (webhookUrl) {
+        const policy = classifyWebhookUrl(webhookUrl);
+        const reason = policy.ok ? '' : policy.reason;
         process.stdout.write(
-          c.red(`  ✗ webhook URL must be https:// (got "${webhookUrl}")`) + '\n',
+          c.red(
+            `  ✗ webhook URL must be https:// (or http://localhost for dev). ` +
+              `got "${webhookUrl}" — ${reason}`,
+          ) + '\n',
         );
         if (flagString(flags, 'webhook-url')) return 2;
       }
       webhookUrl = await prompter.ask(
         c.bold('MERCHANT_WEBHOOK_URL (https://yourapi/zettapay/hook):'),
       );
+    }
+    const webhookPolicy = classifyWebhookUrl(webhookUrl);
+    if (webhookPolicy.ok && webhookPolicy.mode === 'localhost-http') {
+      process.stdout.write(c.yellow(`  ⚠ ${webhookPolicy.warning}`) + '\n');
     }
 
     // ----- (e) webhook secret -----
@@ -294,15 +309,6 @@ export async function runInit(
     return 0;
   } finally {
     if (!opts.prompter) prompter.close();
-  }
-}
-
-function isHttpsUrl(value: string): boolean {
-  try {
-    const u = new URL(value);
-    return u.protocol === 'https:';
-  } catch {
-    return false;
   }
 }
 
