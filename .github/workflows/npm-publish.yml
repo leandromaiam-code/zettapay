@@ -28,6 +28,8 @@ jobs:
             path: packages/widget
           - name: '@zettapay/embed'
             path: packages/embed
+          - name: '@zettapay/listener'
+            path: packages/listener
     steps:
       - uses: actions/checkout@v4
 
@@ -43,25 +45,42 @@ jobs:
       - name: Build ${{ matrix.package.name }}
         run: npm run build --workspace ${{ matrix.package.name }}
 
-      - name: Verify version matches tag
+      - name: Gate publish on tag matching package version
+        id: gate
         if: startsWith(github.ref, 'refs/tags/v')
         working-directory: ${{ matrix.package.path }}
         run: |
           tag="${GITHUB_REF#refs/tags/v}"
           pkg=$(node -p "require('./package.json').version")
-          if [ "$tag" != "$pkg" ]; then
-            echo "::error::tag v$tag does not match ${{ matrix.package.name }} version $pkg"
-            exit 1
+          if [ "$tag" = "$pkg" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::tag v$tag matches ${{ matrix.package.name }}@$pkg — will publish"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::tag v$tag does not match ${{ matrix.package.name }}@$pkg — skipping publish"
+          fi
+
+      - name: Check NPM_TOKEN presence
+        id: token
+        if: ${{ !inputs.dry_run && (steps.gate.outputs.publish == 'true' || github.event_name == 'workflow_dispatch') }}
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::NPM_TOKEN secret is missing — falling back to dry-run pack"
+          else
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Publish ${{ matrix.package.name }}
-        if: ${{ !inputs.dry_run }}
+        if: ${{ !inputs.dry_run && steps.gate.outputs.publish == 'true' && steps.token.outputs.has_token == 'true' }}
         working-directory: ${{ matrix.package.path }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --provenance --access public
 
-      - name: Dry-run pack
-        if: ${{ inputs.dry_run }}
+      - name: Dry-run pack (no token, dry_run input, or tag-version mismatch)
+        if: ${{ inputs.dry_run || steps.token.outputs.has_token == 'false' || steps.gate.outputs.publish != 'true' }}
         working-directory: ${{ matrix.package.path }}
         run: npm pack --dry-run
