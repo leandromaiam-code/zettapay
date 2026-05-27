@@ -1,6 +1,20 @@
 # @zettapay/listener
 
+[![npm](https://img.shields.io/npm/v/@zettapay/listener.svg)](https://www.npmjs.com/package/@zettapay/listener)
+[![npm downloads](https://img.shields.io/npm/dm/@zettapay/listener.svg)](https://www.npmjs.com/package/@zettapay/listener)
+[![license](https://img.shields.io/npm/l/@zettapay/listener.svg)](./LICENSE)
+
 Self-hosted, **non-custodial** payment listener for the ZettaPay protocol.
+
+## Install
+
+```bash
+npm install -g @zettapay/listener
+zettapay-listener init
+zettapay-listener start
+```
+
+Registry: <https://www.npmjs.com/package/@zettapay/listener>
 
 ## What it is
 
