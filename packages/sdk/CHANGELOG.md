@@ -1,5 +1,13 @@
 # Changelog — @zettapay/sdk
 
+## 0.1.3
+
+### Changed
+
+- Version aligned to the workspace matrix tagged for the Z67 cut. Pairs
+  with `@zettapay/listener` 0.1.3 — no API changes, same webhook
+  verifier surface as 0.1.2.
+
 ## 0.1.2
 
 ### Added

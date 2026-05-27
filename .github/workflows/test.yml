@@ -1,0 +1,45 @@
+name: test
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Z67 gate. Runs the unit + integration suites for the four packages whose
+# release health is tied to the self-hosted listener flow. The legacy
+# @zettapay/api workspace is intentionally excluded — its build is tracked
+# under a separate repair effort and is not part of the listener release
+# matrix.
+jobs:
+  listener-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - '@zettapay/listener'
+          - '@zettapay/sdk'
+          - '@zettapay/receiver'
+          - '@zettapay/widget'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install workspace dependencies (including dev)
+        run: npm ci --include=dev
+
+      - name: Build ${{ matrix.package }}
+        run: npm run build --workspace ${{ matrix.package }}
+
+      - name: Test ${{ matrix.package }}
+        run: npm test --workspace ${{ matrix.package }}
