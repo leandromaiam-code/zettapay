@@ -84,7 +84,7 @@ describe('runInit (flag-driven, non-interactive)', () => {
     await expect(fs.access(path.join(cwd, '.env'))).rejects.toBeTruthy();
   });
 
-  it('exits 2 when webhook URL is plain http', async () => {
+  it('exits 2 when webhook URL is plain http on a public host', async () => {
     const cwd = await makeTmpDir();
     const code = await runInit(
       [
@@ -98,6 +98,44 @@ describe('runInit (flag-driven, non-interactive)', () => {
       { cwd, prompter: new NoopPrompter() },
     );
     expect(code).toBe(2);
+  });
+
+  it('accepts http://127.0.0.1 webhook URL (localhost-http dev carve-out)', async () => {
+    const cwd = await makeTmpDir();
+    const dataDir = await makeTmpDir();
+    const code = await runInit(
+      [
+        '--xpub', VALID_ZPUB,
+        '--shop-name', 'Acme',
+        '--email', 'op@acme.test',
+        '--webhook-url', 'http://127.0.0.1:9876/webhook',
+        '--storage', 'json',
+        '--data-dir', dataDir,
+      ],
+      { cwd, prompter: new NoopPrompter() },
+    );
+    expect(code).toBe(0);
+    const env = parseEnv(await fs.readFile(path.join(cwd, '.env'), 'utf8'));
+    expect(env.MERCHANT_WEBHOOK_URL).toBe('http://127.0.0.1:9876/webhook');
+  });
+
+  it('accepts http://localhost webhook URL (localhost-http dev carve-out)', async () => {
+    const cwd = await makeTmpDir();
+    const dataDir = await makeTmpDir();
+    const code = await runInit(
+      [
+        '--xpub', VALID_ZPUB,
+        '--shop-name', 'Acme',
+        '--email', 'op@acme.test',
+        '--webhook-url', 'http://localhost:3000/zp/hook',
+        '--storage', 'json',
+        '--data-dir', dataDir,
+      ],
+      { cwd, prompter: new NoopPrompter() },
+    );
+    expect(code).toBe(0);
+    const env = parseEnv(await fs.readFile(path.join(cwd, '.env'), 'utf8'));
+    expect(env.MERCHANT_WEBHOOK_URL).toBe('http://localhost:3000/zp/hook');
   });
 
   it('--force overwrites an existing .env', async () => {

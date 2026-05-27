@@ -1,5 +1,20 @@
 # Changelog — @zettapay/listener
 
+## 0.1.5
+
+### Fixed
+
+- **`init` honors the `localhost-http` webhook policy (regression from
+  Z65).** `cli/init.ts` was still gating webhook URLs with a strict
+  `isHttpsUrl` check, so `--webhook-url http://127.0.0.1:9876/webhook`
+  was rejected by `init` even though the dispatcher and `verify-config`
+  had already adopted the shared `classifyWebhookUrl` policy that allows
+  `http://localhost` / `http://127.0.0.1` / `http://[::1]` for local
+  `@zettapay/receiver` integration. `init` now uses
+  `isAllowedWebhookUrl`, surfaces a DEV MODE warning for the localhost
+  carve-out, and rejects public-host plain http with the underlying
+  policy reason.
+
 ## 0.1.3
 
 ### Added
