@@ -230,6 +230,25 @@
     /* Trust strip icons */
     .trust-icon { width: 16px; height: 16px; flex-shrink: 0; }
   </style>
+<style id="zp-checkout-v3">
+    .chain-select-trigger {
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .chain-select-trigger:hover { border-color: #CBD5E1; background: #F8FAFC; }
+    .chain-select-trigger[aria-expanded="true"] {
+      border-color: #2563EB;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+    }
+    .chain-select-trigger[aria-expanded="true"] #chainSelectChevron { transform: rotate(180deg); }
+    .chain-select-list {
+      box-shadow: 0 12px 40px -8px rgba(15, 23, 42, 0.18), 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+    }
+    .chain-tab[aria-pressed="true"] { background: #EFF6FF !important; }
+    .chain-tab[aria-pressed="true"] .chain-tick { opacity: 1 !important; }
+  </style>
 </head>
 <body class="bg-slate-50 text-slate-900 antialiased" style="font-family: Inter, ui-sans-serif, system-ui; background:#FAFBFC;">
   <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
@@ -238,73 +257,68 @@
 
   
 
-  <main class="min-h-screen lg:grid lg:grid-cols-2 lg:gap-0">
+  <main class="min-h-screen lg:grid lg:grid-cols-[55%_45%] xl:grid-cols-[58%_42%]">
 
-    <!-- LEFT — product info (desktop only sidebar style) -->
-    <section class="hidden lg:flex flex-col px-12 xl:px-20 py-16 bg-slate-50 border-r border-slate-200/80 min-h-screen relative">
-      <header class="flex items-center gap-3 mb-16 text-sm">
-        <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center gap-1.5 transition-colors">
+    <!-- LEFT — merchant identity (top-aligned, big typography) -->
+    <section class="px-6 lg:px-16 xl:px-24 pt-10 lg:pt-16 pb-12 lg:pb-16 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
+
+      <header class="flex items-center gap-3 mb-12 lg:mb-20 text-sm">
+        <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-200/60 transition-colors" aria-label="Voltar">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         </button>
-        <span class="text-slate-300">·</span>
-        <a href="/" class="inline-flex items-center gap-2">
-          <img src="/Logo_symbol.png" class="w-5 h-5" alt=""/>
-          <span class="font-semibold text-slate-700">ZettaPay</span>
+        <a href="/" class="inline-flex items-center gap-2 ml-1">
+          <img src="/Logo_symbol.png" class="w-6 h-6" alt=""/>
+          <span class="font-bold text-slate-800 text-base tracking-tight">ZettaPay</span>
         </a>
       </header>
 
-      <div class="flex-1 flex flex-col justify-center max-w-md">
-        <div class="text-sm font-medium text-slate-500 mb-3" id="merchantLabel">@merchant</div>
+      <div class="max-w-xl">
+        <div class="text-sm font-medium text-slate-500 uppercase tracking-[0.16em] mb-4">Pagando para</div>
 
-        <div class="flex items-baseline gap-2 mb-5">
-          <span class="text-5xl xl:text-6xl font-bold tracking-tight text-slate-900 tabular-nums">$<span id="amountValue">0</span></span>
-          <span class="text-slate-400 text-sm font-medium">USD</span>
-        </div>
+        <h1 class="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold text-slate-900 tracking-[-0.04em] leading-[0.95] mb-6 break-words" id="merchantLabel">@merchant</h1>
 
         <div id="descriptionBlock" class="hidden mb-10">
-          <p id="descriptionValue" class="text-slate-600 leading-relaxed text-[15px]"></p>
+          <p id="descriptionValue" class="text-slate-600 leading-relaxed text-lg lg:text-xl font-light"></p>
         </div>
 
-        <div class="pt-8 border-t border-slate-200/80">
-          <div class="text-[11px] text-slate-400 font-medium uppercase tracking-[0.12em] mb-4">Pagamento seguro</div>
-          <ul class="space-y-3 text-sm text-slate-600">
-            <li class="flex items-start gap-3">
-              <svg class="trust-icon mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              <span><strong class="font-semibold text-slate-900">Não custodial.</strong> Fundos vão direto pra wallet do merchant. ZettaPay nunca toca o dinheiro.</span>
+        <div class="pt-10 mt-2 border-t border-slate-200/80 max-w-md">
+          <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-[0.16em] mb-5">Pagamento seguro</div>
+          <ul class="space-y-4">
+            <li class="flex items-start gap-3.5">
+              <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </span>
+              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+                <strong class="font-semibold text-slate-900">Não custodial.</strong> Fundos vão direto pra wallet do merchant. ZettaPay nunca toca seu dinheiro.
+              </div>
             </li>
-            <li class="flex items-start gap-3">
-              <svg class="trust-icon mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-              <span><strong class="font-semibold text-slate-900">TLS + HMAC.</strong> Conexão criptografada, confirmação assinada com SHA-256.</span>
+            <li class="flex items-start gap-3.5">
+              <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/70 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              </span>
+              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+                <strong class="font-semibold text-slate-900">TLS + HMAC-SHA256.</strong> Conexão criptografada, confirmação assinada criptograficamente.
+              </div>
             </li>
-            <li class="flex items-start gap-3">
-              <svg class="trust-icon mt-0.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-              <span><strong class="font-semibold text-slate-900">Verificável on-chain.</strong> Toda transação auditável publicamente no blockchain.</span>
+            <li class="flex items-start gap-3.5">
+              <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-50 border border-violet-200/70 flex items-center justify-center mt-0.5">
+                <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              </span>
+              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+                <strong class="font-semibold text-slate-900">Verificável on-chain.</strong> Toda transação auditável publicamente, sem dependência de terceiros.
+              </div>
             </li>
           </ul>
         </div>
       </div>
 
-      <footer class="text-[11px] text-slate-400 mt-12">
-        Powered by <a href="/" class="font-semibold text-slate-700 hover:text-slate-900">ZettaPay</a> · Open-source protocol
+      <footer class="text-[11px] text-slate-400 mt-12 lg:mt-auto lg:pt-12">
+        Powered by <a href="/" class="font-semibold text-slate-700 hover:text-slate-900">ZettaPay</a> · Open-source P2P protocol
       </footer>
     </section>
 
     <!-- RIGHT — payment form -->
-    <section class="bg-white min-h-screen px-6 lg:px-12 xl:px-20 py-10 lg:py-16">
-
-      <!-- Mobile-only product summary -->
-      <div class="lg:hidden mb-8 pb-8 border-b border-slate-200">
-        <div class="flex items-center gap-2 mb-4 text-sm">
-          <img src="/Logo_symbol.png" class="w-5 h-5" alt=""/>
-          <span class="font-semibold text-slate-700">ZettaPay</span>
-        </div>
-        <div class="text-sm font-medium text-slate-500 mb-1">Pagando para</div>
-        <div class="font-semibold text-slate-900 mb-3" id="merchantLabelMobile">@merchant</div>
-        <div class="flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-slate-900 tabular-nums">$<span id="amountValueMobile">0</span></span>
-          <span class="text-slate-400 text-sm font-medium">USD</span>
-        </div>
-      </div>
+    <section class="bg-white px-6 lg:px-12 xl:px-16 pt-10 lg:pt-16 pb-12 lg:pb-16 lg:min-h-screen">
 
       <div class="max-w-md mx-auto lg:mx-0">
 
@@ -321,58 +335,91 @@
         <!-- Checkout form -->
         <div id="checkoutCard" class="hidden">
 
-          <h2 class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em] mb-4">Forma de pagamento</h2>
+          <!-- AMOUNT — only on right side now -->
+          <div class="mb-10">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.16em] mb-2">Total a pagar</div>
+            <div class="flex items-baseline gap-2">
+              <span class="text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight tabular-nums">$<span id="amountValue">0</span></span>
+              <span class="text-slate-500 text-lg font-medium">USD</span>
+            </div>
+          </div>
 
-          <div class="space-y-2 mb-8" id="chainTabs" role="tablist">
+          <!-- Chain selector — dropdown style with brand icons -->
+          <div class="mb-8">
+            <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-3 block">Método de pagamento</label>
 
-            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="btc" role="tab" aria-pressed="false">
-              <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-lg">₿</div>
-              <div class="flex-1 text-left">
-                <div class="font-semibold text-slate-900">Bitcoin</div>
-                <div class="text-xs text-slate-500 mt-0.5">~10-30 min · 0 fee</div>
+            <div class="chain-select-wrapper relative">
+              <button type="button" id="chainSelectTrigger" class="chain-select-trigger w-full flex items-center justify-between gap-3 p-4 rounded-xl text-left transition-all" aria-expanded="false" aria-haspopup="listbox">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <span id="chainSelectedIcon" class="flex-shrink-0"></span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-900 text-base" id="chainSelectedName">Escolher</div>
+                    <div class="text-xs text-slate-500 mt-0.5" id="chainSelectedSub">Selecione uma cadeia</div>
+                  </div>
+                </div>
+                <svg class="w-5 h-5 text-slate-400 transition-transform" id="chainSelectChevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              </button>
+
+              <div id="chainSelectList" class="chain-select-list hidden absolute left-0 right-0 mt-2 z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 overflow-hidden" role="listbox">
+                <div id="chainTabs" class="contents">
+                <button type="button" class="chain-tab w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors" data-chain="base" role="option">
+                  <span class="chain-icon flex-shrink-0">
+                    <svg viewBox="0 0 32 32" class="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#0052FF"/><path d="M16 26.06c-5.557 0-10.06-4.503-10.06-10.06 0-5.557 4.503-10.06 10.06-10.06 5.557 0 10.06 4.503 10.06 10.06 0 5.557-4.503 10.06-10.06 10.06zm-6.92-9h13.84a.94.94 0 100-1.88H9.08a.94.94 0 100 1.88z" fill="#fff"/></svg>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Base</span></div>
+                    <div class="text-xs text-emerald-600 font-medium mt-0.5">Recomendado · ~1 min · taxa baixa</div>
+                  </div>
+                  <svg class="chain-tick w-5 h-5 text-blue-600 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+
+                <button type="button" class="chain-tab w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors" data-chain="btc" role="option">
+                  <span class="chain-icon flex-shrink-0">
+                    <svg viewBox="0 0 32 32" class="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#F7931A"/><path d="M22.39 14.06c.29-1.93-1.18-2.97-3.18-3.66l.65-2.6-1.58-.4-.63 2.54c-.42-.1-.84-.2-1.27-.3l.64-2.55-1.58-.4-.65 2.6c-.34-.08-.68-.16-1-.24v-.01l-2.18-.54-.42 1.69s1.17.27 1.15.28c.64.16.76.58.74.92l-.74 2.96c.04.01.1.03.17.05l-.17-.04-1.04 4.15c-.08.2-.28.49-.74.38.01.02-1.15-.29-1.15-.29l-.79 1.81 2.06.51c.38.1.76.2 1.13.3l-.66 2.63 1.58.4.65-2.6c.43.12.85.22 1.26.33l-.64 2.59 1.58.4.66-2.63c2.7.51 4.73.31 5.58-2.13.69-1.97-.03-3.11-1.46-3.85 1.04-.24 1.83-.92 2.04-2.33zm-3.65 5.09c-.49 1.97-3.81.91-4.88.64l.87-3.48c1.07.27 4.52.79 4.01 2.84zm.49-5.12c-.45 1.79-3.21.88-4.1.66l.79-3.16c.89.22 3.77.64 3.31 2.5z" fill="#fff"/></svg>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-900">Bitcoin</div>
+                    <div class="text-xs text-slate-500 mt-0.5">~10-30 min · 0 protocol fee</div>
+                  </div>
+                  <svg class="chain-tick w-5 h-5 text-blue-600 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+
+                <button type="button" class="chain-tab w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors" data-chain="polygon" role="option">
+                  <span class="chain-icon flex-shrink-0">
+                    <svg viewBox="0 0 32 32" class="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#8247E5"/><path d="M21.06 12.04c-.36-.21-.83-.21-1.23 0L17 13.74l-1.95 1.1-2.83 1.7c-.36.21-.83.21-1.23 0l-2.23-1.34c-.36-.21-.6-.6-.6-1.05v-2.6c0-.42.21-.81.6-1.05l2.2-1.3c.36-.21.83-.21 1.23 0l2.2 1.3c.36.21.6.6.6 1.05v1.7l1.95-1.13v-1.73c0-.42-.21-.81-.6-1.05l-4.11-2.42c-.36-.21-.83-.21-1.23 0L7.6 8.96c-.4.21-.6.6-.6 1.02v4.85c0 .42.21.81.6 1.05l4.16 2.42c.36.21.83.21 1.23 0l2.83-1.66 1.95-1.13 2.83-1.66c.36-.21.83-.21 1.23 0l2.2 1.3c.36.21.6.6.6 1.05v2.6c0 .42-.21.81-.6 1.05l-2.2 1.3c-.36.21-.83.21-1.23 0l-2.2-1.3c-.36-.21-.6-.6-.6-1.05v-1.7l-1.95 1.13v1.73c0 .42.21.81.6 1.05l4.16 2.42c.36.21.83.21 1.23 0l4.16-2.42c.36-.21.6-.6.6-1.05V18.4c0-.42-.21-.81-.6-1.05l-4.18-2.45z" fill="#fff"/></svg>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Polygon</span></div>
+                    <div class="text-xs text-slate-500 mt-0.5">~2 min</div>
+                  </div>
+                  <svg class="chain-tick w-5 h-5 text-blue-600 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+
+                <button type="button" class="chain-tab w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors" data-chain="ethereum" role="option">
+                  <span class="chain-icon flex-shrink-0">
+                    <svg viewBox="0 0 32 32" class="w-8 h-8"><circle cx="16" cy="16" r="16" fill="#627EEA"/><path d="M16.498 4v8.87l7.497 3.35z" fill="#fff" fill-opacity=".602"/><path d="M16.498 4L9 16.22l7.498-3.35z" fill="#fff"/><path d="M16.498 21.968v6.027L24 17.616z" fill="#fff" fill-opacity=".602"/><path d="M16.498 27.995v-6.028L9 17.616z" fill="#fff"/><path d="M16.498 20.573l7.497-4.353-7.497-3.348z" fill="#fff" fill-opacity=".2"/><path d="M9 16.22l7.498 4.353v-7.701z" fill="#fff" fill-opacity=".602"/></svg>
+                  </span>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Ethereum</span></div>
+                    <div class="text-xs text-amber-600 mt-0.5">~3 min · taxa alta</div>
+                  </div>
+                  <svg class="chain-tick w-5 h-5 text-blue-600 opacity-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </button>
+                </div>
               </div>
-              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-
-            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="base" role="tab" aria-pressed="false">
-              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">B</div>
-              <div class="flex-1 text-left">
-                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Base</span></div>
-                <div class="text-xs text-emerald-600 font-medium mt-0.5">Recomendado · ~1 min · taxa baixa</div>
-              </div>
-              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-
-            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="polygon" role="tab" aria-pressed="false">
-              <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">P</div>
-              <div class="flex-1 text-left">
-                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Polygon</span></div>
-                <div class="text-xs text-slate-500 mt-0.5">~2 min</div>
-              </div>
-              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-
-            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="ethereum" role="tab" aria-pressed="false">
-              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold">E</div>
-              <div class="flex-1 text-left">
-                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Ethereum</span></div>
-                <div class="text-xs text-amber-600 mt-0.5">~3 min · taxa alta</div>
-              </div>
-              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-            </button>
-
+            </div>
           </div>
 
           <!-- Payment block (QR + address + actions) -->
-          <div id="payBlock" class="rounded-2xl bg-slate-50 border border-slate-200 p-6 space-y-5">
+          <div id="payBlock" class="rounded-2xl bg-slate-50/80 border border-slate-200 p-6 space-y-5">
 
             <div class="flex items-start justify-between gap-3">
               <div>
-                <div class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em]">Envie exatamente</div>
+                <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.16em]">Envie exatamente</div>
                 <div class="text-2xl font-bold mt-1 text-slate-900 tabular-nums"><span id="amountNativeLabel">—</span> <span id="assetLabel" class="text-slate-500 text-base font-semibold">—</span></div>
               </div>
               <div id="ttlBlock" class="text-right hidden">
-                <div class="text-[10px] font-medium text-slate-500 uppercase tracking-[0.12em]">Expira em</div>
+                <div class="text-[10px] font-semibold text-slate-500 uppercase tracking-[0.12em]">Expira em</div>
                 <div id="ttlLabel" class="text-base font-mono font-semibold text-amber-600 mt-1 tabular-nums">--:--</div>
               </div>
             </div>
@@ -387,7 +434,7 @@
                 <img id="payQr" src="" alt="Payment QR" class="mx-auto" style="max-width:200px"/>
               </div>
               <div>
-                <div class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em] mb-1.5">Endereço de recebimento</div>
+                <div class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.12em] mb-1.5">Endereço de recebimento</div>
                 <div class="p-3 rounded-lg font-mono text-xs break-all" id="receiveAddress"></div>
               </div>
               <div class="grid grid-cols-2 gap-2">
@@ -416,7 +463,7 @@
             <h2 class="text-2xl font-bold text-slate-900 mb-2">Pagamento confirmado</h2>
             <p class="text-slate-500 text-sm mb-5">O merchant foi notificado.</p>
             <div id="txRow" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-left mb-4 hidden">
-              <div class="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 mb-1">Transação</div>
+              <div class="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 mb-1">Transação</div>
               <div id="txLabel" class="text-emerald-600 truncate font-mono text-xs"></div>
             </div>
             <a id="manualRedirect" href="#" class="zp-btn-primary inline-block px-5 py-2.5 rounded-lg text-sm font-semibold">Continuar</a>
@@ -609,7 +656,7 @@
 
     async function createInvoiceForChain(chain) {
       clearTimers();
-      currentChain = chain;
+      currentChain = chain; if (window.zpSyncChainTrigger) window.zpSyncChainTrigger(currentChain || chain);
       setActiveTab(chain);
       showLoading('Creating invoice on ' + chain.toUpperCase() + '…');
 
@@ -835,6 +882,48 @@
       bindEvents();
       await createInvoiceForChain(context.initialChain);
     })();
+
+    // V3 — chain dropdown wiring
+    (function setupChainDropdown() {
+      var trigger = document.getElementById('chainSelectTrigger');
+      var list = document.getElementById('chainSelectList');
+      if (!trigger || !list) return;
+
+      function setOpen(open) {
+        trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        list.classList.toggle('hidden', !open);
+      }
+      trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        setOpen(trigger.getAttribute('aria-expanded') !== 'true');
+      });
+      document.addEventListener('click', function(e) {
+        if (!list.contains(e.target) && e.target !== trigger) setOpen(false);
+      });
+
+      // Wire each option to close dropdown after selection
+      list.querySelectorAll('.chain-tab').forEach(function(btn) {
+        btn.addEventListener('click', function() { setTimeout(function() { setOpen(false); }, 50); });
+      });
+
+      // Mirror selected chain into trigger label/icon
+      function syncTrigger(chainKey) {
+        var btn = list.querySelector('.chain-tab[data-chain="' + chainKey + '"]');
+        if (!btn) return;
+        var iconHost = btn.querySelector('.chain-icon');
+        var nameNode = btn.querySelector('.font-semibold');
+        var subNode = btn.querySelector('.text-xs');
+        var triggerIcon = document.getElementById('chainSelectedIcon');
+        var triggerName = document.getElementById('chainSelectedName');
+        var triggerSub = document.getElementById('chainSelectedSub');
+        if (iconHost && triggerIcon) triggerIcon.innerHTML = iconHost.innerHTML;
+        if (nameNode && triggerName) triggerName.innerHTML = nameNode.innerHTML;
+        if (subNode && triggerSub) triggerSub.innerHTML = subNode.innerHTML;
+      }
+      // expose globally so existing JS can call it
+      window.zpSyncChainTrigger = syncTrigger;
+    })();
+
   </script>
 </body>
 </html>
