@@ -260,9 +260,9 @@
   <main class="min-h-screen lg:grid lg:grid-cols-[55%_45%] xl:grid-cols-[58%_42%]">
 
     <!-- LEFT — merchant identity (top-aligned, big typography) -->
-    <section class="px-6 lg:px-16 xl:px-24 pt-10 lg:pt-16 pb-12 lg:pb-16 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
+    <section class="px-6 lg:px-16 xl:px-24 pt-8 lg:pt-10 pb-12 lg:pb-16 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
 
-      <header class="flex items-center gap-3 mb-12 lg:mb-20 text-sm">
+      <header class="flex items-center gap-3 mb-8 lg:mb-12 text-sm">
         <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-200/60 transition-colors" aria-label="Voltar">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         </button>
@@ -273,22 +273,31 @@
       </header>
 
       <div class="max-w-xl">
-        <div class="text-sm font-medium text-slate-500 uppercase tracking-[0.16em] mb-4">Pagando para</div>
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-[0.18em] mb-3">Pagando para</div>
 
-        <h1 class="text-5xl sm:text-6xl lg:text-7xl xl:text-8xl font-bold text-slate-900 tracking-[-0.04em] leading-[0.95] mb-6 break-words" id="merchantLabel">@merchant</h1>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-[-0.03em] leading-[1.0] mb-4 break-words" id="merchantLabel">@merchant</h1>
 
-        <div id="descriptionBlock" class="hidden mb-10">
-          <p id="descriptionValue" class="text-slate-600 leading-relaxed text-lg lg:text-xl font-light"></p>
+        <div id="descriptionBlock" class="hidden mb-10"><p id="descriptionValue" class="hidden"></p></div>
+
+        <!-- Lock trust badge — prominent -->
+        <div class="inline-flex items-center gap-3 px-4 py-3 mb-10 rounded-2xl bg-emerald-50 border border-emerald-200 max-w-md">
+          <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          </div>
+          <div>
+            <div class="text-sm font-bold text-emerald-900 leading-tight">100% Safe Peer-to-Peer</div>
+            <div class="text-xs text-emerald-700 mt-0.5">Transação direta on-chain, sem intermediário</div>
+          </div>
         </div>
 
         <div class="pt-10 mt-2 border-t border-slate-200/80 max-w-md">
-          <div class="text-[11px] text-slate-400 font-semibold uppercase tracking-[0.16em] mb-5">Pagamento seguro</div>
+          <div class="text-[11px] text-slate-500 font-bold uppercase tracking-[0.16em] mb-5">Detalhes técnicos de segurança</div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3.5">
               <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200/70 flex items-center justify-center mt-0.5">
                 <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </span>
-              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+              <div class="text-sm text-slate-800 leading-relaxed pt-1">
                 <strong class="font-semibold text-slate-900">Não custodial.</strong> Fundos vão direto pra wallet do merchant. ZettaPay nunca toca seu dinheiro.
               </div>
             </li>
@@ -296,7 +305,7 @@
               <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-50 border border-blue-200/70 flex items-center justify-center mt-0.5">
                 <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
               </span>
-              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+              <div class="text-sm text-slate-800 leading-relaxed pt-1">
                 <strong class="font-semibold text-slate-900">TLS + HMAC-SHA256.</strong> Conexão criptografada, confirmação assinada criptograficamente.
               </div>
             </li>
@@ -304,7 +313,7 @@
               <span class="flex-shrink-0 w-8 h-8 rounded-lg bg-violet-50 border border-violet-200/70 flex items-center justify-center mt-0.5">
                 <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
               </span>
-              <div class="text-sm text-slate-700 leading-relaxed pt-1">
+              <div class="text-sm text-slate-800 leading-relaxed pt-1">
                 <strong class="font-semibold text-slate-900">Verificável on-chain.</strong> Toda transação auditável publicamente, sem dependência de terceiros.
               </div>
             </li>
@@ -511,10 +520,10 @@
     };
 
     const WALLET_HINT = {
-      btc: 'Open your Bitcoin wallet (hardware, mobile, or exchange withdraw) — scan the QR or paste the address, then send exactly the amount above. Bitcoin typically confirms in ~30 minutes.',
-      base: 'Open your EVM wallet on Base — scan the QR or paste the address, then send USDC. Confirmation usually arrives in under a minute.',
-      polygon: 'Open your EVM wallet on Polygon — scan the QR or paste the address, then send USDC. Confirmation usually arrives in ~2 minutes.',
-      ethereum: 'Open your EVM wallet on Ethereum mainnet — scan the QR or paste the address, then send USDC. Gas can be high; expect ~3 minutes.',
+      btc: 'Abra sua wallet de Bitcoin (hardware, mobile ou exchange) — escaneie o QR ou cole o endereço, depois envie exatamente o valor acima. Bitcoin tipicamente confirma em ~30 minutos.',
+      base: 'Abra sua wallet em Base (MetaMask, Coinbase Wallet, Rabby) — envie USDC exatamente no valor acima. Confirma em ~1 minuto, taxa de centavos.',
+      polygon: 'Abra sua wallet em Polygon (MetaMask, Rabby) — envie USDC exatamente no valor acima. Confirma em ~2 minutos.',
+      ethereum: 'Abra sua wallet em Ethereum (MetaMask, Rabby, hardware) — envie USDC exatamente no valor acima. Taxa de gas pode ser alta.',
     };
 
     const els = {
@@ -609,7 +618,7 @@
     }
 
     function renderHeader() {
-      els.merchantLabel.textContent = '@' + (context.shopName || context.merchantSlug || 'merchant');
+      els.merchantLabel.textContent = '@' + (context.shopName || context.description || context.merchantSlug || 'merchant');
       var mobileMerchant = document.getElementById('merchantLabelMobile');
       if (mobileMerchant) mobileMerchant.textContent = els.merchantLabel.textContent;
       var mobileAmount = document.getElementById('amountValueMobile');
@@ -723,8 +732,8 @@
 
     function resetStatus() {
       els.statusDot.className = 'status-dot status-pending';
-      els.statusLabel.textContent = 'Awaiting payment on Bitcoin mainnet';
-      els.statusSub.textContent = 'mempool.space watching this address — confirmation fires within seconds of broadcast.';
+      els.statusLabel.textContent = 'Aguardando pagamento na Bitcoin mainnet';
+      els.statusSub.textContent = 'mempool.space monitorando este endereço — confirmação dispara em segundos após broadcast.';
     }
 
     function setDetected(confirmations, required) {
