@@ -88,7 +88,7 @@
     .btn-secondary {
       background: rgba(79, 107, 255, 0.08);
       border: 1px solid rgba(79, 107, 255, 0.3);
-      color: #FFFFFF;
+      color: var(--ink, #FFFFFF);
       transition: all 0.2s ease;
       font-weight: 600;
     }
@@ -96,7 +96,7 @@
     .btn-ghost {
       background: rgba(79, 107, 255, 0.05);
       border: 1px solid rgba(79, 107, 255, 0.3);
-      color: #FFFFFF;
+      color: var(--ink, #FFFFFF);
       transition: all 0.25s ease;
     }
     .btn-ghost:hover { background: rgba(79, 107, 255, 0.1); border-color: rgba(79, 107, 255, 0.6); }
@@ -176,6 +176,7 @@
     .status-confirmed { background: #14F195; box-shadow: 0 0 10px rgba(20, 241, 149, 0.7); }
   </style>
   <script src="/theme-toggle.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
 </head>
 <body class="grid-bg">
   <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
@@ -559,7 +560,7 @@
 
     function renderInvoice() {
       const chain = invoice.chain || currentChain;
-      els.amountNativeLabel.textContent = invoice.amount_native || '—';
+      els.amountNativeLabel.textContent = (typeof invoice.amount_btc === 'number') ? invoice.amount_btc.toFixed(8).replace(/0+$/,'').replace(/\.$/,'') : (invoice.amount_native || '—');
       els.assetLabel.textContent = ASSET_LABEL[chain] || '';
       els.receiveAddress.textContent = invoice.receive_address;
       els.walletHint.textContent = WALLET_HINT[chain] || '';
@@ -682,7 +683,7 @@
 
     function startTtlCountdown() {
       if (!invoice || !invoice.expires_at) return;
-      const expiresMs = Number(invoice.expires_at) * 1000;
+      const expiresMs = new Date(invoice.expires_at).getTime();
       function tick() {
         const remaining = Math.max(0, Math.floor((expiresMs - Date.now()) / 1000));
         const mm = Math.floor(remaining / 60);
