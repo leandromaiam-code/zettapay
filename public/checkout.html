@@ -528,7 +528,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
           body: JSON.stringify({
-            merchant: context.merchant,
+            merchant_id: context.merchant,
             amount_usd: context.amountUsd,
             chain: chain,
           }),
