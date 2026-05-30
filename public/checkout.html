@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <script>document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.colorScheme='dark';</script>
   <link rel="stylesheet" href="/theme.css" />
   <meta name="description" content="ZettaPay hosted checkout — pay an invoice in Bitcoin or USDC on Base, Polygon, or Ethereum. No wallet connection required." />
   <meta name="robots" content="noindex, nofollow" />
@@ -176,7 +176,116 @@
     .status-confirmed { background: #14F195; box-shadow: 0 0 10px rgba(20, 241, 149, 0.7); }
   </style>
   <script src="/theme-toggle.js" defer></script>
-  </head>
+  <style id="zp-checkout-dark-override">
+    :root, html[data-theme="dark"] {
+      color-scheme: dark !important;
+      --bg: #060814;
+      --bg-elev: #0E1224;
+      --ink: #F4F6FF;
+      --ink-muted: #94A3B8;
+      --accent: #4F6BFF;
+      --accent-mint: #14F195;
+      --accent-solana: #9945FF;
+    }
+    html, body {
+      background: #060814 !important;
+      color: #F4F6FF !important;
+    }
+    /* Sophisticated mesh gradient background */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(79, 107, 255, 0.18) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 25%, rgba(153, 69, 255, 0.14) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 50% at 70% 95%, rgba(20, 241, 149, 0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 10% 80%, rgba(79, 107, 255, 0.10) 0%, transparent 60%),
+        linear-gradient(180deg, #060814 0%, #050610 100%);
+      pointer-events: none;
+    }
+    /* Fine grid overlay */
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background-image:
+        linear-gradient(rgba(79, 107, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 107, 255, 0.035) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 30%, transparent 100%);
+      pointer-events: none;
+    }
+    /* Cards: glass dark with subtle border */
+    .glass, .card, [class*="bg-deep-card"], [class*="bg-white"] {
+      background: rgba(14, 18, 36, 0.72) !important;
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
+      border: 1px solid rgba(79, 107, 255, 0.16) !important;
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.04) inset,
+        0 20px 50px -20px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(79, 107, 255, 0.05) !important;
+    }
+    /* Inputs */
+    input, textarea, select {
+      background: rgba(255, 255, 255, 0.03) !important;
+      border: 1px solid rgba(79, 107, 255, 0.18) !important;
+      color: #F4F6FF !important;
+    }
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(79, 107, 255, 0.5) !important;
+      box-shadow: 0 0 0 3px rgba(79, 107, 255, 0.12) !important;
+      outline: none;
+    }
+    /* Secondary buttons (Copy, Open wallet, Verify) */
+    .btn-secondary, .btn-ghost {
+      background: rgba(79, 107, 255, 0.10) !important;
+      border: 1px solid rgba(79, 107, 255, 0.28) !important;
+      color: #F4F6FF !important;
+      font-weight: 600;
+    }
+    .btn-secondary:hover, .btn-ghost:hover {
+      background: rgba(79, 107, 255, 0.18) !important;
+      border-color: rgba(79, 107, 255, 0.5) !important;
+    }
+    /* Chain selector card highlight */
+    [class*="chain-option"] {
+      background: rgba(14, 18, 36, 0.5) !important;
+      border: 1px solid rgba(79, 107, 255, 0.16) !important;
+    }
+    /* QR code container — bright white card centered with breathing room */
+    #payQr {
+      background: #FFFFFF;
+      padding: 12px;
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(79, 107, 255, 0.2);
+    }
+    /* Headings + key labels gradient */
+    .gradient-text {
+      background: linear-gradient(135deg, #6B82FF 0%, #14F195 50%, #9945FF 100%) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      color: transparent !important;
+    }
+    /* Address mono block */
+    .address-display, #receiveAddress {
+      background: rgba(255, 255, 255, 0.04) !important;
+      border: 1px solid rgba(79, 107, 255, 0.18) !important;
+      color: #F4F6FF !important;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Top "Secure Checkout" pill stays vivid */
+    [class*="text-mint"], [class*="status-pending"] { color: #14F195 !important; }
+    /* Make all neutral text lighter */
+    [class*="text-muted"] { color: #94A3B8 !important; }
+    [class*="text-slate"] { color: #94A3B8 !important; }
+  </style>
+</head>
 <body class="grid-bg">
   <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
   <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.12;"></div>
