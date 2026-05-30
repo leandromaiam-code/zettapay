@@ -260,9 +260,9 @@
   <main class="min-h-screen lg:grid lg:grid-cols-[55%_45%] xl:grid-cols-[58%_42%]">
 
     <!-- LEFT — merchant identity (top-aligned, big typography) -->
-    <section class="px-6 lg:px-16 xl:px-24 pt-8 lg:pt-10 pb-12 lg:pb-16 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
+    <section class="px-6 lg:px-12 xl:px-16 pt-4 lg:pt-6 pb-10 lg:pb-12 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
 
-      <header class="flex items-center gap-3 mb-8 lg:mb-12 text-sm">
+      <header class="flex items-center gap-3 mb-4 lg:mb-6 text-sm">
         <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-200/60 transition-colors" aria-label="Voltar">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         </button>
@@ -277,10 +277,10 @@
 
         <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-[-0.03em] leading-[1.0] mb-4 break-words" id="merchantLabel">@merchant</h1>
 
-        <div id="descriptionBlock" class="hidden mb-10"><p id="descriptionValue" class="hidden"></p></div>
+        <div id="descriptionBlock" class="hidden"><p id="descriptionValue" class="hidden"></p></div>
 
         <!-- Lock trust badge — prominent -->
-        <div class="inline-flex items-center gap-3 px-4 py-3 mb-10 rounded-2xl bg-emerald-50 border border-emerald-200 max-w-md">
+        <div class="inline-flex items-center gap-3 px-4 py-3 mb-8 mt-2 rounded-2xl bg-emerald-50 border border-emerald-200 max-w-md">
           <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
@@ -290,7 +290,7 @@
           </div>
         </div>
 
-        <div class="pt-10 mt-2 border-t border-slate-200/80 max-w-md">
+        <div class="pt-6 mt-0 border-t border-slate-200/80 max-w-md">
           <div class="text-[11px] text-slate-500 font-bold uppercase tracking-[0.16em] mb-5">Detalhes técnicos de segurança</div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3.5">
@@ -327,7 +327,7 @@
     </section>
 
     <!-- RIGHT — payment form -->
-    <section class="bg-white px-6 lg:px-12 xl:px-16 pt-10 lg:pt-16 pb-12 lg:pb-16 lg:min-h-screen">
+    <section class="bg-white px-6 lg:px-10 xl:px-14 pt-4 lg:pt-6 pb-10 lg:pb-12 lg:min-h-screen">
 
       <div class="max-w-md mx-auto lg:mx-0">
 
@@ -345,8 +345,8 @@
         <div id="checkoutCard" class="hidden">
 
           <!-- AMOUNT — only on right side now -->
-          <div class="mb-10">
-            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.16em] mb-2">Total a pagar</div>
+          <div class="mb-6">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.16em] mb-1">Total a pagar</div>
             <div class="flex items-baseline gap-2">
               <span class="text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight tabular-nums">$<span id="amountValue">0</span></span>
               <span class="text-slate-500 text-lg font-medium">USD</span>
@@ -354,8 +354,8 @@
           </div>
 
           <!-- Chain selector — dropdown style with brand icons -->
-          <div class="mb-8">
-            <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-3 block">Método de pagamento</label>
+          <div class="mb-5">
+            <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-2 block">Método de pagamento</label>
 
             <div class="chain-select-wrapper relative">
               <button type="button" id="chainSelectTrigger" class="chain-select-trigger w-full flex items-center justify-between gap-3 p-4 rounded-xl text-left transition-all" aria-expanded="false" aria-haspopup="listbox">
@@ -420,7 +420,7 @@
           </div>
 
           <!-- Payment block (QR + address + actions) -->
-          <div id="payBlock" class="rounded-2xl bg-slate-50/80 border border-slate-200 p-6 space-y-5">
+          <div id="payBlock" class="rounded-2xl bg-slate-50/80 border border-slate-200 p-5 space-y-4">
 
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -451,15 +451,15 @@
                 <a id="openWalletLink" href="#" class="zp-btn-secondary px-4 py-2.5 rounded-lg text-sm text-center">Abrir na wallet</a>
               </div>
               <a id="verifyExplorerLink" href="#" target="_blank" rel="noopener" class="block text-center text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium pt-1">Verificar no block explorer ↗</a>
-              <p id="walletHint" class="text-xs text-slate-500 leading-relaxed pt-2"></p>
+              <p id="walletHint" class="text-sm text-slate-600 leading-snug pt-2 font-medium"></p>
             </div>
 
             <div id="statusBlock" class="hidden border-t border-slate-200 pt-4">
               <div class="flex items-center gap-2">
                 <span id="statusDot" class="status-dot status-pending"></span>
-                <span id="statusLabel" class="text-sm font-semibold text-slate-900">Aguardando pagamento…</span>
+                <span id="statusLabel" class="text-base font-semibold text-slate-900">Aguardando pagamento…</span>
               </div>
-              <div id="statusSub" class="text-xs text-slate-500 mt-1.5">mempool.space monitorando este endereço.</div>
+              <div id="statusSub" class="text-sm text-slate-600 mt-1.5 font-medium">Monitorando a blockchain em tempo real.</div>
             </div>
 
           </div>
@@ -520,10 +520,10 @@
     };
 
     const WALLET_HINT = {
-      btc: 'Abra sua wallet de Bitcoin (hardware, mobile ou exchange) — escaneie o QR ou cole o endereço, depois envie exatamente o valor acima. Bitcoin tipicamente confirma em ~30 minutos.',
-      base: 'Abra sua wallet em Base (MetaMask, Coinbase Wallet, Rabby) — envie USDC exatamente no valor acima. Confirma em ~1 minuto, taxa de centavos.',
-      polygon: 'Abra sua wallet em Polygon (MetaMask, Rabby) — envie USDC exatamente no valor acima. Confirma em ~2 minutos.',
-      ethereum: 'Abra sua wallet em Ethereum (MetaMask, Rabby, hardware) — envie USDC exatamente no valor acima. Taxa de gas pode ser alta.',
+      btc: 'Envie o valor exato da sua wallet BTC. Confirma em ~10–30 min.',
+      base: 'Envie USDC da sua wallet em Base. Confirma em ~1 min.',
+      polygon: 'Envie USDC da sua wallet em Polygon. Confirma em ~2 min.',
+      ethereum: 'Envie USDC da sua wallet em Ethereum. Taxa de gas pode ser alta.',
     };
 
     const els = {
@@ -732,8 +732,8 @@
 
     function resetStatus() {
       els.statusDot.className = 'status-dot status-pending';
-      els.statusLabel.textContent = 'Aguardando pagamento na Bitcoin mainnet';
-      els.statusSub.textContent = 'mempool.space monitorando este endereço — confirmação dispara em segundos após broadcast.';
+      els.statusLabel.textContent = 'Aguardando pagamento';
+      els.statusSub.textContent = 'Monitorando a blockchain em tempo real.';
     }
 
     function setDetected(confirmations, required) {
