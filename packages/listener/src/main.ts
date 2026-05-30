@@ -6,7 +6,8 @@
 import { createStorage } from './storage/index.js';
 import { BtcListener, type Logger } from './listener.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
-import { HealthServer, DEFAULT_HEALTH_PORT } from './health-server.js';
+import { DEFAULT_HEALTH_PORT } from './health-server.js';
+import { AppServer } from './http-server.js';
 import { runInit } from './cli/init.js';
 import { runHealthcheck } from './cli/healthcheck.js';
 import { runVerifyConfig } from './cli/verify-config.js';
@@ -146,13 +147,20 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     webhookSecret: cfg.webhookSecret,
     logger: consoleLogger,
   });
-  const health = new HealthServer({
+  const apiServer = new AppServer({
     port: cfg.healthPort,
     statusProvider: () => listener.status(),
+    storage,
+    merchantId,
+    apiKey: process.env.ZETTAPAY_API_KEY?.trim() || undefined,
+    corsOrigins: (process.env.MERCHANT_ORIGIN ?? '')
+      .split(',')
+      .map((o) => o.trim())
+      .filter(Boolean),
     logger: consoleLogger,
   });
 
-  await health.start();
+  await apiServer.start();
   dispatcher.start();
   await listener.start();
 
@@ -169,7 +177,7 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     try {
       await listener.stop();
       await dispatcher.stop();
-      await health.stop();
+      await apiServer.stop();
       if (storage.close) await storage.close();
     } finally {
       process.exit(0);
