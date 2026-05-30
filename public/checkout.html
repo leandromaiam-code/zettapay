@@ -176,196 +176,260 @@
     .status-confirmed { background: #14F195; box-shadow: 0 0 10px rgba(20, 241, 149, 0.7); }
   </style>
   <script src="/theme-toggle.js" defer></script>
-  </head>
-<body class="grid-bg">
+  <style id="zp-checkout-stripe">
+    :root { color-scheme: light; }
+    html, body { background: #FAFBFC !important; color: #0F172A !important; }
+    /* Kill the glow orbs / grid bg overlays from previous design */
+    .glow-orb { display: none !important; }
+    body::before, body::after { display: none !important; }
+    .grid-bg { background: none !important; }
+    .gradient-text {
+      background: linear-gradient(135deg, #2563EB 0%, #0891B2 100%) !important;
+      -webkit-background-clip: text !important;
+      background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      color: transparent !important;
+    }
+    /* Chain tabs — clean radio-card style */
+    .chain-tab {
+      background: #FFFFFF;
+      border: 1.5px solid #E2E8F0;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .chain-tab:hover { border-color: #CBD5E1; background: #F8FAFC; }
+    .chain-tab[aria-pressed="true"] {
+      border-color: #2563EB !important;
+      background: #EFF6FF !important;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.08);
+    }
+    .chain-tab[aria-pressed="true"] .chain-tick { opacity: 1; color: #2563EB; }
+    .chain-tick { opacity: 0; transition: opacity 0.15s ease; }
+    /* Buttons */
+    .zp-btn-primary {
+      background: #0F172A; color: #FFFFFF; font-weight: 600;
+      transition: all 0.15s ease; cursor: pointer;
+    }
+    .zp-btn-primary:hover { background: #1E293B; }
+    .zp-btn-secondary {
+      background: #FFFFFF; color: #0F172A; font-weight: 600;
+      border: 1.5px solid #E2E8F0; transition: all 0.15s ease; cursor: pointer;
+    }
+    .zp-btn-secondary:hover { background: #F8FAFC; border-color: #CBD5E1; }
+    /* Status dot — clean Stripe-ish */
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-dot.status-pending { background: #F59E0B; animation: pulse-soft 1.6s ease-in-out infinite; }
+    .status-dot.status-detected { background: #3B82F6; }
+    .status-dot.status-confirmed { background: #10B981; }
+    @keyframes pulse-soft { 0%,100%{opacity:1} 50%{opacity:0.45} }
+    /* Address mono block */
+    #receiveAddress {
+      background: #FFFFFF !important; border: 1.5px solid #E2E8F0 !important;
+      color: #334155 !important; font-family: 'JetBrains Mono', monospace !important;
+    }
+    /* Trust strip icons */
+    .trust-icon { width: 16px; height: 16px; flex-shrink: 0; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased" style="font-family: Inter, ui-sans-serif, system-ui; background:#FAFBFC;">
   <div class="glow-orb" style="background: #4F6BFF; width: 520px; height: 520px; top: -180px; right: -160px;"></div>
   <div class="glow-orb" style="background: #14F195; width: 420px; height: 420px; bottom: -120px; left: -120px; opacity: 0.12;"></div>
   <div class="glow-orb" style="background: #6B82FF; width: 360px; height: 360px; top: 35%; right: 28%; opacity: 0.07;"></div>
 
-  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
-    <div class="max-w-3xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
-      <a href="/" class="flex items-center gap-3 group">
-        <img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark" />
-      </a>
-      <div class="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-mint">
-        <span class="w-2 h-2 rounded-full bg-mint animate-pulse"></span>
-        <span class="hidden sm:inline">Secure checkout</span>
-      </div>
-    </div>
-  </nav>
+  
 
-  <main class="pt-28 pb-12 px-4 lg:px-12 relative z-10">
-    <div class="max-w-xl mx-auto">
+  <main class="min-h-screen lg:grid lg:grid-cols-2 lg:gap-0">
 
-      <div id="invalidCard" class="hidden glass rounded-3xl p-8 md:p-10 text-center animate-fade-up">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose/10 border border-rose/30 mb-5">
-          <svg class="w-8 h-8 text-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-        </div>
-        <h1 class="text-2xl font-bold mb-2">Invalid invoice</h1>
-        <p id="invalidReason" class="text-muted text-sm leading-relaxed mb-6">This checkout link is missing required parameters.</p>
-        <a href="/" class="btn-ghost inline-block px-5 py-2.5 rounded-full font-semibold text-sm">Back to ZettaPay</a>
-      </div>
+    <!-- LEFT — product info (desktop only sidebar style) -->
+    <section class="hidden lg:flex flex-col px-12 xl:px-20 py-16 bg-slate-50 border-r border-slate-200/80 min-h-screen relative">
+      <header class="flex items-center gap-3 mb-16 text-sm">
+        <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center gap-1.5 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        </button>
+        <span class="text-slate-300">·</span>
+        <a href="/" class="inline-flex items-center gap-2">
+          <img src="/Logo_symbol.png" class="w-5 h-5" alt=""/>
+          <span class="font-semibold text-slate-700">ZettaPay</span>
+        </a>
+      </header>
 
-      <div id="checkoutCard" class="hidden glass rounded-3xl p-6 md:p-10 animate-fade-up">
+      <div class="flex-1 flex flex-col justify-center max-w-md">
+        <div class="text-sm font-medium text-slate-500 mb-3" id="merchantLabel">@merchant</div>
 
-        <!-- Trust badges row -->
-        <div class="flex flex-wrap items-center justify-center gap-2 mb-5 text-xs">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-mint/10 border border-mint/30 text-mint font-semibold">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Non-custodial
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-royal/10 border border-royal/30 text-royal-bright font-semibold">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            TLS encrypted
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-solana/10 border border-solana/30 font-semibold" style="color:#B57DFF">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            HMAC signed
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/20 text-white/80 font-semibold">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
-            zettapay.vercel.app
-          </span>
+        <div class="flex items-baseline gap-2 mb-5">
+          <span class="text-5xl xl:text-6xl font-bold tracking-tight text-slate-900 tabular-nums">$<span id="amountValue">0</span></span>
+          <span class="text-slate-400 text-sm font-medium">USD</span>
         </div>
 
-        <div class="key-row rounded-2xl p-6 md:p-8 mb-6 text-center">
-          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">You are paying</div>
-          <div class="text-2xl md:text-3xl font-bold mb-3 tracking-tight" id="merchantLabel">@merchant</div>
-          <div class="amount-display text-5xl md:text-6xl mb-2">
-            <span class="text-muted text-2xl md:text-3xl font-bold align-top mr-1">$</span>
-            <span id="amountValue" class="gradient-text">0</span>
-            <span class="text-2xl md:text-3xl text-white/80 font-bold tracking-tight ml-1">USD</span>
-          </div>
-          <div class="text-xs text-muted font-mono mt-3">Funds settle directly to merchant wallet &middot; <span class="text-mint">P2P on-chain confirmation</span></div>
+        <div id="descriptionBlock" class="hidden mb-10">
+          <p id="descriptionValue" class="text-slate-600 leading-relaxed text-[15px]"></p>
         </div>
 
-        <div id="descriptionBlock" class="hidden mb-6">
-          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-2">Description</div>
-          <p id="descriptionValue" class="text-sm text-white/90 leading-relaxed bg-deep-card/40 border border-royal/10 rounded-xl px-4 py-3"></p>
-        </div>
-
-        <div class="mb-5">
-          <div class="text-xs font-mono uppercase tracking-widest text-muted mb-3">Choose payment chain</div>
-          <div class="grid grid-cols-2 gap-2.5" id="chainTabs" role="tablist">
-            <button type="button" class="chain-tab rounded-xl px-3 py-3 text-left" data-chain="base" role="tab" aria-pressed="false">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-semibold">USDC on Base</div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted font-mono mt-0.5">Recommended &middot; ~1 min</div>
-                </div>
-                <svg class="chain-tick w-4 h-4 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-              </div>
-            </button>
-            <button type="button" class="chain-tab rounded-xl px-3 py-3 text-left" data-chain="btc" role="tab" aria-pressed="false">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-semibold">Bitcoin</div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted font-mono mt-0.5">BTC &middot; ~30 min</div>
-                </div>
-                <svg class="chain-tick w-4 h-4 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-              </div>
-            </button>
-            <button type="button" class="chain-tab rounded-xl px-3 py-3 text-left" data-chain="polygon" role="tab" aria-pressed="false">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-semibold">USDC on Polygon</div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted font-mono mt-0.5">~2 min</div>
-                </div>
-                <svg class="chain-tick w-4 h-4 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-              </div>
-            </button>
-            <button type="button" class="chain-tab rounded-xl px-3 py-3 text-left" data-chain="ethereum" role="tab" aria-pressed="false">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-sm font-semibold">USDC on Ethereum</div>
-                  <div class="text-[10px] uppercase tracking-widest text-muted font-mono mt-0.5">~3 min &middot; high fee</div>
-                </div>
-                <svg class="chain-tick w-4 h-4 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <div id="payBlock" class="glass rounded-2xl p-6 space-y-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <div class="text-xs font-mono uppercase tracking-widest text-muted">Send exactly</div>
-              <div class="text-2xl font-bold mt-1"><span id="amountNativeLabel">—</span> <span id="assetLabel" class="text-white/80">—</span></div>
-            </div>
-            <div id="ttlBlock" class="text-right hidden">
-              <div class="text-[10px] font-mono uppercase tracking-widest text-muted">Expires in</div>
-              <div id="ttlLabel" class="text-base font-mono font-semibold text-amber mt-1 tabular-nums">--:--</div>
-            </div>
-          </div>
-
-          <div id="loadingBlock" class="text-center py-8">
-            <div class="inline-block w-8 h-8 border-2 border-royal-bright border-t-transparent rounded-full animate-spin"></div>
-            <div class="text-xs text-muted font-mono uppercase tracking-widest mt-3" id="loadingLabel">Creating invoice…</div>
-          </div>
-
-          <div id="addressBlock" class="hidden space-y-4">
-            <div class="qr-container text-center">
-              <img id="payQr" src="" alt="Payment QR" class="mx-auto rounded-xl" style="max-width:240px"/>
-            </div>
-            <div>
-              <div class="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">Receive address</div>
-              <div class="address-display p-3 bg-black/40 rounded-lg font-mono text-xs break-all" id="receiveAddress"></div>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <button type="button" id="copyBtn" class="btn-secondary px-4 py-2 rounded-lg text-sm">Copy address</button>
-              <a id="openWalletLink" href="#" class="btn-secondary px-4 py-2 rounded-lg text-sm inline-block">Open in wallet</a>
-              <a id="verifyExplorerLink" href="#" target="_blank" rel="noopener" class="btn-ghost px-4 py-2 rounded-lg text-sm inline-block">Verify on block explorer ↗</a>
-            </div>
-            <p id="walletHint" class="text-sm text-muted leading-relaxed"></p>
-          </div>
-
-          <div id="statusBlock" class="hidden border-t border-royal/15 pt-4">
-            <div class="flex items-center gap-2">
-              <span id="statusDot" class="status-dot status-pending"></span>
-              <span id="statusLabel" class="text-sm font-semibold">Awaiting payment…</span>
-            </div>
-            <div id="statusSub" class="text-xs text-muted mt-1.5 font-mono">Watching the chain. Confirmation in ~1 min after broadcast.</div>
-          </div>
-
-          <div class="flex items-center justify-center gap-2 secure-pill rounded-full px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest text-mint mx-auto w-fit">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-            <span>Non-custodial &middot; You control the keys</span>
-          </div>
-        </div>
-
-        <div id="successBlock" class="hidden text-center py-4 mt-4">
-          <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-mint/10 border-2 border-mint/40 mb-5">
-            <svg class="w-10 h-10 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="check-mark" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-          </div>
-          <h2 class="text-2xl font-bold mb-2">Payment confirmed</h2>
-          <p class="text-muted text-sm mb-5 leading-relaxed">The merchant has been notified.</p>
-          <div id="txRow" class="key-row rounded-xl px-4 py-3 text-left mb-4 hidden">
-            <div class="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Transaction</div>
-            <div id="txLabel" class="key-value text-mint truncate"></div>
-          </div>
-          <a id="manualRedirect" href="#" class="btn-ghost inline-block px-5 py-2.5 rounded-full font-semibold text-sm">Continue</a>
+        <div class="pt-8 border-t border-slate-200/80">
+          <div class="text-[11px] text-slate-400 font-medium uppercase tracking-[0.12em] mb-4">Pagamento seguro</div>
+          <ul class="space-y-3 text-sm text-slate-600">
+            <li class="flex items-start gap-3">
+              <svg class="trust-icon mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span><strong class="font-semibold text-slate-900">Não custodial.</strong> Fundos vão direto pra wallet do merchant. ZettaPay nunca toca o dinheiro.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="trust-icon mt-0.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              <span><strong class="font-semibold text-slate-900">TLS + HMAC.</strong> Conexão criptografada, confirmação assinada com SHA-256.</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="trust-icon mt-0.5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
+              <span><strong class="font-semibold text-slate-900">Verificável on-chain.</strong> Toda transação auditável publicamente no blockchain.</span>
+            </li>
+          </ul>
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-3 mt-8 text-center">
-        <div class="glass rounded-xl p-3">
-          <div class="text-base md:text-lg font-bold gradient-text">0%</div>
-          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Fee</div>
+      <footer class="text-[11px] text-slate-400 mt-12">
+        Powered by <a href="/" class="font-semibold text-slate-700 hover:text-slate-900">ZettaPay</a> · Open-source protocol
+      </footer>
+    </section>
+
+    <!-- RIGHT — payment form -->
+    <section class="bg-white min-h-screen px-6 lg:px-12 xl:px-20 py-10 lg:py-16">
+
+      <!-- Mobile-only product summary -->
+      <div class="lg:hidden mb-8 pb-8 border-b border-slate-200">
+        <div class="flex items-center gap-2 mb-4 text-sm">
+          <img src="/Logo_symbol.png" class="w-5 h-5" alt=""/>
+          <span class="font-semibold text-slate-700">ZettaPay</span>
         </div>
-        <div class="glass rounded-xl p-3">
-          <div class="text-base md:text-lg font-bold gradient-text">P2P</div>
-          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Non-custodial</div>
-        </div>
-        <div class="glass rounded-xl p-3">
-          <div class="text-base md:text-lg font-bold gradient-text">4</div>
-          <div class="text-[10px] uppercase tracking-widest text-muted mt-1">Chains</div>
+        <div class="text-sm font-medium text-slate-500 mb-1">Pagando para</div>
+        <div class="font-semibold text-slate-900 mb-3" id="merchantLabelMobile">@merchant</div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-slate-900 tabular-nums">$<span id="amountValueMobile">0</span></span>
+          <span class="text-slate-400 text-sm font-medium">USD</span>
         </div>
       </div>
 
-      <p class="text-[11px] text-muted/70 text-center mt-6 leading-relaxed">
-        Powered by <a href="/" class="text-royal-bright hover:underline">ZettaPay</a>. Pay from any wallet &mdash; no install or connection required.
-      </p>
-    </div>
+      <div class="max-w-md mx-auto lg:mx-0">
+
+        <!-- Invalid invoice fallback -->
+        <div id="invalidCard" class="hidden text-center py-12">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-rose-50 border border-rose-200 mb-5">
+            <svg class="w-7 h-7 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          </div>
+          <h1 class="text-xl font-semibold text-slate-900 mb-2">Invoice inválida</h1>
+          <p id="invalidReason" class="text-slate-500 text-sm leading-relaxed mb-6">Faltam parâmetros obrigatórios neste link.</p>
+          <a href="/" class="zp-btn-secondary inline-block px-5 py-2.5 rounded-lg text-sm">Voltar</a>
+        </div>
+
+        <!-- Checkout form -->
+        <div id="checkoutCard" class="hidden">
+
+          <h2 class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em] mb-4">Forma de pagamento</h2>
+
+          <div class="space-y-2 mb-8" id="chainTabs" role="tablist">
+
+            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="btc" role="tab" aria-pressed="false">
+              <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-lg">₿</div>
+              <div class="flex-1 text-left">
+                <div class="font-semibold text-slate-900">Bitcoin</div>
+                <div class="text-xs text-slate-500 mt-0.5">~10-30 min · 0 fee</div>
+              </div>
+              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </button>
+
+            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="base" role="tab" aria-pressed="false">
+              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">B</div>
+              <div class="flex-1 text-left">
+                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Base</span></div>
+                <div class="text-xs text-emerald-600 font-medium mt-0.5">Recomendado · ~1 min · taxa baixa</div>
+              </div>
+              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </button>
+
+            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="polygon" role="tab" aria-pressed="false">
+              <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold">P</div>
+              <div class="flex-1 text-left">
+                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Polygon</span></div>
+                <div class="text-xs text-slate-500 mt-0.5">~2 min</div>
+              </div>
+              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </button>
+
+            <button type="button" class="chain-tab w-full flex items-center gap-4 p-4 rounded-xl" data-chain="ethereum" role="tab" aria-pressed="false">
+              <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold">E</div>
+              <div class="flex-1 text-left">
+                <div class="font-semibold text-slate-900">USDC <span class="text-slate-500 font-normal">on Ethereum</span></div>
+                <div class="text-xs text-amber-600 mt-0.5">~3 min · taxa alta</div>
+              </div>
+              <svg class="chain-tick w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </button>
+
+          </div>
+
+          <!-- Payment block (QR + address + actions) -->
+          <div id="payBlock" class="rounded-2xl bg-slate-50 border border-slate-200 p-6 space-y-5">
+
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em]">Envie exatamente</div>
+                <div class="text-2xl font-bold mt-1 text-slate-900 tabular-nums"><span id="amountNativeLabel">—</span> <span id="assetLabel" class="text-slate-500 text-base font-semibold">—</span></div>
+              </div>
+              <div id="ttlBlock" class="text-right hidden">
+                <div class="text-[10px] font-medium text-slate-500 uppercase tracking-[0.12em]">Expira em</div>
+                <div id="ttlLabel" class="text-base font-mono font-semibold text-amber-600 mt-1 tabular-nums">--:--</div>
+              </div>
+            </div>
+
+            <div id="loadingBlock" class="text-center py-10">
+              <div class="inline-block w-8 h-8 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin"></div>
+              <div class="text-xs text-slate-500 font-medium uppercase tracking-[0.12em] mt-3" id="loadingLabel">Criando invoice…</div>
+            </div>
+
+            <div id="addressBlock" class="hidden space-y-4">
+              <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <img id="payQr" src="" alt="Payment QR" class="mx-auto" style="max-width:200px"/>
+              </div>
+              <div>
+                <div class="text-[11px] font-medium text-slate-500 uppercase tracking-[0.12em] mb-1.5">Endereço de recebimento</div>
+                <div class="p-3 rounded-lg font-mono text-xs break-all" id="receiveAddress"></div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="copyBtn" class="zp-btn-primary px-4 py-2.5 rounded-lg text-sm">Copiar endereço</button>
+                <a id="openWalletLink" href="#" class="zp-btn-secondary px-4 py-2.5 rounded-lg text-sm text-center">Abrir na wallet</a>
+              </div>
+              <a id="verifyExplorerLink" href="#" target="_blank" rel="noopener" class="block text-center text-xs text-blue-600 hover:text-blue-700 hover:underline font-medium pt-1">Verificar no block explorer ↗</a>
+              <p id="walletHint" class="text-xs text-slate-500 leading-relaxed pt-2"></p>
+            </div>
+
+            <div id="statusBlock" class="hidden border-t border-slate-200 pt-4">
+              <div class="flex items-center gap-2">
+                <span id="statusDot" class="status-dot status-pending"></span>
+                <span id="statusLabel" class="text-sm font-semibold text-slate-900">Aguardando pagamento…</span>
+              </div>
+              <div id="statusSub" class="text-xs text-slate-500 mt-1.5">mempool.space monitorando este endereço.</div>
+            </div>
+
+          </div>
+
+          <!-- Success state -->
+          <div id="successBlock" class="hidden text-center py-8 mt-4">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-50 border-2 border-emerald-200 mb-5">
+              <svg class="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path class="check-mark" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Pagamento confirmado</h2>
+            <p class="text-slate-500 text-sm mb-5">O merchant foi notificado.</p>
+            <div id="txRow" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-left mb-4 hidden">
+              <div class="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500 mb-1">Transação</div>
+              <div id="txLabel" class="text-emerald-600 truncate font-mono text-xs"></div>
+            </div>
+            <a id="manualRedirect" href="#" class="zp-btn-primary inline-block px-5 py-2.5 rounded-lg text-sm font-semibold">Continuar</a>
+          </div>
+
+          <p class="text-[11px] text-slate-400 text-center mt-8 leading-relaxed">
+            Sem cartão, sem cadastro, sem custodian.<br>Pagamento direto na blockchain.
+          </p>
+
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <script>
@@ -499,7 +563,13 @@
 
     function renderHeader() {
       els.merchantLabel.textContent = '@' + (context.shopName || context.merchantSlug || 'merchant');
+      var mobileMerchant = document.getElementById('merchantLabelMobile');
+      if (mobileMerchant) mobileMerchant.textContent = els.merchantLabel.textContent;
+      var mobileAmount = document.getElementById('amountValueMobile');
+      var amountVal = els.amountValue ? els.amountValue.textContent : '';
+      if (mobileAmount && amountVal) mobileAmount.textContent = amountVal;
       els.amountValue.textContent = formatUsd(context.amountUsd);
+      if (document.getElementById('amountValueMobile')) document.getElementById('amountValueMobile').textContent = els.amountValue.textContent;
       if (context.description) {
         els.descriptionValue.textContent = context.description;
         els.descriptionBlock.classList.remove('hidden');
