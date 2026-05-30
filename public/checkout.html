@@ -260,9 +260,9 @@
   <main class="min-h-screen lg:grid lg:grid-cols-[55%_45%] xl:grid-cols-[58%_42%]">
 
     <!-- LEFT — merchant identity (top-aligned, big typography) -->
-    <section class="px-6 lg:px-12 xl:px-16 pt-4 lg:pt-6 pb-10 lg:pb-12 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
+    <section class="px-6 lg:px-12 xl:px-16 pt-3 lg:pt-4 pb-8 lg:pb-10 bg-slate-50 lg:min-h-screen lg:border-r border-slate-200/70 flex flex-col">
 
-      <header class="flex items-center gap-3 mb-4 lg:mb-6 text-sm">
+      <header class="flex items-center gap-3 mb-3 lg:mb-4 text-sm">
         <button onclick="history.back()" class="text-slate-400 hover:text-slate-700 inline-flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-200/60 transition-colors" aria-label="Voltar">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
         </button>
@@ -273,14 +273,14 @@
       </header>
 
       <div class="max-w-xl">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-[0.18em] mb-3">Pagando para</div>
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-[0.18em] mb-2">Pagando para</div>
 
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-[-0.03em] leading-[1.0] mb-4 break-words" id="merchantLabel">@merchant</h1>
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 tracking-[-0.03em] leading-[1.0] mb-3 break-words" id="merchantLabel">@merchant</h1>
 
         <div id="descriptionBlock" class="hidden"><p id="descriptionValue" class="hidden"></p></div>
 
         <!-- Lock trust badge — prominent -->
-        <div class="inline-flex items-center gap-3 px-4 py-3 mb-8 mt-2 rounded-2xl bg-emerald-50 border border-emerald-200 max-w-md">
+        <div class="inline-flex items-center gap-3 px-4 py-3 mb-6 mt-1 rounded-2xl bg-emerald-50 border border-emerald-200 max-w-md">
           <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
@@ -290,7 +290,7 @@
           </div>
         </div>
 
-        <div class="pt-6 mt-0 border-t border-slate-200/80 max-w-md">
+        <div class="pt-5 mt-0 border-t border-slate-200/80 max-w-md">
           <div class="text-[11px] text-slate-500 font-bold uppercase tracking-[0.16em] mb-5">Detalhes técnicos de segurança</div>
           <ul class="space-y-4">
             <li class="flex items-start gap-3.5">
@@ -327,7 +327,7 @@
     </section>
 
     <!-- RIGHT — payment form -->
-    <section class="bg-white px-6 lg:px-10 xl:px-14 pt-4 lg:pt-6 pb-10 lg:pb-12 lg:min-h-screen">
+    <section class="bg-white px-6 lg:px-10 xl:px-14 pt-3 lg:pt-4 pb-8 lg:pb-10 lg:min-h-screen">
 
       <div class="max-w-md mx-auto lg:mx-0">
 
@@ -345,16 +345,16 @@
         <div id="checkoutCard" class="hidden">
 
           <!-- AMOUNT — only on right side now -->
-          <div class="mb-6">
+          <div class="mb-4">
             <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-[0.16em] mb-1">Total a pagar</div>
             <div class="flex items-baseline gap-2">
-              <span class="text-5xl lg:text-6xl font-bold text-slate-900 tracking-tight tabular-nums">$<span id="amountValue">0</span></span>
+              <span class="text-4xl lg:text-5xl font-bold text-slate-900 tracking-tight tabular-nums">$<span id="amountValue">0</span></span>
               <span class="text-slate-500 text-lg font-medium">USD</span>
             </div>
           </div>
 
           <!-- Chain selector — dropdown style with brand icons -->
-          <div class="mb-5">
+          <div class="mb-4">
             <label class="text-[11px] font-semibold text-slate-500 uppercase tracking-[0.16em] mb-2 block">Método de pagamento</label>
 
             <div class="chain-select-wrapper relative">
@@ -420,7 +420,7 @@
           </div>
 
           <!-- Payment block (QR + address + actions) -->
-          <div id="payBlock" class="rounded-2xl bg-slate-50/80 border border-slate-200 p-5 space-y-4">
+          <div id="payBlock" class="rounded-2xl bg-slate-50/80 border border-slate-200 p-4 space-y-3">
 
             <div class="flex items-start justify-between gap-3">
               <div>
