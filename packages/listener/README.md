@@ -1,307 +1,200 @@
 # @zettapay/listener
 
-[![npm](https://img.shields.io/npm/v/@zettapay/listener.svg)](https://www.npmjs.com/package/@zettapay/listener)
-[![npm downloads](https://img.shields.io/npm/dm/@zettapay/listener.svg)](https://www.npmjs.com/package/@zettapay/listener)
-[![license](https://img.shields.io/npm/l/@zettapay/listener.svg)](./LICENSE)
+> **Self-hosted, non-custodial crypto payment listener.**
+> Aceite **Bitcoin** e **USDC** (Base) direto na sua infra. Sem custodian,
+> sem taxa de protocolo, sem dar suas chaves pra ninguém.
 
-Self-hosted, **non-custodial** payment listener for the ZettaPay protocol.
+[![npm](https://img.shields.io/npm/v/@zettapay/listener)](https://www.npmjs.com/package/@zettapay/listener)
 
-## Install
+O `zettapay-listener` roda na **sua** máquina, observa a blockchain pelos
+endereços que **você** controla, e dispara um **webhook assinado (HMAC)** pro
+seu backend quando um pagamento é confirmado. Suas chaves privadas nunca saem
+da sua carteira — o listener só conhece a chave **pública** (xpub) ou um
+endereço de recebimento.
+
+---
+
+## Quais pagamentos
+
+| Rede | Token | Como deriva o endereço | Carteira do merchant |
+|------|-------|------------------------|----------------------|
+| **Bitcoin** | BTC | xpub/zpub BIP-84 → 1 endereço por fatura | Sparrow, Ledger, qualquer HD wallet |
+| **USDC on Base** (modo xpub) | USDC | xpub EVM (m/44'/60'/0') → 1 endereço por fatura | Rabby, Ledger, MyEtherWallet |
+| **USDC on Base** (modo endereço-fixo) | USDC | 1 endereço fixo + nonce no valor | **Phantom, MetaMask, Coinbase, App Base** |
+
+> **Por que 2 modos pra USDC?** As carteiras EVM populares (Phantom, MetaMask,
+> App Base) **não exportam xpub**. Pra elas, o modo **endereço-fixo** usa um
+> único endereço `0x` (que qualquer carteira mostra em "Receive") e identifica
+> cada fatura por um **nonce embutido nas casas decimais** do valor
+> (ex: `29.000042 USDC` → fatura nº 42). O cliente paga ~$29 e a fração de
+> centavo identifica unicamente quem pagou.
+
+---
+
+## Instalação
 
 ```bash
 npm install -g @zettapay/listener
+```
+
+### Setup interativo
+
+```bash
 zettapay-listener init
 zettapay-listener start
 ```
 
-Registry: <https://www.npmjs.com/package/@zettapay/listener>
+O `init` pergunta tudo (xpub, webhook, storage). O `start` sobe o watcher +
+a API HTTP + dispatcher de webhook numa porta só (default `8787`).
 
-## Standalone mode (no SDK required)
-
-The listener ships its own BIP-84 derivation, so a merchant can run the
-full accept-payment loop from a single binary — no `@zettapay/sdk`, no
-hosted infrastructure:
-
-```bash
-# 1. Install + bootstrap (writes .env + seeds merchant.json)
-npm install -g @zettapay/listener
-zettapay-listener init \
-  --xpub <zpub|vpub|xpub> \
-  --shop-name "My Shop" \
-  --email ops@my.shop \
-  --webhook-url https://my.shop/zettapay/hook \
-  --storage json
-
-# 2. Sanity-check the config
-zettapay-listener verify-config
-
-# 3. Create an invoice + print the address to show the customer
-zettapay-listener create-invoice --amount-sats 1000 --memo "Coffee"
-# → invoice_id: inv_...
-# → address:    bc1q...
-# → bip21_uri:  bitcoin:bc1q...?amount=0.00001&label=Coffee
-
-# 4. Boot the watcher — webhook fires on confirmation
-zettapay-listener start &
-```
-
-`derive-address` (read-only) is handy when you just want to inspect the
-next address without writing an invoice:
-
-```bash
-zettapay-listener derive-address           # next index from merchant.json
-zettapay-listener derive-address --index 7 # explicit child index
-```
-
-`HR-CUSTODY`: every subcommand refuses extended PRIVATE keys
-(`xprv` / `zprv` / `tprv` / ...). Only the public `xpub` / `zpub` /
-`tpub` / `vpub` family is accepted.
-
-## Testing before mainnet
-
-Don't risk real BTC. The listener runs the exact same code path on signet
-(free coins, real network) — the only thing you change is one env var.
-
-### 1. Generate a signet vpub
-
-Sparrow Wallet → **File → New Wallet → Network: Signet → Single Sig
-(Native SegWit)** → generate seed → the wallet shows a `vpub...` in the
-Settings tab. Copy it. The seed never leaves Sparrow — the listener only
-sees the public key.
-
-### 2. Init the listener for signet
+### Setup por flags (não-interativo)
 
 ```bash
 zettapay-listener init \
-  --xpub <your vpub> \
-  --network signet \
-  --webhook-url http://127.0.0.1:9876/webhook \
-  --shop-name "Signet Test" \
-  --email test@example.com \
-  --storage json
-zettapay-listener start &
-```
-
-`--network` accepts `mainnet | testnet | signet | regtest`. The listener
-refuses mainnet/testnet xpub mixups (`zpub` only watches mainnet,
-`vpub`/`tpub`/`upub` only watch testnet / signet / regtest).
-
-### 3. Start a webhook receiver
-
-```bash
-npm install -g @zettapay/receiver
-zettapay-receiver listen --port 9876 --secret "$WEBHOOK_SECRET" --pretty
-```
-
-### 4. Create an invoice and get the address
-
-```bash
-zettapay-listener create-invoice --amount-sats 10000 --memo "signet test"
-# → invoice_id: inv_...
-# → address:    tb1q...
-# → bip21_uri:  bitcoin:tb1q...?amount=0.0001&label=signet+test
-```
-
-### 5. Send signet coins from a faucet
-
-- <https://signet.bc-2.jp/>
-- <https://signetfaucet.com>
-
-Paste the `tb1q...` address from step 4.
-
-### 6. Watch the flow
-
-- Block explorer: `https://mempool.space/signet/address/<your tb1q...>`
-- Listener log: `tail -f listener.log`
-- Receiver log: terminal where step 3 is running
-
-Within roughly one signet block time (~10 min on average), the listener
-detects the tx in mempool, advances it to confirmed once the depth
-threshold is hit, fires the webhook, and the receiver prints the
-HMAC-validated payload.
-
-Same code, same dispatcher, same HMAC contract. To flip to mainnet,
-change `MERCHANT_NETWORK=mainnet` and supply a mainnet `zpub`. Nothing
-else changes.
-
-### Regtest (optional)
-
-For fully offline development, point `REGTEST_WS_URL` / `REGTEST_REST_URL`
-at a local electrs / esplora instance and run with `--network regtest`.
-The address HRP becomes `bcrt1q...`. No public faucet — you mine your
-own coins.
-
-## What it is
-
-A small daemon a merchant runs on their own infrastructure to:
-
-- watch on-chain activity for invoices generated from their `xpub` (BIP-84 BTC, BIP-44 EVM),
-- dispatch HMAC-signed webhooks to the merchant's own backend when payments confirm,
-- persist invoice and webhook state locally through a swappable `StorageAdapter` (JSON / SQLite / Supabase / Postgres).
-
-## What it is not
-
-- **Not custodial.** The listener never holds, derives, or signs with a private key. It only watches addresses derived from the merchant's `xpub`. See `HR-CUSTODY`.
-- **Not wallet-coupled.** No `wallet.connect`, no Phantom/MetaMask UI, no browser-side signing. See `HR-WALLET-LESS`.
-- **No phone-home.** The listener MUST NOT contact `zettapay.vercel.app`, `zettapay.dev`, `zettapay.com`, or `api.zettapay.*`. Outbound traffic is limited to `mempool.space` (and any merchant-configured chain RPC), the merchant's configured `MERCHANT_WEBHOOK_URL`, and the `STORAGE` adapter URL when the merchant chooses Supabase or Postgres. See `HR-PHONE-HOME`.
-
-## Status — Z59
-
-- `StorageAdapter` interface + type definitions (Z55).
-- Contract test suite at `test/storage-contract.ts` (Z55).
-- **`JsonFileStorage`** — Z56, the zero-deps default (tier-1).
-- **`SqliteStorage`** — Z59, ACID single-file via `better-sqlite3` (tier-2).
-- Cloud adapters (Supabase / Postgres) — Z58 / Z60 (in progress).
-- **`BtcListener` + `WebhookDispatcher` + `HealthServer` + `zettapay-listener` bin + Dockerfile** — Z58.
-- Full `zettapay-listener init / migrate / healthcheck` CLI — Z60.
-
-## Running it
-
-The package ships a `zettapay-listener` binary. Minimum env to boot:
-
-```bash
-export STORAGE=json                                      # default — zero extra deps
-export ZETTAPAY_DATA_DIR=/var/lib/zettapay/data          # JSON adapter on-disk root
-export MERCHANT_WEBHOOK_URL=https://your.shop/zettapay   # https only
-export MERCHANT_WEBHOOK_SECRET=whsec_...                 # HMAC-SHA256 key
-export HEALTH_PORT=8787                                  # /health probe port
-
+  --xpub        <zpub BIP-84 do Bitcoin> \
+  --xpub-evm    <xpub EVM m/44'/60'/0' (opcional — habilita USDC Base via derivação)> \
+  --webhook-url https://seu-backend.com/api/zp/webhook \
+  --storage     json \
+  --force
 zettapay-listener start
 ```
 
-The merchant row must exist in storage first (Z60 will ship the `init`
-subcommand; meanwhile use the `JsonFileStorage` API programmatically).
+Para o **modo endereço-fixo** de USDC (carteiras sem xpub), use as env vars:
 
-### `GET /health`
+```bash
+# no .env (ou EnvironmentFile do systemd)
+MERCHANT_EVM_ADDRESS=0xSEU_ENDERECO_DE_RECEBIMENTO
+MERCHANT_EVM_CHAINS=base
+```
 
+---
+
+## API HTTP
+
+O listener expõe (default `http://localhost:8787`):
+
+### `POST /invoice` — cria uma fatura
+Header: `X-ZettaPay-Api-Key: <ZETTAPAY_API_KEY>` (se configurado)
+
+```bash
+# Bitcoin
+curl -X POST http://localhost:8787/invoice \
+  -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount_sats":2000,"memo":"Pedido #123","metadata":{"ref":"user_42"}}'
+
+# USDC on Base
+curl -X POST http://localhost:8787/invoice \
+  -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount_usd":29,"chain":"base","metadata":{"ref":"user_42"}}'
+```
+
+Resposta (USDC modo endereço-fixo):
 ```json
 {
-  "ok": true,
-  "ws_connected": true,
-  "subscribed_count": 12,
-  "last_event_at": 1716480000000,
-  "last_block_height": 850123,
-  "uptime_s": 3600
+  "invoice_id": "inv_...",
+  "chain": "base",
+  "asset": "USDC",
+  "receive_address": "0xC4a7...",
+  "amount_usdc": "29.000042",
+  "nonce": 42,
+  "mode": "fixed-address",
+  "expires_at": "...",
+  "qr_uri": "ethereum:0x833589...@8453/transfer?address=0xC4a7...&uint256=29000042"
 }
 ```
 
-### Webhook signing
+> ⚠️ No modo endereço-fixo o cliente DEVE enviar o **valor exato**
+> (`29.000042`). O nonce nas casas decimais é o que identifica a fatura.
+> Valor redondo (`29.00`) vira pagamento órfão — não é ativado.
 
-Every POST to `MERCHANT_WEBHOOK_URL` carries:
-
-| header                   | value                                              |
-|--------------------------|----------------------------------------------------|
-| `X-ZettaPay-Signature`   | `hex(hmac_sha256(MERCHANT_WEBHOOK_SECRET, body))`  |
-| `X-ZettaPay-Timestamp`   | unix-ms at attempt time                            |
-| `X-ZettaPay-Event-Id`    | stable event id (idempotency key)                  |
-| `X-ZettaPay-Attempt`     | 1-indexed attempt number                           |
-
-Retry curve: `1s, 5s, 30s, 2m, 10m, 30m, 1h, 3h, 12h, 24h` — 10 attempts
-before the event parks in a dead-letter state.
-
-### Docker
+### `GET /invoice/:id` — consulta status
 
 ```bash
-docker build -t zettapay-listener packages/listener
-docker run --rm -p 8787:8787 \
-  -v $PWD/data:/data \
-  -e MERCHANT_WEBHOOK_URL=https://your.shop/zettapay \
-  -e MERCHANT_WEBHOOK_SECRET=whsec_... \
-  zettapay-listener
+curl http://localhost:8787/invoice/inv_...
+# { "status": "pending" | "detected" | "confirmed" | "expired", ... }
 ```
 
-## Storage adapters
+### `GET /health` — liveness
 
-| adapter           | status                  | tier      | best for                                  | install                                  |
-|-------------------|-------------------------|-----------|-------------------------------------------|------------------------------------------|
-| `json` (default)  | available (Z56)         | tier-1    | up to ~1k invoices/month, single host     | zero extra deps                          |
-| `sqlite`          | available (Z59)         | tier-2    | up to ~100k invoices/month, single host   | `npm install better-sqlite3`             |
-| `supabase`        | coming soon (Z58)       | tier-3    | unlimited, hosted Postgres + auth         | `npm install @supabase/supabase-js`      |
-| `postgres`        | coming soon (Z60)       | tier-3    | unlimited, self-hosted Postgres           | `npm install pg`                         |
+---
 
-### Choosing an adapter
+## Webhook (confirmação → seu backend)
 
-```
-< 1k invoices / month          → json     (default; no install)
-1k–100k invoices / month       → sqlite   (single file; ACID; ~100x faster than json on hot paths)
-> 100k invoices / month        → supabase / postgres
-multi-host listener fleet      → supabase / postgres (shared DB)
-```
+Quando uma fatura confirma, o listener faz `POST` no
+`MERCHANT_WEBHOOK_URL` com:
 
-JSON, SQLite, Supabase and Postgres all share the **same column names and
-types** — `zettapay-listener migrate --from <a> --to <b>` is a pure
-round-trip (see design doc §6).
+- Header `X-ZettaPay-Signature`: HMAC-SHA256(secret, **raw body**) em hex
+- Header `X-ZettaPay-Timestamp`: `Date.now()` em **milissegundos**
+- Body: `{ invoice_id, status, tx_hash, amount_*, confirmations, metadata }`
 
-### `JsonFileStorage` (default)
+Valide a assinatura no seu backend antes de ativar qualquer coisa:
 
-Persists all merchant + invoice + webhook state under
-`~/.zettapay/data/` (override via `--data-dir` / `ZETTAPAY_DATA_DIR`):
+```js
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
-```
-~/.zettapay/data/
-├── merchant.json
-├── invoices/inv_<id>.json
-├── webhook_events/evt_<id>.json
-└── .lock                       # proper-lockfile sentinel
+function verify(rawBody, sig, ts, secret) {
+  if (Math.abs(Date.now() - Number(ts)) > 5 * 60 * 1000) return false; // replay
+  const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
+  return timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
+}
 ```
 
-Atomic-write guarantees:
+> **Dica:** o webhook reusa o mesmo padrão de ativação que você já tem pro
+> Stripe. "Crypto pago" = mesmo `upsert` de subscription que "Stripe pago".
 
-- every write goes through `<file>.tmp.<pid>.<rand>` → `rename(2)` — atomic on POSIX.
-- `nextChildIndex` is serialized in-process (promise queue) **and** across processes (`proper-lockfile` on `merchant.json`). 100 parallel callers receive `{0..99}` distinct indexes, no duplicates.
+---
 
-Programmatic construction:
+## CLI
 
-```ts
-import { JsonFileStorage, createStorage } from '@zettapay/listener';
+| Comando | O que faz |
+|---------|-----------|
+| `init` | wizard de setup (.env + merchant) |
+| `start` | sobe watcher + API + webhook dispatcher |
+| `verify-config` | valida o .env sem iniciar |
+| `derive-address` | deriva um endereço de recebimento (read-only) |
+| `create-invoice` | cria fatura via CLI |
+| `healthcheck` | probe do health server (exit 0/1) |
+| `migrate` | copia storage entre adapters |
 
-const storage = new JsonFileStorage({ dataDir: process.env.ZETTAPAY_DATA_DIR });
-// or, env-driven:
-const fromEnv = createStorage(process.env); // STORAGE defaults to 'json'
-```
+---
 
-### `SqliteStorage` (tier-2, ACID, single-file)
+## Variáveis de ambiente
 
-Persists everything in a single `<dataDir>/zettapay.db` SQLite file
-(override via `filename` or the `ZETTAPAY_SQLITE_FILE` env var). Schema is
-identical to the JSON adapter's logical layout — `migrate --from json --to
-sqlite` is byte-equivalent round-trip-safe.
+| Var | Obrigatória | Descrição |
+|-----|-------------|-----------|
+| `MERCHANT_XPUB` | sim (pra BTC) | zpub/xpub BIP-84 |
+| `MERCHANT_WEBHOOK_URL` | sim | URL https do seu backend |
+| `MERCHANT_WEBHOOK_SECRET` | sim | segredo HMAC |
+| `ZETTAPAY_API_KEY` | recomendado | protege o `POST /invoice` |
+| `MERCHANT_XPUB_EVM` | opcional | xpub EVM → USDC Base via derivação |
+| `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC Base (carteiras sem xpub) |
+| `MERCHANT_EVM_CHAINS` | opcional | csv de chains EVM (default `base`) |
+| `BASE_RPC_URL` | opcional | RPC da Base (default `https://mainnet.base.org`) |
+| `STORAGE` | opcional | `json` (default) \| `sqlite` |
+| `HEALTH_PORT` | opcional | porta da API (default `8787`) |
 
-```ts
-import { SqliteStorage, createStorage } from '@zettapay/listener';
+---
 
-const storage = new SqliteStorage({ filename: '/var/lib/zettapay.db' });
-// or, env-driven:
-process.env.STORAGE = 'sqlite';
-const fromEnv = createStorage(process.env);
-```
+## Segurança (HR — Hard Rules)
 
-Atomicity:
+- **HR-CUSTODY** — o listener recusa qualquer chave privada (xprv/zprv).
+  Só aceita pública (xpub) ou endereço.
+- **HR-WALLET-LESS** — nunca toca material de assinatura. Seus fundos só você move.
+- **HR-PHONE-HOME** — só fala com mempool.space (BTC) e o RPC da chain (EVM).
+  Nenhum dado de cliente sai pra terceiros.
+- **Não custodial** — o BTC/USDC cai direto na sua carteira.
 
-- `journal_mode = WAL` for crash safety on POSIX (silently ignored for `:memory:`).
-- `nextChildIndex` uses `BEGIN IMMEDIATE` so 100 in-process concurrent callers
-  receive `{0..99}` distinct indexes, no duplicates (same conformance bar as JSON).
-- `better-sqlite3` is loaded lazily via `createRequire` — listeners running
-  with `STORAGE=json` (the default) boot without it installed (HR-OPTIONAL-DEPS).
-  A missing peer surfaces as `MissingStorageDependencyError` with the install hint.
+---
 
-## Design doc
+## Docker
 
-See [`docs/architecture/self-hosted-listener-design.md`](../../docs/architecture/self-hosted-listener-design.md) for the canonical interface, JSON storage layout, dependency graph, CLI surface, phone-home prohibition, migration story, and conformance map.
+Veja `INSTALL-docker.md` — roda como container na sua rede Docker
+(EasyPanel/Portainer/compose), nunca exposto, o app fala por localhost.
 
-## Optional peer dependencies
+---
 
-| `STORAGE=` | required peer dep             | install command                        |
-|------------|-------------------------------|----------------------------------------|
-| `json`     | (none — default)              | —                                      |
-| `sqlite`   | `better-sqlite3`              | `npm install better-sqlite3`           |
-| `supabase` | `@supabase/supabase-js`       | `npm install @supabase/supabase-js`    |
-| `postgres` | `pg`                          | `npm install pg`                       |
-
-`proper-lockfile` is a hard dependency — it is what makes the default JSON
-adapter race-safe. A missing optional peer (for the non-default adapters)
-throws `MissingStorageDependencyError` with the exact install hint.
-
-## License
+## Licença
 
 MIT.
