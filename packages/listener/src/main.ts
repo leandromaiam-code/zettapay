@@ -5,6 +5,7 @@
 
 import { createStorage } from './storage/index.js';
 import { BtcListener, type Logger } from './listener.js';
+import { BaseWatcher } from './base-watcher.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
 import { DEFAULT_HEALTH_PORT } from './health-server.js';
 import { AppServer } from './http-server.js';
@@ -147,6 +148,12 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     webhookSecret: cfg.webhookSecret,
     logger: consoleLogger,
   });
+  // USDC on Base is opt-in: only when MERCHANT_XPUB_EVM is set does the base
+  // chain become reachable (HTTP route + watcher). A BTC-only deployment runs
+  // identically to before — no EVM xpub, no BaseWatcher, base route rejected.
+  const evmXpub = process.env.MERCHANT_XPUB_EVM?.trim() || undefined;
+  const baseRpcUrl = process.env.BASE_RPC_URL?.trim() || undefined;
+
   const apiServer = new AppServer({
     port: cfg.healthPort,
     statusProvider: () => listener.status(),
@@ -157,12 +164,23 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       .split(',')
       .map((o) => o.trim())
       .filter(Boolean),
+    evmXpub,
     logger: consoleLogger,
   });
+
+  const baseWatcher = evmXpub
+    ? new BaseWatcher({
+        storage,
+        merchantId,
+        rpcUrl: baseRpcUrl,
+        logger: consoleLogger,
+      })
+    : null;
 
   await apiServer.start();
   dispatcher.start();
   await listener.start();
+  if (baseWatcher) await baseWatcher.start();
 
   consoleLogger.info('zettapay_listener.started', {
     merchant_id: merchantId,
@@ -170,12 +188,15 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     storage: process.env.STORAGE ?? 'json',
     network: cfg.network,
     ws_url: cfg.wsUrl,
+    base_enabled: Boolean(baseWatcher),
+    base_rpc: baseWatcher ? baseWatcher.status().rpcUrl : undefined,
   });
 
   const shutdown = async (signal: string) => {
     consoleLogger.info('zettapay_listener.shutdown', { signal });
     try {
       await listener.stop();
+      if (baseWatcher) await baseWatcher.stop();
       await dispatcher.stop();
       await apiServer.stop();
       if (storage.close) await storage.close();

@@ -17,7 +17,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { ListenerStatus, Logger } from './listener.js';
 import type { StorageAdapter } from './storage/index.js';
 import type { Invoice } from './types.js';
-import { createInvoiceForMerchant } from './invoice-core.js';
+import { createBaseInvoiceForMerchant, createInvoiceForMerchant } from './invoice-core.js';
+import { formatUsdc } from './usdc-pricing.js';
 
 export const DEFAULT_HEALTH_PORT = 8787;
 
@@ -37,6 +38,10 @@ export interface AppServerOptions {
   merchantId: string;
   apiKey?: string;
   corsOrigins?: string[];
+  /** Account-level EVM xpub (MERCHANT_XPUB_EVM). When unset, chain='base' is disabled. */
+  evmXpub?: string;
+  /** Override the USDC token used for base payment URIs. */
+  baseUsdcAddress?: string;
   logger?: Logger;
 }
 
@@ -68,7 +73,7 @@ function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
 }
 
 function serializeInvoice(inv: Invoice): Record<string, unknown> {
-  return {
+  const base = {
     invoice_id: inv.id,
     merchant_id: inv.merchant_id,
     chain: inv.chain,
@@ -83,6 +88,17 @@ function serializeInvoice(inv: Invoice): Record<string, unknown> {
     created_at: inv.created_at,
     updated_at: inv.updated_at,
   };
+  // For base, `amount` is stored as integer USDC base units — expose it under
+  // the correct labels too. BTC serialization is unchanged.
+  if (inv.chain === 'base') {
+    const units = Number(inv.amount);
+    return {
+      ...base,
+      amount_usdc_units: units,
+      amount_usdc: Number.isInteger(units) ? formatUsdc(units) : inv.amount,
+    };
+  }
+  return base;
 }
 
 export class AppServer {
@@ -93,6 +109,8 @@ export class AppServer {
   private readonly merchantId: string;
   private readonly apiKey?: string;
   private readonly corsOrigins: string[];
+  private readonly evmXpub?: string;
+  private readonly baseUsdcAddress?: string;
   private readonly log: Logger;
   private server: Server | null = null;
 
@@ -104,6 +122,8 @@ export class AppServer {
     this.merchantId = opts.merchantId;
     this.apiKey = opts.apiKey;
     this.corsOrigins = opts.corsOrigins ?? [];
+    this.evmXpub = opts.evmXpub;
+    this.baseUsdcAddress = opts.baseUsdcAddress;
     this.log = opts.logger ?? noopLogger;
   }
 
@@ -189,6 +209,19 @@ export class AppServer {
         this.sendJson(res, 400, { error: { code: 'bad_body', message: (e as Error).message } });
         return;
       }
+      // chain is optional and defaults to 'btc' — a body with no chain (or
+      // chain:'btc') takes the exact same path it did before base existed.
+      const chain = typeof body.chain === 'string' ? body.chain.toLowerCase() : 'btc';
+      if (chain === 'base') {
+        await this.handleCreateBaseInvoice(body, res);
+        return;
+      }
+      if (chain !== 'btc') {
+        this.sendJson(res, 400, {
+          error: { code: 'unsupported_chain', message: `chain "${chain}" is not supported` },
+        });
+        return;
+      }
       const amountSats = Number(body.amount_sats);
       if (!Number.isInteger(amountSats) || amountSats <= 0) {
         this.sendJson(res, 400, {
@@ -257,5 +290,55 @@ export class AppServer {
     }
 
     this.sendJson(res, 404, { error: { code: 'not_found' } });
+  }
+
+  private async handleCreateBaseInvoice(
+    body: Record<string, unknown>,
+    res: ServerResponse,
+  ): Promise<void> {
+    if (!this.evmXpub) {
+      this.sendJson(res, 400, {
+        error: {
+          code: 'base_disabled',
+          message: 'chain "base" is not enabled — set MERCHANT_XPUB_EVM to accept USDC on Base',
+        },
+      });
+      return;
+    }
+    const amountUsd = Number(body.amount_usd);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      this.sendJson(res, 400, {
+        error: { code: 'invalid_amount', message: 'amount_usd must be a positive number' },
+      });
+      return;
+    }
+    const expiresIn =
+      Number.isInteger(body.expires_in) && (body.expires_in as number) > 0
+        ? (body.expires_in as number)
+        : undefined;
+    try {
+      const r = await createBaseInvoiceForMerchant(this.storage, this.merchantId, {
+        amountUsd,
+        evmXpub: this.evmXpub,
+        usdcAddress: this.baseUsdcAddress,
+        expiresInSeconds: expiresIn,
+      });
+      this.log.info('http_server.base_invoice_created', {
+        invoice_id: r.invoice.id,
+        address: r.invoice.address,
+        amount_usd: amountUsd,
+      });
+      this.sendJson(res, 201, {
+        ...serializeInvoice(r.invoice),
+        derivation_path: r.path,
+        amount_usd: amountUsd,
+        amount_usdc: r.amountUsdc,
+        amount_usdc_units: r.amountUsdcUnits,
+        qr_uri: r.eip681,
+        verify_url: `https://basescan.org/address/${r.invoice.address}`,
+      });
+    } catch (e) {
+      this.sendJson(res, 500, { error: { code: 'create_failed', message: (e as Error).message } });
+    }
   }
 }

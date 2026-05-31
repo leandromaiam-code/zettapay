@@ -120,6 +120,45 @@ export async function runVerifyConfig(
     }
   }
 
+  // Optional EVM xpub (USDC on Base). Only checked when present — its absence
+  // is valid and simply means the base chain is disabled. When set it must be
+  // a public extended key (never a private xprv/zprv).
+  const evmXpub = env.MERCHANT_XPUB_EVM?.trim();
+  if (evmXpub) {
+    try {
+      const ck = validateXpubFormat(evmXpub);
+      checks.push({
+        label: 'MERCHANT_XPUB_EVM parseable (USDC on Base enabled)',
+        ok: true,
+        detail: `${ck.prefix}`,
+      });
+    } catch (err) {
+      const msg = err instanceof XpubFormatError ? err.message : String(err);
+      checks.push({ label: 'MERCHANT_XPUB_EVM parseable', ok: false, detail: msg });
+    }
+    const baseRpc = env.BASE_RPC_URL?.trim();
+    if (baseRpc) {
+      let rpcOk = false;
+      try {
+        const u = new URL(baseRpc);
+        rpcOk = u.protocol === 'https:' || u.protocol === 'http:';
+      } catch {
+        rpcOk = false;
+      }
+      checks.push({
+        label: 'BASE_RPC_URL valid',
+        ok: rpcOk,
+        detail: rpcOk ? baseRpc : `bad URL "${baseRpc}"`,
+      });
+    } else {
+      checks.push({
+        label: 'BASE_RPC_URL valid',
+        ok: true,
+        detail: 'unset — default https://mainnet.base.org',
+      });
+    }
+  }
+
   // webhook URL is https (or http://localhost as a documented dev exception)
   const webhookUrl = env.MERCHANT_WEBHOOK_URL?.trim();
   let webhookWarning: string | null = null;

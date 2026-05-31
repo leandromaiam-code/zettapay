@@ -1,5 +1,36 @@
 # Changelog — @zettapay/listener
 
+## 0.3.0
+
+### Added
+
+- **USDC on Base — a second chain, fully additive.** BTC is untouched: the
+  Bitcoin derivation, watcher, and webhook paths are byte-for-byte the same and
+  the full existing BTC test suite still passes (regression gate). USDC support
+  lives in new, separate files and is opt-in via `MERCHANT_XPUB_EVM`.
+  - `src/derive-evm.ts` — derives EIP-55 checksummed `0x` addresses from an
+    account-level EVM xpub (`m/44'/60'/0'`) at `m/0/{index}` via
+    secp256k1 → keccak256. Matches the canonical Foundry/Hardhat vectors
+    (`0xf39Fd6…` at index 0, `0x709979…` at index 1). Refuses xprv/zprv
+    (HR-CUSTODY).
+  - `src/base-watcher.ts` — polls USDC `balanceOf(address)` on Base via a single
+    public RPC (`BASE_RPC_URL`, default `https://mainnet.base.org`), flips
+    pending `chain='base'` invoices to `confirmed`, and hands off to the
+    existing HMAC webhook dispatcher. RPC failures retry on the next tick and
+    never crash the loop.
+  - `src/usdc-pricing.ts` — `usdToUsdc` / `formatUsdc` (USDC has 6 decimals,
+    1:1 with USD).
+- **`POST /invoice` accepts an optional `chain` field** (`'btc' | 'base'`,
+  default `'btc'`). Bodies with no `chain` behave exactly as before. With
+  `chain: 'base'` and `amount_usd`, it returns a `201` with a checksummed `0x`
+  receive address and an EIP-681 payment URI.
+- **Conditional Base watcher in `start`.** When `MERCHANT_XPUB_EVM` is set, the
+  daemon runs the `BaseWatcher` alongside the BTC listener (shared webhook
+  pipeline). Without it, the deployment is BTC-only and identical to before.
+- **`init` / `verify-config`** gained optional `MERCHANT_XPUB_EVM` +
+  `BASE_RPC_URL` handling. Absent → base disabled, BTC works normally.
+- New dependency `@noble/curves` (used only by `derive-evm.ts`).
+
 ## 0.1.5
 
 ### Fixed

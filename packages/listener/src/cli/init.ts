@@ -60,6 +60,8 @@ function helpText(): string {
     'Interactive wizard. Pass any of the following flags to skip prompts:',
     '  --xpub <zpub>           Account-level BIP-84 public key',
     '  --network <n>           mainnet | testnet | signet | regtest (defaults to xpub kind)',
+    '  --xpub-evm <xpub>       Optional account-level EVM xpub (m/44\'/60\'/0\') — enables USDC on Base',
+    '  --base-rpc-url <url>    Optional Base RPC (default https://mainnet.base.org)',
     '  --shop-name <name>',
     '  --email <addr>',
     '  --webhook-url <url>     HTTPS URL on your backend',
@@ -184,6 +186,25 @@ export async function runInit(
     }
     process.stdout.write(c.green(`  ✓ network=${network}`) + '\n');
 
+    // ----- (a.6) optional EVM xpub (USDC on Base) -----
+    // Entirely optional and flag-only: if absent, base stays disabled and BTC
+    // works as before. Validated with the same format guard as the BTC xpub so
+    // an extended PRIVATE key can never be written here either (HR-CUSTODY).
+    let evmXpub: string | undefined;
+    const evmXpubFlag = flagString(flags, 'xpub-evm');
+    if (evmXpubFlag) {
+      try {
+        const check = validateXpubFormat(evmXpubFlag);
+        evmXpub = evmXpubFlag.trim();
+        process.stdout.write(c.green(`  ✓ EVM xpub accepted ${check.prefix} — USDC on Base enabled`) + '\n');
+      } catch (err) {
+        const msg = err instanceof XpubFormatError ? err.message : String(err);
+        process.stdout.write(c.red(`  ✗ --xpub-evm: ${msg}`) + '\n');
+        return 2;
+      }
+    }
+    const baseRpcUrl = flagString(flags, 'base-rpc-url')?.trim() || undefined;
+
     // ----- (b) storage backend -----
     let storage = flagString(flags, 'storage') as StorageKind | undefined;
     while (!storage || !STORAGE_KINDS.includes(storage)) {
@@ -285,6 +306,8 @@ export async function runInit(
       HEALTH_PORT: healthPort,
     };
     if (merchantId) envValues.MERCHANT_ID = merchantId;
+    if (evmXpub) envValues.MERCHANT_XPUB_EVM = evmXpub;
+    if (baseRpcUrl) envValues.BASE_RPC_URL = baseRpcUrl;
     if (supabaseUrl) envValues.SUPABASE_URL = supabaseUrl;
     if (supabaseKey) envValues.SUPABASE_SERVICE_ROLE_KEY = supabaseKey;
     if (postgresUrl) envValues.POSTGRES_URL = postgresUrl;

@@ -1,4 +1,4 @@
-export type Chain = 'btc' | 'polygon' | 'eth';
+export type Chain = 'btc' | 'base' | 'polygon' | 'eth';
 
 export type InvoiceStatus =
   | 'pending'
