@@ -8,13 +8,22 @@
 
 import { randomUUID } from 'node:crypto';
 import type { StorageAdapter } from './storage/index.js';
-import type { Invoice } from './types.js';
+import type { Chain, Invoice } from './types.js';
 import { deriveBip84Address } from './derive-bip84.js';
 import { deriveEvmAddress } from './derive-evm.js';
 import { formatUsdc, usdToUsdc } from './usdc-pricing.js';
+import {
+  allocateNonce,
+  baseUnitsForUsd,
+  encodeAmount,
+  NONCE_MODULUS,
+} from './evm-amount-nonce.js';
+import { lookupEvmChain } from './fixed-address-watcher.js';
 
 const SATS_PER_BTC = 100_000_000;
 export const DEFAULT_EXPIRES_SECONDS = 3600;
+/** Fixed-address USDC invoices expire after 1h (nonce recycling, Z74). */
+export const FIXED_ADDRESS_EXPIRES_SECONDS = 3600;
 
 export function formatBtcAmount(sats: number): string {
   const whole = Math.floor(sats / SATS_PER_BTC);
@@ -160,4 +169,133 @@ export async function createBaseInvoiceForMerchant(
     amountUsdc: formatUsdc(units),
     eip681: buildBaseUsdcUri(derived.address, units, usdcAddress),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Fixed-address (USDC) invoice path — the SECOND USDC mode (Z74), additive.
+// For merchants whose wallet cannot export an xpub (Phantom, MetaMask, App
+// Base, Coinbase). One fixed receive address serves every invoice; the payer
+// is identified by the EXACT amount — a per-invoice nonce in the low USDC
+// decimals (see evm-amount-nonce.ts). Both the BTC path and the xpub Base path
+// above are untouched: nothing here runs unless the caller explicitly asks for
+// fixed mode (MERCHANT_EVM_ADDRESS set, no xpub for that chain).
+// ---------------------------------------------------------------------------
+
+/** EIP-681 USDC transfer URI for an arbitrary EVM chain id. */
+export function buildEvmUsdcUri(
+  to: string,
+  usdcUnits: bigint | number,
+  tokenAddress: string,
+  chainId: number,
+): string {
+  return `ethereum:${tokenAddress}@${chainId}/transfer?address=${to}&uint256=${usdcUnits.toString()}`;
+}
+
+export interface CreateFixedEvmInvoiceParams {
+  amountUsd: number;
+  /** Fixed receive address (MERCHANT_EVM_ADDRESS), shared by every invoice. */
+  fixedAddress: string;
+  /** Chain alias understood by the registry: 'base' | 'ethereum' | 'polygon'. */
+  chainAlias: string;
+  expiresInSeconds?: number;
+}
+
+export interface CreateFixedEvmInvoiceResult {
+  invoice: Invoice;
+  /** Per-invoice nonce embedded in the amount (1..9999). */
+  nonce: number;
+  /** Exact USDC amount in integer base units the payer must send. */
+  amountUsdcUnits: bigint;
+  /** Human-readable USDC amount, e.g. "29.000042". */
+  amountUsdc: string;
+  /** EIP-681 transfer URI for QR rendering. */
+  eip681: string;
+}
+
+/**
+ * Create a fixed-address USDC invoice. Allocates the smallest free nonce among
+ * the merchant's currently-active invoices at the same (chain, base price),
+ * encodes it into the exact payment amount, and stores the invoice against the
+ * SHARED fixed address. The nonce is fully recoverable from the stored amount
+ * (`amount % 10000`), so no extra storage column is required.
+ */
+export async function createFixedEvmInvoiceForMerchant(
+  storage: StorageAdapter,
+  merchantId: string,
+  params: CreateFixedEvmInvoiceParams,
+): Promise<CreateFixedEvmInvoiceResult> {
+  const spec = lookupEvmChain(params.chainAlias);
+  if (!spec) throw new Error(`fixed-evm: unknown chain "${params.chainAlias}"`);
+  if (!/^0x[0-9a-fA-F]{40}$/.test(params.fixedAddress)) {
+    throw new Error('fixed-evm: MERCHANT_EVM_ADDRESS must be a 0x EVM address');
+  }
+  const merchant = await storage.getMerchant(merchantId);
+  if (!merchant) throw new Error(`merchant "${merchantId}" not found in storage`);
+
+  const baseUnits = baseUnitsForUsd(params.amountUsd);
+  const activeNonces = await collectActiveNonces(
+    storage,
+    spec.chain,
+    params.fixedAddress,
+    baseUnits,
+  );
+  const nonce = allocateNonce(activeNonces);
+  const encoded = encodeAmount(params.amountUsd, nonce);
+
+  const expiresAt = new Date(
+    Date.now() + (params.expiresInSeconds ?? FIXED_ADDRESS_EXPIRES_SECONDS) * 1000,
+  ).toISOString();
+
+  // child_index is null: fixed mode shares one address, so no HD index is
+  // consumed (the BTC/xpub allocator is left completely untouched).
+  const invoice = await storage.createInvoice({
+    id: `inv_${randomUUID()}`,
+    merchant_id: merchant.id,
+    chain: spec.chain,
+    asset: 'USDC',
+    amount: encoded.units.toString(),
+    address: params.fixedAddress,
+    child_index: null,
+    expires_at: expiresAt,
+  });
+
+  return {
+    invoice,
+    nonce,
+    amountUsdcUnits: encoded.units,
+    amountUsdc: encoded.display,
+    eip681: buildEvmUsdcUri(params.fixedAddress, encoded.units, spec.usdcAddress, spec.chainId),
+  };
+}
+
+/**
+ * Gather the nonces of currently-ACTIVE fixed-address invoices for a given
+ * (chain, fixed address, base price). Only pending invoices that have not
+ * expired count — an expired invoice's nonce is free to recycle. The nonce is
+ * `amount % 10000`.
+ */
+async function collectActiveNonces(
+  storage: StorageAdapter,
+  chain: Chain,
+  fixedAddress: string,
+  baseUnits: number,
+): Promise<Set<number>> {
+  const now = Date.now();
+  const pending = await storage.listPendingInvoices({ chain });
+  const nonces = new Set<number>();
+  for (const inv of pending) {
+    if (inv.address.toLowerCase() !== fixedAddress.toLowerCase()) continue;
+    if (new Date(inv.expires_at).getTime() < now) continue;
+    let units: number;
+    try {
+      units = Number(BigInt(inv.amount));
+    } catch {
+      continue;
+    }
+    const base = Math.floor(units / NONCE_MODULUS) * NONCE_MODULUS;
+    if (base !== baseUnits) continue;
+    const nonce = units - base;
+    if (nonce >= 1) nonces.add(nonce);
+  }
+  return nonces;
 }

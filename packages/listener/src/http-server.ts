@@ -17,8 +17,13 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { ListenerStatus, Logger } from './listener.js';
 import type { StorageAdapter } from './storage/index.js';
 import type { Invoice } from './types.js';
-import { createBaseInvoiceForMerchant, createInvoiceForMerchant } from './invoice-core.js';
+import {
+  createBaseInvoiceForMerchant,
+  createFixedEvmInvoiceForMerchant,
+  createInvoiceForMerchant,
+} from './invoice-core.js';
 import { formatUsdc } from './usdc-pricing.js';
+import { lookupEvmChain } from './fixed-address-watcher.js';
 
 export const DEFAULT_HEALTH_PORT = 8787;
 
@@ -42,6 +47,10 @@ export interface AppServerOptions {
   evmXpub?: string;
   /** Override the USDC token used for base payment URIs. */
   baseUsdcAddress?: string;
+  /** Fixed receive address (MERCHANT_EVM_ADDRESS) for the xpub-less USDC mode. */
+  fixedEvmAddress?: string;
+  /** Chain aliases enabled for fixed mode (e.g. ['base','polygon']). */
+  fixedEvmChains?: string[];
   logger?: Logger;
 }
 
@@ -88,9 +97,9 @@ function serializeInvoice(inv: Invoice): Record<string, unknown> {
     created_at: inv.created_at,
     updated_at: inv.updated_at,
   };
-  // For base, `amount` is stored as integer USDC base units — expose it under
-  // the correct labels too. BTC serialization is unchanged.
-  if (inv.chain === 'base') {
+  // For USDC chains, `amount` is stored as integer USDC base units — expose it
+  // under the correct labels too. BTC serialization is unchanged.
+  if (inv.chain !== 'btc' && inv.asset === 'USDC') {
     const units = Number(inv.amount);
     return {
       ...base,
@@ -111,6 +120,8 @@ export class AppServer {
   private readonly corsOrigins: string[];
   private readonly evmXpub?: string;
   private readonly baseUsdcAddress?: string;
+  private readonly fixedEvmAddress?: string;
+  private readonly fixedEvmChains: string[];
   private readonly log: Logger;
   private server: Server | null = null;
 
@@ -124,7 +135,16 @@ export class AppServer {
     this.corsOrigins = opts.corsOrigins ?? [];
     this.evmXpub = opts.evmXpub;
     this.baseUsdcAddress = opts.baseUsdcAddress;
+    this.fixedEvmAddress = opts.fixedEvmAddress;
+    this.fixedEvmChains = (opts.fixedEvmChains ?? []).map((c) => c.toLowerCase());
     this.log = opts.logger ?? noopLogger;
+  }
+
+  /** True when chain is served by the fixed-address (xpub-less) USDC mode. */
+  private fixedModeFor(alias: string): boolean {
+    if (!this.fixedEvmAddress) return false;
+    const spec = lookupEvmChain(alias);
+    return spec !== null && this.fixedEvmChains.includes(spec.chain);
   }
 
   async start(): Promise<void> {
@@ -213,7 +233,30 @@ export class AppServer {
       // chain:'btc') takes the exact same path it did before base existed.
       const chain = typeof body.chain === 'string' ? body.chain.toLowerCase() : 'btc';
       if (chain === 'base') {
-        await this.handleCreateBaseInvoice(body, res);
+        // xpub mode (per-invoice derived address) takes precedence — it is the
+        // more secure path. Fixed mode is the xpub-less fallback.
+        if (this.evmXpub) {
+          await this.handleCreateBaseInvoice(body, res);
+          return;
+        }
+        if (this.fixedModeFor('base')) {
+          await this.handleCreateFixedInvoice('base', body, res);
+          return;
+        }
+        await this.handleCreateBaseInvoice(body, res); // emits base_disabled
+        return;
+      }
+      if (chain === 'ethereum' || chain === 'polygon') {
+        if (this.fixedModeFor(chain)) {
+          await this.handleCreateFixedInvoice(chain, body, res);
+          return;
+        }
+        this.sendJson(res, 400, {
+          error: {
+            code: 'chain_disabled',
+            message: `chain "${chain}" is not enabled — set MERCHANT_EVM_ADDRESS + MERCHANT_EVM_CHAINS to accept USDC`,
+          },
+        });
         return;
       }
       if (chain !== 'btc') {
@@ -339,6 +382,61 @@ export class AppServer {
       });
     } catch (e) {
       this.sendJson(res, 500, { error: { code: 'create_failed', message: (e as Error).message } });
+    }
+  }
+
+  /**
+   * Fixed-address (xpub-less) USDC invoice. Shares ONE receive address; the
+   * payer is identified by a per-invoice nonce in the amount's low decimals.
+   * TTL is 1h so nonces recycle.
+   */
+  private async handleCreateFixedInvoice(
+    chainAlias: string,
+    body: Record<string, unknown>,
+    res: ServerResponse,
+  ): Promise<void> {
+    const spec = lookupEvmChain(chainAlias);
+    if (!spec || !this.fixedEvmAddress) {
+      this.sendJson(res, 400, {
+        error: { code: 'chain_disabled', message: `chain "${chainAlias}" is not enabled` },
+      });
+      return;
+    }
+    const amountUsd = Number(body.amount_usd);
+    if (!Number.isFinite(amountUsd) || amountUsd <= 0) {
+      this.sendJson(res, 400, {
+        error: { code: 'invalid_amount', message: 'amount_usd must be a positive number' },
+      });
+      return;
+    }
+    try {
+      const r = await createFixedEvmInvoiceForMerchant(this.storage, this.merchantId, {
+        amountUsd,
+        fixedAddress: this.fixedEvmAddress,
+        chainAlias,
+      });
+      this.log.info('http_server.fixed_invoice_created', {
+        invoice_id: r.invoice.id,
+        chain: r.invoice.chain,
+        nonce: r.nonce,
+        amount_usd: amountUsd,
+      });
+      this.sendJson(res, 201, {
+        ...serializeInvoice(r.invoice),
+        mode: 'fixed-address',
+        nonce: r.nonce,
+        amount_usd: amountUsd,
+        amount_usdc: r.amountUsdc,
+        amount_usdc_units: Number(r.amountUsdcUnits),
+        qr_uri: r.eip681,
+      });
+    } catch (e) {
+      const msg = (e as Error).message;
+      // Nonce-pool exhaustion is a transient capacity limit → 503, not a 500.
+      const exhausted = msg.includes('nonce pool exhausted');
+      this.sendJson(res, exhausted ? 503 : 500, {
+        error: { code: exhausted ? 'capacity' : 'create_failed', message: msg },
+      });
     }
   }
 }

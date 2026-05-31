@@ -1,5 +1,45 @@
 # Changelog — @zettapay/listener
 
+## 0.4.0
+
+### Added
+
+- **USDC fixed-address mode — a second USDC receive path, fully additive.** BTC
+  (v0.2.0) and USDC-xpub on Base (v0.3.0) are untouched: their derivation,
+  watcher, and webhook paths are byte-for-byte the same and the full existing
+  test suite still passes (regression gate). For merchants whose wallet cannot
+  export an xpub (Phantom, MetaMask, App Base, Coinbase), a SINGLE fixed receive
+  address serves every invoice and the payer is identified by the EXACT amount —
+  a per-invoice nonce embedded in the low USDC decimals. Opt-in via
+  `MERCHANT_EVM_ADDRESS` (+ optional `MERCHANT_EVM_CHAINS`).
+  - `src/evm-amount-nonce.ts` — pure decimal-nonce allocator/encoder/matcher.
+    USDC has 6 decimals; the last 4 are reserved as a nonce (1..9999). `$29`
+    nonce 42 → `29.000042 USDC`. Max surcharge +0.009999 USDC (~1 cent). Also
+    exports the EIP-55 validators (`isValidEvmAddress`, `assertChecksumAddress`).
+  - `src/fixed-address-watcher.ts` — scans the ERC-20 `Transfer` event log via
+    `eth_getLogs` over a short trailing block window per chain (base / ethereum /
+    polygon), matches each inbound transfer's exact value to a pending invoice by
+    nonce, and confirms it through the existing HMAC webhook dispatcher. A
+    transfer that matches no active invoice emits `payment.orphan` and NEVER
+    activates anything. Dedup by `txHash:logIndex`; per-chain `minConfirmations`.
+    RPC failures retry on the next tick and never crash the loop.
+  - `src/invoice-core.ts` — `createFixedEvmInvoiceForMerchant` allocates the
+    smallest free nonce among the merchant's active invoices at the same
+    (chain, base price), stores the invoice against the shared fixed address
+    (`child_index: null`, 1h TTL so nonces recycle), and returns the EIP-681 QR
+    URI. BTC and xpub paths are left completely untouched.
+  - HTTP API: `POST /invoice` with `chain: 'base' | 'ethereum' | 'polygon'`
+    routes to fixed mode when `MERCHANT_EVM_ADDRESS` is set (xpub mode wins for
+    `base` when both are configured). Nonce-pool exhaustion → `503 capacity`.
+  - CLI: `init --evm-address <0x..> --evm-chains <csv>` (EIP-55 validated) and
+    `verify-config` reports the fixed-address mode + xpub precedence.
+
+### Notes
+
+- If both `MERCHANT_XPUB_EVM` and `MERCHANT_EVM_ADDRESS` target the same chain,
+  the xpub mode wins (per-invoice derived address is more secure) and the fixed
+  watcher skips that chain with a warning.
+
 ## 0.3.0
 
 ### Added

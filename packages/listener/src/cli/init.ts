@@ -43,6 +43,8 @@ import {
   isNetworkCompatibleWithXpub,
   type Network,
 } from '../network.js';
+import { isValidEvmAddress } from '../evm-amount-nonce.js';
+import { parseFixedChains } from '../fixed-address-watcher.js';
 
 export interface InitOptions {
   cwd?: string;
@@ -62,6 +64,8 @@ function helpText(): string {
     '  --network <n>           mainnet | testnet | signet | regtest (defaults to xpub kind)',
     '  --xpub-evm <xpub>       Optional account-level EVM xpub (m/44\'/60\'/0\') — enables USDC on Base',
     '  --base-rpc-url <url>    Optional Base RPC (default https://mainnet.base.org)',
+    '  --evm-address <0x..>    Optional fixed USDC receive address (wallets w/o xpub) — EIP-55',
+    '  --evm-chains <csv>      Fixed-mode chains (default base; e.g. base,ethereum,polygon)',
     '  --shop-name <name>',
     '  --email <addr>',
     '  --webhook-url <url>     HTTPS URL on your backend',
@@ -205,6 +209,30 @@ export async function runInit(
     }
     const baseRpcUrl = flagString(flags, 'base-rpc-url')?.trim() || undefined;
 
+    // ----- (a.7) optional fixed-address USDC mode (Z74) -----
+    // For wallets that cannot export an xpub (Phantom, MetaMask, App Base,
+    // Coinbase). Flag-only and entirely optional. The address must pass EIP-55;
+    // payments are identified by a unique amount (nonce in the low decimals).
+    let fixedEvmAddress: string | undefined;
+    let fixedEvmChains: string | undefined;
+    const fixedAddrFlag = flagString(flags, 'evm-address');
+    if (fixedAddrFlag) {
+      const addr = fixedAddrFlag.trim();
+      if (!isValidEvmAddress(addr)) {
+        process.stdout.write(c.red(`  ✗ --evm-address: bad EIP-55 address "${addr}"`) + '\n');
+        return 2;
+      }
+      const specs = parseFixedChains(flagString(flags, 'evm-chains'));
+      fixedEvmAddress = addr;
+      fixedEvmChains = specs.map((s) => s.chain).join(',');
+      process.stdout.write(
+        c.green(
+          `  ✓ fixed-address USDC mode ON (${addr}) — chains ${fixedEvmChains}; ` +
+            'payment identified by unique amount (nonce decimal)',
+        ) + '\n',
+      );
+    }
+
     // ----- (b) storage backend -----
     let storage = flagString(flags, 'storage') as StorageKind | undefined;
     while (!storage || !STORAGE_KINDS.includes(storage)) {
@@ -308,6 +336,8 @@ export async function runInit(
     if (merchantId) envValues.MERCHANT_ID = merchantId;
     if (evmXpub) envValues.MERCHANT_XPUB_EVM = evmXpub;
     if (baseRpcUrl) envValues.BASE_RPC_URL = baseRpcUrl;
+    if (fixedEvmAddress) envValues.MERCHANT_EVM_ADDRESS = fixedEvmAddress;
+    if (fixedEvmChains) envValues.MERCHANT_EVM_CHAINS = fixedEvmChains;
     if (supabaseUrl) envValues.SUPABASE_URL = supabaseUrl;
     if (supabaseKey) envValues.SUPABASE_SERVICE_ROLE_KEY = supabaseKey;
     if (postgresUrl) envValues.POSTGRES_URL = postgresUrl;
