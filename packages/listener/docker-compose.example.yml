@@ -1,0 +1,47 @@
+# @zettapay/listener — exemplo de deploy self-hosted.
+#
+# Roda o listener como container na MESMA rede Docker do app do merchant.
+# O app chama http://zettapay-listener:8787 pela rede interna — o listener
+# NUNCA fica exposto na internet. O único elo público é o app do merchant,
+# servido pelo proxy que ele já tem (EasyPanel/Traefik/nginx/Caddy).
+#
+# Uso:
+#   1. copie para docker-compose.yml
+#   2. preencha as variáveis em .env (veja .env.example abaixo)
+#   3. docker compose up -d
+#
+# Plug-and-play: na primeira subida o container faz o seed do merchant a
+# partir das variáveis de ambiente. Sem passos manuais.
+
+services:
+  zettapay-listener:
+    image: ghcr.io/leandromaiam-code/zettapay-listener:latest
+    container_name: zettapay-listener
+    restart: unless-stopped
+    environment:
+      # --- obrigatórios ---
+      MERCHANT_XPUB: ${MERCHANT_XPUB}                 # zpub/xpub BIP-84 (mainnet) — fica SÓ aqui, server-side
+      MERCHANT_WEBHOOK_URL: ${MERCHANT_WEBHOOK_URL}   # https://seu-app/api/zp/webhook
+      MERCHANT_WEBHOOK_SECRET: ${MERCHANT_WEBHOOK_SECRET}
+      ZETTAPAY_API_KEY: ${ZETTAPAY_API_KEY}           # protege o POST /invoice (o app envia este header)
+      # --- opcionais ---
+      MERCHANT_NETWORK: ${MERCHANT_NETWORK:-mainnet}
+      MERCHANT_SHOP_NAME: ${MERCHANT_SHOP_NAME:-merchant}
+      MERCHANT_EMAIL: ${MERCHANT_EMAIL:-noreply@example.com}
+      STORAGE: json
+      HEALTH_PORT: "8787"
+    volumes:
+      - zettapay-data:/data            # invoices ficam aqui (efêmeras, TTL 1h)
+    networks:
+      - app-net                        # MESMA rede do app do merchant
+    # NÃO publique a porta na internet. Comunicação é interna (rede Docker).
+    # Para debug local apenas, descomente:
+    # ports:
+    #   - "127.0.0.1:8787:8787"
+
+networks:
+  app-net:
+    external: true                     # rede onde o app do merchant já roda
+
+volumes:
+  zettapay-data:
