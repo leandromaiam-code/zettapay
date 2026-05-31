@@ -22,6 +22,32 @@ export type {
 } from './listener.js';
 
 export {
+  BaseWatcher,
+  DEFAULT_BASE_RPC_URL,
+  USDC_BASE_ADDRESS,
+} from './base-watcher.js';
+export type { BaseWatcherOptions, BaseWatcherStatus } from './base-watcher.js';
+
+export { deriveEvmAddress, toChecksumAddress } from './derive-evm.js';
+export type { DeriveEvmParams, DerivedEvm } from './derive-evm.js';
+
+export { usdToUsdc, formatUsdc, USDC_DECIMALS } from './usdc-pricing.js';
+
+export {
+  createInvoiceForMerchant,
+  createBaseInvoiceForMerchant,
+  buildBaseUsdcUri,
+  buildBip21Uri,
+  formatBtcAmount,
+} from './invoice-core.js';
+export type {
+  CreateInvoiceParams,
+  CreateInvoiceResult,
+  CreateBaseInvoiceParams,
+  CreateBaseInvoiceResult,
+} from './invoice-core.js';
+
+export {
   WebhookDispatcher,
   RETRY_CURVE_MS,
   MAX_ATTEMPTS,
