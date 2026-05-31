@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 # @zettapay/listener — self-hosted, non-custodial BTC payment listener.
-# Build once, ship the compiled dist/ + production deps only.
+# Plug-and-play: `docker run` with MERCHANT_XPUB + webhook env vars and it
+# auto-seeds the merchant on first boot, then runs watcher + HTTP API.
 
 FROM node:22-alpine AS build
 WORKDIR /app
@@ -20,8 +21,10 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./package.json
 COPY README.md LICENSE ./
-RUN mkdir -p /data && chown -R node:node /data /app
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN mkdir -p /data \
+ && chmod +x /usr/local/bin/docker-entrypoint.sh \
+ && chown -R node:node /data /app
 USER node
 EXPOSE 8787
-ENTRYPOINT ["node", "/app/dist/main.js"]
-CMD ["start"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
