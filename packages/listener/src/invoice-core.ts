@@ -13,12 +13,18 @@ import { deriveBip84Address } from './derive-bip84.js';
 import { deriveEvmAddress } from './derive-evm.js';
 import { formatUsdc, usdToUsdc } from './usdc-pricing.js';
 import {
-  allocateNonce,
+  allocateNonceShuffled,
   baseUnitsForUsd,
   encodeAmount,
   NONCE_MODULUS,
+  randomNonceOffset,
 } from './evm-amount-nonce.js';
 import { lookupEvmChain } from './fixed-address-watcher.js';
+
+// Per-boot random offset for the non-sequential nonce walk (Z76, FIX 6). Fixed
+// once per process so consecutive invoices step through the pool unpredictably
+// without an attacker being able to anticipate the next nonce from their own.
+const NONCE_BOOT_OFFSET = randomNonceOffset();
 
 const SATS_PER_BTC = 100_000_000;
 export const DEFAULT_EXPIRES_SECONDS = 3600;
@@ -239,7 +245,7 @@ export async function createFixedEvmInvoiceForMerchant(
     params.fixedAddress,
     baseUnits,
   );
-  const nonce = allocateNonce(activeNonces);
+  const nonce = allocateNonceShuffled(activeNonces, NONCE_BOOT_OFFSET);
   const encoded = encodeAmount(params.amountUsd, nonce);
 
   const expiresAt = new Date(

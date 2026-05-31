@@ -20,6 +20,7 @@
 //
 // Pure module: no I/O, no network, no storage. HR-PHONE-HOME / HR-CUSTODY safe.
 
+import { randomInt } from 'node:crypto';
 import { USDC_DECIMALS, usdToUsdc } from './usdc-pricing.js';
 import { toChecksumAddress } from './derive-evm.js';
 
@@ -30,9 +31,30 @@ export const NONCE_MAX = 10 ** NONCE_DECIMALS - 1; // 9999
 /** Integer base-unit modulus that isolates the nonce (10^4 = 10000). */
 export const NONCE_MODULUS = 10 ** NONCE_DECIMALS; // 10000
 
+// Stride used to walk the nonce space pseudo-randomly (Z76, FIX 6). Stepping by
+// a value COPRIME to NONCE_MAX visits every nonce in 1..NONCE_MAX exactly once
+// before repeating, so consecutive invoices get non-adjacent nonces and a payer
+// cannot guess another invoice's nonce from their own. 9999 = 3²·11·101 and
+// 2719 shares no factor with it, so the walk is a full permutation.
+export const NONCE_STRIDE = 2719;
+
 // Sanity: the nonce must fit strictly inside the 6-decimal USDC space.
 if (NONCE_DECIMALS >= USDC_DECIMALS) {
   throw new Error('evm-amount-nonce: NONCE_DECIMALS must be < USDC_DECIMALS');
+}
+
+// Sanity: the stride must be coprime to NONCE_MAX or the walk would skip nonces.
+if (gcd(NONCE_STRIDE, NONCE_MAX) !== 1) {
+  throw new Error('evm-amount-nonce: NONCE_STRIDE must be coprime to NONCE_MAX');
+}
+
+function gcd(a: number, b: number): number {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    [x, y] = [y, x % y];
+  }
+  return x;
 }
 
 /**
@@ -53,6 +75,36 @@ export function baseUnitsForUsd(usd: number): number {
 export function allocateNonce(activeNonces: ReadonlySet<number>): number {
   for (let n = 1; n <= NONCE_MAX; n += 1) {
     if (!activeNonces.has(n)) return n;
+  }
+  throw new Error(
+    `evm-amount-nonce: nonce pool exhausted (${NONCE_MAX} active invoices at this chain+price)`,
+  );
+}
+
+/**
+ * Pick a random per-boot offset for {@link allocateNonceShuffled}. Uses the CSPRNG
+ * so the nonce walk starts at an unpredictable point each time the listener boots.
+ */
+export function randomNonceOffset(): number {
+  return randomInt(0, NONCE_MAX);
+}
+
+/**
+ * Allocate a non-sequential nonce in 1..NONCE_MAX (Z76, FIX 6). Walks the space
+ * by {@link NONCE_STRIDE} starting from a per-boot `offset`, returning the first
+ * free slot. Because the stride is coprime to NONCE_MAX the walk is a full
+ * permutation of the pool: it stays unique, never skips a free nonce, and yields
+ * values that are hard to guess from a neighbouring invoice. Throws — exactly
+ * like {@link allocateNonce} — when all NONCE_MAX slots are taken.
+ */
+export function allocateNonceShuffled(
+  activeNonces: ReadonlySet<number>,
+  offset: number,
+): number {
+  const start = ((Math.trunc(offset) % NONCE_MAX) + NONCE_MAX) % NONCE_MAX;
+  for (let k = 0; k < NONCE_MAX; k += 1) {
+    const nonce = ((start + k * NONCE_STRIDE) % NONCE_MAX) + 1;
+    if (!activeNonces.has(nonce)) return nonce;
   }
   throw new Error(
     `evm-amount-nonce: nonce pool exhausted (${NONCE_MAX} active invoices at this chain+price)`,

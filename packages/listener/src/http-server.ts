@@ -14,6 +14,8 @@
 // when that env var is set. If unset, POST is open (dev) with a startup warning.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
+import type { AddressInfo } from 'node:net';
 import type { ListenerStatus, Logger } from './listener.js';
 import type { StorageAdapter } from './storage/index.js';
 import type { Invoice } from './types.js';
@@ -24,6 +26,37 @@ import {
 } from './invoice-core.js';
 import { formatUsdc } from './usdc-pricing.js';
 import { lookupEvmChain } from './fixed-address-watcher.js';
+import { SlidingWindowRateLimiter, type RateLimitConfig } from './rate-limit.js';
+
+/**
+ * Constant-time API-key comparison (Z76, FIX 1). A plain `===` short-circuits on
+ * the first differing byte, leaking key length and a prefix-match oracle through
+ * timing. We compare equal-length Buffers via `crypto.timingSafeEqual` and burn
+ * the same compare cost on a length mismatch — the same shape the webhook
+ * receiver already uses to verify HMAC signatures.
+ */
+export function timingSafeStrEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  if (aBuf.length !== bBuf.length) {
+    const filler = Buffer.alloc(aBuf.length);
+    timingSafeEqual(aBuf, filler);
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
+
+/** Best-effort client IP for rate-limiting. Trusts the first X-Forwarded-For
+ *  hop when present (self-hosted behind the merchant's own proxy), else the
+ *  socket peer. Only used as a rate-limit bucket key, never for authz. */
+function clientIp(req: IncomingMessage): string {
+  const fwd = req.headers['x-forwarded-for'];
+  if (typeof fwd === 'string' && fwd.length > 0) {
+    const first = fwd.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  return req.socket?.remoteAddress ?? 'unknown';
+}
 
 export const DEFAULT_HEALTH_PORT = 8787;
 
@@ -51,6 +84,10 @@ export interface AppServerOptions {
   fixedEvmAddress?: string;
   /** Chain aliases enabled for fixed mode (e.g. ['base','polygon']). */
   fixedEvmChains?: string[];
+  /** Rate-limit config for POST /invoice. Defaults to 30/min per IP, 300/min global. */
+  rateLimit?: Partial<RateLimitConfig>;
+  /** Injectable limiter (tests). When set, `rateLimit` is ignored. */
+  rateLimiter?: SlidingWindowRateLimiter;
   logger?: Logger;
 }
 
@@ -122,6 +159,7 @@ export class AppServer {
   private readonly baseUsdcAddress?: string;
   private readonly fixedEvmAddress?: string;
   private readonly fixedEvmChains: string[];
+  private readonly rateLimiter: SlidingWindowRateLimiter;
   private readonly log: Logger;
   private server: Server | null = null;
 
@@ -137,7 +175,14 @@ export class AppServer {
     this.baseUsdcAddress = opts.baseUsdcAddress;
     this.fixedEvmAddress = opts.fixedEvmAddress;
     this.fixedEvmChains = (opts.fixedEvmChains ?? []).map((c) => c.toLowerCase());
+    this.rateLimiter = opts.rateLimiter ?? new SlidingWindowRateLimiter(opts.rateLimit ?? {});
     this.log = opts.logger ?? noopLogger;
+  }
+
+  /** Actual bound TCP port (useful when constructed with port 0 in tests). */
+  get boundPort(): number {
+    const addr = this.server?.address();
+    return addr && typeof addr === 'object' ? (addr as AddressInfo).port : this.port;
   }
 
   /** True when chain is served by the fixed-address (xpub-less) USDC mode. */
@@ -150,6 +195,15 @@ export class AppServer {
   async start(): Promise<void> {
     if (this.server) return;
     if (!this.apiKey) {
+      // Prod-guard (Z76, FIX 4): an unauthenticated POST /invoice in production
+      // lets anyone mint invoices. Refuse to start instead of silently exposing
+      // the endpoint; dev keeps running with a warning.
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error(
+          '@zettapay/listener: ZETTAPAY_API_KEY is required when NODE_ENV=production — ' +
+            'POST /invoice must not be left unauthenticated. Set ZETTAPAY_API_KEY and restart.',
+        );
+      }
       this.log.warn('http_server.no_api_key', {
         message:
           'DEV MODE: POST /invoice is unauthenticated. Set ZETTAPAY_API_KEY for production.',
@@ -217,10 +271,23 @@ export class AppServer {
     if (method === 'POST' && path === '/invoice') {
       if (this.apiKey) {
         const got = String(req.headers['x-zettapay-api-key'] ?? '');
-        if (got !== this.apiKey) {
+        if (!timingSafeStrEqual(got, this.apiKey)) {
           this.sendJson(res, 401, { error: { code: 'unauthorized', message: 'invalid api key' } });
           return;
         }
+      }
+      // Rate-limit (Z76, FIX 3): bound invoice creation so an abusive caller
+      // cannot drain the fixed-address nonce pool or flood storage. In-memory,
+      // no external service.
+      const ip = clientIp(req);
+      const decision = this.rateLimiter.check(ip);
+      if (!decision.ok) {
+        res.setHeader('retry-after', '60');
+        this.log.warn('http_server.rate_limited', { ip, scope: decision.scope });
+        this.sendJson(res, 429, {
+          error: { code: 'rate_limited', message: 'too many invoice requests — retry shortly' },
+        });
+        return;
       }
       let body: Record<string, unknown>;
       try {

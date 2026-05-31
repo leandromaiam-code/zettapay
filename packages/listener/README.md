@@ -171,9 +171,15 @@ function verify(rawBody, sig, ts, secret) {
 | `MERCHANT_XPUB_EVM` | opcional | xpub EVM → USDC Base via derivação |
 | `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC Base (carteiras sem xpub) |
 | `MERCHANT_EVM_CHAINS` | opcional | csv de chains EVM (default `base`) |
-| `BASE_RPC_URL` | opcional | RPC da Base (default `https://mainnet.base.org`) |
+| `BASE_RPC_URL` | opcional | RPC(s) da Base — csv; sobrescreve o quórum público |
+| `ETHEREUM_RPC_URL` | opcional | RPC(s) da Ethereum — csv |
+| `POLYGON_RPC_URL` | opcional | RPC(s) da Polygon — csv |
+| `ZETTAPAY_RATE_LIMIT` | opcional | rate-limit `POST /invoice` (`<porIp>,<global>` por min; default `30,300`) |
 | `STORAGE` | opcional | `json` (default) \| `sqlite` |
 | `HEALTH_PORT` | opcional | porta da API (default `8787`) |
+
+> **Produção:** com `NODE_ENV=production`, o listener **recusa iniciar** sem
+> `ZETTAPAY_API_KEY` — o `POST /invoice` nunca fica aberto sem autenticação.
 
 ---
 
@@ -185,6 +191,55 @@ function verify(rawBody, sig, ts, secret) {
 - **HR-PHONE-HOME** — só fala com mempool.space (BTC) e o RPC da chain (EVM).
   Nenhum dado de cliente sai pra terceiros.
 - **Não custodial** — o BTC/USDC cai direto na sua carteira.
+
+---
+
+## Modelo de segurança e ameaças
+
+Honestidade sobre o que o listener garante — e o que **você** precisa decidir.
+Nada aqui muda a arquitetura: continua self-hosted, P2P, não custodial, sem
+telemetria, sem terceiros.
+
+### Confiança no RPC (USDC, modo endereço-fixo) — mitigada por quórum
+
+No modo endereço-fixo o pagamento é confirmado lendo o log `Transfer` do ERC-20
+num RPC público. Confiar num **único** RPC é risco: um endpoint malicioso ou com
+bug poderia forjar uma confirmação e ativar uma fatura sem pagamento real.
+
+Mitigação (v0.5.0): cada chain consulta uma **lista** de 2-3 RPCs públicos
+independentes e exige **quórum** (≥2 de N) concordando no mesmo tx + valor +
+maturidade antes de confirmar.
+
+- 1 endpoint discorda / cai → usa os outros;
+- só 1 responde → **não** confirma; fica "awaiting" e loga `rpc_quorum_degraded`;
+- um endpoint forjando outro valor **nunca** alcança quórum.
+
+**Alto valor: rode seu próprio node.** Aponte `BASE_RPC_URL` (ou
+`ETHEREUM_RPC_URL` / `POLYGON_RPC_URL`) pro seu node — a lista vira 1-de-1 e o
+node que você controla passa a ser a autoridade.
+
+### Trade-off de privacidade: endereço-fixo vs xpub
+
+- **Modo xpub** (`MERCHANT_XPUB_EVM`) deriva **um endereço por fatura** — melhor
+  privacidade e atribuição direta por endereço. É o caminho preferido.
+- **Modo endereço-fixo** (`MERCHANT_EVM_ADDRESS`) usa **um** endereço pra todas
+  as faturas, identificando o pagador pelo **valor exato** (nonce nas casas
+  decimais baixas do USDC). É o fallback pra carteiras que não exportam xpub
+  (Phantom, MetaMask, App Base, Coinbase). Como o endereço é reutilizado, o
+  histórico de pagamentos fica agregado num único endereço público. Os nonces
+  são alocados de forma **não-sequencial** (passo coprimo + offset aleatório por
+  boot) pra dificultar adivinhar o nonce de outra fatura. Pagamento com valor
+  fora do nonce exato (a menos / a mais) **nunca** ativa fatura: vira
+  `payment.orphan` (tolerância zero).
+
+### Endpoint de criação de faturas
+
+- `POST /invoice` exige `X-ZettaPay-Api-Key` quando `ZETTAPAY_API_KEY` está setado;
+  a comparação é **constante no tempo** (sem vazar tamanho/prefixo por timing).
+- Em `NODE_ENV=production` sem `ZETTAPAY_API_KEY`, o servidor **recusa iniciar**.
+- **Rate-limit** em memória (default 30/min por IP, 300/min global, via
+  `ZETTAPAY_RATE_LIMIT`) evita que um cliente abusivo esgote o pool de nonces ou
+  inunde a criação de faturas. Excesso → HTTP 429.
 
 ---
 

@@ -23,6 +23,12 @@ import type { StorageAdapter } from './storage/index.js';
 import type { Chain, Invoice } from './types.js';
 import type { Logger } from './listener.js';
 import { matchAmount, NONCE_MODULUS } from './evm-amount-nonce.js';
+import {
+  DEFAULT_EVM_RPCS,
+  quorumThreshold,
+  tallyTransferQuorum,
+  type TransferObservation,
+} from './rpc-quorum.js';
 
 /** keccak256("Transfer(address,address,uint256)"). */
 const TRANSFER_TOPIC0 =
@@ -44,7 +50,9 @@ export interface EvmChainSpec {
   usdcAddress: string;
   /** Public JSON-RPC default; overridable per chain via env. */
   defaultRpcUrl: string;
-  /** Env var that overrides defaultRpcUrl. */
+  /** Public JSON-RPC defaults for the quorum cross-check (>=2 independent). */
+  defaultRpcUrls: string[];
+  /** Env var that overrides the RPC endpoints (csv accepted). */
   rpcEnvVar: string;
   /** Min confirmations before an inbound transfer is accepted. */
   minConfirmations: number;
@@ -59,7 +67,8 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
     chain: 'base',
     chainId: 8453,
     usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    defaultRpcUrl: 'https://mainnet.base.org',
+    defaultRpcUrl: DEFAULT_EVM_RPCS.base![0]!,
+    defaultRpcUrls: DEFAULT_EVM_RPCS.base!,
     rpcEnvVar: 'BASE_RPC_URL',
     minConfirmations: 1,
   },
@@ -67,7 +76,8 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
     chain: 'eth',
     chainId: 1,
     usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    defaultRpcUrl: 'https://eth.llamarpc.com',
+    defaultRpcUrl: DEFAULT_EVM_RPCS.ethereum![0]!,
+    defaultRpcUrls: DEFAULT_EVM_RPCS.ethereum!,
     rpcEnvVar: 'ETHEREUM_RPC_URL',
     minConfirmations: 2,
   },
@@ -75,7 +85,8 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
     chain: 'polygon',
     chainId: 137,
     usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-    defaultRpcUrl: 'https://polygon-rpc.com',
+    defaultRpcUrl: DEFAULT_EVM_RPCS.polygon![0]!,
+    defaultRpcUrls: DEFAULT_EVM_RPCS.polygon!,
     rpcEnvVar: 'POLYGON_RPC_URL',
     minConfirmations: 5,
   },
@@ -115,8 +126,11 @@ const noopLogger: Logger = {
 };
 
 export interface FixedChainConfig extends EvmChainSpec {
-  /** Effective RPC URL after env override. */
+  /** Effective RPC URL after env override (first endpoint; kept for status). */
   rpcUrl: string;
+  /** Effective RPC endpoint list for the quorum cross-check. When absent or of
+   *  length 1, the watcher behaves as a single-source reader (backwards-compat). */
+  rpcUrls?: string[];
 }
 
 export interface FixedAddressWatcherOptions {
@@ -289,46 +303,75 @@ export class FixedAddressWatcher {
     }
   }
 
-  /** Returns false when the RPC read failed (poll marked degraded). */
+  /** Effective RPC endpoint list for a chain (quorum source). */
+  private endpointsFor(chain: FixedChainConfig): string[] {
+    if (chain.rpcUrls && chain.rpcUrls.length > 0) return chain.rpcUrls;
+    return [chain.rpcUrl];
+  }
+
+  /**
+   * One reconciliation pass over a chain, cross-checking ALL configured RPC
+   * endpoints (Z76, FIX 2). A transfer is only acted on once a QUORUM of
+   * endpoints independently report it mature; a single forged/lagging endpoint
+   * can neither confirm nor orphan. Returns false only when EVERY endpoint
+   * failed (poll marked degraded).
+   */
   private async scanChain(chain: FixedChainConfig, active: Invoice[]): Promise<boolean> {
-    const latest = await this.blockNumber(chain);
-    if (latest === null) return false;
-    const fromBlock = latest > BigInt(this.blockWindow) ? latest - BigInt(this.blockWindow) : 0n;
-    const logs = await this.getTransferLogs(chain, fromBlock, latest);
-    if (logs === null) return false;
+    const endpoints = this.endpointsFor(chain);
+    const required = quorumThreshold(endpoints.length);
+
+    const perEndpoint: TransferObservation[][] = [];
+    let responsive = 0;
+    for (const url of endpoints) {
+      const obs = await this.observeEndpoint(url, chain);
+      if (obs === null) continue;
+      responsive += 1;
+      perEndpoint.push(obs);
+    }
+    if (responsive === 0) return false; // all endpoints down → degraded poll
+
+    const { confirmed, degraded } = tallyTransferQuorum(
+      perEndpoint,
+      chain.minConfirmations,
+      required,
+    );
+
+    // A transfer that some — but fewer than `required` — endpoints report as
+    // mature is NOT confirmed on a minority (could be a single forging or
+    // lagging RPC). Surface it and retry next poll.
+    for (const d of degraded) {
+      this.log.warn('rpc_quorum_degraded', {
+        chain: chain.chain,
+        key: d.key,
+        value: d.value.toString(),
+        agreement: d.agreement,
+        required: d.required,
+      });
+    }
 
     const seen = this.seenFor(chain.chain);
-    for (const lg of logs) {
-      const key = `${lg.transactionHash}:${lg.logIndex}`;
-      if (seen.has(key)) continue;
-
-      const value = hexToBigInt(lg.data);
-      const logBlock = hexToBigInt(lg.blockNumber);
-      const confirmations = latest >= logBlock ? Number(latest - logBlock) + 1 : 0;
-      // Only mark the log as processed once it reaches a TERMINAL decision
-      // (confirmed or orphan). A transfer still below minConfirmations is left
-      // un-seen so the next poll reprocesses it once it matures — otherwise we
-      // would skip it forever and never confirm the invoice.
-      const terminal = await this.handleTransfer(
-        chain,
-        active,
-        lg.transactionHash,
-        value,
-        confirmations,
-      );
-      if (terminal) seen.add(key);
+    for (const c of confirmed) {
+      if (seen.has(c.key)) continue;
+      await this.handleConfirmedTransfer(chain, active, c.txHash, c.value, c.confirmations);
+      seen.add(c.key);
     }
     return true;
   }
 
-  /** Returns true when the transfer reached a terminal state (confirmed/orphan). */
-  private async handleTransfer(
+  /**
+   * Act on a transfer that reached quorum (already at/above minConfirmations):
+   * match it to a pending invoice by exact value → confirm, else → orphan.
+   * Underpayment / overpayment never matches an active nonce (tolerance is
+   * exactly ZERO — the stored amount IS the precise base+nonce units), so it
+   * deterministically falls through to the orphan path.
+   */
+  private async handleConfirmedTransfer(
     chain: FixedChainConfig,
     active: Invoice[],
     txHash: string,
     value: bigint,
     confirmations: number,
-  ): Promise<boolean> {
+  ): Promise<void> {
     const match = this.findInvoiceByValue(active, value);
     if (!match) {
       this.log.warn('fixed_watcher.orphan_payment', {
@@ -336,30 +379,45 @@ export class FixedAddressWatcher {
         address: this.address,
         tx_hash: txHash,
         value: value.toString(),
+        reason: 'no active invoice matches this exact amount (zero tolerance)',
       });
       await this.emitOrphanWebhook(chain.chain, txHash, value);
-      return true;
-    }
-    if (confirmations < chain.minConfirmations) {
-      this.log.info('fixed_watcher.awaiting_confirmations', {
-        invoice_id: match.invoice.id,
-        confirmations,
-        required: chain.minConfirmations,
-      });
-      return false;
+      return;
     }
     const confirmed = await this.storage.updateInvoiceStatus(match.invoice.id, 'confirmed', {
       paid_at: new Date().toISOString(),
       tx_hash: txHash,
     });
-    await this.emitConfirmedWebhook(confirmed, value, match.nonce);
+    await this.emitConfirmedWebhook(confirmed, value, match.nonce, confirmations);
     this.log.info('fixed_watcher.invoice_confirmed', {
       invoice_id: confirmed.id,
       nonce: match.nonce,
       tx_hash: txHash,
       value: value.toString(),
+      confirmations,
     });
-    return true;
+  }
+
+  /** Query one RPC endpoint and return its Transfer observations, or null on
+   *  any failure (offline / error / malformed). */
+  private async observeEndpoint(
+    url: string,
+    chain: FixedChainConfig,
+  ): Promise<TransferObservation[] | null> {
+    const latest = await this.blockNumber(url, chain);
+    if (latest === null) return null;
+    const fromBlock = latest > BigInt(this.blockWindow) ? latest - BigInt(this.blockWindow) : 0n;
+    const logs = await this.getTransferLogs(url, chain, fromBlock, latest);
+    if (logs === null) return null;
+    return logs.map((lg) => {
+      const logBlock = hexToBigInt(lg.blockNumber);
+      return {
+        key: `${lg.transactionHash}:${lg.logIndex}`,
+        txHash: lg.transactionHash,
+        value: hexToBigInt(lg.data),
+        confirmations: latest >= logBlock ? Number(latest - logBlock) + 1 : 0,
+      };
+    });
   }
 
   /**
@@ -397,8 +455,8 @@ export class FixedAddressWatcher {
   }
 
   /** eth_blockNumber → latest block as bigint, or null on failure. */
-  private async blockNumber(chain: FixedChainConfig): Promise<bigint | null> {
-    const result = await this.rpc(chain, 'eth_blockNumber', []);
+  private async blockNumber(url: string, chain: FixedChainConfig): Promise<bigint | null> {
+    const result = await this.rpc(url, chain, 'eth_blockNumber', []);
     if (typeof result !== 'string') return null;
     try {
       return hexToBigInt(result);
@@ -408,6 +466,7 @@ export class FixedAddressWatcher {
   }
 
   private async getTransferLogs(
+    url: string,
     chain: FixedChainConfig,
     fromBlock: bigint,
     toBlock: bigint,
@@ -420,13 +479,15 @@ export class FixedAddressWatcher {
         topics: [TRANSFER_TOPIC0, null, addressTopic(this.address)],
       },
     ];
-    const result = await this.rpc(chain, 'eth_getLogs', params);
+    const result = await this.rpc(url, chain, 'eth_getLogs', params);
     if (!Array.isArray(result)) return null;
     return result as RpcLog[];
   }
 
-  /** Single JSON-RPC call. Returns the `result` field, or null on any failure. */
+  /** Single JSON-RPC call to a specific endpoint. Returns `result`, or null on
+   *  any failure (the quorum tolerates individual endpoint failures). */
   private async rpc(
+    url: string,
     chain: FixedChainConfig,
     method: string,
     params: unknown[],
@@ -435,26 +496,26 @@ export class FixedAddressWatcher {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), RPC_TIMEOUT_MS);
     try {
-      const res = await this.fetchImpl(chain.rpcUrl, {
+      const res = await this.fetchImpl(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       if (!res.ok) {
-        this.log.warn('fixed_watcher.rpc_http_error', { chain: chain.chain, status: res.status });
+        this.log.warn('fixed_watcher.rpc_http_error', { chain: chain.chain, rpc: url, status: res.status });
         return null;
       }
       const json = (await res.json()) as { result?: unknown; error?: { message?: string } };
       if (json.error) {
-        this.log.warn('fixed_watcher.rpc_error', { chain: chain.chain, err: json.error.message });
+        this.log.warn('fixed_watcher.rpc_error', { chain: chain.chain, rpc: url, err: json.error.message });
         return null;
       }
       return json.result ?? null;
     } catch (err) {
       this.log.warn('fixed_watcher.rpc_failed', {
         chain: chain.chain,
-        rpc: chain.rpcUrl,
+        rpc: url,
         err: (err as Error).message,
       });
       return null;
@@ -467,6 +528,7 @@ export class FixedAddressWatcher {
     invoice: Invoice,
     valueUnits: bigint,
     nonce: number,
+    confirmations: number,
   ): Promise<void> {
     const payload = {
       event: 'invoice.confirmed',
@@ -478,11 +540,15 @@ export class FixedAddressWatcher {
       address: invoice.address,
       tx_hash: invoice.tx_hash,
       value: valueUnits.toString(),
+      confirmations,
       metadata: { mode: 'fixed-address', ref: invoice.id, nonce },
       confirmed_at: invoice.paid_at ?? new Date().toISOString(),
     };
+    // Deterministic event id per (invoice, status) (Z76, FIX 5) so the merchant
+    // can dedupe via X-ZettaPay-Event-Id. An invoice confirms exactly once, so
+    // re-recording the same id (e.g. across a restart) overwrites idempotently.
     await this.storage.recordWebhookEvent({
-      id: `evt_${randomUUID()}`,
+      id: `evt_${invoice.id}_confirmed`,
       invoice_id: invoice.id,
       payload_json: JSON.stringify(payload),
       next_retry_at: new Date(Date.now() + WEBHOOK_RETRY_INITIAL_MS).toISOString(),

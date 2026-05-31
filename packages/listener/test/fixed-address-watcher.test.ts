@@ -226,6 +226,107 @@ describe('FixedAddressWatcher.pollOnce', () => {
   });
 });
 
+/** A fetch that routes per-URL so each RPC endpoint can return its own view. */
+function quorumFetch(
+  perUrl: Record<string, { latest: bigint; logs: RpcLog[] } | null>,
+): typeof fetch {
+  return (async (url: string, init: { body: string }) => {
+    const view = perUrl[url];
+    if (!view) {
+      // Simulate an offline / erroring endpoint.
+      return { ok: false, status: 502, json: async () => ({}) } as unknown as Response;
+    }
+    const { method } = JSON.parse(init.body) as { method: string };
+    const result =
+      method === 'eth_blockNumber'
+        ? '0x' + view.latest.toString(16)
+        : method === 'eth_getLogs'
+          ? view.logs
+          : null;
+    return { ok: true, status: 200, json: async () => ({ result }) } as unknown as Response;
+  }) as unknown as typeof fetch;
+}
+
+function baseChainQuorum(urls: string[]): FixedChainConfig {
+  return { ...EVM_CHAIN_REGISTRY.base!, rpcUrl: urls[0]!, rpcUrls: urls };
+}
+
+describe('FixedAddressWatcher RPC quorum (Z76, FIX 2)', () => {
+  const A = 'https://rpc-a.test';
+  const B = 'https://rpc-b.test';
+  const C = 'https://rpc-c.test';
+
+  it('confirms only when >=2 endpoints agree on the same tx+value', async () => {
+    const storage = new FakeStorage([makeInvoice({ amount: '29000042' })]);
+    const fetchImpl = quorumFetch({
+      [A]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [B]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [C]: { latest: 100n, logs: [makeLog(29_000042n)] },
+    });
+    const watcher = makeWatcher(storage, baseChainQuorum([A, B, C]), fetchImpl);
+    await watcher.pollOnce();
+    expect(storage.invoices.get('inv_fixed_1')?.status).toBe('confirmed');
+    expect(storage.webhooks).toHaveLength(1);
+  });
+
+  it('leaves the invoice awaiting when only ONE of N endpoints responds (degraded, no quorum)', async () => {
+    const storage = new FakeStorage([makeInvoice({ amount: '29000042' })]);
+    const fetchImpl = quorumFetch({
+      [A]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [B]: null, // offline
+      [C]: null, // offline
+    });
+    const watcher = makeWatcher(storage, baseChainQuorum([A, B, C]), fetchImpl);
+    await watcher.pollOnce();
+    expect(storage.invoices.get('inv_fixed_1')?.status).toBe('pending');
+    expect(storage.webhooks).toHaveLength(0);
+  });
+
+  it('never confirms a value forged by a single endpoint (others disagree)', async () => {
+    const storage = new FakeStorage([makeInvoice({ amount: '29000042' })]);
+    // A + B see the real 29.000042; C forges a different value that would match
+    // no invoice anyway — but crucially it can never reach quorum on its own.
+    const fetchImpl = quorumFetch({
+      [A]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [B]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [C]: { latest: 100n, logs: [makeLog(29_000042n, { transactionHash: '0xforged' })] },
+    });
+    const watcher = makeWatcher(storage, baseChainQuorum([A, B, C]), fetchImpl);
+    await watcher.pollOnce();
+    // The honest value reached quorum (A+B) → confirmed once; the forged tx
+    // (1 vote) neither confirmed nor orphaned.
+    expect(storage.invoices.get('inv_fixed_1')?.status).toBe('confirmed');
+    const events = storage.webhooks.map((w) => JSON.parse(w.payload_json).event);
+    expect(events.filter((e) => e === 'invoice.confirmed')).toHaveLength(1);
+    expect(events).not.toContain('payment.orphan');
+  });
+
+  it('does not confirm when two endpoints report DIFFERENT values (no agreement)', async () => {
+    const storage = new FakeStorage([makeInvoice({ amount: '29000042' })]);
+    const fetchImpl = quorumFetch({
+      [A]: { latest: 100n, logs: [makeLog(29_000042n)] },
+      [B]: { latest: 100n, logs: [makeLog(29_000043n)] }, // disagree on value
+    });
+    const watcher = makeWatcher(storage, baseChainQuorum([A, B]), fetchImpl);
+    await watcher.pollOnce();
+    expect(storage.invoices.get('inv_fixed_1')?.status).toBe('pending');
+    expect(storage.webhooks).toHaveLength(0);
+  });
+
+  it('underpayment reaching quorum has no exact nonce match → orphan, never confirm', async () => {
+    const storage = new FakeStorage([makeInvoice({ amount: '29000042' })]);
+    const fetchImpl = quorumFetch({
+      [A]: { latest: 100n, logs: [makeLog(29_000041n)] }, // 1 unit short
+      [B]: { latest: 100n, logs: [makeLog(29_000041n)] },
+    });
+    const watcher = makeWatcher(storage, baseChainQuorum([A, B]), fetchImpl);
+    await watcher.pollOnce();
+    expect(storage.invoices.get('inv_fixed_1')?.status).toBe('pending');
+    expect(storage.webhooks).toHaveLength(1);
+    expect(JSON.parse(storage.webhooks[0]!.payload_json).event).toBe('payment.orphan');
+  });
+});
+
 describe('FixedAddressWatcher.status', () => {
   it('reports the configured address, chains and pending count', async () => {
     const storage = new FakeStorage([makeInvoice()]);

@@ -4,12 +4,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   allocateNonce,
+  allocateNonceShuffled,
   baseUnitsForUsd,
   encodeAmount,
   isValidEvmAddress,
   matchAmount,
   NONCE_MAX,
   NONCE_MODULUS,
+  NONCE_STRIDE,
+  randomNonceOffset,
 } from '../src/evm-amount-nonce.js';
 
 describe('baseUnitsForUsd', () => {
@@ -88,6 +91,66 @@ describe('NONCE constants', () => {
   it('reserves 4 decimals (modulus 10000, max 9999)', () => {
     expect(NONCE_MODULUS).toBe(10_000);
     expect(NONCE_MAX).toBe(9_999);
+  });
+
+  it('uses a stride coprime to NONCE_MAX (full permutation walk)', () => {
+    const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+    expect(gcd(NONCE_STRIDE, NONCE_MAX)).toBe(1);
+  });
+});
+
+describe('allocateNonceShuffled (FIX 6 — non-sequential)', () => {
+  it('returns a valid in-range nonce', () => {
+    const n = allocateNonceShuffled(new Set(), 0);
+    expect(n).toBeGreaterThanOrEqual(1);
+    expect(n).toBeLessThanOrEqual(NONCE_MAX);
+  });
+
+  it('does not allocate sequentially from a non-zero offset', () => {
+    // With offset 0 the first nonce is start(0)+stride+1; consecutive draws are
+    // spaced by NONCE_STRIDE, never the adjacent integer.
+    const active = new Set<number>();
+    const first = allocateNonceShuffled(active, 0);
+    active.add(first);
+    const second = allocateNonceShuffled(active, 0);
+    expect(Math.abs(second - first)).not.toBe(1);
+  });
+
+  it('produces a unique permutation across the whole pool (no repeats, no gaps)', () => {
+    const active = new Set<number>();
+    const seen = new Set<number>();
+    for (let i = 0; i < NONCE_MAX; i += 1) {
+      const n = allocateNonceShuffled(active, 1234);
+      expect(n).toBeGreaterThanOrEqual(1);
+      expect(n).toBeLessThanOrEqual(NONCE_MAX);
+      expect(seen.has(n)).toBe(false);
+      seen.add(n);
+      active.add(n);
+    }
+    expect(seen.size).toBe(NONCE_MAX);
+  });
+
+  it('throws when the pool is exhausted', () => {
+    const full = new Set<number>();
+    for (let n = 1; n <= NONCE_MAX; n += 1) full.add(n);
+    expect(() => allocateNonceShuffled(full, 7)).toThrow(/exhausted/);
+  });
+
+  it('skips already-active nonces', () => {
+    const first = allocateNonceShuffled(new Set(), 0);
+    const n = allocateNonceShuffled(new Set([first]), 0);
+    expect(n).not.toBe(first);
+  });
+});
+
+describe('randomNonceOffset', () => {
+  it('returns an integer within the nonce range', () => {
+    for (let i = 0; i < 50; i += 1) {
+      const o = randomNonceOffset();
+      expect(Number.isInteger(o)).toBe(true);
+      expect(o).toBeGreaterThanOrEqual(0);
+      expect(o).toBeLessThan(NONCE_MAX);
+    }
   });
 });
 

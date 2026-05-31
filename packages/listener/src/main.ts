@@ -11,6 +11,7 @@ import {
   parseFixedChains,
   type FixedChainConfig,
 } from './fixed-address-watcher.js';
+import { resolveRpcList } from './rpc-quorum.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
 import { DEFAULT_HEALTH_PORT } from './health-server.js';
 import { AppServer } from './http-server.js';
@@ -175,8 +176,10 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       });
       continue;
     }
-    const rpcUrl = process.env[spec.rpcEnvVar]?.trim() || spec.defaultRpcUrl;
-    fixedChains.push({ ...spec, rpcUrl });
+    // Quorum source (Z76, FIX 2): a list of independent public RPCs by default;
+    // a merchant can collapse to their own node via <CHAIN>_RPC_URL (csv).
+    const rpcUrls = resolveRpcList(process.env[spec.rpcEnvVar], spec.defaultRpcUrls);
+    fixedChains.push({ ...spec, rpcUrl: rpcUrls[0] ?? spec.defaultRpcUrl, rpcUrls });
   }
 
   const apiServer = new AppServer({

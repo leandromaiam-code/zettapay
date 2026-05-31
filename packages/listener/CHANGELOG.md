@@ -1,5 +1,50 @@
 # Changelog — @zettapay/listener
 
+## 0.5.0
+
+### Security hardening — additive, no architecture change
+
+All seven fixes are defensive hardening only. The architecture is unchanged:
+self-hosted, P2P, non-custodial, zero telemetry, zero third-party/custody calls.
+BTC (BIP-84 xpub), USDC-xpub on Base, and USDC fixed-address mode keep their
+derivation, watcher, and webhook paths byte-for-byte; the full prior test suite
+still passes (regression gate).
+
+- **Timing-safe API-key comparison (FIX 1).** `POST /invoice` previously compared
+  `X-ZettaPay-Api-Key` with `===`, which short-circuits on the first differing
+  byte and leaks key length + a prefix-match oracle through response timing. Now
+  compared in constant time via `crypto.timingSafeEqual` over equal-length
+  buffers (same shape the webhook receiver uses for HMAC). `src/http-server.ts`.
+- **RPC quorum (FIX 2).** The fixed-address USDC watcher confirmed a payment from
+  a SINGLE public JSON-RPC endpoint — a malicious/buggy RPC could forge a
+  confirmation. Each chain now reads a LIST of 2-3 independent public RPCs and
+  requires a QUORUM (≥2 of N) to AGREE on the same tx + value + maturity before
+  confirming. One discordant/offline endpoint falls back to the others; if only
+  one responds the transfer stays awaiting and `rpc_quorum_degraded` is logged; a
+  single forged value can never reach quorum. A merchant running their own node
+  can collapse the list to 1 trusted endpoint via `<CHAIN>_RPC_URL` (csv) →
+  quorum 1-of-1. `src/rpc-quorum.ts`, `src/fixed-address-watcher.ts`.
+- **Rate-limit on `POST /invoice` (FIX 3).** In-memory sliding window (default
+  30/min per IP, 300/min global, configurable via `ZETTAPAY_RATE_LIMIT`); exceed
+  → HTTP 429 `rate_limited`. Zero deps, zero external service. `src/rate-limit.ts`.
+- **Production prod-guard (FIX 4).** When `NODE_ENV=production` and
+  `ZETTAPAY_API_KEY` is unset, the server REFUSES to start instead of silently
+  exposing an unauthenticated invoice endpoint. Dev stays a warning.
+- **Deterministic webhook event id (FIX 5).** `invoice.confirmed` now uses a
+  deterministic `evt_<invoice>_confirmed` id so the merchant can dedupe via
+  `X-ZettaPay-Event-Id` across retries/restarts. `GET /invoice/:id` returns
+  `tx_hash` for audit.
+- **Non-sequential nonce allocation (FIX 6).** Fixed-address nonces are now drawn
+  by walking the 1..9999 pool with a coprime stride from a random per-boot offset
+  (full permutation: still unique, never skips a free slot), so a payer cannot
+  guess another invoice's nonce from their own. Underpayment/overpayment has no
+  exact nonce match and deterministically falls to the `payment.orphan` path
+  (zero tolerance). `src/evm-amount-nonce.ts`, `src/invoice-core.ts`.
+- **Threat model documentation (FIX 7).** New README "Modelo de segurança e
+  ameaças" section: RPC trust (mitigated by quorum), the fixed-address privacy
+  trade-off vs xpub, the recommendation to run your own node for high value, the
+  prod-guard, and the rate-limit.
+
 ## 0.4.0
 
 ### Added
