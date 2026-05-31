@@ -6,6 +6,11 @@
 import { createStorage } from './storage/index.js';
 import { BtcListener, type Logger } from './listener.js';
 import { BaseWatcher } from './base-watcher.js';
+import {
+  FixedAddressWatcher,
+  parseFixedChains,
+  type FixedChainConfig,
+} from './fixed-address-watcher.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
 import { DEFAULT_HEALTH_PORT } from './health-server.js';
 import { AppServer } from './http-server.js';
@@ -154,6 +159,26 @@ export async function run(argv: readonly string[] = []): Promise<void> {
   const evmXpub = process.env.MERCHANT_XPUB_EVM?.trim() || undefined;
   const baseRpcUrl = process.env.BASE_RPC_URL?.trim() || undefined;
 
+  // Fixed-address (xpub-less) USDC mode (Z74) — opt-in via MERCHANT_EVM_ADDRESS.
+  // Independent of xpub mode; if both target the same chain, xpub wins (more
+  // secure) and the fixed watcher skips that chain with a warning.
+  const fixedAddress = process.env.MERCHANT_EVM_ADDRESS?.trim() || undefined;
+  const fixedChainSpecs = fixedAddress
+    ? parseFixedChains(process.env.MERCHANT_EVM_CHAINS)
+    : [];
+  const fixedChains: FixedChainConfig[] = [];
+  for (const spec of fixedChainSpecs) {
+    if (spec.chain === 'base' && evmXpub) {
+      consoleLogger.warn('fixed_watcher.xpub_precedence', {
+        chain: 'base',
+        message: 'MERCHANT_XPUB_EVM and MERCHANT_EVM_ADDRESS both set for base — xpub mode wins',
+      });
+      continue;
+    }
+    const rpcUrl = process.env[spec.rpcEnvVar]?.trim() || spec.defaultRpcUrl;
+    fixedChains.push({ ...spec, rpcUrl });
+  }
+
   const apiServer = new AppServer({
     port: cfg.healthPort,
     statusProvider: () => listener.status(),
@@ -165,6 +190,8 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       .map((o) => o.trim())
       .filter(Boolean),
     evmXpub,
+    fixedEvmAddress: fixedAddress,
+    fixedEvmChains: fixedChains.map((ch) => ch.chain),
     logger: consoleLogger,
   });
 
@@ -177,10 +204,22 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       })
     : null;
 
+  const fixedWatcher =
+    fixedAddress && fixedChains.length > 0
+      ? new FixedAddressWatcher({
+          storage,
+          merchantId,
+          address: fixedAddress,
+          chains: fixedChains,
+          logger: consoleLogger,
+        })
+      : null;
+
   await apiServer.start();
   dispatcher.start();
   await listener.start();
   if (baseWatcher) await baseWatcher.start();
+  if (fixedWatcher) await fixedWatcher.start();
 
   consoleLogger.info('zettapay_listener.started', {
     merchant_id: merchantId,
@@ -190,6 +229,8 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     ws_url: cfg.wsUrl,
     base_enabled: Boolean(baseWatcher),
     base_rpc: baseWatcher ? baseWatcher.status().rpcUrl : undefined,
+    fixed_address_enabled: Boolean(fixedWatcher),
+    fixed_chains: fixedWatcher ? fixedWatcher.status().chains : undefined,
   });
 
   const shutdown = async (signal: string) => {

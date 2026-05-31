@@ -34,9 +34,36 @@ export type { DeriveEvmParams, DerivedEvm } from './derive-evm.js';
 export { usdToUsdc, formatUsdc, USDC_DECIMALS } from './usdc-pricing.js';
 
 export {
+  allocateNonce,
+  encodeAmount,
+  matchAmount,
+  baseUnitsForUsd,
+  isValidEvmAddress,
+  NONCE_MAX,
+  NONCE_MODULUS,
+  NONCE_DECIMALS,
+} from './evm-amount-nonce.js';
+export type { EncodedAmount } from './evm-amount-nonce.js';
+
+export {
+  FixedAddressWatcher,
+  EVM_CHAIN_REGISTRY,
+  lookupEvmChain,
+  parseFixedChains,
+} from './fixed-address-watcher.js';
+export type {
+  EvmChainSpec,
+  FixedChainConfig,
+  FixedAddressWatcherOptions,
+  FixedAddressWatcherStatus,
+} from './fixed-address-watcher.js';
+
+export {
   createInvoiceForMerchant,
   createBaseInvoiceForMerchant,
+  createFixedEvmInvoiceForMerchant,
   buildBaseUsdcUri,
+  buildEvmUsdcUri,
   buildBip21Uri,
   formatBtcAmount,
 } from './invoice-core.js';
@@ -45,6 +72,8 @@ export type {
   CreateInvoiceResult,
   CreateBaseInvoiceParams,
   CreateBaseInvoiceResult,
+  CreateFixedEvmInvoiceParams,
+  CreateFixedEvmInvoiceResult,
 } from './invoice-core.js';
 
 export {

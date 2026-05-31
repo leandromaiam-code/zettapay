@@ -20,6 +20,8 @@ import {
   isNetworkCompatibleWithXpub,
   type Network,
 } from '../network.js';
+import { isValidEvmAddress } from '../evm-amount-nonce.js';
+import { parseFixedChains } from '../fixed-address-watcher.js';
 
 export interface VerifyOptions {
   cwd?: string;
@@ -155,6 +157,34 @@ export async function runVerifyConfig(
         label: 'BASE_RPC_URL valid',
         ok: true,
         detail: 'unset — default https://mainnet.base.org',
+      });
+    }
+  }
+
+  // Optional fixed-address USDC mode (Z74) — for wallets that can't export an
+  // xpub. Only checked when MERCHANT_EVM_ADDRESS is present; its absence is
+  // valid (fixed mode off). When set it must pass the EIP-55 checksum.
+  const fixedAddress = env.MERCHANT_EVM_ADDRESS?.trim();
+  if (fixedAddress) {
+    const ok = isValidEvmAddress(fixedAddress);
+    checks.push({
+      label: 'MERCHANT_EVM_ADDRESS valid (fixed-address USDC mode)',
+      ok,
+      detail: ok
+        ? `${fixedAddress} — identifies payment by unique amount (nonce decimal)`
+        : `bad EIP-55 address "${fixedAddress}"`,
+    });
+    const specs = parseFixedChains(env.MERCHANT_EVM_CHAINS);
+    checks.push({
+      label: 'MERCHANT_EVM_CHAINS resolved',
+      ok: specs.length > 0,
+      detail: specs.map((s) => s.chain).join(', ') || '(none)',
+    });
+    if (env.MERCHANT_XPUB_EVM?.trim() && specs.some((s) => s.chain === 'base')) {
+      checks.push({
+        label: 'fixed vs xpub precedence (base)',
+        ok: true,
+        detail: 'both set for base — xpub mode wins (more secure)',
       });
     }
   }
