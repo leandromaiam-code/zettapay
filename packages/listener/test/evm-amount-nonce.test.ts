@@ -8,6 +8,7 @@ import {
   encodeAmount,
   isValidEvmAddress,
   matchAmount,
+  randomNonceStart,
   NONCE_MAX,
   NONCE_MODULUS,
 } from '../src/evm-amount-nonce.js';
@@ -81,6 +82,43 @@ describe('allocateNonce', () => {
     const full = new Set<number>();
     for (let n = 1; n <= NONCE_MAX; n += 1) full.add(n);
     expect(() => allocateNonce(full)).toThrow(/exhausted/);
+  });
+});
+
+describe('allocateNonce shuffle (Z76 FIX 6 — anti front-running)', () => {
+  it('starts the search at the given start and wraps the ring', () => {
+    // start=5000, nothing active → returns 5000 (non-sequential origin).
+    expect(allocateNonce(new Set(), 5000)).toBe(5000);
+    // start near the top wraps back to 1 when the tail is occupied.
+    const tailFull = new Set<number>();
+    for (let n = NONCE_MAX - 2; n <= NONCE_MAX; n += 1) tailFull.add(n);
+    expect(allocateNonce(tailFull, NONCE_MAX - 2)).toBe(1);
+  });
+
+  it('still guarantees uniqueness from an arbitrary start', () => {
+    const active = new Set<number>();
+    const picked = new Set<number>();
+    let start = 4242;
+    for (let i = 0; i < 500; i += 1) {
+      const n = allocateNonce(active, start);
+      expect(picked.has(n)).toBe(false); // never a collision
+      picked.add(n);
+      active.add(n);
+      start = (start % NONCE_MAX) + 7; // jump the origin around each time
+    }
+    expect(picked.size).toBe(500);
+  });
+
+  it('default start (legacy) is still deterministic smallest-free', () => {
+    expect(allocateNonce(new Set([1, 2, 4]))).toBe(3);
+  });
+
+  it('randomNonceStart yields values inside 1..NONCE_MAX', () => {
+    for (let i = 0; i < 200; i += 1) {
+      const s = randomNonceStart();
+      expect(s).toBeGreaterThanOrEqual(1);
+      expect(s).toBeLessThanOrEqual(NONCE_MAX);
+    }
   });
 });
 

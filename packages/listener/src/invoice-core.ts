@@ -17,6 +17,7 @@ import {
   baseUnitsForUsd,
   encodeAmount,
   NONCE_MODULUS,
+  randomNonceStart,
 } from './evm-amount-nonce.js';
 import { lookupEvmChain } from './fixed-address-watcher.js';
 
@@ -239,7 +240,11 @@ export async function createFixedEvmInvoiceForMerchant(
     params.fixedAddress,
     baseUnits,
   );
-  const nonce = allocateNonce(activeNonces);
+  // Anti front-running (Z76 FIX 6): start the search at a per-invoice random
+  // point so the allocated nonce — and thus the exact payable amount — is not
+  // guessable from another invoice. allocateNonce still skips occupied slots,
+  // so uniqueness within the active (chain, base price) pool is guaranteed.
+  const nonce = allocateNonce(activeNonces, randomNonceStart());
   const encoded = encodeAmount(params.amountUsd, nonce);
 
   const expiresAt = new Date(

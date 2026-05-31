@@ -14,6 +14,7 @@
 // when that env var is set. If unset, POST is open (dev) with a startup warning.
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import type { ListenerStatus, Logger } from './listener.js';
 import type { StorageAdapter } from './storage/index.js';
 import type { Invoice } from './types.js';
@@ -24,6 +25,10 @@ import {
 } from './invoice-core.js';
 import { formatUsdc } from './usdc-pricing.js';
 import { lookupEvmChain } from './fixed-address-watcher.js';
+import {
+  SlidingWindowRateLimiter,
+  type RateLimitConfig,
+} from './rate-limit.js';
 
 export const DEFAULT_HEALTH_PORT = 8787;
 
@@ -34,6 +39,25 @@ const noopLogger: Logger = {
 };
 
 const MAX_BODY_BYTES = 16 * 1024;
+
+/**
+ * Constant-time string comparison (Z76 FIX 1). A naive `a === b` short-circuits
+ * on the first differing byte, leaking — via response timing — how much of the
+ * API key an attacker has guessed. We compare equal-length Buffers with
+ * crypto.timingSafeEqual; on a length mismatch we still burn one compare so the
+ * key's length isn't leaked either, then return false. Mirrors the receiver's
+ * HMAC comparison.
+ */
+export function timingSafeStrEqual(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a, 'utf8');
+  const bBuf = Buffer.from(b, 'utf8');
+  if (aBuf.length !== bBuf.length) {
+    const filler = Buffer.alloc(aBuf.length);
+    timingSafeEqual(aBuf, filler);
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
 
 export interface AppServerOptions {
   port?: number;
@@ -51,6 +75,8 @@ export interface AppServerOptions {
   fixedEvmAddress?: string;
   /** Chain aliases enabled for fixed mode (e.g. ['base','polygon']). */
   fixedEvmChains?: string[];
+  /** Sliding-window rate limit for POST /invoice. null disables limiting. */
+  rateLimit?: RateLimitConfig | null;
   logger?: Logger;
 }
 
@@ -122,6 +148,7 @@ export class AppServer {
   private readonly baseUsdcAddress?: string;
   private readonly fixedEvmAddress?: string;
   private readonly fixedEvmChains: string[];
+  private readonly rateLimiter: SlidingWindowRateLimiter | null;
   private readonly log: Logger;
   private server: Server | null = null;
 
@@ -137,7 +164,22 @@ export class AppServer {
     this.baseUsdcAddress = opts.baseUsdcAddress;
     this.fixedEvmAddress = opts.fixedEvmAddress;
     this.fixedEvmChains = (opts.fixedEvmChains ?? []).map((c) => c.toLowerCase());
+    // rateLimit === undefined → default limiter; null → disabled.
+    this.rateLimiter =
+      opts.rateLimit === null
+        ? null
+        : new SlidingWindowRateLimiter(opts.rateLimit ?? undefined);
     this.log = opts.logger ?? noopLogger;
+  }
+
+  /** Best-effort client IP for rate-limit bucketing. */
+  private clientIp(req: IncomingMessage): string {
+    const fwd = req.headers['x-forwarded-for'];
+    if (typeof fwd === 'string' && fwd.length > 0) {
+      const first = fwd.split(',')[0]?.trim();
+      if (first) return first;
+    }
+    return req.socket.remoteAddress ?? 'unknown';
   }
 
   /** True when chain is served by the fixed-address (xpub-less) USDC mode. */
@@ -164,6 +206,12 @@ export class AppServer {
       server.listen(this.port, this.host, () => resolve());
     });
     this.log.info('http_server.listening', { port: this.port, host: this.host });
+  }
+
+  /** OS-assigned port after start() — useful when constructed with port 0. */
+  get boundPort(): number | null {
+    const addr = this.server?.address();
+    return addr && typeof addr === 'object' ? addr.port : null;
   }
 
   async stop(): Promise<void> {
@@ -215,9 +263,28 @@ export class AppServer {
 
     // POST /invoice
     if (method === 'POST' && path === '/invoice') {
+      // Rate limit BEFORE auth so a flood is bounded even without a valid key
+      // (DoS / nonce-pool-exhaustion defense, Z76 FIX 3). Local Map only.
+      if (this.rateLimiter) {
+        const ip = this.clientIp(req);
+        const decision = this.rateLimiter.hit(ip);
+        if (!decision.allowed) {
+          if (decision.retryAfterSeconds) {
+            res.setHeader('retry-after', String(decision.retryAfterSeconds));
+          }
+          this.log.warn('http_server.rate_limited', { ip, scope: decision.scope });
+          this.sendJson(res, 429, {
+            error: {
+              code: 'rate_limited',
+              message: `too many invoice requests (${decision.scope} limit) — slow down`,
+            },
+          });
+          return;
+        }
+      }
       if (this.apiKey) {
         const got = String(req.headers['x-zettapay-api-key'] ?? '');
-        if (got !== this.apiKey) {
+        if (!timingSafeStrEqual(got, this.apiKey)) {
           this.sendJson(res, 401, { error: { code: 'unauthorized', message: 'invalid api key' } });
           return;
         }

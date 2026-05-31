@@ -18,11 +18,17 @@
 // per chain (BASE_RPC_URL / ETHEREUM_RPC_URL / POLYGON_RPC_URL). No zettapay.*
 // host is reachable. HR-CUSTODY: only a public 0x receive address is used.
 
-import { randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import type { StorageAdapter } from './storage/index.js';
 import type { Chain, Invoice } from './types.js';
 import type { Logger } from './listener.js';
 import { matchAmount, NONCE_MODULUS } from './evm-amount-nonce.js';
+import {
+  decideTransferQuorum,
+  quorumThreshold,
+  DEFAULT_QUORUM,
+  type RpcObservation,
+} from './rpc-quorum.js';
 
 /** keccak256("Transfer(address,address,uint256)"). */
 const TRANSFER_TOPIC0 =
@@ -87,6 +93,17 @@ export function lookupEvmChain(alias: string): EvmChainSpec | null {
 }
 
 /**
+ * Deterministic webhook event id (Z76 FIX 5). The id surfaces to the merchant
+ * as the `X-ZettaPay-Event-Id` header; making it a stable function of the event
+ * key (rather than a random UUID) means a re-detection after a listener restart
+ * produces the SAME id, so the merchant can deduplicate idempotently. Truncated
+ * SHA-256 over a domain-separated key.
+ */
+export function deterministicEventId(key: string): string {
+  return `evt_${createHash('sha256').update(key).digest('hex').slice(0, 32)}`;
+}
+
+/**
  * Parse MERCHANT_EVM_CHAINS ("base,ethereum,polygon") into registry specs,
  * defaulting to ['base']. Unknown aliases are dropped with no throw so a typo
  * never crashes boot; the caller logs the effective set.
@@ -115,8 +132,15 @@ const noopLogger: Logger = {
 };
 
 export interface FixedChainConfig extends EvmChainSpec {
-  /** Effective RPC URL after env override. */
+  /** Effective RPC URL after env override (primary; first of the quorum list). */
   rpcUrl: string;
+  /**
+   * Full quorum endpoint list (Z76 FIX 2). When 2+ entries, a confirmation
+   * requires {@link quorumThreshold} of them to agree. When omitted/empty the
+   * watcher falls back to `[rpcUrl]` (single source) so older callers and tests
+   * keep working unchanged.
+   */
+  rpcUrls?: string[];
 }
 
 export interface FixedAddressWatcherOptions {
@@ -128,6 +152,8 @@ export interface FixedAddressWatcherOptions {
   chains: FixedChainConfig[];
   pollIntervalMs?: number;
   blockWindow?: number;
+  /** Agreeing-RPC count required to confirm when 2+ endpoints are configured. */
+  quorum?: number;
   /** Injectable fetch for tests; defaults to global fetch. */
   fetchImpl?: typeof fetch;
   logger?: Logger;
@@ -172,6 +198,7 @@ export class FixedAddressWatcher {
   private readonly chains: FixedChainConfig[];
   private readonly pollIntervalMs: number;
   private readonly blockWindow: number;
+  private readonly quorum: number;
   private readonly fetchImpl: typeof fetch;
   private readonly log: Logger;
 
@@ -192,6 +219,7 @@ export class FixedAddressWatcher {
     this.chains = opts.chains;
     this.pollIntervalMs = opts.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
     this.blockWindow = opts.blockWindow ?? DEFAULT_BLOCK_WINDOW;
+    this.quorum = opts.quorum ?? DEFAULT_QUORUM;
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.log = opts.logger ?? noopLogger;
   }
@@ -289,36 +317,98 @@ export class FixedAddressWatcher {
     }
   }
 
-  /** Returns false when the RPC read failed (poll marked degraded). */
+  /** Endpoints to cross-check for this chain (quorum list, or single fallback). */
+  private rpcUrlsFor(chain: FixedChainConfig): string[] {
+    return chain.rpcUrls && chain.rpcUrls.length > 0 ? chain.rpcUrls : [chain.rpcUrl];
+  }
+
+  /**
+   * Cross-check every configured RPC and confirm a transfer ONLY when a quorum
+   * of them agrees on the same (tx, value) with enough confirmations (Z76 FIX
+   * 2). Returns false when the poll is DEGRADED — fewer RPCs responded than the
+   * quorum requires — so a lone (possibly hostile) source can never decide.
+   */
   private async scanChain(chain: FixedChainConfig, active: Invoice[]): Promise<boolean> {
-    const latest = await this.blockNumber(chain);
-    if (latest === null) return false;
-    const fromBlock = latest > BigInt(this.blockWindow) ? latest - BigInt(this.blockWindow) : 0n;
-    const logs = await this.getTransferLogs(chain, fromBlock, latest);
-    if (logs === null) return false;
+    const urls = this.rpcUrlsFor(chain);
+    const threshold = quorumThreshold(urls.length, this.quorum);
+    const scans = await Promise.all(urls.map((url) => this.scanOneRpc(url, chain)));
+    const responded = scans.filter((s): s is { latest: bigint; logs: RpcLog[] } => s !== null);
+
+    if (responded.length < threshold) {
+      this.log.warn('fixed_watcher.rpc_quorum_degraded', {
+        chain: chain.chain,
+        responded: responded.length,
+        required: threshold,
+        configured: urls.length,
+      });
+      return false;
+    }
+
+    // Aggregate per-transfer observations across the responding RPCs. Each RPC
+    // computes confirmations against ITS OWN latest block; the quorum takes the
+    // most-agreed value and the minimum confirmation depth among agreeing RPCs.
+    const byKey = new Map<string, { txHash: string; observations: RpcObservation[] }>();
+    for (const scan of responded) {
+      for (const lg of scan.logs) {
+        const key = `${lg.transactionHash}:${lg.logIndex}`;
+        const value = hexToBigInt(lg.data);
+        const logBlock = hexToBigInt(lg.blockNumber);
+        const confirmations = scan.latest >= logBlock ? Number(scan.latest - logBlock) + 1 : 0;
+        let entry = byKey.get(key);
+        if (!entry) {
+          entry = { txHash: lg.transactionHash, observations: [] };
+          byKey.set(key, entry);
+        }
+        entry.observations.push({ value, confirmations });
+      }
+    }
 
     const seen = this.seenFor(chain.chain);
-    for (const lg of logs) {
-      const key = `${lg.transactionHash}:${lg.logIndex}`;
+    for (const [key, entry] of byKey) {
       if (seen.has(key)) continue;
-
-      const value = hexToBigInt(lg.data);
-      const logBlock = hexToBigInt(lg.blockNumber);
-      const confirmations = latest >= logBlock ? Number(latest - logBlock) + 1 : 0;
-      // Only mark the log as processed once it reaches a TERMINAL decision
-      // (confirmed or orphan). A transfer still below minConfirmations is left
-      // un-seen so the next poll reprocesses it once it matures — otherwise we
-      // would skip it forever and never confirm the invoice.
+      const decision = decideTransferQuorum(entry.observations, threshold);
+      if (decision.status === 'conflict') {
+        // RPCs report DIFFERENT values for the same tx — a possible forgery by
+        // one source. Never confirm; leave un-seen so an honest majority can
+        // still form on a later poll.
+        this.log.warn('fixed_watcher.rpc_quorum_conflict', {
+          chain: chain.chain,
+          tx_hash: entry.txHash,
+          agree: decision.agree,
+          required: threshold,
+        });
+        continue;
+      }
+      if (decision.status === 'insufficient') {
+        // A single value but not enough reporters yet (propagation lag). Wait.
+        continue;
+      }
+      // Quorum agreed. Mark seen only once the transfer reaches a TERMINAL
+      // decision (confirmed/orphan); a value below minConfirmations stays
+      // un-seen so a later poll reprocesses it once it matures.
       const terminal = await this.handleTransfer(
         chain,
         active,
-        lg.transactionHash,
-        value,
-        confirmations,
+        entry.txHash,
+        decision.value,
+        decision.confirmations,
       );
       if (terminal) seen.add(key);
     }
     return true;
+  }
+
+  /** Read latest block + Transfer logs from ONE endpoint. null on any failure. */
+  private async scanOneRpc(
+    url: string,
+    chain: FixedChainConfig,
+  ): Promise<{ latest: bigint; logs: RpcLog[] } | null> {
+    const latest = await this.blockNumber(url, chain);
+    if (latest === null) return null;
+    const fromBlock = latest > BigInt(this.blockWindow) ? latest - BigInt(this.blockWindow) : 0n;
+    const logs = await this.getTransferLogs(url, chain, fromBlock, latest);
+    if (logs === null) return null;
+    return { latest, logs };
   }
 
   /** Returns true when the transfer reached a terminal state (confirmed/orphan). */
@@ -397,8 +487,8 @@ export class FixedAddressWatcher {
   }
 
   /** eth_blockNumber → latest block as bigint, or null on failure. */
-  private async blockNumber(chain: FixedChainConfig): Promise<bigint | null> {
-    const result = await this.rpc(chain, 'eth_blockNumber', []);
+  private async blockNumber(url: string, chain: FixedChainConfig): Promise<bigint | null> {
+    const result = await this.rpc(url, chain, 'eth_blockNumber', []);
     if (typeof result !== 'string') return null;
     try {
       return hexToBigInt(result);
@@ -408,6 +498,7 @@ export class FixedAddressWatcher {
   }
 
   private async getTransferLogs(
+    url: string,
     chain: FixedChainConfig,
     fromBlock: bigint,
     toBlock: bigint,
@@ -420,13 +511,19 @@ export class FixedAddressWatcher {
         topics: [TRANSFER_TOPIC0, null, addressTopic(this.address)],
       },
     ];
-    const result = await this.rpc(chain, 'eth_getLogs', params);
+    const result = await this.rpc(url, chain, 'eth_getLogs', params);
     if (!Array.isArray(result)) return null;
     return result as RpcLog[];
   }
 
-  /** Single JSON-RPC call. Returns the `result` field, or null on any failure. */
+  /**
+   * Single JSON-RPC call against ONE endpoint. Returns the `result` field, or
+   * null on any failure (HTTP error, RPC error, timeout, network). A single
+   * endpoint failing never throws — the quorum tolerates it via the other
+   * endpoints.
+   */
   private async rpc(
+    url: string,
     chain: FixedChainConfig,
     method: string,
     params: unknown[],
@@ -435,26 +532,34 @@ export class FixedAddressWatcher {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), RPC_TIMEOUT_MS);
     try {
-      const res = await this.fetchImpl(chain.rpcUrl, {
+      const res = await this.fetchImpl(url, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
       if (!res.ok) {
-        this.log.warn('fixed_watcher.rpc_http_error', { chain: chain.chain, status: res.status });
+        this.log.warn('fixed_watcher.rpc_http_error', {
+          chain: chain.chain,
+          rpc: url,
+          status: res.status,
+        });
         return null;
       }
       const json = (await res.json()) as { result?: unknown; error?: { message?: string } };
       if (json.error) {
-        this.log.warn('fixed_watcher.rpc_error', { chain: chain.chain, err: json.error.message });
+        this.log.warn('fixed_watcher.rpc_error', {
+          chain: chain.chain,
+          rpc: url,
+          err: json.error.message,
+        });
         return null;
       }
       return json.result ?? null;
     } catch (err) {
       this.log.warn('fixed_watcher.rpc_failed', {
         chain: chain.chain,
-        rpc: chain.rpcUrl,
+        rpc: url,
         err: (err as Error).message,
       });
       return null;
@@ -482,7 +587,7 @@ export class FixedAddressWatcher {
       confirmed_at: invoice.paid_at ?? new Date().toISOString(),
     };
     await this.storage.recordWebhookEvent({
-      id: `evt_${randomUUID()}`,
+      id: deterministicEventId(`${invoice.id}:confirmed`),
       invoice_id: invoice.id,
       payload_json: JSON.stringify(payload),
       next_retry_at: new Date(Date.now() + WEBHOOK_RETRY_INITIAL_MS).toISOString(),
@@ -507,7 +612,7 @@ export class FixedAddressWatcher {
       detected_at: new Date().toISOString(),
     };
     await this.storage.recordWebhookEvent({
-      id: `evt_${randomUUID()}`,
+      id: deterministicEventId(`orphan:${chain}:${txHash}`),
       invoice_id: `orphan_${txHash}`,
       payload_json: JSON.stringify(payload),
       next_retry_at: new Date(Date.now() + WEBHOOK_RETRY_INITIAL_MS).toISOString(),

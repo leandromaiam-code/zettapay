@@ -20,6 +20,7 @@
 //
 // Pure module: no I/O, no network, no storage. HR-PHONE-HOME / HR-CUSTODY safe.
 
+import { randomInt } from 'node:crypto';
 import { USDC_DECIMALS, usdToUsdc } from './usdc-pricing.js';
 import { toChecksumAddress } from './derive-evm.js';
 
@@ -46,17 +47,47 @@ export function baseUnitsForUsd(usd: number): number {
 }
 
 /**
- * Allocate the smallest free nonce in 1..NONCE_MAX given the set of currently
- * active nonces. Throws when the pool is exhausted (9999 simultaneous active
- * invoices at the same chain+price) — the caller surfaces this as a 503.
+ * Allocate a free nonce in 1..NONCE_MAX given the set of currently active
+ * nonces. Scans the ring starting at `start` (1-based, default 1) and wraps,
+ * returning the first free slot. Throws when the pool is exhausted (9999
+ * simultaneous active invoices at the same chain+price) — the caller surfaces
+ * this as a 503.
+ *
+ * The `start` parameter is the anti-front-running lever (Z76 FIX 6): callers
+ * pass a per-allocation random start (see {@link randomNonceStart}) so the
+ * nonce — and therefore the exact payable amount — of one invoice cannot be
+ * guessed from another's. With the default start=1 the behaviour is the legacy
+ * deterministic smallest-free allocation, so unit semantics are unchanged.
+ * Uniqueness is preserved regardless of start: occupied slots are always
+ * skipped.
  */
-export function allocateNonce(activeNonces: ReadonlySet<number>): number {
-  for (let n = 1; n <= NONCE_MAX; n += 1) {
+export function allocateNonce(activeNonces: ReadonlySet<number>, start = 1): number {
+  const origin = normalizeNonceStart(start);
+  for (let i = 0; i < NONCE_MAX; i += 1) {
+    const n = ((origin - 1 + i) % NONCE_MAX) + 1;
     if (!activeNonces.has(n)) return n;
   }
   throw new Error(
     `evm-amount-nonce: nonce pool exhausted (${NONCE_MAX} active invoices at this chain+price)`,
   );
+}
+
+/** Clamp/normalize an arbitrary start into the 1..NONCE_MAX ring. */
+function normalizeNonceStart(start: number): number {
+  if (!Number.isFinite(start)) return 1;
+  const s = Math.floor(start);
+  // Map any integer onto 1..NONCE_MAX (wrap negatives/overflows safely).
+  return ((((s - 1) % NONCE_MAX) + NONCE_MAX) % NONCE_MAX) + 1;
+}
+
+/**
+ * A cryptographically-random nonce ring start (1..NONCE_MAX). Used per-invoice
+ * so allocated nonces are non-sequential and unpredictable to an outside
+ * observer, while {@link allocateNonce} still guarantees uniqueness against the
+ * active set. Pure local CSPRNG — no I/O, no network (HR-PHONE-HOME safe).
+ */
+export function randomNonceStart(): number {
+  return randomInt(1, NONCE_MAX + 1);
 }
 
 export interface EncodedAmount {
