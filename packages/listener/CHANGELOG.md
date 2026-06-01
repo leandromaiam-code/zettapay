@@ -1,5 +1,48 @@
 # Changelog — @zettapay/listener
 
+## 0.5.0
+
+### Security hardening (additive — zero regression on BTC + USDC paths)
+
+All seven items below are defensive-only. No new paid dependency, no custody, no
+KYC, no telemetry, no third-party call: the listener still speaks only to public
+RPCs and mempool.space. The full existing test suite passes unchanged.
+
+- **Constant-time API-key auth (`src/http-server.ts`).** The
+  `X-ZettaPay-Api-Key` check now uses `crypto.timingSafeEqual` (with a
+  length-guard filler) instead of `===`, removing the timing side-channel that
+  could leak the key byte-by-byte. Exposed as `timingSafeStrEqual`.
+- **RPC quorum for fixed-address confirmations (`src/rpc-quorum.ts`,
+  `src/fixed-address-watcher.ts`).** A confirmation now requires a quorum of
+  independent public RPCs to AGREE on the same `(tx, value, ≥minConfirmations)`.
+  Each chain ships a list of 2–3 public RPCs (base / ethereum / polygon); a
+  confirmation only lands when **≥2 agree**. One reachable RPC → invoice stays
+  `pending` and we log `rpc_quorum_degraded`; a disagreeing value → no confirm +
+  `rpc_quorum_conflict`. A single forging RPC can never decide. A merchant can
+  point `BASE_RPC_URL` / `ETHEREUM_RPC_URL` / `POLYGON_RPC_URL` (csv) at their
+  own node — a single endpoint collapses the quorum to a trusted source of 1.
+- **In-memory rate limit on `POST /invoice` (`src/rate-limit.ts`).** Zero-dep
+  sliding window: default 30 req/min per IP + 300/min global, exceed → `429`
+  with `Retry-After`. Configurable via `ZETTAPAY_RATE_LIMIT` (`30`, `30,300`, or
+  `off`). Denied hits are not counted toward the window.
+- **Production guard (`src/main.ts`).** `NODE_ENV=production` with no
+  `ZETTAPAY_API_KEY` now REFUSES to boot (an open `POST /invoice` would let
+  anyone mint invoices). In dev it only warns. Exposed as `assertApiKeyForEnv`.
+- **Deterministic webhook event id (`src/fixed-address-watcher.ts`).**
+  `X-ZettaPay-Event-Id` is `sha256(invoice:status)` so a re-detection after a
+  restart re-emits the same id and the merchant backend deduplicates. Pull
+  reconciliation via `GET /invoice/:id` (returns `tx_hash`).
+- **Anti front-running nonce (`src/evm-amount-nonce.ts`,
+  `src/invoice-core.ts`).** The fixed-address nonce is now allocated from a
+  CSPRNG random origin (`randomNonceStart` via `crypto.randomInt`) walking the
+  1..9999 ring, so one invoice's exact amount is not guessable from another.
+  Uniqueness within the active `(chain, price)` pool is still guaranteed.
+  Under/overpayment remains zero-tolerance → `payment.orphan`.
+- **README threat model.** New "Security model & threat model" section documents
+  what the listener trusts (public RPC, mitigated by quorum), the xpub vs
+  fixed-address privacy trade-off, the own-node recommendation, the prod-guard,
+  and the rate limit — honest about guarantees and non-guarantees.
+
 ## 0.4.0
 
 ### Added

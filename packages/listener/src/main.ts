@@ -9,11 +9,14 @@ import { BaseWatcher } from './base-watcher.js';
 import {
   FixedAddressWatcher,
   parseFixedChains,
+  EVM_CHAIN_REGISTRY,
   type FixedChainConfig,
 } from './fixed-address-watcher.js';
 import { WebhookDispatcher } from './webhook-dispatcher.js';
 import { DEFAULT_HEALTH_PORT } from './health-server.js';
 import { AppServer } from './http-server.js';
+import { resolveRpcUrls } from './rpc-quorum.js';
+import { parseRateLimitEnv } from './rate-limit.js';
 import { runInit } from './cli/init.js';
 import { runHealthcheck } from './cli/healthcheck.js';
 import { runVerifyConfig } from './cli/verify-config.js';
@@ -69,6 +72,28 @@ function readEnv(env: NodeJS.ProcessEnv = process.env): ResolvedConfig {
     wsUrl: env.MEMPOOL_WS_URL?.trim() || profile.ws,
     restBase: env.MEMPOOL_REST_URL?.trim() || profile.rest,
   };
+}
+
+/**
+ * Production safety guard (Z76 FIX 4). In production an unauthenticated POST
+ * /invoice lets anyone mint invoices / exhaust the nonce pool, so a missing
+ * ZETTAPAY_API_KEY must HALT the boot with a clear error rather than silently
+ * running open (the old behavior only logged a "DEV MODE" warning). In any
+ * non-production env the key stays optional — returns a warning string the
+ * caller may log, or null when nothing to warn about. Throws only in prod.
+ */
+export function assertApiKeyForEnv(env: NodeJS.ProcessEnv = process.env): string | null {
+  const isProd = (env.NODE_ENV ?? '').trim().toLowerCase() === 'production';
+  const hasKey = Boolean(env.ZETTAPAY_API_KEY?.trim());
+  if (hasKey) return null;
+  if (isProd) {
+    throw new Error(
+      '@zettapay/listener: NODE_ENV=production but ZETTAPAY_API_KEY is not set. ' +
+        'POST /invoice would be unauthenticated — refusing to start. ' +
+        'Set ZETTAPAY_API_KEY (any high-entropy secret) or run with NODE_ENV unset for local dev.',
+    );
+  }
+  return 'DEV MODE: ZETTAPAY_API_KEY is unset — POST /invoice is unauthenticated. Set it for production.';
 }
 
 const consoleLogger: Logger = {
@@ -127,6 +152,11 @@ export async function run(argv: readonly string[] = []): Promise<void> {
   if (logLevel) process.env.LOG_LEVEL = logLevel;
 
   const cfg = readEnv();
+  // Prod-guard (FIX 4): refuse to boot a production deployment whose POST
+  // /invoice would be unauthenticated. In dev this only returns a warning.
+  const apiKeyWarning = assertApiKeyForEnv(process.env);
+  if (apiKeyWarning) consoleLogger.warn('http_server.no_api_key', { message: apiKeyWarning });
+
   const storage = createStorage(process.env);
 
   let merchantId = cfg.merchantId;
@@ -175,8 +205,17 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       });
       continue;
     }
-    const rpcUrl = process.env[spec.rpcEnvVar]?.trim() || spec.defaultRpcUrl;
-    fixedChains.push({ ...spec, rpcUrl });
+    // RPC quorum (FIX 2): resolve the full endpoint list — a merchant override
+    // (csv in the chain's env var) replaces the public defaults; otherwise the
+    // 2-3 bundled public endpoints are cross-checked. DEFAULT_RPC_URLS is keyed
+    // by the registry ALIAS ('ethereum'), not the canonical chain id ('eth').
+    const alias =
+      Object.keys(EVM_CHAIN_REGISTRY).find(
+        (k) => EVM_CHAIN_REGISTRY[k]!.chain === spec.chain,
+      ) ?? spec.chain;
+    const rpcUrls = resolveRpcUrls(alias, process.env[spec.rpcEnvVar]?.trim());
+    const rpcUrl = rpcUrls[0] ?? spec.defaultRpcUrl;
+    fixedChains.push({ ...spec, rpcUrl, rpcUrls: rpcUrls.length > 0 ? rpcUrls : [rpcUrl] });
   }
 
   const apiServer = new AppServer({
@@ -192,6 +231,7 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     evmXpub,
     fixedEvmAddress: fixedAddress,
     fixedEvmChains: fixedChains.map((ch) => ch.chain),
+    rateLimit: parseRateLimitEnv(process.env.ZETTAPAY_RATE_LIMIT),
     logger: consoleLogger,
   });
 

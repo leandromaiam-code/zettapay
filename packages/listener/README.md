@@ -171,9 +171,16 @@ function verify(rawBody, sig, ts, secret) {
 | `MERCHANT_XPUB_EVM` | opcional | xpub EVM → USDC Base via derivação |
 | `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC Base (carteiras sem xpub) |
 | `MERCHANT_EVM_CHAINS` | opcional | csv de chains EVM (default `base`) |
-| `BASE_RPC_URL` | opcional | RPC da Base (default `https://mainnet.base.org`) |
+| `BASE_RPC_URL` | opcional | RPC(s) da Base — csv pra quorum/node próprio (default: 3 RPCs públicos) |
+| `ETHEREUM_RPC_URL` | opcional | RPC(s) Ethereum — csv (default: 3 RPCs públicos) |
+| `POLYGON_RPC_URL` | opcional | RPC(s) Polygon — csv (default: 3 RPCs públicos) |
+| `ZETTAPAY_RATE_LIMIT` | opcional | limite do `POST /invoice` — `30` ou `30,300` (ip,global) ou `off` (default `30,300`/min) |
 | `STORAGE` | opcional | `json` (default) \| `sqlite` |
 | `HEALTH_PORT` | opcional | porta da API (default `8787`) |
+
+> **`NODE_ENV=production` + sem `ZETTAPAY_API_KEY` → o listener recusa subir.**
+> Em produção um `POST /invoice` sem chave deixaria qualquer um criar faturas;
+> defina a chave (qualquer segredo de alta entropia) ou rode sem `NODE_ENV` em dev.
 
 ---
 
@@ -185,6 +192,70 @@ function verify(rawBody, sig, ts, secret) {
 - **HR-PHONE-HOME** — só fala com mempool.space (BTC) e o RPC da chain (EVM).
   Nenhum dado de cliente sai pra terceiros.
 - **Não custodial** — o BTC/USDC cai direto na sua carteira.
+
+---
+
+## Security model & threat model
+
+Honesto sobre o que o listener garante — e o que não garante. Tudo roda na sua
+máquina; nenhum serviço novo, custódia ou telemetria é introduzido.
+
+### No que o listener confia
+
+- **Nós RPC públicos (EVM).** Confirmar um pagamento USDC depende de ler a chain
+  via RPC. Um RPC malicioso poderia, em tese, forjar uma confirmação.
+  **Mitigação (quorum):** cada chain tem uma *lista* de RPCs públicos
+  independentes (2–3 por default). Uma confirmação só é aceita quando **≥2 RPCs
+  concordam** no mesmo `(tx, valor, confirmações)`. Se só 1 responde, o
+  pagamento fica `awaiting` e logamos `rpc_quorum_degraded` — **nunca**
+  confirmamos com fonte única. Se um RPC discorda do valor, logamos
+  `rpc_quorum_conflict` e não confirmamos.
+  - **Alto valor → use seu próprio node.** Aponte `BASE_RPC_URL` (csv) pro seu
+    nó (e opcionalmente um backup) — o override substitui os públicos. Com um
+    único endpoint o quorum colapsa pra 1 (fonte confiável que é sua).
+- **mempool.space (BTC).** A confirmação BTC usa o WebSocket/REST do
+  mempool.space. Trade-off equivalente; rode sua própria instância pra remover a
+  dependência.
+
+### Trade-off de privacidade: xpub vs fixed-address
+
+- **Modo xpub (recomendado):** cada fatura deriva um endereço único — máxima
+  privacidade on-chain, nenhuma correlação entre pagamentos.
+- **Modo fixed-address (carteiras sem xpub):** *uma* address recebe todas as
+  faturas; o pagador é identificado pelo *valor exato* (nonce nos decimais
+  baixos do USDC). Como todos os pagamentos caem no mesmo endereço, há **menos
+  privacidade** (são correlacionáveis). Use xpub quando a carteira permitir.
+
+### Front-running de valor & under/overpayment (fixed-address)
+
+- **Nonce não-sequencial.** O nonce (1..9999) é alocado a partir de um ponto
+  **aleatório** por fatura, então o valor exato de uma fatura não é adivinhável
+  a partir de outra. A unicidade dentro do pool ativo `(chain, preço)` é
+  garantida.
+- **Tolerância ZERO.** Um valor recebido que não casa **exatamente** com nenhum
+  nonce ativo vira `payment.orphan` (log + webhook) — nunca ativa uma fatura.
+  Under/overpayment = orphan. A defesa contra reuso de nonce é a tela de
+  checkout expirar (TTL 1h) escondendo o QR.
+
+### Endurecimento da API (`POST /invoice`)
+
+- **Auth constant-time.** A `X-ZettaPay-Api-Key` é comparada com
+  `crypto.timingSafeEqual` (sem early-exit) — sem vazamento de timing.
+- **Prod-guard.** `NODE_ENV=production` sem `ZETTAPAY_API_KEY` → recusa subir.
+- **Rate-limit local.** Janela deslizante em memória (sem serviço externo):
+  default 30 req/min por IP + 300/min global; excedeu → `429`. Configurável via
+  `ZETTAPAY_RATE_LIMIT`.
+
+### Idempotência de webhook
+
+- `X-ZettaPay-Event-Id` é **determinístico** por `(invoice, status)`: uma
+  re-detecção após restart produz o mesmo id, então seu backend deduplica.
+  Reconciliação pull: `GET /invoice/:id` devolve `status` + `tx_hash`.
+
+### O que NÃO fazemos
+
+Sem custódia, sem KYC, sem telemetria, sem dependência paga, sem chamada a
+domínio `zettapay.*` ou qualquer terceiro além de RPC público + mempool.space.
 
 ---
 
