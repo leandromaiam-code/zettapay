@@ -1,0 +1,48 @@
+# ZettaPay
+
+> Non-custodial crypto payment protocol. Funds go straight to the merchant's
+> wallet — ZettaPay never holds keys or money. Self-hosted open-source listener
+> or managed cloud, both non-custodial. Identity-free, zero telemetry, zero
+> third party.
+
+## What it is
+
+- Self-hosted (open-source, npm) OR managed cloud — both non-custodial
+- Accept Bitcoin + USDC on Base + USDT on Base
+- 1 address per invoice (merchant xpub, BIP-84) or a fixed address + decimal-nonce matching
+- HMAC-SHA256 signed webhooks, identity-free, zero telemetry, zero third party
+- The merchant only ever supplies a public key (xpub or receive address) — never a signing key
+
+## Install
+
+- npm i -g @zettapay/listener
+- The listener runs on the merchant's own box and watches the chain over mempool.space (BTC) and public RPC (Base). No phone-home.
+
+## API (self-hosted listener)
+
+- POST /invoice  — create a pending invoice
+  - Bitcoin:        { "amount_sats": 50000 }
+  - USDC on Base:   { "chain": "base", "amount_usd": 42.00 }
+  - USDT on Base:   { "chain": "base", "amount_usd": 42.00, "asset": "usdt" }
+  - Auth: header X-ZettaPay-Api-Key (when ZETTAPAY_API_KEY is set)
+- GET /invoice/:id  — poll invoice status (pending | partial | confirmed | expired | failed)
+- GET /health  — liveness, websocket state, subscribed address count
+- Webhook: POST to the merchant's URL on payment. Body is signed HMAC-SHA256
+  over the raw bytes; headers X-ZettaPay-Signature (hex) and
+  X-ZettaPay-Timestamp (unix ms).
+
+## Agent-native
+
+- @zettapay/mcp — Model Context Protocol server that runs on the agent's own
+  machine and talks to the local listener (http://localhost:8787). Tools:
+  create_invoice, get_invoice_status, list_supported_assets. Non-custodial: the
+  MCP only calls the user's own local listener API.
+
+## Links
+
+- Docs: /docs
+- npm (listener): https://www.npmjs.com/package/@zettapay/listener
+- npm (mcp): https://www.npmjs.com/package/@zettapay/mcp
+- GitHub: https://github.com/leandromaiam-code/zettapay
+- OpenAPI: /openapi.json
+- Full version: /llms-full.txt

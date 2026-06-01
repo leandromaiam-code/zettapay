@@ -9,6 +9,33 @@
   <meta property="og:title" content="ZettaPay — Crypto payments that confirm themselves" />
   <meta property="og:description" content="Get paid in crypto, straight to your wallet — secure and private. Non-custodial, zero protocol fees, your keys stay yours. Self-host open-source in 30 seconds, or let us host it. Bitcoin + USDC/USDT on Base." />
   <title>ZettaPay — Crypto payments that confirm themselves</title>
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "ZettaPay",
+    "applicationCategory": "FinanceApplication",
+    "applicationSubCategory": "Crypto payment protocol",
+    "operatingSystem": "Any",
+    "softwareVersion": "0.6.0",
+    "description": "Non-custodial crypto payment protocol. Funds go straight to the merchant's wallet — ZettaPay never holds keys or money. Self-hosted open-source listener or managed cloud, both non-custodial. Accept Bitcoin and USDC/USDT on Base with HMAC-signed webhooks. Identity-free, zero telemetry.",
+    "url": "https://github.com/leandromaiam-code/zettapay",
+    "license": "https://opensource.org/licenses/MIT",
+    "softwareHelp": "https://github.com/leandromaiam-code/zettapay#readme",
+    "downloadUrl": "https://www.npmjs.com/package/@zettapay/listener",
+    "codeRepository": "https://github.com/leandromaiam-code/zettapay",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
+      "@type": "Organization",
+      "name": "ZettaPay"
+    }
+  }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -522,6 +549,56 @@
     </div>
   </section>
 
+  <!-- BUILT FOR AI AGENTS -->
+  <section id="agents" class="py-28 px-4 lg:px-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-16 reveal">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Agent-native</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">Built for <span class="gradient-text">AI agents</span></h2>
+        <p class="text-muted text-lg">Agents can accept crypto in one tool call. ZettaPay ships a Model Context Protocol server and a faithful OpenAPI spec &mdash; both pointed at <em>your</em> local listener, so the agent never touches a key or a coin.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6 mb-10">
+        <div class="glass rounded-2xl p-8 reveal">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">MCP server</div>
+          <h3 class="text-xl font-bold mb-3 text-white">One tool call to get paid</h3>
+          <p class="text-muted text-sm leading-relaxed">Drop <code class="text-royal-bright">@zettapay/mcp</code> into Claude Desktop or any MCP client. Tools: <code class="text-royal-bright">create_invoice</code>, <code class="text-royal-bright">get_invoice_status</code>, <code class="text-royal-bright">list_supported_assets</code>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.05s;">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">OpenAPI 3.1</div>
+          <h3 class="text-xl font-bold mb-3 text-white">A spec agents can read</h3>
+          <p class="text-muted text-sm leading-relaxed">The full listener API is published at <a href="/openapi.json" class="text-royal-bright hover:underline">/openapi.json</a> and described for crawlers at <a href="/llms.txt" class="text-royal-bright hover:underline">/llms.txt</a>.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.1s;">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Non-custodial</div>
+          <h3 class="text-xl font-bold mb-3 text-white">Runs on your machine</h3>
+          <p class="text-muted text-sm leading-relaxed">The MCP server talks only to your local listener at <code class="text-royal-bright">localhost:8787</code>. No keys, no funds, no third party &mdash; ever.</p>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.15s;">
+        <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Add it to Claude Desktop &mdash; claude_desktop_config.json</div>
+<pre class="code-block rounded-lg p-4 text-sm overflow-x-auto"><code>{
+  <span class="code-string">"mcpServers"</span>: {
+    <span class="code-string">"zettapay"</span>: {
+      <span class="code-string">"command"</span>: <span class="code-string">"npx"</span>,
+      <span class="code-string">"args"</span>: [<span class="code-string">"-y"</span>, <span class="code-string">"@zettapay/mcp"</span>],
+      <span class="code-string">"env"</span>: {
+        <span class="code-string">"LISTENER_URL"</span>: <span class="code-string">"http://localhost:8787"</span>,
+        <span class="code-string">"ZETTAPAY_API_KEY"</span>: <span class="code-string">"sk_live_..."</span>
+      }
+    }
+  }
+}</code></pre>
+        <div class="flex flex-wrap items-center gap-4 mt-5 text-sm">
+          <a href="https://www.npmjs.com/package/@zettapay/mcp" class="text-royal-bright hover:underline font-medium">@zettapay/mcp on npm &rarr;</a>
+          <a href="/openapi.json" class="text-royal-bright hover:underline font-medium">OpenAPI spec &rarr;</a>
+          <a href="/llms.txt" class="text-royal-bright hover:underline font-medium">llms.txt &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- INSTALL / QUICKSTART -->
   <section id="install" class="py-28 px-4 lg:px-12">
     <div class="max-w-7xl mx-auto">
@@ -627,6 +704,8 @@
           <li><a href="/docs/quickstart" class="text-muted hover:text-white transition">Quickstart</a></li>
           <li><a href="/docs/embed" class="text-muted hover:text-white transition">Embed widget</a></li>
           <li><a href="/docs/webhook" class="text-muted hover:text-white transition">Webhooks</a></li>
+          <li><a href="#agents" class="text-muted hover:text-white transition">AI agents (MCP)</a></li>
+          <li><a href="/openapi.json" class="text-muted hover:text-white transition">OpenAPI spec</a></li>
           <li><a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a></li>
         </ul>
       </div>

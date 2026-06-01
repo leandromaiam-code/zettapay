@@ -1,0 +1,64 @@
+{
+  "name": "@zettapay/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol (MCP) server for ZettaPay. Lets AI agents accept Bitcoin and USDC/USDT on Base in one tool call, against the user's own self-hosted, non-custodial listener. Runs locally — never holds keys or funds.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zettapay-mcp": "./dist/index.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "prepublishOnly": "npm run build",
+    "start": "node ./dist/index.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leandromaiam-code/zettapay.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/leandromaiam-code/zettapay/tree/main/packages/mcp#readme",
+  "keywords": [
+    "zettapay",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "bitcoin",
+    "usdc",
+    "base",
+    "payments",
+    "non-custodial",
+    "self-hosted"
+  ]
+}

@@ -1,0 +1,244 @@
+# ZettaPay — full reference
+
+> Non-custodial crypto payment protocol. Funds go straight to the merchant's
+> wallet — ZettaPay never holds keys or money. Self-hosted open-source listener
+> or managed cloud, both non-custodial. Identity-free, zero telemetry, zero
+> third party.
+
+This is the expanded, RAG-friendly version of /llms.txt.
+Everything below describes the real shipping product (@zettapay/listener v0.6.0).
+
+## Core idea
+
+ZettaPay is a payment listener you run yourself. You give it a public key
+(a BIP-84 xpub for Bitcoin, an account xpub or a single receive address for
+USDC/USDT on Base). It derives or reuses receive addresses, watches the chain,
+and fires an HMAC-signed webhook to your backend the moment a payment confirms.
+The funds settle directly to your wallet on-chain. ZettaPay never custodies
+funds, never holds a signing key, and performs no identity checks.
+
+Two ways to run it:
+
+- Self-hosted: `npm i -g @zettapay/listener`, set a few env vars, run it on your
+  own server. Open-source, MIT, auditable.
+- Managed cloud: we run the same listener for you. Still non-custodial — funds
+  go to your wallet, we only run the watcher.
+
+## Supported assets
+
+- Bitcoin (on-chain, BIP-84 native segwit). Amounts in satoshis.
+- USDC on Base (chain id 8453). Amounts in USD.
+- USDT on Base (chain id 8453). Amounts in USD.
+
+There is no Solana and no Ethereum L1 support. Bitcoin and the two Base
+stablecoins are the entire surface.
+
+## Address modes
+
+1. Per-invoice (xpub) mode — preferred. Each invoice derives a fresh address
+   from the merchant's xpub (BIP-84 for BTC, m/44'/60' for Base). One address
+   per invoice means payments are unambiguous.
+2. Fixed-address mode — for wallets that cannot export an xpub. One shared
+   receive address serves every invoice; the payer is identified by a unique
+   per-invoice nonce encoded in the low decimals of the USD amount (e.g.
+   29.000042). Fixed-address invoices expire after 1 hour so nonces recycle.
+
+## HTTP API (the self-hosted listener)
+
+Base URL: http://localhost:8787 by default (configurable). The listener is a
+single dependency-light node:http server.
+
+### POST /invoice
+
+Creates a pending invoice. Auth: when `ZETTAPAY_API_KEY` is set, send it in the
+`X-ZettaPay-Api-Key` header (compared in constant time). When unset, the
+endpoint is open for local development and logs a warning at boot.
+
+Bitcoin request:
+
+```bash
+curl -s http://localhost:8787/invoice \
+  -H 'content-type: application/json' \
+  -H 'X-ZettaPay-Api-Key: sk_live_...' \
+  -d '{"amount_sats": 50000, "memo": "order 4711", "expires_in": 3600}'
+```
+
+Bitcoin 201 response (abridged):
+
+```json
+{
+  "invoice_id": "inv_...",
+  "chain": "btc",
+  "asset": "BTC",
+  "amount_btc": "0.0005",
+  "receive_address": "bc1q...",
+  "status": "pending",
+  "derivation_path": "m/84'/0'/0'/0/12",
+  "network": "mainnet",
+  "amount_sats": 50000,
+  "qr_uri": "bitcoin:bc1q...?amount=0.0005&label=order%204711",
+  "verify_url": "https://mempool.space/address/bc1q...",
+  "expires_at": "2026-06-01T12:00:00.000Z"
+}
+```
+
+USDC on Base request (xpub mode):
+
+```bash
+curl -s http://localhost:8787/invoice \
+  -H 'content-type: application/json' \
+  -H 'X-ZettaPay-Api-Key: sk_live_...' \
+  -d '{"chain": "base", "amount_usd": 42.00}'
+```
+
+USDC/USDT on Base 201 response (abridged):
+
+```json
+{
+  "invoice_id": "inv_...",
+  "chain": "base",
+  "asset": "USDC",
+  "receive_address": "0x...",
+  "status": "pending",
+  "amount_usd": 42.0,
+  "amount_usdc": "42",
+  "amount_usdc_units": 42000000,
+  "qr_uri": "ethereum:0x833589...@8453/transfer?address=0x...&uint256=42000000",
+  "verify_url": "https://basescan.org/address/0x..."
+}
+```
+
+USDT on Base request (fixed-address mode adds `"asset": "usdt"`):
+
+```bash
+curl -s http://localhost:8787/invoice \
+  -H 'content-type: application/json' \
+  -d '{"chain": "base", "amount_usd": 42.00, "asset": "usdt"}'
+```
+
+In fixed-address mode the response also carries `"mode": "fixed-address"`, the
+allocated `nonce`, the resolved `asset`, and the `token_address` the payer must
+send. The exact `amount_usdc` includes the nonce in its low decimals.
+
+Error responses use `{ "error": { "code": "...", "message": "..." } }`:
+
+- 400 invalid_amount / unsupported_chain / chain_disabled / base_disabled / asset_disabled / bad_body
+- 401 unauthorized (bad or missing API key)
+- 429 rate_limited (sliding-window per client IP; honors Retry-After)
+- 503 capacity (fixed-address nonce pool temporarily exhausted)
+- 500 create_failed
+
+### GET /invoice/:id
+
+Polls invoice status. Returns the same invoice shape as the create response
+(without the one-shot fields like qr_uri). A pending invoice past its
+`expires_at` is lazily flipped to `expired` on read.
+
+```bash
+curl -s http://localhost:8787/invoice/inv_abc123
+```
+
+Status values: `pending`, `partial`, `confirmed`, `expired`, `failed`. On
+payment the `tx_hash` and `paid_at` fields are populated.
+
+### GET /health
+
+Liveness and watcher state. No auth.
+
+```json
+{
+  "ok": true,
+  "ws_connected": true,
+  "subscribed_count": 17,
+  "last_event_at": "2026-06-01T11:59:00.000Z",
+  "last_block_height": 845123,
+  "uptime_s": 3600
+}
+```
+
+## Webhooks
+
+When a payment confirms, the listener POSTs a JSON event to your
+`MERCHANT_WEBHOOK_URL` (HTTPS required; http://localhost allowed for dev with
+@zettapay/receiver). The event body looks like:
+
+```json
+{
+  "event": "invoice.confirmed",
+  "invoice_id": "inv_...",
+  "merchant_id": "mer_...",
+  "chain": "btc",
+  "asset": "BTC",
+  "amount": "0.0005",
+  "address": "bc1q...",
+  "tx_hash": "...",
+  "confirmations": 3,
+  "confirmed_at": "2026-06-01T12:01:00.000Z"
+}
+```
+
+Each delivery carries:
+
+- `X-ZettaPay-Signature`: HMAC-SHA256 of the raw request body, hex-encoded,
+  keyed by your `ZETTAPAY_WEBHOOK_SECRET`.
+- `X-ZettaPay-Timestamp`: delivery time in unix milliseconds.
+- `X-ZettaPay-Event-Id`: stable event id (use it for idempotency).
+- `X-ZettaPay-Attempt`: 1-indexed attempt number.
+
+Verify by recomputing `HMAC_SHA256(secret, rawBody)` and comparing in constant
+time. The `@zettapay/sdk` `verifyWebhookSignature` and the `@zettapay/receiver`
+CLI both do this for you. Confirmation tiers for BTC: 1/3/6 confirmations at
+<$50 / <$500 / >=$500. Retries follow a Stripe-grade curve
+(1s, 5s, 30s, 2m, 10m, 30m, 1h, 3h, 12h, 24h) up to 10 attempts.
+
+## Configuration (env vars)
+
+- ZETTAPAY_API_KEY — protects POST /invoice
+- ZETTAPAY_WEBHOOK_SECRET — HMAC signing key
+- MERCHANT_WEBHOOK_URL — where confirmations are posted (HTTPS)
+- MERCHANT_XPUB — BTC BIP-84 xpub (per-invoice mode)
+- MERCHANT_XPUB_EVM — account xpub for USDC on Base (per-invoice mode)
+- MERCHANT_EVM_ADDRESS + MERCHANT_EVM_CHAINS + MERCHANT_EVM_TOKENS — fixed-address mode
+
+## Agent-native: @zettapay/mcp
+
+`@zettapay/mcp` is an open-source Model Context Protocol (MCP) server that runs
+on the agent's or user's own machine and speaks to the LOCAL listener at
+`http://localhost:8787`. It is fully self-hosted and non-custodial — it only
+calls the user's own listener API; it never holds keys or funds.
+
+MCP tools exposed:
+
+- `create_invoice(amount_usd | amount_sats, chain, asset?)` → invoice id,
+  receive address, exact amount, and QR/payment URI.
+- `get_invoice_status(invoice_id)` → status and confirmations.
+- `list_supported_assets()` → btc, usdc-base, usdt-base.
+
+Claude Desktop config (claude_desktop_config.json):
+
+```json
+{
+  "mcpServers": {
+    "zettapay": {
+      "command": "npx",
+      "args": ["-y", "@zettapay/mcp"],
+      "env": {
+        "LISTENER_URL": "http://localhost:8787",
+        "ZETTAPAY_API_KEY": "sk_live_..."
+      }
+    }
+  }
+}
+```
+
+With this, an AI agent can accept Bitcoin or USDC/USDT on Base in a single tool
+call, against the user's own non-custodial listener.
+
+## Links
+
+- Docs: /docs
+- npm (listener): https://www.npmjs.com/package/@zettapay/listener
+- npm (mcp): https://www.npmjs.com/package/@zettapay/mcp
+- npm (sdk): https://www.npmjs.com/package/@zettapay/sdk
+- GitHub: https://github.com/leandromaiam-code/zettapay
+- OpenAPI: /openapi.json
