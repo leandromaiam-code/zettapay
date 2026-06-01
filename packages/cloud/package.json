@@ -1,0 +1,64 @@
+{
+  "name": "@zettapay/cloud",
+  "version": "0.1.0",
+  "description": "Managed, non-custodial ZettaPay. The same @zettapay/listener core run as a multi-tenant service backed by a Supabase StorageAdapter. We see invoice metadata — never funds, never keys.",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "zettapay-cloud": "./dist/server.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @zettapay/listener && tsc -p tsconfig.json",
+    "typecheck": "npm run build --workspace @zettapay/listener && tsc --noEmit",
+    "test": "vitest run",
+    "prepublishOnly": "npm run build",
+    "seed": "node ./dist/seed.js",
+    "start": "node ./dist/server.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@zettapay/listener": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18.18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leandromaiam-code/zettapay.git",
+    "directory": "packages/cloud"
+  },
+  "keywords": [
+    "bitcoin",
+    "btc",
+    "usdc",
+    "base",
+    "payments",
+    "webhooks",
+    "non-custodial",
+    "multi-tenant",
+    "supabase",
+    "zettapay"
+  ]
+}
