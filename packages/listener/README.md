@@ -21,6 +21,15 @@ endereço de recebimento.
 | **Bitcoin** | BTC | xpub/zpub BIP-84 → 1 endereço por fatura | Sparrow, Ledger, qualquer HD wallet |
 | **USDC on Base** (modo xpub) | USDC | xpub EVM (m/44'/60'/0') → 1 endereço por fatura | Rabby, Ledger, MyEtherWallet |
 | **USDC on Base** (modo endereço-fixo) | USDC | 1 endereço fixo + nonce no valor | **Phantom, MetaMask, Coinbase, App Base** |
+| **USDT on Base** (modo endereço-fixo) | USDT | 1 endereço fixo + nonce no valor (mesmo padrão do USDC) | **Phantom, MetaMask, Coinbase, App Base** |
+
+> **USDT é um segundo token na MESMA Base.** Contrato
+> `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2`, 6 decimais (igual ao USDC), então
+> o nonce decimal funciona idêntico. O **mesmo** endereço fixo `0x` do merchant
+> recebe USDC **e** USDT — a carteira dele aceita os dois. Cada fatura declara
+> qual token espera (`asset: 'usdc' | 'usdt'`): um pagamento em USDT só casa
+> fatura USDT e vice-versa, nunca se misturam. Mesma segurança (quorum RPC 2-de-N,
+> confirmações, TTL 1h, orphan em under/overpayment) do USDC.
 
 > **Por que 2 modos pra USDC?** As carteiras EVM populares (Phantom, MetaMask,
 > App Base) **não exportam xpub**. Pra elas, o modo **endereço-fixo** usa um
@@ -65,6 +74,8 @@ Para o **modo endereço-fixo** de USDC (carteiras sem xpub), use as env vars:
 # no .env (ou EnvironmentFile do systemd)
 MERCHANT_EVM_ADDRESS=0xSEU_ENDERECO_DE_RECEBIMENTO
 MERCHANT_EVM_CHAINS=base
+# opcional — quais tokens aceitar na Base (default: usdc). Para aceitar USDT também:
+MERCHANT_EVM_TOKENS=usdc,usdt
 ```
 
 ---
@@ -83,25 +94,33 @@ curl -X POST http://localhost:8787/invoice \
   -H "Content-Type: application/json" \
   -d '{"amount_sats":2000,"memo":"Pedido #123","metadata":{"ref":"user_42"}}'
 
-# USDC on Base
+# USDC on Base (asset default)
 curl -X POST http://localhost:8787/invoice \
   -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"amount_usd":29,"chain":"base","metadata":{"ref":"user_42"}}'
+
+# USDT on Base (segundo token, mesmo endereço fixo)
+curl -X POST http://localhost:8787/invoice \
+  -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"amount_usd":29,"chain":"base","asset":"usdt","metadata":{"ref":"user_42"}}'
 ```
 
-Resposta (USDC modo endereço-fixo):
+Resposta (modo endereço-fixo). `asset` e `token_address` refletem o token pedido
+(`USDC` default ou `USDT`); o `qr_uri` aponta para o contrato correto:
 ```json
 {
   "invoice_id": "inv_...",
   "chain": "base",
-  "asset": "USDC",
+  "asset": "USDT",
+  "token_address": "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
   "receive_address": "0xC4a7...",
   "amount_usdc": "29.000042",
   "nonce": 42,
   "mode": "fixed-address",
   "expires_at": "...",
-  "qr_uri": "ethereum:0x833589...@8453/transfer?address=0xC4a7...&uint256=29000042"
+  "qr_uri": "ethereum:0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2@8453/transfer?address=0xC4a7...&uint256=29000042"
 }
 ```
 
@@ -169,8 +188,9 @@ function verify(rawBody, sig, ts, secret) {
 | `MERCHANT_WEBHOOK_SECRET` | sim | segredo HMAC |
 | `ZETTAPAY_API_KEY` | recomendado | protege o `POST /invoice` |
 | `MERCHANT_XPUB_EVM` | opcional | xpub EVM → USDC Base via derivação |
-| `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC Base (carteiras sem xpub) |
+| `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC/USDT Base (carteiras sem xpub) |
 | `MERCHANT_EVM_CHAINS` | opcional | csv de chains EVM (default `base`) |
+| `MERCHANT_EVM_TOKENS` | opcional | csv de tokens na Base (default `usdc`; ex: `usdc,usdt`). USDT é Base-only |
 | `BASE_RPC_URL` | opcional | RPC(s) da Base — csv pra quorum/node próprio (default: 3 RPCs públicos) |
 | `ETHEREUM_RPC_URL` | opcional | RPC(s) Ethereum — csv (default: 3 RPCs públicos) |
 | `POLYGON_RPC_URL` | opcional | RPC(s) Polygon — csv (default: 3 RPCs públicos) |
@@ -223,15 +243,18 @@ máquina; nenhum serviço novo, custódia ou telemetria é introduzido.
   privacidade on-chain, nenhuma correlação entre pagamentos.
 - **Modo fixed-address (carteiras sem xpub):** *uma* address recebe todas as
   faturas; o pagador é identificado pelo *valor exato* (nonce nos decimais
-  baixos do USDC). Como todos os pagamentos caem no mesmo endereço, há **menos
-  privacidade** (são correlacionáveis). Use xpub quando a carteira permitir.
+  baixos do USDC/USDT). Como todos os pagamentos caem no mesmo endereço, há
+  **menos privacidade** (são correlacionáveis). Use xpub quando a carteira
+  permitir. Quando vários tokens compartilham o endereço (USDC + USDT na Base),
+  cada fatura registra o token esperado: um pagamento USDT só casa com uma fatura
+  USDT, e vice-versa — nunca há cruzamento entre tokens.
 
 ### Front-running de valor & under/overpayment (fixed-address)
 
 - **Nonce não-sequencial.** O nonce (1..9999) é alocado a partir de um ponto
   **aleatório** por fatura, então o valor exato de uma fatura não é adivinhável
-  a partir de outra. A unicidade dentro do pool ativo `(chain, preço)` é
-  garantida.
+  a partir de outra. A unicidade dentro do pool ativo `(chain, token, preço)` é
+  garantida — cada token tem seu próprio espaço de nonces independente.
 - **Tolerância ZERO.** Um valor recebido que não casa **exatamente** com nenhum
   nonce ativo vira `payment.orphan` (log + webhook) — nunca ativa uma fatura.
   Under/overpayment = orphan. A defesa contra reuso de nonce é a tela de

@@ -41,13 +41,36 @@ const WEBHOOK_RETRY_INITIAL_MS = 1_000;
  *  tick yet bounded so public RPCs don't reject the range. */
 const DEFAULT_BLOCK_WINDOW = 200;
 
+/** Canonical stablecoin symbols the fixed-address mode understands. */
+export type TokenSymbol = 'USDC' | 'USDT';
+
+/** A single ERC-20 stablecoin contract a chain can receive into the fixed addr. */
+export interface EvmTokenSpec {
+  /** Asset symbol stored on the invoice + reported in webhooks. */
+  symbol: TokenSymbol;
+  /** ERC-20 contract address (used in the getLogs filter + EIP-681 URI). */
+  address: string;
+  /** Token decimals. USDC and USDT on Base both use 6 → the decimal-nonce
+   *  encoding (evm-amount-nonce) is identical for both. */
+  decimals: number;
+}
+
 export interface EvmChainSpec {
   /** Canonical Chain id stored on the invoice + reported in webhooks. */
   chain: Chain;
   /** EIP-155 chain id (used in the EIP-681 payment URI). */
   chainId: number;
-  /** Canonical native-USDC token contract (6 decimals). */
+  /** Canonical native-USDC token contract (6 decimals). Kept for back-compat;
+   *  equals the USDC entry of {@link tokens}. */
   usdcAddress: string;
+  /**
+   * Stablecoins this chain can receive into the fixed address. The first entry
+   * is always USDC (the default asset, so a request with no `asset` behaves
+   * exactly as before). A chain may list a SECOND token (e.g. USDT on Base) —
+   * an invoice declares which token it expects and a payment in the other token
+   * never satisfies it.
+   */
+  tokens: EvmTokenSpec[];
   /** Public JSON-RPC default; overridable per chain via env. */
   defaultRpcUrl: string;
   /** Env var that overrides defaultRpcUrl. */
@@ -56,15 +79,27 @@ export interface EvmChainSpec {
   minConfirmations: number;
 }
 
+// Base native-USDC + bridged-USDT contracts. Both 6 decimals, so the
+// decimal-nonce amount encoding (evm-amount-nonce.ts) applies identically.
+const BASE_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+const BASE_USDT = '0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2';
+const ETH_USDC = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+const POLYGON_USDC = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359';
+
 /**
  * Registry of EVM chains the fixed-address mode understands, keyed by the value
- * a merchant puts in MERCHANT_EVM_CHAINS (csv). Native USDC contracts only.
+ * a merchant puts in MERCHANT_EVM_CHAINS (csv). Base accepts USDC (default) and
+ * USDT as a second token on the SAME chain; ethereum/polygon stay USDC-only.
  */
 export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
   base: {
     chain: 'base',
     chainId: 8453,
-    usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    usdcAddress: BASE_USDC,
+    tokens: [
+      { symbol: 'USDC', address: BASE_USDC, decimals: 6 },
+      { symbol: 'USDT', address: BASE_USDT, decimals: 6 },
+    ],
     defaultRpcUrl: 'https://mainnet.base.org',
     rpcEnvVar: 'BASE_RPC_URL',
     minConfirmations: 1,
@@ -72,7 +107,8 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
   ethereum: {
     chain: 'eth',
     chainId: 1,
-    usdcAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    usdcAddress: ETH_USDC,
+    tokens: [{ symbol: 'USDC', address: ETH_USDC, decimals: 6 }],
     defaultRpcUrl: 'https://eth.llamarpc.com',
     rpcEnvVar: 'ETHEREUM_RPC_URL',
     minConfirmations: 2,
@@ -80,7 +116,8 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
   polygon: {
     chain: 'polygon',
     chainId: 137,
-    usdcAddress: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+    usdcAddress: POLYGON_USDC,
+    tokens: [{ symbol: 'USDC', address: POLYGON_USDC, decimals: 6 }],
     defaultRpcUrl: 'https://polygon-rpc.com',
     rpcEnvVar: 'POLYGON_RPC_URL',
     minConfirmations: 5,
@@ -90,6 +127,46 @@ export const EVM_CHAIN_REGISTRY: Record<string, EvmChainSpec> = {
 /** Resolve a registry spec from a chain alias (case-insensitive). */
 export function lookupEvmChain(alias: string): EvmChainSpec | null {
   return EVM_CHAIN_REGISTRY[alias.trim().toLowerCase()] ?? null;
+}
+
+/** The default token of a chain (always USDC — the first entry). */
+export function defaultEvmToken(spec: EvmChainSpec): EvmTokenSpec {
+  return spec.tokens.find((t) => t.symbol === 'USDC') ?? spec.tokens[0]!;
+}
+
+/**
+ * Resolve the token a chain receives for a given asset alias ('usdc' | 'usdt',
+ * case-insensitive). Defaults to USDC when the alias is empty. Returns null when
+ * the chain does not list that token (e.g. USDT on a USDC-only chain), so the
+ * caller can reject the request rather than silently fall back.
+ */
+export function lookupEvmToken(spec: EvmChainSpec, asset: string | undefined): EvmTokenSpec | null {
+  const sym = (asset ?? 'usdc').trim().toLowerCase();
+  return spec.tokens.find((t) => t.symbol.toLowerCase() === sym) ?? null;
+}
+
+/**
+ * Parse MERCHANT_EVM_TOKENS ("usdc,usdt") into a deduped, lowercased alias list,
+ * defaulting to ['usdc']. Unknown aliases are dropped (a typo never crashes
+ * boot); USDC is always implied so a fixed-address deployment keeps working
+ * unchanged when the var is unset.
+ */
+export function parseEvmTokens(csv: string | undefined): TokenSymbol[] {
+  const raw = (csv ?? 'usdc')
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const out: TokenSymbol[] = [];
+  const seen = new Set<string>();
+  for (const alias of raw.length ? raw : ['usdc']) {
+    const sym = alias === 'usdt' ? 'USDT' : alias === 'usdc' ? 'USDC' : null;
+    if (sym && !seen.has(sym)) {
+      seen.add(sym);
+      out.push(sym);
+    }
+  }
+  if (!out.includes('USDC')) out.unshift('USDC');
+  return out;
 }
 
 /**
@@ -141,6 +218,13 @@ export interface FixedChainConfig extends EvmChainSpec {
    * keep working unchanged.
    */
   rpcUrls?: string[];
+  /**
+   * Tokens this merchant accepts on the chain (Z77). When omitted/empty the
+   * watcher scans only the chain's default USDC token, so older callers and
+   * tests behave exactly as before USDT existed. With 2+ entries (e.g. USDC +
+   * USDT on Base) each token is scanned and matched independently.
+   */
+  enabledTokens?: EvmTokenSpec[];
 }
 
 export interface FixedAddressWatcherOptions {
@@ -322,21 +406,53 @@ export class FixedAddressWatcher {
     return chain.rpcUrls && chain.rpcUrls.length > 0 ? chain.rpcUrls : [chain.rpcUrl];
   }
 
+  /** Tokens to scan on a chain: the merchant's enabled set, or USDC only. */
+  private tokensToScan(chain: FixedChainConfig): EvmTokenSpec[] {
+    return chain.enabledTokens && chain.enabledTokens.length > 0
+      ? chain.enabledTokens
+      : [defaultEvmToken(chain)];
+  }
+
   /**
-   * Cross-check every configured RPC and confirm a transfer ONLY when a quorum
-   * of them agrees on the same (tx, value) with enough confirmations (Z76 FIX
-   * 2). Returns false when the poll is DEGRADED — fewer RPCs responded than the
-   * quorum requires — so a lone (possibly hostile) source can never decide.
+   * Scan every enabled token on a chain independently (Z77). Each token gets its
+   * own RPC quorum pass over its OWN contract logs, matched only against
+   * invoices that requested that exact token — a USDT payment never satisfies a
+   * USDC invoice and vice versa. A single-token (USDC-only) chain behaves
+   * exactly as before.
    */
   private async scanChain(chain: FixedChainConfig, active: Invoice[]): Promise<boolean> {
+    let allOk = true;
+    for (const token of this.tokensToScan(chain)) {
+      const forToken = active.filter(
+        (inv) => inv.asset.toUpperCase() === token.symbol,
+      );
+      const ok = await this.scanToken(chain, token, forToken);
+      if (!ok) allOk = false;
+    }
+    return allOk;
+  }
+
+  /**
+   * Cross-check every configured RPC and confirm a transfer of ONE token ONLY
+   * when a quorum of them agrees on the same (tx, value) with enough
+   * confirmations (Z76 FIX 2). Returns false when the poll is DEGRADED — fewer
+   * RPCs responded than the quorum requires — so a lone (possibly hostile)
+   * source can never decide.
+   */
+  private async scanToken(
+    chain: FixedChainConfig,
+    token: EvmTokenSpec,
+    active: Invoice[],
+  ): Promise<boolean> {
     const urls = this.rpcUrlsFor(chain);
     const threshold = quorumThreshold(urls.length, this.quorum);
-    const scans = await Promise.all(urls.map((url) => this.scanOneRpc(url, chain)));
+    const scans = await Promise.all(urls.map((url) => this.scanOneRpc(url, chain, token)));
     const responded = scans.filter((s): s is { latest: bigint; logs: RpcLog[] } => s !== null);
 
     if (responded.length < threshold) {
       this.log.warn('fixed_watcher.rpc_quorum_degraded', {
         chain: chain.chain,
+        asset: token.symbol,
         responded: responded.length,
         required: threshold,
         configured: urls.length,
@@ -363,8 +479,11 @@ export class FixedAddressWatcher {
       }
     }
 
+    // Dedup key is scoped per token so the same logIndex on two contracts can
+    // never collide.
     const seen = this.seenFor(chain.chain);
-    for (const [key, entry] of byKey) {
+    for (const [logKey, entry] of byKey) {
+      const key = `${token.symbol}:${logKey}`;
       if (seen.has(key)) continue;
       const decision = decideTransferQuorum(entry.observations, threshold);
       if (decision.status === 'conflict') {
@@ -373,6 +492,7 @@ export class FixedAddressWatcher {
         // still form on a later poll.
         this.log.warn('fixed_watcher.rpc_quorum_conflict', {
           chain: chain.chain,
+          asset: token.symbol,
           tx_hash: entry.txHash,
           agree: decision.agree,
           required: threshold,
@@ -388,6 +508,7 @@ export class FixedAddressWatcher {
       // un-seen so a later poll reprocesses it once it matures.
       const terminal = await this.handleTransfer(
         chain,
+        token,
         active,
         entry.txHash,
         decision.value,
@@ -398,15 +519,16 @@ export class FixedAddressWatcher {
     return true;
   }
 
-  /** Read latest block + Transfer logs from ONE endpoint. null on any failure. */
+  /** Read latest block + Transfer logs for ONE token from ONE endpoint. */
   private async scanOneRpc(
     url: string,
     chain: FixedChainConfig,
+    token: EvmTokenSpec,
   ): Promise<{ latest: bigint; logs: RpcLog[] } | null> {
     const latest = await this.blockNumber(url, chain);
     if (latest === null) return null;
     const fromBlock = latest > BigInt(this.blockWindow) ? latest - BigInt(this.blockWindow) : 0n;
-    const logs = await this.getTransferLogs(url, chain, fromBlock, latest);
+    const logs = await this.getTransferLogs(url, chain, token, fromBlock, latest);
     if (logs === null) return null;
     return { latest, logs };
   }
@@ -414,6 +536,7 @@ export class FixedAddressWatcher {
   /** Returns true when the transfer reached a terminal state (confirmed/orphan). */
   private async handleTransfer(
     chain: FixedChainConfig,
+    token: EvmTokenSpec,
     active: Invoice[],
     txHash: string,
     value: bigint,
@@ -423,11 +546,12 @@ export class FixedAddressWatcher {
     if (!match) {
       this.log.warn('fixed_watcher.orphan_payment', {
         chain: chain.chain,
+        asset: token.symbol,
         address: this.address,
         tx_hash: txHash,
         value: value.toString(),
       });
-      await this.emitOrphanWebhook(chain.chain, txHash, value);
+      await this.emitOrphanWebhook(chain.chain, token, txHash, value);
       return true;
     }
     if (confirmations < chain.minConfirmations) {
@@ -442,9 +566,10 @@ export class FixedAddressWatcher {
       paid_at: new Date().toISOString(),
       tx_hash: txHash,
     });
-    await this.emitConfirmedWebhook(confirmed, value, match.nonce);
+    await this.emitConfirmedWebhook(confirmed, token, value, match.nonce);
     this.log.info('fixed_watcher.invoice_confirmed', {
       invoice_id: confirmed.id,
+      asset: token.symbol,
       nonce: match.nonce,
       tx_hash: txHash,
       value: value.toString(),
@@ -500,12 +625,13 @@ export class FixedAddressWatcher {
   private async getTransferLogs(
     url: string,
     chain: FixedChainConfig,
+    token: EvmTokenSpec,
     fromBlock: bigint,
     toBlock: bigint,
   ): Promise<RpcLog[] | null> {
     const params = [
       {
-        address: chain.usdcAddress,
+        address: token.address,
         fromBlock: '0x' + fromBlock.toString(16),
         toBlock: '0x' + toBlock.toString(16),
         topics: [TRANSFER_TOPIC0, null, addressTopic(this.address)],
@@ -570,6 +696,7 @@ export class FixedAddressWatcher {
 
   private async emitConfirmedWebhook(
     invoice: Invoice,
+    token: EvmTokenSpec,
     valueUnits: bigint,
     nonce: number,
   ): Promise<void> {
@@ -579,11 +706,12 @@ export class FixedAddressWatcher {
       merchant_id: invoice.merchant_id,
       chain: invoice.chain,
       asset: invoice.asset,
+      token_address: token.address,
       amount: invoice.amount,
       address: invoice.address,
       tx_hash: invoice.tx_hash,
       value: valueUnits.toString(),
-      metadata: { mode: 'fixed-address', ref: invoice.id, nonce },
+      metadata: { mode: 'fixed-address', ref: invoice.id, nonce, asset: token.symbol },
       confirmed_at: invoice.paid_at ?? new Date().toISOString(),
     };
     await this.storage.recordWebhookEvent({
@@ -601,18 +729,25 @@ export class FixedAddressWatcher {
    * on-chain transfer cannot be refused, so the defense is the checkout screen
    * expiring (hiding the QR at 0:00).
    */
-  private async emitOrphanWebhook(chain: Chain, txHash: string, value: bigint): Promise<void> {
+  private async emitOrphanWebhook(
+    chain: Chain,
+    token: EvmTokenSpec,
+    txHash: string,
+    value: bigint,
+  ): Promise<void> {
     const payload = {
       event: 'payment.orphan',
       merchant_id: this.merchantId,
       chain,
+      asset: token.symbol,
+      token_address: token.address,
       address: this.address,
       tx_hash: txHash,
       value: value.toString(),
       detected_at: new Date().toISOString(),
     };
     await this.storage.recordWebhookEvent({
-      id: deterministicEventId(`orphan:${chain}:${txHash}`),
+      id: deterministicEventId(`orphan:${chain}:${token.symbol}:${txHash}`),
       invoice_id: `orphan_${txHash}`,
       payload_json: JSON.stringify(payload),
       next_retry_at: new Date(Date.now() + WEBHOOK_RETRY_INITIAL_MS).toISOString(),

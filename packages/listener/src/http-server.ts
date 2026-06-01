@@ -75,6 +75,8 @@ export interface AppServerOptions {
   fixedEvmAddress?: string;
   /** Chain aliases enabled for fixed mode (e.g. ['base','polygon']). */
   fixedEvmChains?: string[];
+  /** Token aliases the merchant accepts on fixed mode (e.g. ['usdc','usdt']). */
+  fixedEvmTokens?: string[];
   /** Sliding-window rate limit for POST /invoice. null disables limiting. */
   rateLimit?: RateLimitConfig | null;
   logger?: Logger;
@@ -123,9 +125,10 @@ function serializeInvoice(inv: Invoice): Record<string, unknown> {
     created_at: inv.created_at,
     updated_at: inv.updated_at,
   };
-  // For USDC chains, `amount` is stored as integer USDC base units — expose it
-  // under the correct labels too. BTC serialization is unchanged.
-  if (inv.chain !== 'btc' && inv.asset === 'USDC') {
+  // For EVM stablecoin chains (USDC or USDT — both 6 decimals), `amount` is
+  // stored as integer base units — expose it under the correct labels too. BTC
+  // serialization is unchanged.
+  if (inv.chain !== 'btc' && (inv.asset === 'USDC' || inv.asset === 'USDT')) {
     const units = Number(inv.amount);
     return {
       ...base,
@@ -148,6 +151,7 @@ export class AppServer {
   private readonly baseUsdcAddress?: string;
   private readonly fixedEvmAddress?: string;
   private readonly fixedEvmChains: string[];
+  private readonly fixedEvmTokens: string[];
   private readonly rateLimiter: SlidingWindowRateLimiter | null;
   private readonly log: Logger;
   private server: Server | null = null;
@@ -164,6 +168,9 @@ export class AppServer {
     this.baseUsdcAddress = opts.baseUsdcAddress;
     this.fixedEvmAddress = opts.fixedEvmAddress;
     this.fixedEvmChains = (opts.fixedEvmChains ?? []).map((c) => c.toLowerCase());
+    // Default to USDC-only so a fixed deployment with no MERCHANT_EVM_TOKENS set
+    // behaves exactly as before USDT existed.
+    this.fixedEvmTokens = (opts.fixedEvmTokens ?? ['usdc']).map((t) => t.toLowerCase());
     // rateLimit === undefined → default limiter; null → disabled.
     this.rateLimiter =
       opts.rateLimit === null
@@ -476,15 +483,29 @@ export class AppServer {
       });
       return;
     }
+    // Asset is optional and defaults to 'usdc' (Z77) — a body with no `asset`
+    // takes the exact same path it did before USDT existed.
+    const asset = typeof body.asset === 'string' ? body.asset.trim().toLowerCase() : 'usdc';
+    if (!this.fixedEvmTokens.includes(asset)) {
+      this.sendJson(res, 400, {
+        error: {
+          code: 'asset_disabled',
+          message: `asset "${asset}" is not enabled — set MERCHANT_EVM_TOKENS to accept it`,
+        },
+      });
+      return;
+    }
     try {
       const r = await createFixedEvmInvoiceForMerchant(this.storage, this.merchantId, {
         amountUsd,
         fixedAddress: this.fixedEvmAddress,
         chainAlias,
+        asset,
       });
       this.log.info('http_server.fixed_invoice_created', {
         invoice_id: r.invoice.id,
         chain: r.invoice.chain,
+        asset: r.asset,
         nonce: r.nonce,
         amount_usd: amountUsd,
       });
@@ -492,6 +513,8 @@ export class AppServer {
         ...serializeInvoice(r.invoice),
         mode: 'fixed-address',
         nonce: r.nonce,
+        asset: r.asset,
+        token_address: r.tokenAddress,
         amount_usd: amountUsd,
         amount_usdc: r.amountUsdc,
         amount_usdc_units: Number(r.amountUsdcUnits),

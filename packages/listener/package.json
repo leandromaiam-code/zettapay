@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/listener",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Self-hosted, non-custodial BTC + USDC-on-Base payment listener. Watches BIP-84 / EVM addresses derived from the merchant xpub, dispatches HMAC-signed webhooks. No phone-home.",
   "license": "MIT",
   "private": false,
