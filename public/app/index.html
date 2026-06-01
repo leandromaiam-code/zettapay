@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+  <link rel="stylesheet" href="/theme.css" />
+  <meta name="description" content="ZettaPay Cloud — managed, non-custodial crypto payments. Join the early-access waitlist, or self-host the open-source listener today." />
+  <meta property="og:title" content="ZettaPay Cloud — early access" />
+  <meta property="og:description" content="Let ZettaPay host the listener for you. Still fully non-custodial — funds land directly in your wallet. Join the waitlist." />
+  <title>ZettaPay Cloud — early access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: {
+        fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
+        colors: { royal:'#4F6BFF','royal-bright':'#6B82FF','deep':'#0A0A0A','mint':'#14F195','solana':'#9945FF','muted':'#94A3B8' },
+        animation: { 'fade-up':'fadeUp 0.8s ease-out forwards','glow-pulse':'glowPulse 4s ease-in-out infinite' },
+        keyframes: {
+          fadeUp: { '0%':{opacity:'0',transform:'translateY(30px)'}, '100%':{opacity:'1',transform:'translateY(0)'} },
+          glowPulse: { '0%,100%':{opacity:'0.3'}, '50%':{opacity:'0.6'} },
+        },
+      } },
+    };
+  </script>
+  <style>
+    :root { color-scheme: dark; }
+    html { scroll-behavior: smooth; }
+    body { background:#0A0A0A; color:#FFFFFF; font-family:'Inter',ui-sans-serif,system-ui; overflow-x:hidden; }
+    .grid-bg { background-image: linear-gradient(rgba(79,107,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(79,107,255,0.03) 1px,transparent 1px); background-size:50px 50px; }
+    .gradient-text { background:linear-gradient(135deg,#4F6BFF 0%,#14F195 50%,#9945FF 100%); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+    .glass { background:rgba(79,107,255,0.05); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(79,107,255,0.15); }
+    .glow-orb { position:absolute; border-radius:50%; filter:blur(120px); opacity:0.3; pointer-events:none; }
+    .btn-primary { background:linear-gradient(135deg,#4F6BFF 0%,#6B82FF 100%); color:#FFFFFF; transition:all 0.3s ease; box-shadow:0 0 30px rgba(79,107,255,0.3); }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 40px rgba(79,107,255,0.5); }
+    .btn-ghost { background:rgba(79,107,255,0.05); border:1px solid rgba(79,107,255,0.3); color:#FFFFFF; transition:all 0.3s ease; }
+    .btn-ghost:hover { background:rgba(79,107,255,0.1); border-color:rgba(79,107,255,0.6); }
+    .logo-wordmark { filter:invert(1) brightness(2); }
+    input { font-family:inherit; }
+  </style>
+  <script src="/theme-toggle.js" defer></script>
+</head>
+<body class="grid-bg">
+  <div class="glow-orb animate-glow-pulse" style="background:#4F6BFF; width:600px; height:600px; top:-200px; right:-200px;"></div>
+  <div class="glow-orb" style="background:#14F195; width:500px; height:500px; bottom:10%; left:-150px; opacity:0.12;"></div>
+
+  <!-- NAV -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
+    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+      <a href="/" class="flex items-center gap-3"><img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark" /></a>
+      <div class="flex items-center gap-3">
+        <a href="/" class="text-muted hover:text-white transition text-sm font-medium">&larr; Home</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Self-host instead</a>
+      </div>
+    </div>
+  </nav>
+
+  <section class="relative min-h-screen flex items-center px-4 lg:px-12 py-32">
+    <div class="max-w-2xl mx-auto w-full text-center">
+      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8 animate-fade-up">
+        <span class="w-2 h-2 rounded-full bg-mint animate-glow-pulse"></span>
+        <span class="text-xs font-mono text-muted uppercase tracking-widest">Cloud &middot; early access</span>
+      </div>
+
+      <h1 class="text-4xl md:text-6xl font-bold mb-6 tracking-tight animate-fade-up">
+        Let us host the<br/><span class="gradient-text">listener for you</span>
+      </h1>
+
+      <p class="text-muted text-lg leading-relaxed mb-4 animate-fade-up" style="animation-delay:0.15s; animation-fill-mode:both;">
+        ZettaPay Cloud runs the chain listener so you don&rsquo;t have to &mdash; perfect for serverless setups.
+        Still <span class="text-white font-semibold">fully non-custodial</span>: we watch the chain, but the funds land
+        <span class="text-white font-semibold">directly in your wallet</span>. We never touch them.
+      </p>
+
+      <p class="text-sm font-mono text-muted/70 uppercase tracking-widest mb-10 animate-fade-up" style="animation-delay:0.2s; animation-fill-mode:both;">
+        Coming soon &mdash; join the waitlist below
+      </p>
+
+      <form id="waitlistForm" class="glass rounded-2xl p-6 md:p-8 text-left animate-fade-up" style="animation-delay:0.25s; animation-fill-mode:both;">
+        <label for="email" class="text-xs font-mono text-mint uppercase tracking-widest">Get notified when Cloud opens</label>
+        <div class="flex flex-col sm:flex-row gap-3 mt-3">
+          <input id="email" name="email" type="email" required placeholder="you@company.com"
+            class="flex-1 bg-deep border border-royal/30 rounded-full px-5 py-3 text-white placeholder:text-muted/50 focus:outline-none focus:border-royal-bright transition" />
+          <button type="submit" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm whitespace-nowrap">Join waitlist</button>
+        </div>
+        <p id="formMsg" class="text-sm text-mint mt-4 hidden">Thanks &mdash; you&rsquo;re on the list. We&rsquo;ll email you when Cloud opens.</p>
+        <p class="text-xs text-muted/60 mt-4 leading-relaxed">
+          Prefer full control? The listener is open source &mdash;
+          <a href="https://github.com/leandromaiam-code/zettapay" class="text-royal-bright hover:underline">self-host it today</a>
+          with <code class="font-mono">npm i -g @zettapay/listener</code>.
+        </p>
+      </form>
+
+      <div class="mt-10 text-xs font-mono text-muted/40 uppercase tracking-widest animate-fade-up" style="animation-delay:0.3s; animation-fill-mode:both;">
+        Non-custodial &middot; Bitcoin &middot; USDC on Base &middot; USDT on Base
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const form = document.getElementById('waitlistForm');
+    const msg = document.getElementById('formMsg');
+    if (form) {
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('email');
+        if (!email.value) return;
+        try { localStorage.setItem('zp-cloud-waitlist', email.value); } catch (_) {}
+        msg.classList.remove('hidden');
+        email.value = '';
+        email.disabled = true;
+      });
+    }
+  </script>
+</body>
+</html>
