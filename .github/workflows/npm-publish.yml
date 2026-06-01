@@ -32,6 +32,8 @@ jobs:
             path: packages/listener
           - name: '@zettapay/receiver'
             path: packages/receiver
+          - name: '@zettapay/mcp'
+            path: packages/mcp
     steps:
       - uses: actions/checkout@v4
 

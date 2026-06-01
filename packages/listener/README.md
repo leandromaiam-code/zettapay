@@ -14,6 +14,35 @@ endereço de recebimento.
 
 ---
 
+## Why ZettaPay
+
+A way to **accept Bitcoin self-hosted** and **accept non-custodial USDC on Base**
+without handing your money — or your customers' identities — to a third party.
+
+- **Non-custodial.** Funds settle straight to your wallet on-chain. The listener
+  only ever knows a public key (an xpub or a receive address). It can watch, but
+  it can never move your money.
+- **Self-hosted.** One npm install, runs on your own box. Open-source (MIT) and
+  auditable. Nothing phones home.
+- **Identity-free.** No identity checks, no account, no telemetry. You run a
+  watcher; you do not run a compliance department.
+- **Crypto payments with no identity checks**, signed webhooks you can verify in
+  three lines, and a fixed-address mode for wallets that can't export an xpub.
+
+| | Custodial gateways | ZettaPay listener |
+|---|---|---|
+| Who holds the funds | The gateway | **You** (direct to your wallet) |
+| Signing keys | Shared / hosted | **Never leave your wallet** |
+| Identity checks on payers | Usually required | **None** |
+| Where it runs | Their servers | **Your machine** |
+| Source | Proprietary | **Open-source (MIT)** |
+| Phone-home / telemetry | Common | **None** |
+
+This is a deliberately small surface: **Bitcoin** plus **USDC and USDT on Base**.
+No Solana, no Ethereum L1 — just the rails that settle cheaply and fast.
+
+---
+
 ## Quais pagamentos
 
 | Rede | Token | Como deriva o endereço | Carteira do merchant |
@@ -277,7 +306,7 @@ máquina; nenhum serviço novo, custódia ou telemetria é introduzido.
 
 ### O que NÃO fazemos
 
-Sem custódia, sem KYC, sem telemetria, sem dependência paga, sem chamada a
+Sem custódia, sem checagem de identidade, sem telemetria, sem dependência paga, sem chamada a
 domínio `zettapay.*` ou qualquer terceiro além de RPC público + mempool.space.
 
 ---
