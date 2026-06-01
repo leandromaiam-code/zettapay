@@ -38,7 +38,7 @@ export type {
   RateLimitDecision,
 } from './auth.js';
 
-export { CloudApiServer, serializeInvoice } from './server.js';
+export { buildCheckoutView, CloudApiServer, serializeInvoice } from './server.js';
 export type { CloudApiServerOptions } from './server.js';
 
 export { CloudWebhookDispatcher, startCloudFleet } from './webhook-fleet.js';

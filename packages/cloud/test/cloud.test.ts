@@ -160,6 +160,7 @@ describe('CloudApiServer', () => {
       port: 0,
       host: '127.0.0.1',
       rateLimit: null,
+      checkoutBaseUrl: 'https://pay.example',
     });
     await server.start();
     return `http://127.0.0.1:${server.boundPort}/api/v1`;
@@ -286,5 +287,149 @@ describe('CloudApiServer', () => {
     });
     expect(crossView.status).toBe(404);
     void a;
+  });
+});
+
+describe('public checkout endpoint', () => {
+  let server: CloudApiServer | null = null;
+
+  afterEach(async () => {
+    if (server) await server.stop();
+    server = null;
+  });
+
+  const SECRET = 'whsec_topsecret_value_do_not_leak';
+
+  async function startServer(db: MemoryCloudDb): Promise<string> {
+    server = new CloudApiServer({
+      storage: new SupabaseStorageAdapter(db),
+      db,
+      port: 0,
+      host: '127.0.0.1',
+      rateLimit: null,
+      checkoutBaseUrl: 'https://pay.example',
+    });
+    await server.start();
+    return `http://127.0.0.1:${server.boundPort}/api/v1`;
+  }
+
+  async function seedWithSecrets(db: MemoryCloudDb, email = 'a@shop.com') {
+    return seedMerchant(db, {
+      email,
+      shopName: 'Acme Coffee',
+      chains: [{ chain: 'btc', xpub: BTC_XPUB }],
+      webhookUrl: 'https://merchant.example/hook',
+      webhookSecret: SECRET,
+    });
+  }
+
+  it('POST /invoice returns the hosted checkout_url', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedWithSecrets(db);
+    const base = await startServer(db);
+
+    const res = await fetch(`${base}/invoice`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-zettapay-api-key': apiKey },
+      body: JSON.stringify({ chain: 'btc', amount_sats: 50_000 }),
+    });
+    const body = await res.json();
+    expect(body.checkout_url).toBe(`https://pay.example/checkout/${body.invoice_id}`);
+  });
+
+  it('serves safe display fields without an API key', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedWithSecrets(db);
+    const base = await startServer(db);
+
+    const created = await fetch(`${base}/invoice`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-zettapay-api-key': apiKey },
+      body: JSON.stringify({ chain: 'btc', amount_sats: 50_000 }),
+    });
+    const invId = (await created.json()).invoice_id as string;
+
+    // No API key header at all — the payer is anonymous.
+    const res = await fetch(`${base}/checkout/${invId}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    const view = await res.json();
+    expect(view.shop_name).toBe('Acme Coffee');
+    expect(view.invoice_id).toBe(invId);
+    expect(view.chain).toBe('btc');
+    expect(view.status).toBe('pending');
+    expect(view.receive_address).toMatch(/^bc1/);
+    expect(view.qr_uri.startsWith('bitcoin:')).toBe(true);
+    expect(typeof view.expires_at).toBe('string');
+  });
+
+  it('never leaks secret/xpub/api-key/email in the public payload', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedWithSecrets(db);
+    const base = await startServer(db);
+
+    const created = await fetch(`${base}/invoice`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-zettapay-api-key': apiKey },
+      body: JSON.stringify({ chain: 'btc', amount_sats: 50_000 }),
+    });
+    const invId = (await created.json()).invoice_id as string;
+
+    const res = await fetch(`${base}/checkout/${invId}`);
+    const raw = await res.text();
+    expect(raw).not.toContain(SECRET);
+    expect(raw).not.toContain(BTC_XPUB);
+    expect(raw).not.toContain(apiKey);
+    expect(raw.toLowerCase()).not.toContain('xpub');
+    expect(raw).not.toContain('a@shop.com');
+
+    const view = JSON.parse(raw);
+    expect(view.merchant_id).toBeUndefined();
+    expect(view.webhook_secret).toBeUndefined();
+    expect(view.api_key).toBeUndefined();
+    expect(view.email).toBeUndefined();
+  });
+
+  it('returns 404 for an unknown invoice id', async () => {
+    const db = new MemoryCloudDb();
+    await seedWithSecrets(db);
+    const base = await startServer(db);
+
+    const res = await fetch(`${base}/checkout/inv_does_not_exist`);
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error.code).toBe('not_found');
+  });
+
+  it('exposes only the invoice owner shop_name, isolating other merchants', async () => {
+    const db = new MemoryCloudDb();
+    const a = await seedMerchant(db, {
+      email: 'a@shop.com',
+      shopName: 'Merchant A',
+      chains: [{ chain: 'btc', xpub: BTC_XPUB }],
+      webhookUrl: 'https://a.example/hook',
+      webhookSecret: 'whsec_aaa_secret',
+    });
+    await seedMerchant(db, {
+      email: 'b@shop.com',
+      shopName: 'Merchant B',
+      chains: [{ chain: 'btc', xpub: BTC_XPUB }],
+      webhookUrl: 'https://b.example/hook',
+      webhookSecret: 'whsec_bbb_secret',
+    });
+    const base = await startServer(db);
+
+    const created = await fetch(`${base}/invoice`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-zettapay-api-key': a.apiKey },
+      body: JSON.stringify({ chain: 'btc', amount_sats: 7_000 }),
+    });
+    const invId = (await created.json()).invoice_id as string;
+
+    const raw = await (await fetch(`${base}/checkout/${invId}`)).text();
+    expect(raw).toContain('Merchant A');
+    expect(raw).not.toContain('Merchant B');
+    expect(raw).not.toContain('whsec_aaa_secret');
+    expect(raw).not.toContain('whsec_bbb_secret');
   });
 });

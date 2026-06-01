@@ -882,7 +882,242 @@
       els.copyBtn.addEventListener('click', copyAddress);
     }
 
+    // ---------------------------------------------------------------------
+    // HOSTED CHECKOUT MODE (Z81) — multi-tenant, read-only.
+    // When an invoice id is present (path /checkout/<id> or ?id=<id>) the page
+    // renders an existing cloud invoice fetched from the PUBLIC, key-less
+    // endpoint GET /api/v1/checkout/:id. The merchant created the invoice via
+    // the cloud API; the payer just opens this link, pays on-chain, and the
+    // ZettaPay watcher fleet flips the status to confirmed. Non-custodial: we
+    // only show the merchant's receive address — funds go straight to them.
+    // The legacy self-hosted creator flow (which needs ?merchant=&amount=) is
+    // left fully intact and only runs when no invoice id is supplied.
+    // ---------------------------------------------------------------------
+    function getHostedInvoiceId() {
+      const q = new URLSearchParams(window.location.search);
+      const fromQuery = (q.get('id') || '').trim();
+      if (fromQuery) return fromQuery;
+      const m = window.location.pathname.match(/\/checkout\/([^/?#]+)/);
+      if (m && m[1] && m[1] !== 'index.html') return decodeURIComponent(m[1]);
+      return null;
+    }
+
+    var hosted = { id: null, view: null, pollTimer: null, ttlTimer: null, done: false };
+
+    function hostedNetworkLabel(view) {
+      if (view.chain === 'btc') return 'Bitcoin';
+      var asset = (view.asset || 'USDC').toUpperCase();
+      return asset + ' on Base';
+    }
+
+    function hostedAmountText(view) {
+      if (view.chain === 'btc') return (view.amount_btc || '—') + ' BTC';
+      return (view.amount_usdc || '—') + ' ' + (view.asset || 'USDC').toUpperCase();
+    }
+
+    function hostedEscape(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function renderHostedShell() {
+      var styleOverride = document.getElementById('zp-checkout-stripe');
+      if (styleOverride) styleOverride.remove();
+      document.title = 'Pay — ZettaPay';
+      document.body.innerHTML =
+        '<div class="glow-orb" style="width:520px;height:520px;background:#4F6BFF;top:-160px;left:-120px;"></div>' +
+        '<div class="glow-orb" style="width:520px;height:520px;background:#14F195;bottom:-180px;right:-140px;"></div>' +
+        '<main class="relative z-10 min-h-screen flex items-center justify-center px-4 py-10">' +
+        '  <div class="w-full max-w-md">' +
+        '    <a href="/" class="flex items-center justify-center gap-2 mb-6 opacity-90">' +
+        '      <img src="/Logo_symbol.png" class="w-7 h-7" alt=""/>' +
+        '      <span class="font-bold text-lg tracking-tight">ZettaPay</span>' +
+        '    </a>' +
+        '    <div class="glass rounded-3xl p-6 sm:p-8 shadow-2xl">' +
+        '      <div id="hostedState"></div>' +
+        '    </div>' +
+        '    <div class="mt-6 text-center">' +
+        '      <div class="flex items-center justify-center gap-2 flex-wrap mb-3">' +
+        '        <span class="secure-pill text-mint text-[11px] font-semibold px-3 py-1.5 rounded-full">Non-custodial</span>' +
+        '        <span class="secure-pill text-mint text-[11px] font-semibold px-3 py-1.5 rounded-full">On-chain verified</span>' +
+        '        <span class="secure-pill text-mint text-[11px] font-semibold px-3 py-1.5 rounded-full">Identity-free</span>' +
+        '      </div>' +
+        '      <p class="text-muted text-xs leading-relaxed max-w-sm mx-auto">Secured by ZettaPay — non-custodial. Funds go straight to the merchant\'s wallet.</p>' +
+        '    </div>' +
+        '  </div>' +
+        '</main>';
+    }
+
+    function hostedSetState(html) {
+      var host = document.getElementById('hostedState');
+      if (host) host.innerHTML = html;
+    }
+
+    function renderHostedError(message) {
+      hostedSetState(
+        '<div class="text-center py-6">' +
+        '  <div class="w-14 h-14 rounded-full bg-rose-500/15 border border-rose-500/30 flex items-center justify-center mx-auto mb-4">' +
+        '    <svg class="w-7 h-7 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+        '  </div>' +
+        '  <h2 class="text-xl font-bold mb-1">Invoice not found</h2>' +
+        '  <p class="text-muted text-sm">' + hostedEscape(message || 'This payment link is invalid or has expired.') + '</p>' +
+        '</div>');
+    }
+
+    function renderHostedPending(view) {
+      hostedSetState(
+        '<div class="flex items-start justify-between gap-4 mb-6">' +
+        '  <div class="min-w-0">' +
+        '    <div class="text-[11px] font-semibold text-muted uppercase tracking-[0.16em] mb-1">Pay</div>' +
+        '    <div class="text-2xl font-bold tracking-tight truncate" id="hShop">' + hostedEscape(view.shop_name || 'Merchant') + '</div>' +
+        '  </div>' +
+        '  <div class="text-right flex-shrink-0">' +
+        '    <div class="text-[11px] font-semibold text-muted uppercase tracking-[0.16em] mb-1">Amount</div>' +
+        '    <div class="amount-display text-2xl gradient-text" id="hAmount">' + hostedEscape(hostedAmountText(view)) + '</div>' +
+        '  </div>' +
+        '</div>' +
+        '<div class="rounded-2xl bg-white p-3 w-fit mx-auto mb-3 qr-container">' +
+        '  <img id="hQr" width="220" height="220" alt="Payment QR"/>' +
+        '</div>' +
+        '<div class="text-center text-xs text-muted mb-5">Scan with any wallet · <span class="text-mint font-semibold">' + hostedEscape(hostedNetworkLabel(view)) + '</span></div>' +
+        '<div class="mb-2 text-[11px] font-semibold text-muted uppercase tracking-[0.16em]">Send to this address</div>' +
+        '<button type="button" id="hCopy" class="address-display w-full text-left rounded-xl px-4 py-3 mb-4 text-sm hover:border-mint/50 transition" title="Copy address">' +
+        '  <span id="hAddr" class="block break-all">' + hostedEscape(view.receive_address || '') + '</span>' +
+        '  <span class="text-mint text-[11px] font-semibold mt-1 inline-block" id="hCopyHint">Tap to copy</span>' +
+        '</button>' +
+        '<div class="flex items-center justify-between gap-3 pt-3 border-t border-white/10">' +
+        '  <div class="flex items-center gap-2 text-sm">' +
+        '    <span class="status-dot status-pending"></span>' +
+        '    <span id="hStatus" class="text-muted">Waiting for payment…</span>' +
+        '  </div>' +
+        '  <div class="text-sm font-mono" id="hTtl">--:--</div>' +
+        '</div>' +
+        '<a id="hVerify" href="' + hostedEscape(view.verify_url || '#') + '" target="_blank" rel="noopener" class="block text-center text-xs text-muted hover:text-mint mt-4 transition">Verify on block explorer ↗</a>');
+
+      var img = document.getElementById('hQr');
+      if (img && view.qr_uri && typeof window.QRious !== 'undefined') {
+        try {
+          var qr = new window.QRious({ value: view.qr_uri, size: 440, padding: 0, foreground: '#0A0A0A', background: '#FFFFFF' });
+          img.src = qr.toDataURL('image/png');
+        } catch (e) { /* leave blank */ }
+      }
+      var copyBtn = document.getElementById('hCopy');
+      if (copyBtn) copyBtn.addEventListener('click', function () { hostedCopy(view.receive_address); });
+      hostedStartTtl(view.expires_at);
+    }
+
+    function renderHostedSuccess(view) {
+      hosted.done = true;
+      hostedClearTimers();
+      var txLink = view.tx_url
+        ? '<a href="' + hostedEscape(view.tx_url) + '" target="_blank" rel="noopener" class="text-mint hover:underline break-all font-mono text-xs">' + hostedEscape(view.tx_hash || '') + ' ↗</a>'
+        : '';
+      hostedSetState(
+        '<div class="text-center py-4">' +
+        '  <div class="w-20 h-20 rounded-full bg-mint/15 border border-mint/40 flex items-center justify-center mx-auto mb-5">' +
+        '    <svg class="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="#14F195" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path class="check-mark" d="M20 6L9 17l-5-5"/></svg>' +
+        '  </div>' +
+        '  <h2 class="text-2xl font-bold mb-1">Payment confirmed</h2>' +
+        '  <p class="text-muted text-sm mb-4">' + hostedEscape(hostedAmountText(view)) + ' received by ' + hostedEscape(view.shop_name || 'the merchant') + '.</p>' +
+        (txLink ? '<div class="rounded-xl bg-white/5 border border-white/10 px-4 py-3 mb-2"><div class="text-[11px] text-muted uppercase tracking-wide mb-1">Transaction</div>' + txLink + '</div>' : '') +
+        '  <p class="text-mint text-xs font-semibold mt-3">Settled on-chain · non-custodial</p>' +
+        '</div>');
+    }
+
+    function renderHostedExpired(view) {
+      hosted.done = true;
+      hostedClearTimers();
+      hostedSetState(
+        '<div class="text-center py-6">' +
+        '  <div class="w-16 h-16 rounded-full bg-amber-500/15 border border-amber-500/30 flex items-center justify-center mx-auto mb-4">' +
+        '    <svg class="w-8 h-8 text-amber" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>' +
+        '  </div>' +
+        '  <h2 class="text-xl font-bold mb-1">Invoice expired</h2>' +
+        '  <p class="text-muted text-sm">This payment window has closed. Ask ' + hostedEscape(view.shop_name || 'the merchant') + ' for a fresh checkout link.</p>' +
+        '</div>');
+    }
+
+    function hostedCopy(addr) {
+      if (!addr) return;
+      var hint = document.getElementById('hCopyHint');
+      var flash = function () { if (hint) { hint.textContent = 'Copied!'; setTimeout(function () { if (hint) hint.textContent = 'Tap to copy'; }, 1400); } };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(addr).then(flash).catch(function () { flash(); });
+      } else { flash(); }
+    }
+
+    function hostedStartTtl(expiresAt) {
+      if (!expiresAt) return;
+      var expiresMs = new Date(expiresAt).getTime();
+      var el = document.getElementById('hTtl');
+      function tick() {
+        if (!el) return;
+        var remaining = Math.max(0, Math.floor((expiresMs - Date.now()) / 1000));
+        var mm = Math.floor(remaining / 60), ss = remaining % 60;
+        el.textContent = String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0');
+        if (remaining <= 0) {
+          el.classList.add('text-rose');
+          if (hosted.ttlTimer) { clearInterval(hosted.ttlTimer); hosted.ttlTimer = null; }
+          if (!hosted.done && hosted.view && hosted.view.status === 'pending') renderHostedExpired(hosted.view);
+        }
+      }
+      tick();
+      if (hosted.ttlTimer) clearInterval(hosted.ttlTimer);
+      hosted.ttlTimer = setInterval(tick, 1000);
+    }
+
+    function hostedClearTimers() {
+      if (hosted.pollTimer) { clearInterval(hosted.pollTimer); hosted.pollTimer = null; }
+      if (hosted.ttlTimer) { clearInterval(hosted.ttlTimer); hosted.ttlTimer = null; }
+    }
+
+    function hostedIsPaid(status) {
+      var s = String(status || '').toLowerCase();
+      return s === 'confirmed' || s === 'paid' || s === 'completed';
+    }
+
+    async function hostedFetch(id) {
+      var resp = await fetch('/api/v1/checkout/' + encodeURIComponent(id), {
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      });
+      if (!resp.ok) return { status: resp.status, view: null };
+      return { status: 200, view: await resp.json() };
+    }
+
+    async function hostedPollOnce() {
+      if (hosted.done) return;
+      try {
+        var r = await hostedFetch(hosted.id);
+        if (r.status !== 200 || !r.view) return;
+        hosted.view = r.view;
+        if (hostedIsPaid(r.view.status)) { renderHostedSuccess(r.view); }
+        else if (String(r.view.status).toLowerCase() === 'expired') { renderHostedExpired(r.view); }
+        else {
+          var label = document.getElementById('hStatus');
+          if (label) label.textContent = 'Waiting for payment…';
+        }
+      } catch (e) { /* transient — keep polling */ }
+    }
+
+    async function runHostedCheckout(id) {
+      hosted.id = id;
+      renderHostedShell();
+      var first;
+      try { first = await hostedFetch(id); }
+      catch (e) { renderHostedError('Could not reach the payment service.'); return; }
+      if (first.status === 404 || !first.view) { renderHostedError(); return; }
+      hosted.view = first.view;
+      if (hostedIsPaid(first.view.status)) { renderHostedSuccess(first.view); return; }
+      if (String(first.view.status).toLowerCase() === 'expired') { renderHostedExpired(first.view); return; }
+      renderHostedPending(first.view);
+      hosted.pollTimer = setInterval(hostedPollOnce, 4000);
+    }
+
     (async function init() {
+      const hostedId = getHostedInvoiceId();
+      if (hostedId) { runHostedCheckout(hostedId); return; }
       const parsed = parseContextFromUrl();
       if (parsed.error) { showInvalid(parsed.error); return; }
       context = parsed.context;
