@@ -9,6 +9,7 @@ import { BaseWatcher } from './base-watcher.js';
 import {
   FixedAddressWatcher,
   parseFixedChains,
+  parseEvmTokens,
   EVM_CHAIN_REGISTRY,
   type FixedChainConfig,
 } from './fixed-address-watcher.js';
@@ -196,6 +197,10 @@ export async function run(argv: readonly string[] = []): Promise<void> {
   const fixedChainSpecs = fixedAddress
     ? parseFixedChains(process.env.MERCHANT_EVM_CHAINS)
     : [];
+  // Tokens the merchant accepts on the fixed address (Z77). Defaults to USDC.
+  // 'usdt' is only realized on chains that list it (Base); on a USDC-only chain
+  // the intersection collapses back to USDC.
+  const enabledTokenAliases = parseEvmTokens(process.env.MERCHANT_EVM_TOKENS);
   const fixedChains: FixedChainConfig[] = [];
   for (const spec of fixedChainSpecs) {
     if (spec.chain === 'base' && evmXpub) {
@@ -215,7 +220,15 @@ export async function run(argv: readonly string[] = []): Promise<void> {
       ) ?? spec.chain;
     const rpcUrls = resolveRpcUrls(alias, process.env[spec.rpcEnvVar]?.trim());
     const rpcUrl = rpcUrls[0] ?? spec.defaultRpcUrl;
-    fixedChains.push({ ...spec, rpcUrl, rpcUrls: rpcUrls.length > 0 ? rpcUrls : [rpcUrl] });
+    const enabledTokens = spec.tokens.filter((t) =>
+      enabledTokenAliases.includes(t.symbol),
+    );
+    fixedChains.push({
+      ...spec,
+      rpcUrl,
+      rpcUrls: rpcUrls.length > 0 ? rpcUrls : [rpcUrl],
+      enabledTokens: enabledTokens.length > 0 ? enabledTokens : spec.tokens.slice(0, 1),
+    });
   }
 
   const apiServer = new AppServer({
@@ -231,6 +244,7 @@ export async function run(argv: readonly string[] = []): Promise<void> {
     evmXpub,
     fixedEvmAddress: fixedAddress,
     fixedEvmChains: fixedChains.map((ch) => ch.chain),
+    fixedEvmTokens: enabledTokenAliases.map((t) => t.toLowerCase()),
     rateLimit: parseRateLimitEnv(process.env.ZETTAPAY_RATE_LIMIT),
     logger: consoleLogger,
   });

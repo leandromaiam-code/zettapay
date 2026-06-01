@@ -1,5 +1,34 @@
 # Changelog — @zettapay/listener
 
+## 0.6.0
+
+### USDT on Base — second token, same fixed-address pattern (additive)
+
+USDT becomes a SECOND stablecoin on the SAME Base chain that already serves USDC,
+in the fixed-address mode (one shared receive address + per-invoice decimal
+nonce). USDT on Base is 6 decimals like USDC, so the amount-nonce encoding is
+byte-for-byte identical — only the token contract changes. BTC, the USDC xpub
+mode and the USDC fixed-address mode are untouched; with no new env var the
+listener behaves exactly as in 0.5.0.
+
+- **Multi-token registry (`src/fixed-address-watcher.ts`).** Each EVM chain now
+  carries a `tokens[]` list. Base lists `USDC` (default) +
+  `USDT 0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2`; ethereum/polygon stay
+  USDC-only. New helpers: `lookupEvmToken`, `defaultEvmToken`, `parseEvmTokens`.
+- **Per-token watcher scan.** `FixedAddressWatcher` runs an independent
+  `eth_getLogs` + RPC-quorum pass per enabled token against its OWN contract,
+  matching a transfer only to invoices that requested that token. A USDT payment
+  never satisfies a USDC invoice and vice versa. The Z76 2-of-N quorum applies to
+  each token. Confirmed/orphan webhooks now carry `asset` + `token_address`.
+- **`asset` on invoice creation (`src/invoice-core.ts`, `src/http-server.ts`).**
+  `POST /invoice {chain:'base', asset:'usdt'}` (default `'usdc'`) persists the
+  resolved symbol + token contract, derives the same fixed address + nonce, and
+  returns `asset`, `token_address` and a USDT `qr_uri`. USDC and USDT keep
+  independent nonce spaces. `asset='usdt'` on a USDC-only chain is rejected.
+- **`MERCHANT_EVM_TOKENS` (`src/main.ts`, `src/cli/verify-config.ts`).** Optional
+  csv (default `usdc`; e.g. `usdc,usdt`) controlling which tokens the merchant
+  accepts on Base. `verify-config` validates it and flags `usdt` without `base`.
+
 ## 0.5.0
 
 ### Security hardening (additive — zero regression on BTC + USDC paths)

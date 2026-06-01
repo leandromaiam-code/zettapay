@@ -19,7 +19,7 @@ import {
   NONCE_MODULUS,
   randomNonceStart,
 } from './evm-amount-nonce.js';
-import { lookupEvmChain } from './fixed-address-watcher.js';
+import { lookupEvmChain, lookupEvmToken } from './fixed-address-watcher.js';
 
 const SATS_PER_BTC = 100_000_000;
 export const DEFAULT_EXPIRES_SECONDS = 3600;
@@ -198,6 +198,12 @@ export interface CreateFixedEvmInvoiceParams {
   fixedAddress: string;
   /** Chain alias understood by the registry: 'base' | 'ethereum' | 'polygon'. */
   chainAlias: string;
+  /**
+   * Stablecoin to receive: 'usdc' (default) or 'usdt' (Base only, Z77). The
+   * invoice records the resolved symbol so a payment in the other token never
+   * satisfies it. USDT on Base is 6 decimals — the nonce encoding is identical.
+   */
+  asset?: string;
   expiresInSeconds?: number;
 }
 
@@ -205,10 +211,14 @@ export interface CreateFixedEvmInvoiceResult {
   invoice: Invoice;
   /** Per-invoice nonce embedded in the amount (1..9999). */
   nonce: number;
-  /** Exact USDC amount in integer base units the payer must send. */
+  /** Exact token amount in integer base units the payer must send. */
   amountUsdcUnits: bigint;
-  /** Human-readable USDC amount, e.g. "29.000042". */
+  /** Human-readable token amount, e.g. "29.000042". */
   amountUsdc: string;
+  /** Resolved asset symbol ('USDC' | 'USDT'). */
+  asset: string;
+  /** Token contract the payer must send (USDC or USDT on the chain). */
+  tokenAddress: string;
   /** EIP-681 transfer URI for QR rendering. */
   eip681: string;
 }
@@ -227,6 +237,13 @@ export async function createFixedEvmInvoiceForMerchant(
 ): Promise<CreateFixedEvmInvoiceResult> {
   const spec = lookupEvmChain(params.chainAlias);
   if (!spec) throw new Error(`fixed-evm: unknown chain "${params.chainAlias}"`);
+  const token = lookupEvmToken(spec, params.asset);
+  if (!token) {
+    throw new Error(
+      `fixed-evm: asset "${params.asset}" is not available on chain "${params.chainAlias}" ` +
+        `(supported: ${spec.tokens.map((t) => t.symbol).join(', ')})`,
+    );
+  }
   if (!/^0x[0-9a-fA-F]{40}$/.test(params.fixedAddress)) {
     throw new Error('fixed-evm: MERCHANT_EVM_ADDRESS must be a 0x EVM address');
   }
@@ -239,6 +256,7 @@ export async function createFixedEvmInvoiceForMerchant(
     spec.chain,
     params.fixedAddress,
     baseUnits,
+    token.symbol,
   );
   // Anti front-running (Z76 FIX 6): start the search at a per-invoice random
   // point so the allocated nonce — and thus the exact payable amount — is not
@@ -257,7 +275,7 @@ export async function createFixedEvmInvoiceForMerchant(
     id: `inv_${randomUUID()}`,
     merchant_id: merchant.id,
     chain: spec.chain,
-    asset: 'USDC',
+    asset: token.symbol,
     amount: encoded.units.toString(),
     address: params.fixedAddress,
     child_index: null,
@@ -269,7 +287,9 @@ export async function createFixedEvmInvoiceForMerchant(
     nonce,
     amountUsdcUnits: encoded.units,
     amountUsdc: encoded.display,
-    eip681: buildEvmUsdcUri(params.fixedAddress, encoded.units, spec.usdcAddress, spec.chainId),
+    asset: token.symbol,
+    tokenAddress: token.address,
+    eip681: buildEvmUsdcUri(params.fixedAddress, encoded.units, token.address, spec.chainId),
   };
 }
 
@@ -284,12 +304,16 @@ async function collectActiveNonces(
   chain: Chain,
   fixedAddress: string,
   baseUnits: number,
+  asset: string,
 ): Promise<Set<number>> {
   const now = Date.now();
   const pending = await storage.listPendingInvoices({ chain });
   const nonces = new Set<number>();
   for (const inv of pending) {
     if (inv.address.toLowerCase() !== fixedAddress.toLowerCase()) continue;
+    // Each token has an independent nonce space (Z77): a USDC invoice never
+    // reserves a USDT nonce, since payments are matched per token.
+    if (inv.asset.toUpperCase() !== asset.toUpperCase()) continue;
     if (new Date(inv.expires_at).getTime() < now) continue;
     let units: number;
     try {

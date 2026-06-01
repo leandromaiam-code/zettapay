@@ -21,7 +21,7 @@ import {
   type Network,
 } from '../network.js';
 import { isValidEvmAddress } from '../evm-amount-nonce.js';
-import { parseFixedChains } from '../fixed-address-watcher.js';
+import { parseFixedChains, parseEvmTokens } from '../fixed-address-watcher.js';
 
 export interface VerifyOptions {
   cwd?: string;
@@ -180,6 +180,30 @@ export async function runVerifyConfig(
       ok: specs.length > 0,
       detail: specs.map((s) => s.chain).join(', ') || '(none)',
     });
+    // MERCHANT_EVM_TOKENS (Z77) — which stablecoins the merchant accepts on the
+    // fixed address. Defaults to USDC. USDT is realized only on chains that list
+    // it (Base); a raw alias is rejected only when it is neither usdc nor usdt.
+    const rawTokens = (env.MERCHANT_EVM_TOKENS ?? 'usdc')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const badTokens = rawTokens.filter((t) => t !== 'usdc' && t !== 'usdt');
+    const tokens = parseEvmTokens(env.MERCHANT_EVM_TOKENS);
+    checks.push({
+      label: 'MERCHANT_EVM_TOKENS resolved',
+      ok: badTokens.length === 0,
+      detail:
+        badTokens.length === 0
+          ? tokens.join(', ')
+          : `unknown token(s): ${badTokens.join(', ')} (expected usdc, usdt)`,
+    });
+    if (tokens.includes('USDT') && !specs.some((s) => s.chain === 'base')) {
+      checks.push({
+        label: 'USDT requires Base chain',
+        ok: false,
+        detail: 'MERCHANT_EVM_TOKENS lists usdt but MERCHANT_EVM_CHAINS has no base — USDT is Base-only',
+      });
+    }
     if (env.MERCHANT_XPUB_EVM?.trim() && specs.some((s) => s.chain === 'base')) {
       checks.push({
         label: 'fixed vs xpub precedence (base)',
