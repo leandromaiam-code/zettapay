@@ -22,8 +22,11 @@ Two ways to run it:
 - Self-hosted: `npm i -g @zettapay/listener`, set a few env vars, run it on your
   own server. Open-source, MIT, auditable.
 - Managed cloud: we run the same listener for you. Still non-custodial — funds
-  go to your wallet, we only run the watcher. In early access; onboarding is
-  manual via /app. Same API under /api/v1, same `X-ZettaPay-Api-Key` header.
+  go to your wallet, we only run the watcher. Self-serve: create an account at
+  /app (email, shop name, public key), copy the API key shown once and paste it
+  to sign in to the dashboard. New accounts start on the Free plan; upgrades
+  are paid from the dashboard in crypto or by card. Early access, so features
+  may change. Same API under /api/v1, same `X-ZettaPay-Api-Key` header.
 
 There is no per-transaction fee in either mode. Self-hosting is free; Cloud is a
 flat subscription by monthly invoice volume (see /pricing).

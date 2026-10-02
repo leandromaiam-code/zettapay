@@ -214,6 +214,12 @@
 
           <div class="toc-group">Cloud</div>
           <a href="#cloud-overview" class="toc-link">Overview</a>
+          <a href="#cloud-signup" class="toc-link">POST /api/v1/signup</a>
+          <a href="#cloud-me" class="toc-link">GET /api/v1/me</a>
+          <a href="#cloud-invoices" class="toc-link">GET /api/v1/invoices</a>
+          <a href="#cloud-webhook" class="toc-link">POST /api/v1/webhook</a>
+          <a href="#cloud-plans" class="toc-link">GET /api/v1/plans</a>
+          <a href="#cloud-billing-checkout" class="toc-link">POST /api/v1/billing/checkout</a>
           <a href="#cloud-invoice-create" class="toc-link">POST /api/v1/invoice</a>
           <a href="#cloud-invoice-get" class="toc-link">GET /api/v1/invoice/:id</a>
           <a href="#cloud-checkout" class="toc-link">GET /api/v1/checkout/:id</a>
@@ -242,7 +248,7 @@
             On the self-hosted listener the key is whatever secret you put in
             <code class="font-mono text-mint text-xs">ZETTAPAY_API_KEY</code>; it is compared in constant time and
             protects <code class="font-mono text-mint text-xs">POST /invoice</code>. On Cloud the key is issued
-            when your account is provisioned and shown once — only its hash is stored.
+            when you create your account at <a href="/app" class="text-royal-bright hover:underline">/app</a> and shown once — only its hash is stored. The same key signs you in to the dashboard.
           </p>
           <pre class="code"><span class="tk-d">X-ZettaPay-Api-Key:</span> zp_live_xxxxxxxx
 <span class="tk-d">Content-Type:</span> application/json</pre>
@@ -478,11 +484,198 @@ curl -X POST http://localhost:8787/invoice \
             secret; it never receives a private key and is never in the flow of funds.
           </p>
           <p class="text-muted text-sm leading-relaxed">
-            Access is by manual onboarding during early access — join at
-            <a href="/app" class="text-royal-bright hover:underline">/app</a>. There is no per-transaction fee;
-            plans are a flat subscription by monthly invoice volume, listed on
-            <a href="/pricing" class="text-royal-bright hover:underline">/pricing</a>. In the examples below,
-            <code>$ZETTAPAY_URL</code> stands for the Cloud base URL you receive at onboarding.
+            Cloud is self-serve: create an account at
+            <a href="/app" class="text-royal-bright hover:underline">/app</a>, copy the API key (shown once) and
+            paste it there to sign in to the dashboard — no password, no wallet connection. A new account starts on
+            the Free plan; upgrades are paid from the dashboard, in crypto or by card. There is no per-transaction
+            fee; plans are a flat subscription by monthly invoice volume, listed on
+            <a href="/pricing" class="text-royal-bright hover:underline">/pricing</a>. Cloud is in early access, so
+            features may change. In the examples below, <code>$ZETTAPAY_URL</code> stands for the origin of this
+            site — the Cloud API lives under <code>/api/v1</code> on it.
+          </p>
+        </article>
+
+        <article id="cloud-signup" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/v1/signup</span>
+            <span class="text-xs font-mono text-muted">public · throttled</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Creates an account on the Free plan. This is what the form at
+            <a href="/app" class="text-royal-bright hover:underline">/app</a> calls. It takes public material only:
+            an email, a shop name and at least one way to receive — a BIP-84 extended public key for Bitcoin
+            and/or, for Base, an extended public key or a fixed receive address. An extended <em>private</em> key
+            is refused and never stored.
+          </p>
+          <table class="params mb-5">
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>email</code></td><td>string</td><td>Required. One account per email.</td></tr>
+              <tr><td><code>shop_name</code></td><td>string</td><td>Required, 2–80 characters. Shown on hosted checkout.</td></tr>
+              <tr><td><code>btc_xpub</code></td><td>string</td><td>Optional. Extended public key for Bitcoin.</td></tr>
+              <tr><td><code>base_xpub</code></td><td>string</td><td>Optional. Extended public key for Base (one address per invoice). Wins over <code>base_address</code> when both are sent.</td></tr>
+              <tr><td><code>base_address</code></td><td>string</td><td>Optional. Fixed <code>0x</code> receive address for Base.</td></tr>
+              <tr><td><code>webhook_url</code></td><td>string</td><td>Optional. <code>https</code>, default port, public host.</td></tr>
+            </tbody>
+          </table>
+          <pre class="code">curl -X POST $ZETTAPAY_URL/api/v1/signup \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -d <span class="tk-s">'{"email": "you@example.com", "shop_name": "My Shop", "base_address": "0x...", "webhook_url": "https://shop.example/api/zp/webhook"}'</span></pre>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mt-5 mb-2">Response · 201</h3>
+          <pre class="code">{
+  <span class="tk-d">"merchant_id"</span>: <span class="tk-s">"..."</span>,
+  <span class="tk-d">"plan"</span>: <span class="tk-s">"free"</span>,
+  <span class="tk-d">"api_key"</span>: <span class="tk-s">"zp_live_xxxxxxxxxxxxxxxx"</span>,
+  <span class="tk-d">"key_prefix"</span>: <span class="tk-s">"zp_live_xxxxxxxx"</span>,
+  <span class="tk-d">"webhook_secret"</span>: <span class="tk-s">"whsec_xxxxxxxxxxxxxxxxxxxxxxxx"</span>
+}</pre>
+          <p class="text-xs text-muted/80 font-mono mt-3">
+            api_key and webhook_secret are shown once — only the key's hash is stored. webhook_secret is present only when webhook_url was sent.
+            Errors: 400 invalid_email / invalid_shop_name / no_receive_method / private_key_rejected / invalid_xpub / invalid_address / invalid_webhook_url,
+            409 email_taken, 429 rate_limited (with Retry-After).
+          </p>
+        </article>
+
+        <article id="cloud-me" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/v1/me</span>
+            <span class="text-xs font-mono text-muted">API key required</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            The account behind the API key: plan, this calendar month's usage, receive methods and webhook URL.
+            No secrets are returned. A paid plan whose period has ended is reported as <code>free</code>.
+          </p>
+          <pre class="code">{
+  <span class="tk-d">"merchant_id"</span>: <span class="tk-s">"..."</span>,
+  <span class="tk-d">"shop_name"</span>: <span class="tk-s">"My Shop"</span>,
+  <span class="tk-d">"email"</span>: <span class="tk-s">"you@example.com"</span>,
+  <span class="tk-d">"plan"</span>: <span class="tk-s">"starter"</span>,
+  <span class="tk-d">"plan_expires_at"</span>: <span class="tk-s">"2026-07-01T12:00:00.000Z"</span>,
+  <span class="tk-d">"usage"</span>: { <span class="tk-d">"invoices_this_month"</span>: <span class="tk-n">12</span>, <span class="tk-d">"monthly_limit"</span>: <span class="tk-n">500</span> },
+  <span class="tk-d">"chains"</span>: [
+    { <span class="tk-d">"chain"</span>: <span class="tk-s">"base"</span>, <span class="tk-d">"mode"</span>: <span class="tk-s">"fixed-address"</span>, <span class="tk-d">"xpub"</span>: <span class="tk-k">null</span>, <span class="tk-d">"fixed_address"</span>: <span class="tk-s">"0x..."</span> }
+  ],
+  <span class="tk-d">"webhook_url"</span>: <span class="tk-s">"https://shop.example/api/zp/webhook"</span>,
+  <span class="tk-d">"api_keys"</span>: [
+    { <span class="tk-d">"prefix"</span>: <span class="tk-s">"zp_live_xxxxxxxx"</span>, <span class="tk-d">"label"</span>: <span class="tk-s">"signup"</span>, <span class="tk-d">"created_at"</span>: <span class="tk-s">"..."</span>, <span class="tk-d">"revoked"</span>: <span class="tk-k">false</span> }
+  ],
+  <span class="tk-d">"created_at"</span>: <span class="tk-s">"2026-06-01T12:00:00.000Z"</span>
+}</pre>
+          <p class="text-xs text-muted/80 font-mono mt-3">
+            plan_expires_at is null on the Free plan. mode is "xpub" or "fixed-address"; in xpub mode the key is shortened for display.
+          </p>
+        </article>
+
+        <article id="cloud-invoices" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/v1/invoices?limit=25</span>
+            <span class="text-xs font-mono text-muted">API key required</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Your most recent invoices. <code>limit</code> defaults to 25 and is clamped to 1–100.
+          </p>
+          <pre class="code">{
+  <span class="tk-d">"invoices"</span>: [
+    {
+      <span class="tk-d">"invoice_id"</span>: <span class="tk-s">"inv_..."</span>,
+      <span class="tk-d">"chain"</span>: <span class="tk-s">"base"</span>,
+      <span class="tk-d">"asset"</span>: <span class="tk-s">"USDC"</span>,
+      <span class="tk-d">"amount"</span>: <span class="tk-s">"42"</span>,
+      <span class="tk-d">"receive_address"</span>: <span class="tk-s">"0x..."</span>,
+      <span class="tk-d">"status"</span>: <span class="tk-s">"confirmed"</span>,
+      <span class="tk-d">"tx_hash"</span>: <span class="tk-s">"0x..."</span>,
+      <span class="tk-d">"created_at"</span>: <span class="tk-s">"..."</span>,
+      <span class="tk-d">"paid_at"</span>: <span class="tk-s">"..."</span>,
+      <span class="tk-d">"expires_at"</span>: <span class="tk-s">"..."</span>
+    }
+  ]
+}</pre>
+        </article>
+
+        <article id="cloud-webhook" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/v1/webhook</span>
+            <span class="text-xs font-mono text-muted">API key required</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Sets or replaces your webhook URL. Every call issues a <em>fresh</em> signing secret, shown once — the
+            previous secret stops being used, so update your server at the same time. The URL must be
+            <code>https</code> on the default port and resolve only to public addresses; this is checked when it
+            is saved and again before every delivery.
+          </p>
+          <pre class="code">curl -X POST $ZETTAPAY_URL/api/v1/webhook \
+  -H <span class="tk-s">"X-ZettaPay-Api-Key: zp_live_xxxxxxxx"</span> \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -d <span class="tk-s">'{"webhook_url": "https://shop.example/api/zp/webhook"}'</span></pre>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mt-5 mb-2">Response · 200</h3>
+          <pre class="code">{
+  <span class="tk-d">"webhook_url"</span>: <span class="tk-s">"https://shop.example/api/zp/webhook"</span>,
+  <span class="tk-d">"webhook_secret"</span>: <span class="tk-s">"whsec_xxxxxxxxxxxxxxxxxxxxxxxx"</span>
+}</pre>
+          <p class="text-xs text-muted/80 font-mono mt-3">Errors: 400 invalid_webhook_url.</p>
+        </article>
+
+        <article id="cloud-plans" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-get">GET</span>
+            <span class="ep-path">/api/v1/plans</span>
+            <span class="text-xs font-mono text-muted">public</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            The plan catalogue: monthly invoice caps, prices and the payment methods currently on offer.
+          </p>
+          <pre class="code">{
+  <span class="tk-d">"plans"</span>: [
+    { <span class="tk-d">"plan"</span>: <span class="tk-s">"free"</span>, <span class="tk-d">"invoices_per_month"</span>: <span class="tk-n">50</span>, <span class="tk-d">"price_usd_per_month"</span>: <span class="tk-n">0</span> },
+    { <span class="tk-d">"plan"</span>: <span class="tk-s">"starter"</span>, <span class="tk-d">"invoices_per_month"</span>: <span class="tk-n">500</span>, <span class="tk-d">"price_usd_per_month"</span>: <span class="tk-n">19</span> },
+    { <span class="tk-d">"plan"</span>: <span class="tk-s">"pro"</span>, <span class="tk-d">"invoices_per_month"</span>: <span class="tk-n">5000</span>, <span class="tk-d">"price_usd_per_month"</span>: <span class="tk-n">49</span> }
+  ],
+  <span class="tk-d">"payment_methods"</span>: [<span class="tk-s">"crypto"</span>, <span class="tk-s">"stripe"</span>],
+  <span class="tk-d">"transaction_fee"</span>: <span class="tk-n">0</span>
+}</pre>
+        </article>
+
+        <article id="cloud-billing-checkout" class="ep-card glass rounded-2xl p-6 md:p-8">
+          <div class="flex items-center gap-3 mb-2 flex-wrap">
+            <span class="pill pill-post">POST</span>
+            <span class="ep-path">/api/v1/billing/checkout</span>
+            <span class="text-xs font-mono text-muted">API key required</span>
+          </div>
+          <p class="text-muted text-sm leading-relaxed mb-4">
+            Starts the payment for a paid plan and returns a link to open. This is what the upgrade buttons in the
+            dashboard call.
+          </p>
+          <table class="params mb-5">
+            <thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>plan</code></td><td>string</td><td>Required. <code>starter</code> or <code>pro</code>.</td></tr>
+              <tr><td><code>method</code></td><td>string</td><td><code>crypto</code> (default) or <code>stripe</code>. Must be listed in <code>payment_methods</code> of <code>GET /api/v1/plans</code>.</td></tr>
+            </tbody>
+          </table>
+          <ul class="text-muted text-sm leading-relaxed mb-4 list-disc pl-5 space-y-1.5">
+            <li><code>crypto</code> — an ordinary ZettaPay invoice in a stablecoin on Base; <code>checkout_url</code> is its hosted payment page. Once it confirms, the plan is active for 30 days. To renew, pay again; time still left on the same plan is kept.</li>
+            <li><code>stripe</code> — a card subscription that renews monthly; <code>checkout_url</code> is a page hosted by Stripe. ZettaPay never receives card data.</li>
+            <li>A paid plan that is not renewed falls back to Free.</li>
+          </ul>
+          <pre class="code">curl -X POST $ZETTAPAY_URL/api/v1/billing/checkout \
+  -H <span class="tk-s">"X-ZettaPay-Api-Key: zp_live_xxxxxxxx"</span> \
+  -H <span class="tk-s">"Content-Type: application/json"</span> \
+  -d <span class="tk-s">'{"plan": "starter", "method": "crypto"}'</span></pre>
+          <h3 class="text-xs font-mono text-muted uppercase tracking-widest mt-5 mb-2">Response · 200</h3>
+          <pre class="code">{
+  <span class="tk-d">"subscription_id"</span>: <span class="tk-s">"..."</span>,
+  <span class="tk-d">"method"</span>: <span class="tk-s">"crypto"</span>,
+  <span class="tk-d">"plan"</span>: <span class="tk-s">"starter"</span>,
+  <span class="tk-d">"amount_usd"</span>: <span class="tk-n">19</span>,
+  <span class="tk-d">"invoice_id"</span>: <span class="tk-s">"inv_..."</span>,
+  <span class="tk-d">"checkout_url"</span>: <span class="tk-s">"$ZETTAPAY_URL/checkout/inv_..."</span>
+}</pre>
+          <p class="text-xs text-muted/80 font-mono mt-3">
+            invoice_id is present for crypto only. Errors: 400 unknown_plan, 409 method_unavailable, 502 stripe_error.
           </p>
         </article>
 
@@ -689,11 +882,11 @@ curl -X POST http://localhost:8787/invoice \
         <!-- CTA -->
         <div class="glass rounded-2xl p-8 text-center mt-6">
           <h3 class="text-2xl font-bold mb-3">Ready to ship?</h3>
-          <p class="text-muted text-sm mb-6 max-w-xl mx-auto">Self-host the listener in a few minutes, or join the Cloud early access.</p>
+          <p class="text-muted text-sm mb-6 max-w-xl mx-auto">Self-host the listener in a few minutes, or create a Cloud account and start on the free plan.</p>
           <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
             <a href="/docs/quickstart" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm">Quickstart</a>
             <a href="/docs/embed" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Checkout guide</a>
-            <a href="/app" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Cloud early access</a>
+            <a href="/app" class="btn-ghost px-7 py-3 rounded-full font-semibold text-sm">Create Cloud account</a>
           </div>
         </div>
 
