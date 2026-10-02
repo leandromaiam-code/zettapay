@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/cloud",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Managed, non-custodial ZettaPay. The same @zettapay/listener core run as a multi-tenant service backed by a Supabase StorageAdapter. We see invoice metadata — never funds, never keys.",
   "license": "MIT",
   "private": false,
@@ -34,7 +34,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@zettapay/listener": "*"
+    "@zettapay/listener": "^0.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
