@@ -55,6 +55,8 @@ export interface VerifyWebhookOptions {
  *
  * Pass the *raw* request body. JSON re-encoding changes byte order and
  * invalidates the signature.
+ *
+ * @deprecated Expects a seconds timestamp, a signature over `${timestamp}.${payload}` and a `{ type, data }` envelope — none of which the listener / Cloud dispatcher sends. Use `verifyWebhook`.
  */
 export function verifyWebhookSignature(
   payload: string,

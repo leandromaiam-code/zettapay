@@ -33,6 +33,9 @@ function toBase64(transaction: string | Uint8Array): string {
   return Buffer.from(transaction).toString('base64');
 }
 
+/**
+ * @deprecated Client for the pre-pivot Solana / x402 API, which is no longer served. Use `ZettaPayApi` (`@zettapay/sdk/api`).
+ */
 export class ZettaPayClient {
   private readonly http: AxiosInstance;
 

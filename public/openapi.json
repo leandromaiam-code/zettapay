@@ -4,7 +4,7 @@
     "title": "ZettaPay listener API",
     "version": "0.6.0",
     "summary": "Self-hosted, non-custodial crypto payment listener. Accept Bitcoin and USDC/USDT on Base. Funds settle straight to the merchant's wallet — the listener never holds keys or money.",
-    "description": "The ZettaPay listener is an open-source HTTP service the merchant runs on their own box (`npm i -g @zettapay/listener`). It derives or reuses on-chain receive addresses from a public key the merchant supplies (a BIP-84 xpub for Bitcoin, an account xpub or a single receive address for USDC/USDT on Base), watches the chain, and fires an HMAC-signed webhook the moment a payment confirms.\n\n**Non-custodial.** The merchant only ever provides a public key. The listener never holds a signing key and never custodies funds. Payments settle directly to the merchant's wallet on-chain.\n\n**No identity checks, no telemetry, no third party.** Nothing phones home.\n\n**Auth.** When `ZETTAPAY_API_KEY` is configured, `POST /invoice` requires the `X-ZettaPay-Api-Key` header (compared in constant time). `GET /invoice/:id` and `GET /health` are unauthenticated.\n\n**Webhooks.** Each delivery to the merchant's URL is signed: `X-ZettaPay-Signature` is the hex HMAC-SHA256 of the raw request body keyed by `ZETTAPAY_WEBHOOK_SECRET`, `X-ZettaPay-Timestamp` is the delivery time in unix milliseconds, `X-ZettaPay-Event-Id` is a stable id for idempotency, and `X-ZettaPay-Attempt` is the 1-indexed attempt number.",
+    "description": "The ZettaPay listener is an open-source HTTP service the merchant runs on their own box (`npm i -g @zettapay/listener`). It derives or reuses on-chain receive addresses from a public key the merchant supplies (a BIP-84 xpub for Bitcoin, an account xpub or a single receive address for USDC/USDT on Base), watches the chain, and fires an HMAC-signed webhook the moment a payment confirms.\n\n**Non-custodial.** The merchant only ever provides a public key. The listener never holds a signing key and never custodies funds. Payments settle directly to the merchant's wallet on-chain.\n\n**No identity checks, no telemetry, no third party.** Nothing phones home.\n\n**Auth.** When `ZETTAPAY_API_KEY` is configured, `POST /invoice` requires the `X-ZettaPay-Api-Key` header (compared in constant time). `GET /invoice/:id` and `GET /health` are unauthenticated.\n\n**Webhooks.** Each delivery to the merchant's URL is signed: `X-ZettaPay-Signature` is the hex HMAC-SHA256 of the raw request body keyed by `MERCHANT_WEBHOOK_SECRET`, `X-ZettaPay-Timestamp` is the delivery time in unix milliseconds, `X-ZettaPay-Event-Id` is a stable id for idempotency, and `X-ZettaPay-Attempt` is the 1-indexed attempt number.",
     "contact": {
       "name": "ZettaPay",
       "url": "https://github.com/leandromaiam-code/zettapay"
@@ -213,7 +213,7 @@
         "properties": {
           "invoice_id": { "type": "string" },
           "merchant_id": { "type": "string" },
-          "chain": { "type": "string", "enum": ["btc", "base", "polygon", "eth"] },
+          "chain": { "type": "string", "enum": ["btc", "base", "polygon", "eth"], "description": "Supported chains are btc and base. polygon and eth exist in the listener's stored chain type (fixed-address aliases) but are not part of the supported product." },
           "asset": { "type": "string", "examples": ["BTC", "USDC", "USDT"] },
           "amount_btc": { "type": "string", "description": "Decimal BTC amount (BTC invoices)." },
           "receive_address": { "type": "string", "description": "On-chain address the payer sends to." },
@@ -247,7 +247,7 @@
           "ok": { "type": "boolean" },
           "ws_connected": { "type": "boolean" },
           "subscribed_count": { "type": "integer" },
-          "last_event_at": { "type": ["string", "null"], "format": "date-time" },
+          "last_event_at": { "type": ["integer", "null"], "description": "Unix milliseconds of the last chain event." },
           "last_block_height": { "type": ["integer", "null"] },
           "uptime_s": { "type": "number" }
         }
@@ -272,7 +272,7 @@
       "post": {
         "operationId": "paymentWebhook",
         "summary": "Payment confirmation webhook",
-        "description": "When a payment confirms, the listener POSTs a JSON event to the merchant's MERCHANT_WEBHOOK_URL. Verify by recomputing HMAC-SHA256(ZETTAPAY_WEBHOOK_SECRET, rawBody) and comparing in constant time against X-ZettaPay-Signature. Deliveries retry up to 10 times on a Stripe-grade backoff curve.",
+        "description": "When a payment confirms, the listener POSTs a JSON event to the merchant's MERCHANT_WEBHOOK_URL. Verify by recomputing HMAC-SHA256(MERCHANT_WEBHOOK_SECRET, rawBody) and comparing in constant time against X-ZettaPay-Signature. Deliveries retry up to 10 times on a Stripe-grade backoff curve.",
         "parameters": [
           { "name": "X-ZettaPay-Signature", "in": "header", "required": true, "schema": { "type": "string" }, "description": "Hex HMAC-SHA256 of the raw body." },
           { "name": "X-ZettaPay-Timestamp", "in": "header", "required": true, "schema": { "type": "string" }, "description": "Delivery time, unix milliseconds." },
@@ -284,12 +284,23 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "description": "Flat event object. invoice.confirmed carries the fields below; payment.orphan (fixed-address mode) carries merchant_id, chain, asset, token_address, address, tx_hash, value and detected_at.",
+                "required": ["event"],
                 "properties": {
+                  "event": { "type": "string", "enum": ["invoice.confirmed", "payment.orphan"] },
                   "invoice_id": { "type": "string" },
-                  "status": { "$ref": "#/components/schemas/InvoiceStatus" },
-                  "tx_hash": { "type": "string" },
+                  "merchant_id": { "type": "string" },
                   "chain": { "type": "string" },
-                  "asset": { "type": "string" }
+                  "asset": { "type": "string" },
+                  "amount": { "type": "string", "description": "Invoice amount: decimal BTC, or integer token base units for stablecoins." },
+                  "address": { "type": "string" },
+                  "tx_hash": { "type": ["string", "null"] },
+                  "confirmed_at": { "type": "string", "format": "date-time" },
+                  "confirmations": { "type": "integer", "description": "BTC invoices." },
+                  "balance": { "type": "string", "description": "Base xpub-mode invoices: token balance of the invoice address, base units." },
+                  "value": { "type": "string", "description": "Base fixed-address invoices: transferred value, base units." },
+                  "token_address": { "type": "string", "description": "Base fixed-address invoices." },
+                  "metadata": { "type": "object", "description": "Base fixed-address invoices: { mode, ref, nonce, asset }, set by the listener." }
                 }
               }
             }

@@ -22,11 +22,11 @@ import QRCode, {
   type QRCodeToStringOptions,
 } from 'qrcode';
 
-/** URI scheme for ZettaPay-aware wallets. */
+/** URI scheme for ZettaPay-aware wallets. @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API. */
 export const ZETTAPAY_URI_SCHEME = 'zettapay';
-/** URI scheme defined by the Solana Pay spec. */
+/** URI scheme defined by the Solana Pay spec. @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API. */
 export const SOLANA_PAY_URI_SCHEME = 'solana';
-/** Default currency symbol — V1 ships USDC only (premissa I.2). */
+/** Default currency symbol — V1 ships USDC only (premissa I.2). @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API. */
 export const DEFAULT_CURRENCY = 'USDC';
 
 // ---------------------------------------------------------------------------
@@ -103,6 +103,8 @@ function appendParam(
  * @example
  *   buildZettaPayUri({ invoicePda, amount: 29 })
  *   // => "zettapay:invoice/8x...?amount=29&currency=USDC"
+ *
+ * @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API.
  */
 export function buildZettaPayUri(params: BuildZettaPayUriParams): string {
   const pda = toBase58(params.invoicePda);
@@ -138,6 +140,8 @@ export interface ParsedZettaPayUri {
  * Parse a ZettaPay URI back into its component fields. Throws on any
  * structural violation — callers should treat a thrown error as an
  * untrusted/corrupt URI.
+ *
+ * @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API.
  */
 export function parseZettaPayUri(uri: string): ParsedZettaPayUri {
   const colon = uri.indexOf(':');
@@ -216,6 +220,8 @@ export interface BuildSolanaPayUriParams {
  * Use this in tandem with {@link buildZettaPayUri}: render the ZettaPay
  * URI in QR for ZettaPay-native flows, fall back to the Solana Pay URI
  * for generic wallets.
+ *
+ * @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API.
  */
 export function buildSolanaPayUri(params: BuildSolanaPayUriParams): string {
   const recipient = toBase58(params.recipient);
@@ -293,6 +299,8 @@ function buildDataUrlOptions(opts: InvoiceQrOptions): QRCodeToDataURLOptions {
 /**
  * Render the supplied URI as an inline SVG QR code. SVG scales crisply
  * at any DPI and embeds cleanly inside server-rendered HTML.
+ *
+ * @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API.
  */
 export function generateInvoiceQrSvg(
   uri: string,
@@ -307,6 +315,8 @@ export function generateInvoiceQrSvg(
 /**
  * Render the supplied URI as a PNG data-URL. Useful when embedding in
  * `<img src>` or piping into a PDF receipt generator.
+ *
+ * @deprecated Solana-era payment URI helper; current invoices return `qr_uri` from the API.
  */
 export function generateInvoiceQrDataUrl(
   uri: string,

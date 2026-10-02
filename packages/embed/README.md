@@ -1,5 +1,17 @@
 # @zettapay/embed
 
+> **Legacy package — not compatible with the current ZettaPay product.**
+> `@zettapay/embed` is the pre-pivot, Solana-era widget. It does not talk to the
+> current `@zettapay/listener` or to ZettaPay Cloud, and it cannot take Bitcoin
+> or USDC/USDT-on-Base payments. Everything below documents the old behaviour
+> and is kept for reference only.
+>
+> **What to use instead:** create an invoice from your backend
+> (`POST /invoice` on the listener, `POST /api/v1/invoice` on Cloud — or
+> `ZettaPayApi` from `@zettapay/sdk/api`) and then either redirect the payer to
+> the hosted `checkout_url` returned by Cloud, or render the invoice's `qr_uri`
+> as a QR code next to `receive_address` and the amount.
+
 The lean drop-in for ZettaPay. One `<script>` tag renders a QR + pay-to
 address. Reads the invoice on-chain via Solana public RPC, polls every
 30 s for settlement, and emits a callback when the payment confirms.

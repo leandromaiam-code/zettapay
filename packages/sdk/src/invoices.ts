@@ -74,6 +74,8 @@ export interface InvoiceTransport {
 /**
  * `client.invoices` namespace.
  *
+ * @deprecated Targets `/api/invoices`, a route neither the listener nor Cloud serves. Use `ZettaPayApi` (`@zettapay/sdk/api`).
+ *
  * @example
  *   const invoice = await zp.invoices.create({
  *     amount_usd: 29,
