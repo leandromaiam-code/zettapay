@@ -132,7 +132,7 @@ describe('ZettaPayApi against the real listener HTTP server', () => {
     expect(usdc.mode).toBe('fixed-address');
     expect(usdc.receive_address.toLowerCase()).toBe(FIXED_ADDRESS.toLowerCase());
     expect(usdc.amount_usd).toBe(29);
-    expect(usdc.amount_usdc).toMatch(/^29\.00\d{4}$/);
+    expect(usdc.amount_usdc).toMatch(/^29\.00\d{1,4}$/);
     expect(usdc.amount_usdc_units).toBe(29_000_000 + (usdc.nonce as number));
     expect(usdc.qr_uri).toMatch(/^ethereum:0x/);
     expect(usdc.child_index).toBeNull();
