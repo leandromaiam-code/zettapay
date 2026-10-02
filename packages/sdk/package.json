@@ -1,6 +1,6 @@
 {
   "name": "@zettapay/sdk",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "ZettaPay TypeScript SDK — dependency-free client for the listener / Cloud invoice API and a verifier for their HMAC-signed webhooks (non-custodial BTC + USDC/USDT on Base).",
   "license": "MIT",
   "type": "module",
