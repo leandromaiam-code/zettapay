@@ -49,8 +49,8 @@ No Solana, no Ethereum L1 — just the rails that settle cheaply and fast.
 |------|-------|------------------------|----------------------|
 | **Bitcoin** | BTC | xpub/zpub BIP-84 → 1 endereço por fatura | Sparrow, Ledger, qualquer HD wallet |
 | **USDC on Base** (modo xpub) | USDC | xpub EVM (m/44'/60'/0') → 1 endereço por fatura | Rabby, Ledger, MyEtherWallet |
-| **USDC on Base** (modo endereço-fixo) | USDC | 1 endereço fixo + nonce no valor | **Phantom, MetaMask, Coinbase, App Base** |
-| **USDT on Base** (modo endereço-fixo) | USDT | 1 endereço fixo + nonce no valor (mesmo padrão do USDC) | **Phantom, MetaMask, Coinbase, App Base** |
+| **USDC on Base** (modo endereço-fixo) | USDC | 1 endereço fixo + nonce no valor | **MetaMask, Coinbase Wallet, App Base** — qualquer carteira EVM com endereço na Base |
+| **USDT on Base** (modo endereço-fixo) | USDT | 1 endereço fixo + nonce no valor (mesmo padrão do USDC) | **MetaMask, Coinbase Wallet, App Base** — qualquer carteira EVM com endereço na Base |
 
 > **USDT é um segundo token na MESMA Base.** Contrato
 > `0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2`, 6 decimais (igual ao USDC), então
@@ -60,8 +60,8 @@ No Solana, no Ethereum L1 — just the rails that settle cheaply and fast.
 > fatura USDT e vice-versa, nunca se misturam. Mesma segurança (quorum RPC 2-de-N,
 > confirmações, TTL 1h, orphan em under/overpayment) do USDC.
 
-> **Por que 2 modos pra USDC?** As carteiras EVM populares (Phantom, MetaMask,
-> App Base) **não exportam xpub**. Pra elas, o modo **endereço-fixo** usa um
+> **Por que 2 modos pra USDC?** As carteiras EVM populares (MetaMask, Coinbase
+> Wallet, App Base) **não exportam xpub**. Pra elas, o modo **endereço-fixo** usa um
 > único endereço `0x` (que qualquer carteira mostra em "Receive") e identifica
 > cada fatura por um **nonce embutido nas casas decimais** do valor
 > (ex: `29.000042 USDC` → fatura nº 42). O cliente paga ~$29 e a fração de
@@ -121,20 +121,26 @@ Header: `X-ZettaPay-Api-Key: <ZETTAPAY_API_KEY>` (se configurado)
 curl -X POST http://localhost:8787/invoice \
   -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"amount_sats":2000,"memo":"Pedido #123","metadata":{"ref":"user_42"}}'
+  -d '{"amount_sats":2000,"memo":"Pedido #123"}'
 
 # USDC on Base (asset default)
 curl -X POST http://localhost:8787/invoice \
   -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"amount_usd":29,"chain":"base","metadata":{"ref":"user_42"}}'
+  -d '{"amount_usd":29,"chain":"base"}'
 
 # USDT on Base (segundo token, mesmo endereço fixo)
 curl -X POST http://localhost:8787/invoice \
   -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"amount_usd":29,"chain":"base","asset":"usdt","metadata":{"ref":"user_42"}}'
+  -d '{"amount_usd":29,"chain":"base","asset":"usdt"}'
 ```
+
+Campos aceitos: `amount_sats` (BTC) ou `amount_usd` + `chain:"base"`, mais
+`memo` (só BTC), `asset` (`usdc` | `usdt`, só no modo endereço-fixo — no modo
+xpub a fatura é sempre USDC) e `expires_in` em segundos (BTC e Base modo xpub).
+**Não existe campo `metadata`:** o servidor ignora qualquer outro campo do body.
+Para amarrar a fatura ao seu pedido, guarde o `invoice_id` retornado.
 
 Resposta (modo endereço-fixo). `asset` e `token_address` refletem o token pedido
 (`USDC` default ou `USDT`); o `qr_uri` aponta para o contrato correto:
@@ -161,7 +167,7 @@ Resposta (modo endereço-fixo). `asset` e `token_address` refletem o token pedid
 
 ```bash
 curl http://localhost:8787/invoice/inv_...
-# { "status": "pending" | "detected" | "confirmed" | "expired", ... }
+# { "status": "pending" | "partial" | "confirmed" | "expired" | "failed", ... }
 ```
 
 ### `GET /health` — liveness
@@ -175,7 +181,16 @@ Quando uma fatura confirma, o listener faz `POST` no
 
 - Header `X-ZettaPay-Signature`: HMAC-SHA256(secret, **raw body**) em hex
 - Header `X-ZettaPay-Timestamp`: `Date.now()` em **milissegundos**
-- Body: `{ invoice_id, status, tx_hash, amount_*, confirmations, metadata }`
+- Header `X-ZettaPay-Event-Id`: id do evento (o mesmo em todas as retentativas)
+- Header `X-ZettaPay-Attempt`: número da tentativa (começa em 1)
+- Body (JSON plano): `{ event: "invoice.confirmed", invoice_id, merchant_id, chain,
+  asset, amount, address, tx_hash, confirmed_at }` mais `confirmations` (BTC),
+  `balance` (Base modo xpub) ou `value`, `token_address` e `metadata` (Base modo
+  endereço-fixo — `metadata` é `{ mode, ref, nonce, asset }`, gerado pelo
+  listener). Não há campo `status`. No modo endereço-fixo existe também o evento
+  `payment.orphan` (transferência que não casou com nenhuma fatura ativa).
+
+O timestamp **não** entra no HMAC — a assinatura cobre só o body.
 
 Valide a assinatura no seu backend antes de ativar qualquer coisa:
 
@@ -187,6 +202,14 @@ function verify(rawBody, sig, ts, secret) {
   const expected = createHmac('sha256', secret).update(rawBody).digest('hex');
   return timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
 }
+```
+
+Ou use o verificador pronto do SDK (`@zettapay/sdk` ≥ 0.2.0):
+
+```js
+import { verifyWebhook } from '@zettapay/sdk/webhooks';
+
+const { event, eventId } = verifyWebhook({ rawBody, headers: req.headers, secret });
 ```
 
 > **Dica:** o webhook reusa o mesmo padrão de ativação que você já tem pro
@@ -218,14 +241,16 @@ function verify(rawBody, sig, ts, secret) {
 | `ZETTAPAY_API_KEY` | recomendado | protege o `POST /invoice` |
 | `MERCHANT_XPUB_EVM` | opcional | xpub EVM → USDC Base via derivação |
 | `MERCHANT_EVM_ADDRESS` | opcional | endereço fixo → USDC/USDT Base (carteiras sem xpub) |
-| `MERCHANT_EVM_CHAINS` | opcional | csv de chains EVM (default `base`) |
+| `MERCHANT_EVM_CHAINS` | opcional | chain do modo endereço-fixo — use `base` (default), a única suportada |
 | `MERCHANT_EVM_TOKENS` | opcional | csv de tokens na Base (default `usdc`; ex: `usdc,usdt`). USDT é Base-only |
 | `BASE_RPC_URL` | opcional | RPC(s) da Base — csv pra quorum/node próprio (default: 3 RPCs públicos) |
-| `ETHEREUM_RPC_URL` | opcional | RPC(s) Ethereum — csv (default: 3 RPCs públicos) |
-| `POLYGON_RPC_URL` | opcional | RPC(s) Polygon — csv (default: 3 RPCs públicos) |
 | `ZETTAPAY_RATE_LIMIT` | opcional | limite do `POST /invoice` — `30` ou `30,300` (ip,global) ou `off` (default `30,300`/min) |
 | `STORAGE` | opcional | `json` (default) \| `sqlite` |
 | `HEALTH_PORT` | opcional | porta da API (default `8787`) |
+
+> **Chains suportadas: Bitcoin e Base.** O código ainda reconhece os aliases
+> `ethereum` e `polygon` no modo endereço-fixo (com `ETHEREUM_RPC_URL` /
+> `POLYGON_RPC_URL`), mas eles não fazem parte do produto suportado — não use.
 
 > **`NODE_ENV=production` + sem `ZETTAPAY_API_KEY` → o listener recusa subir.**
 > Em produção um `POST /invoice` sem chave deixaria qualquer um criar faturas;
@@ -300,8 +325,10 @@ máquina; nenhum serviço novo, custódia ou telemetria é introduzido.
 
 ### Idempotência de webhook
 
-- `X-ZettaPay-Event-Id` é **determinístico** por `(invoice, status)`: uma
-  re-detecção após restart produz o mesmo id, então seu backend deduplica.
+- `X-ZettaPay-Event-Id` é o mesmo em todas as retentativas de um evento —
+  deduplique por ele. No modo endereço-fixo o id é **determinístico** por
+  `(invoice, status)`: uma re-detecção após restart produz o mesmo id. Em BTC e
+  no modo xpub o id é aleatório por evento.
   Reconciliação pull: `GET /invoice/:id` devolve `status` + `tx_hash`.
 
 ### O que NÃO fazemos

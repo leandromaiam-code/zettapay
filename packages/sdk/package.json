@@ -1,7 +1,7 @@
 {
   "name": "@zettapay/sdk",
-  "version": "0.1.4",
-  "description": "ZettaPay TypeScript SDK \u2014 typed client, on-chain helpers, and Node-only webhook verifier (@zettapay/sdk/server) for merchants integrating the ZettaPay BTC + EVM USDC payment protocol.",
+  "version": "0.2.0",
+  "description": "ZettaPay TypeScript SDK — dependency-free client for the listener / Cloud invoice API and a verifier for their HMAC-signed webhooks (non-custodial BTC + USDC/USDT on Base).",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,6 +11,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js"
+    },
+    "./webhooks": {
+      "types": "./dist/webhooks/index.d.ts",
+      "import": "./dist/webhooks/index.js"
     },
     "./server": {
       "types": "./dist/server/index.d.ts",

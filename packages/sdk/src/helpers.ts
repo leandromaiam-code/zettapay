@@ -37,11 +37,11 @@ import {
 } from './onchain.js';
 import { ZETTAPAY_IDL } from './idl/zettapay.js';
 
-/** Canonical USDC mint on Solana mainnet-beta (alias of `USDC_MINT['mainnet-beta']`). */
+/** Canonical USDC mint on Solana mainnet-beta (alias of `USDC_MINT['mainnet-beta']`). @deprecated Solana-era helper; not used by the current listener / Cloud product. */
 export const USDC_MAINNET_MINT = USDC_MINT['mainnet-beta'];
-/** Canonical USDC mint published by Circle on devnet (alias of `USDC_MINT.devnet`). */
+/** Canonical USDC mint published by Circle on devnet (alias of `USDC_MINT.devnet`). @deprecated Solana-era helper; not used by the current listener / Cloud product. */
 export const USDC_DEVNET_MINT = USDC_MINT.devnet;
-/** USDC decimals — fixed at 6 (Circle spec). */
+/** USDC decimals — fixed at 6 (Circle spec). @deprecated Solana-era helper; not used by the current listener / Cloud product. */
 export const USDC_DECIMALS = 6;
 
 const PAYMENT_DISCRIMINATOR = Buffer.from(
@@ -91,6 +91,8 @@ export interface CreateMerchantResult {
  * if necessary, the USDC ATA that will receive future payments. Returns
  * the signature, the binding PDA, and the resolved payout token
  * account. No backend hop.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export async function createMerchant(
   params: CreateMerchantParams,
@@ -198,6 +200,8 @@ export interface Invoice {
  * Pure CPU work — no RPC call. The returned `paymentPda` is the address
  * the payer must write to settle the invoice, and the address callers
  * watch via {@link getInvoiceStatus} or {@link listenPaymentEvents}.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export function createInvoice(params: CreateInvoiceParams): Invoice {
   const programId = params.programId ?? ZETTAPAY_PROGRAM_ID;
@@ -277,6 +281,8 @@ export interface GetInvoiceStatusParams {
  * receipt PDA. Returns `paid` with parsed receipt fields if the PDA
  * exists, `expired` if the invoice's advisory expiry has elapsed and
  * no receipt was found, otherwise `pending`.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export async function getInvoiceStatus(
   params: GetInvoiceStatusParams,
@@ -316,6 +322,8 @@ export async function getInvoiceStatus(
  * inside the on-chain check) — drift here would let dashboard and
  * SPV-monitor surfaces disagree about whether an invoice is still
  * payable.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export function isInvoiceExpired(
   invoice: Pick<Invoice, 'expiresAt'>,
@@ -367,6 +375,8 @@ export interface EnsureInvoiceUsdcAtaResult extends InvoiceUsdcAddress {
  * against an invoice whose USDC ATA was never created would silently
  * fail at the SPL token program — the merchant would see the payment
  * tx rejected and the customer would have an unrecoverable timeout.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export async function ensureInvoiceUsdcAta(
   params: EnsureInvoiceUsdcAtaParams,
@@ -461,6 +471,8 @@ export interface PaymentSubscription {
  * RPC's program-account subscription with a memcmp filter pinned to the
  * receipt's discriminator + embedded merchant binding so the RPC only
  * pushes accounts that belong to this merchant.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export async function listenPaymentEvents(
   params: ListenPaymentEventsParams,
@@ -563,6 +575,8 @@ export interface SweepResult {
  * wallet (or an explicit token account). Uses `transferChecked` so the
  * decimals must match the mint — divergence would fail on-chain instead
  * of silently mis-scaling.
+ *
+ * @deprecated Solana-era helper; not used by the current listener / Cloud product.
  */
 export async function sweep(params: SweepParams): Promise<SweepResult> {
   const mint = params.mint ?? USDC_MAINNET_MINT;
@@ -722,6 +736,7 @@ function base58Encode(bytes: Uint8Array | Buffer): string {
   return result;
 }
 
+/** @deprecated Solana-era helper; not used by the current listener / Cloud product. */
 export const __testing__ = {
   decodePaymentReceipt,
   base58Encode,

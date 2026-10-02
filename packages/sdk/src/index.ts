@@ -142,3 +142,46 @@ export {
   type DedupeResult,
   type HeaderBag,
 } from './webhook.js';
+
+// --- Current product API (self-hosted listener + ZettaPay Cloud) -----------
+// Also available without the legacy modules via `@zettapay/sdk/api` and
+// `@zettapay/sdk/webhooks`.
+export {
+  ZettaPayApi,
+  API_KEY_HEADER,
+  API_PATH_PREFIX,
+  ZettaPayApiError,
+  PlanLimitReachedError,
+  RateLimitedError,
+  type ZettaPayApiOptions,
+  type ZettaPayTarget,
+  type BaseAsset,
+  type BaseInvoiceCreated,
+  type BtcInvoiceCreated,
+  type CloudHealth,
+  type CreateBaseInvoiceInput,
+  type CreateBtcInvoiceInput,
+  type ListenerHealth,
+  type ZettaPayApiErrorBody,
+  type ZettaPayChain,
+  type ZettaPayHealth,
+  type ZettaPayInvoice,
+  type ZettaPayInvoiceStatus,
+} from './api/index.js';
+export {
+  verifyWebhook,
+  computeWebhookSignature,
+  WebhookVerificationError,
+  WEBHOOK_SIGNATURE_HEADER,
+  WEBHOOK_TIMESTAMP_HEADER,
+  WEBHOOK_EVENT_ID_HEADER,
+  WEBHOOK_ATTEMPT_HEADER,
+  DEFAULT_WEBHOOK_TOLERANCE_MS,
+  type VerifyWebhookInput,
+  type VerifiedWebhook,
+  type WebhookHeaders,
+  type WebhookVerificationErrorCode,
+  type ZettaPayWebhookEvent,
+  type InvoiceConfirmedWebhook,
+  type PaymentOrphanWebhook,
+} from './webhooks/index.js';

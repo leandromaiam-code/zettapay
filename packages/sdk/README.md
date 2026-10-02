@@ -1,6 +1,15 @@
 # @zettapay/sdk
 
-Typed TypeScript client for the ZettaPay merchant + X-402 payments API.
+TypeScript SDK for ZettaPay — non-custodial payments in **Bitcoin** and
+**USDC / USDT on Base**. It talks to the two servers that make up the product:
+
+- the self-hosted [`@zettapay/listener`](../listener) (`POST /invoice`,
+  `GET /invoice/:id`, `GET /health`), and
+- **ZettaPay Cloud**, the same API run as a managed service under `/api/v1`.
+
+The SDK does two things: create and read invoices, and verify the
+HMAC-signed webhook that fires when an invoice is paid. Funds always settle
+on-chain directly to the merchant's wallet; the SDK never sees a signing key.
 
 ## Install
 
@@ -8,323 +17,245 @@ Typed TypeScript client for the ZettaPay merchant + X-402 payments API.
 npm install @zettapay/sdk
 ```
 
-## Quickstart — pubkey lives in your code
+Node 18.18 or newer. The two entry points below have no runtime dependencies
+beyond the platform (`fetch`, and `node:crypto` for webhooks).
 
-ZettaPay is a P2P confirmation-tracking protocol. Your wallet addresses live in *your* env vars, not on
-our servers. Sign up at [zettapay.io/signup](https://zettapay.io/signup) for email + shop name to receive
-`api_key` + `webhook_secret`, then configure pubkeys client-side:
-
-```dotenv
-# .env — stays on your servers, never on ours
-ZETTAPAY_API_KEY=sk_live_...
-ZETTAPAY_WEBHOOK_SECRET=whsec_...
-
-# Wallet addresses you control — set any subset
-MERCHANT_BTC_PUBKEY=bc1qx5...e92
-MERCHANT_ETH_PUBKEY=0x7a3...4F2
-MERCHANT_SOL_PUBKEY=7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT
-```
-
-```ts
-import { ZettaPay } from '@zettapay/sdk';
-
-const zp = new ZettaPay({
-  apiKey:        process.env.ZETTAPAY_API_KEY!,
-  webhookSecret: process.env.ZETTAPAY_WEBHOOK_SECRET!,
-  pubkeys: {
-    btc: process.env.MERCHANT_BTC_PUBKEY,
-    eth: process.env.MERCHANT_ETH_PUBKEY,
-    sol: process.env.MERCHANT_SOL_PUBKEY,
-  },
-  webhookUrl: 'https://my-app.com/webhooks/zettapay',
-});
-
-// Idempotent — registers the pubkeys with the ZettaPay chain listener.
-// Call on boot. Re-running with new env vars rotates keys (no dashboard edit).
-await zp.register();
-```
-
-Rotate any key by editing your `.env` and redeploying — the next `zp.register()` call swaps the address the
-chain listener is watching. No login, no support ticket. `dev` / `staging` / `prod` are just three different
-env files.
-
-## Low-level client (advanced)
-
-```ts
-import { ZettaPayClient, ZettaPayError } from '@zettapay/sdk';
-
-const client = new ZettaPayClient({ baseURL: 'https://api.zettapay.dev' });
-
-// Register a merchant
-const merchant = await client.registerMerchant({
-  name: 'Acme Coffee',
-  walletPubkey: '7Np41oeYqPefeNQEHSv1UDhYrehxin3NStpSyab9YVhT',
-  usdcAta: 'EhpbDdUDKv2Ah6yyhyqz7n9zUQqvmW1qzPKNaqgQ4kZK',
-});
-
-// Submit an X-402 payment (base64-encoded signed Solana tx)
-const receipt = await client.pay({ transaction: signedTransactionBase64 });
-
-// Look up a payment
-const record = await client.getPayment(receipt.paymentId);
-```
-
-Errors thrown by the SDK are `ZettaPayError` instances exposing `code`, `status`, and `details` mirroring the API error envelope.
-
-## API surface
-
-| Method | HTTP | Description |
+| Import | Contains | Runs in |
 | --- | --- | --- |
-| `pay(input)` | `POST /pay` | Submit a signed transaction via the `x-402-payment` header. |
-| `registerMerchant(input)` | `POST /merchants` | Create a merchant. |
-| `getMerchant(id)` | `GET /merchants/:id` | Fetch a merchant. |
-| `listMerchants(opts)` | `GET /merchants` | Paginated merchant list. |
-| `updateMerchant(id, patch)` | `PATCH /merchants/:id` | Patch a merchant. |
-| `deleteMerchant(id)` | `DELETE /merchants/:id` | Remove a merchant. |
-| `getPayment(id)` | `GET /payments/:id` | Fetch a recorded payment. |
-| `listPayments(opts)` | `GET /payments` | Paginated payment list. |
-| `health()` | `GET /healthz` | Liveness probe. |
-| `invoices.create(input)` | `POST /api/invoices` | Multi-chain invoice (BTC / Base / Polygon / Ethereum). |
-| `invoices.get(id)` | `GET /api/invoices/:id` | Fetch a multi-chain invoice. |
+| `@zettapay/sdk/api` | `ZettaPayApi` client, typed errors, response types | Node, edge runtimes, browsers |
+| `@zettapay/sdk/webhooks` | `verifyWebhook`, event types | Node |
 
-## Multi-chain invoices
+Both are also re-exported from the package root, but the root additionally
+loads the legacy Solana-era modules — prefer the subpaths.
+
+## Create an invoice
 
 ```ts
-const invoice = await zp.invoices.create({
-  amount_usd: 29,
-  chain: 'base', // 'btc' | 'base' | 'polygon' | 'ethereum'
-  metadata: { order_id: 'xyz' },
+import { ZettaPayApi } from '@zettapay/sdk/api';
+
+// Self-hosted listener
+const zp = new ZettaPayApi({
+  baseUrl: 'http://localhost:8787',
+  target: 'listener',
+  apiKey: process.env.ZETTAPAY_API_KEY,
 });
-console.log(invoice.receive_address, invoice.amount_native);
+
+// ZettaPay Cloud — same client, different target
+const cloud = new ZettaPayApi({
+  baseUrl: process.env.ZETTAPAY_CLOUD_URL!, // origin of the Cloud deployment
+  target: 'cloud',
+  apiKey: process.env.ZETTAPAY_API_KEY,
+});
 ```
 
-Webhook payloads on multi-chain invoices include a `chain` field. Legacy
-events emit `chain: 'unknown'` — use `normalizeWebhookChain()` for safe
-parsing.
-
-## On-chain helpers (Z9 — Anchor program)
-
-The SDK ships PDA derivation and Anchor-encoded instruction builders for the ZettaPay merchant binding program (`programs/zettapay`). The program is deployed at:
-
-```
-Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS  // devnet + localnet
-```
+`target` is required and selects the route prefix (`''` for the listener,
+`/api/v1` for Cloud). It is never guessed from the URL. If the server sits
+behind a path of your own, pass `pathPrefix` to override it. There is no
+default `baseUrl`.
 
 ```ts
-import {
-  Connection,
-  Keypair,
-  clusterApiUrl,
-} from '@solana/web3.js';
-import { randomBytes } from 'node:crypto';
-import {
-  registerMerchantOnChain,
-  recordPayment,
-  deriveMerchantBindingPda,
-  derivePaymentPda,
-  PAYMENT_ID_LEN,
-} from '@zettapay/sdk';
+// Bitcoin — amount in satoshis
+const btc = await zp.createBtcInvoice({ amountSats: 2000, memo: 'Order 123' });
+btc.receive_address; // bc1q…
+btc.qr_uri;          // BIP-21 URI — render as a QR code
 
-const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-const owner = Keypair.generate();
-const usdcTokenAccount = /* merchant's USDC ATA */ owner.publicKey;
+// USDC on Base — amount in USD (asset defaults to 'usdc')
+const usdc = await zp.createBaseInvoice({ amountUsd: 29 });
+usdc.amount_usdc;    // "29.000042" — the exact amount the payer must send
+usdc.qr_uri;         // EIP-681 URI — render as a QR code
 
-// 1) Bind a handle on-chain (immutable PDA = [handle, owner])
-const { signature, pda } = await registerMerchantOnChain({
-  connection,
-  owner: owner.publicKey,
-  payer: owner.publicKey,
-  merchantHandle: 'acme-store',
-  usdcTokenAccount,
-  signers: [owner],
-});
+// USDT on Base
+const usdt = await zp.createBaseInvoice({ amountUsd: 29, asset: 'usdt' });
 
-// 2) Record an already-settled USDC transfer (immutable PDA = [binding, paymentId])
-const paymentId = randomBytes(PAYMENT_ID_LEN);
-const txSignature = randomBytes(64); // signature of the underlying SPL transfer
-await recordPayment({
-  connection,
-  merchantBinding: pda,
-  payer: owner.publicKey,
-  paymentId,
-  amount: 1_500_000n, // 1.5 USDC (6 decimals)
-  txSignature,
-  signers: [owner],
-});
+// Follow the status
+const invoice = await zp.getInvoice(usdc.invoice_id);
+invoice.status;      // 'pending' | 'partial' | 'confirmed' | 'expired' | 'failed'
+
+// Liveness
+const health = await zp.health();
 ```
 
-| Helper | Returns | Purpose |
+### Showing the invoice to the payer
+
+- **Cloud:** when the service has a checkout origin configured, the create
+  response carries `checkout_url` — redirect the payer there.
+- **Anywhere:** render `qr_uri` as a QR code and show `receive_address` plus the
+  amount (`amount_sats` / `amount_btc` for Bitcoin, `amount_usdc` for Base).
+
+In fixed-address mode (`mode: 'fixed-address'`) every invoice shares one
+receive address and is identified by the low decimals of the amount, so the
+payer must send **exactly** `amount_usdc`.
+
+### Methods
+
+| Method | Request | Returns |
 | --- | --- | --- |
-| `deriveMerchantBindingPda(handle, owner)` | `{ pda, bump }` | Off-chain PDA derivation matching the Rust seed contract. |
-| `derivePaymentPda(merchantBinding, paymentId)` | `{ pda, bump }` | Off-chain payment receipt PDA derivation. |
-| `buildRegisterMerchantInstruction(params)` | `TransactionInstruction` | Compose the `register_merchant` ix without sending. |
-| `buildRecordPaymentInstruction(params)` | `TransactionInstruction` | Compose the `record_payment` ix without sending. |
-| `registerMerchantOnChain(params)` | `Promise<{ signature, pda }>` | End-to-end build → sign → confirm. |
-| `recordPayment(params)` | `Promise<{ signature, pda }>` | End-to-end build → sign → confirm. |
+| `createBtcInvoice({ amountSats, memo?, expiresInSeconds? })` | `POST {prefix}/invoice` `{ chain: 'btc', amount_sats, memo?, expires_in? }` | `BtcInvoiceCreated` |
+| `createBaseInvoice({ amountUsd, asset?, expiresInSeconds? })` | `POST {prefix}/invoice` `{ chain: 'base', amount_usd, asset, expires_in? }` | `BaseInvoiceCreated` |
+| `getInvoice(invoiceId)` | `GET {prefix}/invoice/:id` | `ZettaPayInvoice` |
+| `health()` | `GET {prefix}/health` | `ListenerHealth \| CloudHealth` |
 
-The IDL is exposed as `ZETTAPAY_IDL` for callers that want to wire it through `@coral-xyz/anchor` directly.
+The API key is sent as `X-ZettaPay-Api-Key` on every call when set. Cloud
+requires it for invoice calls; the listener requires it for `POST /invoice`
+when `ZETTAPAY_API_KEY` is configured. Keep it on your server.
 
-To redeploy the program (devnet), see `scripts/deploy-devnet.sh` at the repo root.
+Things the servers do that are worth knowing:
 
-## High-level helpers (Z27.1 — no backend required)
+- `expiresInSeconds` is honoured by the listener for Bitcoin and for Base in
+  xpub mode. Cloud and fixed-address invoices use the server's own TTL.
+- A deployment in **xpub mode** issues USDC whatever `asset` says. The client
+  does not return such an invoice when you asked for `usdt`: it throws
+  `ZettaPayApiError` with `code: 'asset_mismatch'` (the invoice the server
+  created is in `error.details`).
+- On stablecoin invoices the `amount_btc` field holds the integer token base
+  units. Read `amount_usdc` / `amount_usdc_units` instead.
 
-These call Solana RPC + the ZettaPay program directly. No API keys, no `ZettaPayClient`.
+### Errors
 
-```ts
-import {
-  Connection,
-  Keypair,
-  clusterApiUrl,
-} from '@solana/web3.js';
-import {
-  createMerchant,
-  createInvoice,
-  getInvoiceStatus,
-  listenPaymentEvents,
-  sweep,
-  USDC_DEVNET_MINT,
-} from '@zettapay/sdk';
+Every failure is a `ZettaPayApiError` with `code`, `status` and `details`.
+`code` is the server's `error.code` (`unauthorized`, `invalid_amount`,
+`chain_disabled`, `asset_disabled`, `base_disabled`, `not_found`, `capacity`,
+`create_failed`, …) or a client-side one (`invalid_request`, `asset_mismatch`,
+`http_error`, `invalid_response`, `network_error`, `timeout`).
 
-const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-const owner = Keypair.generate();
-
-// 1) Bind merchant on-chain (creates the USDC ATA if missing)
-const { merchantBinding } = await createMerchant({
-  connection,
-  owner,
-  merchantHandle: 'acme-store',
-  mint: USDC_DEVNET_MINT,
-});
-
-// 2) Off-chain: derive the payment PDA the payer must settle
-const invoice = createInvoice({
-  merchantHandle: 'acme-store',
-  merchantOwner: owner.publicKey,
-  amount: 1_500_000n, // 1.5 USDC
-  expiresAt: Math.floor(Date.now() / 1000) + 600,
-});
-
-// 3) Poll status (pending | paid | expired)
-const status = await getInvoiceStatus({ connection, invoice });
-
-// 4) Push-based — subscribe to new payments for this merchant
-const sub = await listenPaymentEvents({
-  connection,
-  merchantBinding,
-  onEvent: (e) => console.log('settled', e.paymentIdHex, e.amount),
-});
-// later: await sub.close();
-
-// 5) Drain merchant ATA into a treasury wallet
-await sweep({
-  connection,
-  owner,
-  mint: USDC_DEVNET_MINT,
-  destination: new PublicKey('...treasury wallet...'),
-});
-```
-
-| Helper | Returns | Purpose |
-| --- | --- | --- |
-| `createMerchant(params)` | `{ signature, merchantBinding, payoutTokenAccount, createdPayoutAta }` | One-shot on-chain merchant registration. Creates the payout ATA if missing. |
-| `createInvoice(params)` | `Invoice` | Pure off-chain. Generates 32-byte invoice id + derives the payment receipt PDA the payer must settle. |
-| `getInvoiceStatus({ connection, invoice })` | `{ status: 'pending' \| 'paid' \| 'expired', receipt }` | Polls the receipt PDA. Returns parsed amount + tx signature when paid. |
-| `listenPaymentEvents(params)` | `{ id, close() }` | WebSocket subscription filtered to a single merchant's receipts. |
-| `sweep(params)` | `{ signature, amount, source, destinationTokenAccount, noop }` | Drain an SPL token ATA to a destination wallet/account using `transferChecked`. |
-
-## Receiving webhooks
-
-Imported from `@zettapay/sdk/server` (Node-only). Verifies the HMAC-SHA256
-signature in `X-ZettaPay-Signature`, enforces a 5-minute timestamp tolerance
-(replay protection), and returns a typed `ZettaPayEvent` you can branch on by
-`event.type`.
-
-Pass the **raw** request body. Re-serializing JSON changes byte order and
-breaks the signature.
-
-### Next.js (App Router)
+Two cases have their own class:
 
 ```ts
-// app/api/zettapay/webhook/route.ts
-import {
-  verifyWebhookSignature,
-  WebhookSignatureError,
-} from '@zettapay/sdk/server';
+import { PlanLimitReachedError, RateLimitedError, ZettaPayApiError } from '@zettapay/sdk/api';
 
-export async function POST(req: Request) {
-  const body = await req.text();
-  const sig = req.headers.get('x-zettapay-signature');
-  const ts = req.headers.get('x-zettapay-timestamp');
-  if (!sig || !ts) return new Response('missing headers', { status: 400 });
-
-  try {
-    const event = verifyWebhookSignature(
-      body,
-      sig,
-      ts,
-      process.env.ZETTAPAY_WEBHOOK_SECRET!,
-    );
-
-    if (event.type === 'invoice.confirmed') {
-      await markInvoicePaid(event.data.invoice_id, event.data.tx_hash);
-    }
-
-    return Response.json({ ok: true });
-  } catch (err) {
-    if (err instanceof WebhookSignatureError) {
-      return Response.json({ ok: false, code: err.code }, { status: 401 });
-    }
-    throw err;
+try {
+  await cloud.createBtcInvoice({ amountSats: 2000 });
+} catch (err) {
+  if (err instanceof PlanLimitReachedError) {
+    // HTTP 402 plan_limit_reached (Cloud): monthly invoice cap of the plan
+    console.log(err.plan, err.limit, err.used);
+  } else if (err instanceof RateLimitedError) {
+    // HTTP 429
+    console.log('retry in', err.retryAfterSeconds, 's');
+  } else if (err instanceof ZettaPayApiError) {
+    console.log(err.status, err.code, err.message);
   }
 }
 ```
 
-### Express
+## Verify a webhook
+
+When a payment confirms, the listener / Cloud POSTs a JSON event to your
+webhook URL with these headers:
+
+| Header | Value |
+| --- | --- |
+| `X-ZettaPay-Signature` | hex HMAC-SHA256 of the **raw body**, keyed by your webhook secret |
+| `X-ZettaPay-Timestamp` | delivery time, epoch **milliseconds** |
+| `X-ZettaPay-Event-Id` | event id, reused across retries of the same event |
+| `X-ZettaPay-Attempt` | 1-indexed attempt number |
 
 ```ts
 import express from 'express';
-import {
-  verifyWebhookSignature,
-  WebhookSignatureError,
-} from '@zettapay/sdk/server';
+import { verifyWebhook, WebhookVerificationError } from '@zettapay/sdk/webhooks';
 
 const app = express();
-// raw body is required for HMAC — do not use express.json() on this route
-app.post(
-  '/api/zettapay/webhook',
-  express.raw({ type: 'application/json' }),
-  (req, res) => {
-    const sig = req.header('x-zettapay-signature');
-    const ts = req.header('x-zettapay-timestamp');
-    if (!sig || !ts) return res.status(400).send('missing headers');
 
-    try {
-      const event = verifyWebhookSignature(
-        (req.body as Buffer).toString('utf8'),
-        sig,
-        ts,
-        process.env.ZETTAPAY_WEBHOOK_SECRET!,
-      );
-      // ...handle event by event.type
-      res.json({ ok: true });
-    } catch (err) {
-      if (err instanceof WebhookSignatureError) {
-        return res.status(401).json({ ok: false, code: err.code });
-      }
-      throw err;
+// The raw body is required — do not let a JSON parser touch it first.
+app.post('/webhooks/zettapay', express.raw({ type: 'application/json' }), async (req, res) => {
+  try {
+    const { event, eventId } = verifyWebhook({
+      rawBody: req.body,
+      headers: req.headers,
+      secret: process.env.MERCHANT_WEBHOOK_SECRET!, // e.g. whsec_xxxxxxxxxxxxxxxxxxxxxxxx
+    });
+
+    if (eventId && (await alreadyProcessed(eventId))) return res.sendStatus(200);
+
+    if (event.event === 'invoice.confirmed') {
+      await markOrderPaid(event.invoice_id, event.tx_hash);
     }
-  },
-);
+    res.sendStatus(200);
+  } catch (err) {
+    if (err instanceof WebhookVerificationError) return res.status(401).send(err.code);
+    throw err;
+  }
+});
 ```
 
-### Event types
+With the Fetch API (Next.js route handlers, Hono, …):
 
-| `event.type` | Shape of `event.data` |
+```ts
+export async function POST(req: Request) {
+  const { event } = verifyWebhook({
+    rawBody: await req.text(),
+    headers: req.headers,
+    secret: process.env.MERCHANT_WEBHOOK_SECRET!,
+  });
+  // …
+  return new Response(null, { status: 200 });
+}
+```
+
+`verifyWebhook` throws `WebhookVerificationError` with a `code`:
+`missing_signature`, `malformed_signature`, `signature_mismatch`,
+`missing_timestamp`, `invalid_timestamp`, `timestamp_out_of_tolerance`,
+`invalid_payload`. Any non-2xx reply makes the dispatcher retry (up to 10
+attempts with growing delays).
+
+The signature covers the body only — the timestamp header is not signed. The
+default 5-minute tolerance (`toleranceMs`, `null` to disable) drops stale
+deliveries, but **idempotency must come from `eventId`**: store it and skip
+events you have already handled.
+
+### Events
+
+Payloads are flat objects discriminated by `event`.
+
+`invoice.confirmed`
+
+| Field | Notes |
 | --- | --- |
-| `invoice.confirmed` | `{ invoice_id, address, amount_sats, tx_hash, confirmations, paid_at }` |
-| `invoice.pending` | `{ invoice_id, address, amount_sats, tx_hash, confirmations, seen_at }` |
-| `invoice.expired` | `{ invoice_id, address, amount_sats, expired_at }` |
-| `invoice.underpaid` | `{ invoice_id, address, amount_sats, received_sats, tx_hash, seen_at }` |
+| `invoice_id`, `merchant_id` | |
+| `chain` | `btc` or `base` |
+| `asset` | `BTC`, `USDC` or `USDT` |
+| `amount` | invoice amount — decimal BTC, or integer token base units (6 decimals) |
+| `address` | address that was paid |
+| `tx_hash` | |
+| `confirmed_at` | ISO-8601 |
+| `confirmations` | Bitcoin only |
+| `balance` | Base, xpub mode — token balance of the invoice address |
+| `value`, `token_address`, `metadata` | Base, fixed-address mode — `metadata` is `{ mode, ref, nonce, asset }` |
 
-`WebhookSignatureError.code` is one of `invalid_signature`, `timestamp_too_old`,
-or `malformed`.
+`payment.orphan` (fixed-address mode only) — a transfer reached the shared
+address but matched no active invoice (wrong amount, or the invoice expired).
+Fields: `merchant_id`, `chain`, `asset`, `token_address`, `address`, `tx_hash`,
+`value`, `detected_at`. Never fulfil an order from this event; it exists so you
+can decide on a refund.
+
+`computeWebhookSignature(rawBody, secret)` returns the signature the
+dispatcher would send — handy for test fixtures.
+
+## Address derivation helpers
+
+`deriveBip84Address`, `parseExtendedPublicKey`, `deriveBitcoinAddress`,
+`deriveEthereumAddress` and friends (package root) derive receive addresses
+from an extended **public** key. They are what the listener does internally and
+are useful for checking an address independently.
+
+## Legacy exports (deprecated)
+
+Everything written for the pre-pivot Solana / x402 product is still exported
+from the package root and from `@zettapay/sdk/server` so existing code keeps
+compiling, and is marked `@deprecated`. None of it works against the current
+listener or Cloud:
+
+- `ZettaPayClient` and `client.invoices` (`InvoicesResource`) — call routes
+  that are no longer served.
+- `parseWebhook` and `verifyWebhookSignature` / `parseEvent` /
+  `ZettaPayEventSchema` — expect a different signature input, timestamp unit
+  and payload envelope, and reject every real delivery. Use `verifyWebhook`.
+- The Solana helpers (`createMerchant`, `createInvoice`, `getInvoiceStatus`,
+  `listenPaymentEvents`, `sweep`, the Anchor / PDA helpers, Solana Pay URI and
+  QR helpers).
+
+They will be removed in a future major version.
+
+## License
+
+MIT

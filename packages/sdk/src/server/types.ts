@@ -60,6 +60,7 @@ export const InvoiceUnderpaidSchema = z.object({
   }),
 });
 
+/** @deprecated Pre-pivot `{ type, data }` envelope; current webhooks are flat `{ event, ... }` objects (see `ZettaPayWebhookEvent`). */
 export const ZettaPayEventSchema = z.discriminatedUnion('type', [
   InvoiceConfirmedSchema,
   InvoicePendingSchema,
@@ -72,6 +73,7 @@ export type InvoicePendingEvent = z.infer<typeof InvoicePendingSchema>;
 export type InvoiceExpiredEvent = z.infer<typeof InvoiceExpiredSchema>;
 export type InvoiceUnderpaidEvent = z.infer<typeof InvoiceUnderpaidSchema>;
 
+/** @deprecated Pre-pivot envelope type. Use `ZettaPayWebhookEvent`. */
 export type ZettaPayEvent = z.infer<typeof ZettaPayEventSchema>;
 
 export type ZettaPayEventType = ZettaPayEvent['type'];

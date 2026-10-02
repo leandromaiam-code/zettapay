@@ -63,6 +63,8 @@ export type ParseWebhookResult<TPayload = unknown> =
  *
  * Pass the *raw* request body (e.g. via `express.raw()`); re-serializing JSON
  * changes byte order and invalidates the signature.
+ *
+ * @deprecated Expects a signature over `${timestamp}.${body}`, which the listener / Cloud dispatcher does not produce. Use `verifyWebhook` (`@zettapay/sdk/webhooks`).
  */
 export function parseWebhook<TPayload = unknown>(
   opts: ParseWebhookOptions<TPayload>,

@@ -1,5 +1,27 @@
 # Changelog — @zettapay/sdk
 
+## 0.2.0
+
+### Added
+
+- **`@zettapay/sdk/api`** — `ZettaPayApi`, a dependency-free client for the
+  current HTTP API of the self-hosted listener (`/invoice`, `/health`) and of
+  ZettaPay Cloud (same routes under `/api/v1`): `createBtcInvoice`,
+  `createBaseInvoice` (USDC / USDT), `getInvoice`, `health`. The route prefix
+  comes from the required `target` option. Typed errors: `ZettaPayApiError`,
+  `PlanLimitReachedError` (402 `plan_limit_reached`), `RateLimitedError` (429).
+- **`@zettapay/sdk/webhooks`** — `verifyWebhook`, matching what the dispatcher
+  sends: hex HMAC-SHA256 over the raw body, `X-ZettaPay-Timestamp` in
+  milliseconds, flat `{ event, ... }` payloads (`invoice.confirmed`,
+  `payment.orphan`). Also exported from `@zettapay/sdk/server` and the root.
+
+### Deprecated
+
+- `ZettaPayClient`, `InvoicesResource`, `parseWebhook`,
+  `verifyWebhookSignature`, `parseEvent`, `ZettaPayEventSchema` and the Solana
+  helpers. They target the pre-pivot API and do not work against the current
+  listener or Cloud. Still exported; no behaviour change.
+
 ## 0.1.3
 
 ### Changed

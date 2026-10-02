@@ -8,6 +8,8 @@ import { ZettaPayEventSchema, type ZettaPayEvent } from './types.js';
  * verification, replay protection, and this parse in one step. Use `parseEvent`
  * directly only when the signature has already been verified upstream (e.g.
  * by an API gateway).
+ *
+ * @deprecated Validates the pre-pivot `{ type, data }` envelope; current webhooks are flat `{ event, ... }` objects. Use `verifyWebhook`.
  */
 export function parseEvent(raw: unknown): ZettaPayEvent {
   return ZettaPayEventSchema.parse(raw);

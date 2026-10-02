@@ -22,20 +22,25 @@ import {
 } from '@solana/web3.js';
 import { ZETTAPAY_IDL } from './idl/zettapay.js';
 
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const ZETTAPAY_PROGRAM_ID = new PublicKey(ZETTAPAY_IDL.address);
 
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const MERCHANT_HANDLE_MIN_LEN = 3;
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const MERCHANT_HANDLE_MAX_LEN = 32;
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const PAYMENT_ID_LEN = 32;
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const TX_SIGNATURE_LEN = 64;
-/** Width of the `invoice_index` PDA seed (u64-le, matching the on-chain expectation). */
+/** Width of the `invoice_index` PDA seed (u64-le, matching the on-chain expectation). @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const INVOICE_INDEX_SEED_LEN = 8;
 
-/** SPL Token program id (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA). */
+/** SPL Token program id (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA). @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const TOKEN_PROGRAM_ID = new PublicKey(
   'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
 );
-/** Associated Token Account program id (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL). */
+/** Associated Token Account program id (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL). @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
   'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL',
 );
@@ -44,6 +49,8 @@ export const ASSOCIATED_TOKEN_PROGRAM_ID = new PublicKey(
  * Canonical USDC mint addresses per Solana cluster. Mirrors the
  * server-side registry in `packages/api/src/lib/currencies.ts` so the SDK
  * can resolve a mint without round-tripping to the API.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export const USDC_MINT = {
   'mainnet-beta': new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'),
@@ -56,22 +63,26 @@ export type UsdcCluster = keyof typeof USDC_MINT;
  * — devnet must be opted into explicitly. Merchants who want a paid RPC
  * (Helius, Triton, QuickNode) pass that URL directly to
  * `new Connection(...)` and bypass this map entirely.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export const SOLANA_RPC_URL = {
   'mainnet-beta': 'https://api.mainnet-beta.solana.com',
   devnet: 'https://api.devnet.solana.com',
 } as const;
 
-/** Default cluster for the SDK and embed (Z29: mainnet live). */
+/** Default cluster for the SDK and embed (Z29: mainnet live). @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const DEFAULT_CLUSTER: UsdcCluster = 'mainnet-beta';
 
-/** Default RPC endpoint — mainnet-beta. */
+/** Default RPC endpoint — mainnet-beta. @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export const DEFAULT_SOLANA_RPC_URL = SOLANA_RPC_URL[DEFAULT_CLUSTER];
 
 /**
  * Resolve the cluster from an explicit value or a `testnet` flag. The
  * embed exposes the same logic via `data-testnet="true"`; both
  * surfaces stay in sync by routing through this helper.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function resolveCluster(opts?: {
   cluster?: UsdcCluster;
@@ -85,6 +96,7 @@ export function resolveCluster(opts?: {
 const HANDLE_FIRST = /^[a-z0-9]$/;
 const HANDLE_TAIL = /^[a-z0-9_-]+$/;
 
+/** @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product. */
 export function isValidMerchantHandle(handle: string): boolean {
   if (handle.length < MERCHANT_HANDLE_MIN_LEN) return false;
   if (handle.length > MERCHANT_HANDLE_MAX_LEN) return false;
@@ -101,6 +113,8 @@ export interface PdaAddress {
 /**
  * Derive the immutable merchant binding PDA. Seeds match the Rust
  * `RegisterMerchant` accounts struct: `[handle_bytes, owner_bytes]`.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function deriveMerchantBindingPda(
   merchantHandle: string,
@@ -123,6 +137,8 @@ export function deriveMerchantBindingPda(
  * Derive the immutable payment receipt PDA from the merchant binding
  * address and a 32-byte payment id. Seeds match `RecordPayment` in
  * `programs/zettapay/src/lib.rs`.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function derivePaymentPda(
   merchantBinding: PublicKey,
@@ -152,6 +168,8 @@ export function derivePaymentPda(
  * on-demand by the first payer (or facilitator) via
  * `createAssociatedTokenAccountIdempotentInstruction` server-side — this
  * helper is purely deterministic and performs no RPC.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function deriveInvoicePda(
   masterPubkey: PublicKey,
@@ -182,6 +200,8 @@ export function deriveInvoicePda(
  *
  * Hand-rolled to avoid pulling `@solana/spl-token` into the SDK runtime;
  * the seeds and program id are canonical and stable.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function deriveAssociatedTokenAddress(
   owner: PublicKey,
@@ -235,6 +255,8 @@ export interface InvoiceUsdcAddress {
  * before any on-chain state exists. Combines `deriveInvoicePda` (the
  * owner identity) and `deriveAssociatedTokenAddress` (the SPL token
  * account that will hold the deposited USDC).
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function deriveInvoiceUsdcAddress(
   params: DeriveInvoiceUsdcAddressParams,
@@ -288,6 +310,8 @@ export interface BuildRegisterMerchantParams {
  * `TransactionInstruction` ready to add to a `Transaction`. The PDA is
  * derived from `(merchantHandle, owner)` — re-registering the same pair
  * is rejected on-chain.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function buildRegisterMerchantInstruction(
   params: BuildRegisterMerchantParams,
@@ -335,6 +359,8 @@ export interface BuildRecordPaymentParams {
  * Build the `record_payment` instruction. The receipt PDA is derived
  * from `(merchantBinding, paymentId)` — re-recording the same pair is
  * rejected on-chain (idempotency by construction).
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export function buildRecordPaymentInstruction(
   params: BuildRecordPaymentParams,
@@ -398,6 +424,8 @@ export interface RegisterMerchantOnChainParams extends BuildRegisterMerchantPara
  *
  * Returns the Solana signature plus the derived merchant binding PDA so
  * callers can persist the linkage without re-deriving it.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export async function registerMerchantOnChain(
   params: RegisterMerchantOnChainParams,
@@ -423,6 +451,8 @@ export interface RecordPaymentOnChainParams extends BuildRecordPaymentParams {
  * Build, sign, and confirm a `record_payment` transaction.
  *
  * Returns the Solana signature plus the derived payment receipt PDA.
+ *
+ * @deprecated Solana-era on-chain helper; not used by the current listener / Cloud product.
  */
 export async function recordPayment(
   params: RecordPaymentOnChainParams,
