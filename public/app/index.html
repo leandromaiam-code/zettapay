@@ -41,21 +41,21 @@
     button:disabled { opacity:0.5; cursor:not-allowed; }
     .logo-wordmark { filter:invert(1) brightness(2); }
     input, select, button { font-family:inherit; }
-    .field { width:100%; background:#0A0A0A; border:1px solid rgba(79,107,255,0.3); border-radius:0.75rem; padding:0.7rem 1rem; color:#fff; font-size:0.9rem; }
-    .field:focus { outline:none; border-color:#6B82FF; }
-    .field::placeholder { color:rgba(148,163,184,0.5); }
-    .label { display:block; font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:#94A3B8; margin-bottom:0.4rem; }
-    .eyebrow { font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:#14F195; }
+    .field { width:100%; background:var(--input-bg,#0A0A0A); border:1px solid var(--input-border,rgba(79,107,255,0.3)); border-radius:0.75rem; padding:0.7rem 1rem; color:var(--input-ink,#fff); font-size:0.9rem; }
+    .field:focus { outline:none; border-color:var(--accent,#6B82FF); }
+    .field::placeholder { color:var(--ink-muted,#94A3B8); opacity:0.6; }
+    .label { display:block; font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-muted,#94A3B8); margin-bottom:0.4rem; }
+    .eyebrow { font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--mint,#14F195); }
     .mono-wrap { font-family:'JetBrains Mono',monospace; font-size:0.8rem; word-break:break-all; }
-    .tab[aria-selected="true"] { background:rgba(79,107,255,0.18); color:#fff; }
-    .bar { height:8px; border-radius:999px; background:rgba(79,107,255,0.15); overflow:hidden; }
+    .tab[aria-selected="true"] { background:var(--accent-soft,rgba(79,107,255,0.18)); color:var(--ink,#fff); }
+    .bar { height:8px; border-radius:999px; background:var(--accent-soft,rgba(79,107,255,0.15)); overflow:hidden; }
     .bar > span { display:block; height:100%; background:linear-gradient(90deg,#4F6BFF,#14F195); }
     table { width:100%; border-collapse:collapse; font-size:0.82rem; }
-    th { text-align:left; font-family:'JetBrains Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:#94A3B8; padding:0.5rem 0.75rem; }
-    td { padding:0.6rem 0.75rem; border-top:1px solid rgba(79,107,255,0.12); vertical-align:top; }
-    .pill { display:inline-block; padding:0.1rem 0.55rem; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:0.68rem; border:1px solid rgba(148,163,184,0.35); color:#94A3B8; }
-    .pill.confirmed { color:#14F195; border-color:rgba(20,241,149,0.5); }
-    .pill.pending { color:#FBBF24; border-color:rgba(251,191,36,0.5); }
+    th { text-align:left; font-family:'JetBrains Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--ink-muted,#94A3B8); padding:0.5rem 0.75rem; }
+    td { padding:0.6rem 0.75rem; border-top:1px solid var(--line,rgba(79,107,255,0.12)); vertical-align:top; }
+    .pill { display:inline-block; padding:0.1rem 0.55rem; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:0.68rem; border:1px solid var(--line-strong,rgba(148,163,184,0.35)); color:var(--ink-muted,#94A3B8); }
+    .pill.confirmed { color:var(--mint,#14F195); border-color:var(--mint-line,rgba(20,241,149,0.5)); }
+    .pill.pending { color:var(--warn,#FBBF24); border-color:var(--warn-line,rgba(251,191,36,0.5)); }
     [hidden] { display:none !important; }
   </style>
   <script src="/theme-toggle.js" defer></script>
@@ -140,7 +140,7 @@
     <section id="dash" class="space-y-6" hidden>
       <div id="billingNote" class="glass rounded-2xl p-4 text-sm" hidden></div>
 
-      <div id="secrets" class="rounded-2xl p-6 border border-mint/40" style="background:rgba(20,241,149,0.06);" hidden>
+      <div id="secrets" class="rounded-2xl p-6" style="background:var(--mint-soft,rgba(20,241,149,0.06)); border:1px solid var(--mint-line,rgba(20,241,149,0.4));" hidden>
         <div class="eyebrow mb-2">Save these now &mdash; shown only once</div>
         <div class="space-y-3">
           <div id="secKeyRow">
@@ -243,7 +243,7 @@
       function show(el, on) { el.hidden = !on; }
       function say(el, text, ok) {
         el.textContent = text;
-        el.style.color = ok ? '#14F195' : '#F87171';
+        el.style.color = ok ? 'var(--mint, #14F195)' : 'var(--danger, #F87171)';
         show(el, !!text);
       }
       function el(tag, cls, text) {
