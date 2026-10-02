@@ -12,6 +12,10 @@
   },
   "rewrites": [
     {
+      "source": "/api/v1/:path*",
+      "destination": "https://zettapay-cloud.ajpgd7.easypanel.host/api/v1/:path*"
+    },
+    {
       "source": "/healthz",
       "destination": "/api/healthz"
     },
