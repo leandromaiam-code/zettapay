@@ -11,10 +11,14 @@
 
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import {
+  buildBip21Uri,
+  buildEvmUsdcUri,
   createBaseInvoiceForMerchant,
   createFixedEvmInvoiceForMerchant,
   createInvoiceForMerchant,
   formatUsdc,
+  lookupEvmChain,
+  NONCE_MODULUS,
   type Invoice,
   type Logger,
 } from '@zettapay/listener';
@@ -23,6 +27,14 @@ import { SupabaseStorageAdapter } from './storage.js';
 import { SupabaseRestDb } from './supabase-db.js';
 import { startCloudFleet } from './webhook-fleet.js';
 import { authenticate, CloudRateLimiter, type RateLimitConfig } from './auth.js';
+import {
+  DEFAULT_PLAN,
+  DEFAULT_PLAN_LIMITS,
+  limitForPlan,
+  monthStartIso,
+  parsePlanLimits,
+  type PlanLimits,
+} from './plans.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const API_PREFIX = '/api/v1';
@@ -40,6 +52,13 @@ export interface CloudApiServerOptions {
   host?: string;
   rateLimit?: RateLimitConfig | null;
   logger?: Logger;
+  /**
+   * Base origin for the hosted checkout link returned by POST /invoice. There is
+   * no built-in default: when unset, responses simply omit `checkout_url`.
+   */
+  checkoutBaseUrl?: string;
+  /** Monthly invoice cap per plan. `null` disables plan enforcement entirely. */
+  planLimits?: PlanLimits | null;
 }
 
 export class CloudApiServer {
@@ -49,6 +68,8 @@ export class CloudApiServer {
   private readonly host: string;
   private readonly limiter: CloudRateLimiter | null;
   private readonly log: Logger;
+  private readonly checkoutBaseUrl: string | null;
+  private readonly planLimits: PlanLimits | null;
   private server: Server | null = null;
 
   constructor(opts: CloudApiServerOptions) {
@@ -58,6 +79,14 @@ export class CloudApiServer {
     this.host = opts.host ?? '0.0.0.0';
     this.limiter = opts.rateLimit === null ? null : new CloudRateLimiter(opts.rateLimit ?? undefined);
     this.log = opts.logger ?? noopLogger;
+    this.planLimits = opts.planLimits === null ? null : (opts.planLimits ?? DEFAULT_PLAN_LIMITS);
+    this.checkoutBaseUrl = opts.checkoutBaseUrl ? opts.checkoutBaseUrl.replace(/\/$/, '') : null;
+  }
+
+  /** Hosted checkout link a payer opens to settle this invoice. */
+  private checkoutUrl(invoiceId: string): string | undefined {
+    if (!this.checkoutBaseUrl) return undefined;
+    return `${this.checkoutBaseUrl}/checkout/${invoiceId}`;
   }
 
   async start(): Promise<void> {
@@ -89,6 +118,18 @@ export class CloudApiServer {
     res.end(JSON.stringify(body));
   }
 
+  private applyCors(res: ServerResponse): void {
+    res.setHeader('access-control-allow-origin', '*');
+    res.setHeader('access-control-allow-methods', 'GET, OPTIONS');
+    res.setHeader('access-control-allow-headers', 'content-type');
+  }
+
+  /** JSON reply for the public checkout surface — open CORS, read-only. */
+  private sendPublic(res: ServerResponse, code: number, body: unknown): void {
+    this.applyCors(res);
+    this.send(res, code, body);
+  }
+
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const method = req.method ?? 'GET';
     const path = (req.url ?? '/').split('?')[0] ?? '/';
@@ -105,6 +146,19 @@ export class CloudApiServer {
 
     if (method === 'GET' && path.startsWith(`${API_PREFIX}/invoice/`)) {
       await this.handleGetInvoice(req, res, path.slice(`${API_PREFIX}/invoice/`.length));
+      return;
+    }
+
+    // Public, unauthenticated checkout view — the payer has no API key. Only
+    // safe display fields are returned (see buildCheckoutView).
+    if (method === 'OPTIONS' && path.startsWith(`${API_PREFIX}/checkout/`)) {
+      this.applyCors(res);
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+    if (method === 'GET' && path.startsWith(`${API_PREFIX}/checkout/`)) {
+      await this.handleGetCheckout(res, path.slice(`${API_PREFIX}/checkout/`.length));
       return;
     }
 
@@ -136,6 +190,8 @@ export class CloudApiServer {
       }
     }
 
+    if (!(await this.withinPlan(merchantId, res))) return;
+
     let body: Record<string, unknown>;
     try {
       body = await readJsonBody(req);
@@ -160,6 +216,31 @@ export class CloudApiServer {
     }
   }
 
+  /**
+   * Plan gate: a merchant may create at most its plan's monthly invoice cap.
+   * Replies 402 and returns false once the cap is reached. Existing invoices are
+   * never affected — they keep being watched, confirmed and webhooked.
+   */
+  private async withinPlan(merchantId: string, res: ServerResponse): Promise<boolean> {
+    if (!this.planLimits) return true;
+    const merchant = await this.db.getMerchant(merchantId);
+    const plan = merchant?.plan && merchant.plan in this.planLimits ? merchant.plan : DEFAULT_PLAN;
+    const limit = limitForPlan(this.planLimits, plan);
+    if (limit === null) return true;
+    const used = await this.db.countInvoicesSince(merchantId, monthStartIso());
+    if (used < limit) return true;
+    this.send(res, 402, {
+      error: {
+        code: 'plan_limit_reached',
+        message: `plan "${plan}" allows ${limit} invoices per month`,
+        plan,
+        limit,
+        used,
+      },
+    });
+    return false;
+  }
+
   private async createBtc(merchantId: string, body: Record<string, unknown>, res: ServerResponse): Promise<void> {
     const amountSats = Number(body.amount_sats);
     if (!Number.isInteger(amountSats) || amountSats <= 0) {
@@ -175,6 +256,7 @@ export class CloudApiServer {
       amount_sats: r.amountSats,
       qr_uri: r.bip21,
       verify_url: `https://mempool.space/address/${r.invoice.address}`,
+      checkout_url: this.checkoutUrl(r.invoice.id),
     });
   }
 
@@ -204,6 +286,7 @@ export class CloudApiServer {
         amount_usdc_units: r.amountUsdcUnits,
         qr_uri: r.eip681,
         verify_url: `https://basescan.org/address/${r.invoice.address}`,
+        checkout_url: this.checkoutUrl(r.invoice.id),
       });
       return;
     }
@@ -225,6 +308,7 @@ export class CloudApiServer {
         amount_usdc: r.amountUsdc,
         amount_usdc_units: Number(r.amountUsdcUnits),
         qr_uri: r.eip681,
+        checkout_url: this.checkoutUrl(r.invoice.id),
       });
       return;
     }
@@ -247,6 +331,88 @@ export class CloudApiServer {
       return;
     }
     this.send(res, 200, serializeInvoice(inv));
+  }
+
+  /**
+   * PUBLIC checkout view — no API key. The payer who opens the hosted checkout
+   * link has no credentials, so this returns ONLY the fields needed to render a
+   * payment screen (shop name for branding, amount, receive address, QR URI,
+   * status, countdown). It deliberately never exposes the merchant's xpub,
+   * webhook secret, API key, email, or any other invoice/merchant.
+   */
+  private async handleGetCheckout(res: ServerResponse, rawId: string): Promise<void> {
+    const id = decodeURIComponent(rawId);
+    if (!id) {
+      this.sendPublic(res, 400, { error: { code: 'missing_id' } });
+      return;
+    }
+    const inv = await this.storage.getInvoice(id);
+    if (!inv) {
+      this.sendPublic(res, 404, { error: { code: 'not_found' } });
+      return;
+    }
+    const merchant = await this.storage.getMerchant(inv.merchant_id);
+    this.sendPublic(res, 200, buildCheckoutView(inv, merchant?.shop_name ?? ''));
+  }
+}
+
+/**
+ * Project an invoice down to the minimal, non-secret display surface a payer
+ * needs. Only public on-chain material (address, amount, tx hash) plus the shop
+ * name for branding is included — never xpub, webhook secret, API key, email,
+ * or the internal merchant id.
+ */
+export function buildCheckoutView(inv: Invoice, shopName: string): Record<string, unknown> {
+  const isBtc = inv.chain === 'btc';
+  const addrBase = isBtc ? 'https://mempool.space/address/' : 'https://basescan.org/address/';
+  const txBase = isBtc ? 'https://mempool.space/tx/' : 'https://basescan.org/tx/';
+  const view: Record<string, unknown> = {
+    invoice_id: inv.id,
+    shop_name: shopName,
+    chain: inv.chain,
+    asset: inv.asset,
+    status: inv.status,
+    receive_address: inv.address,
+    expires_at: inv.expires_at,
+    created_at: inv.created_at,
+    tx_hash: inv.tx_hash,
+    paid_at: inv.paid_at,
+    verify_url: `${addrBase}${inv.address}`,
+    tx_url: inv.tx_hash ? `${txBase}${inv.tx_hash}` : null,
+  };
+
+  if (isBtc) {
+    view.amount_btc = inv.amount;
+    view.qr_uri = buildBip21Uri(inv.address, btcToSats(inv.amount));
+    return view;
+  }
+
+  // EVM (USDC/USDT on Base): amount is stored as integer token base units.
+  const units = safeBigInt(inv.amount);
+  view.amount_usdc_units = Number(units);
+  view.amount_usdc = formatUsdc(Number(units));
+  const spec = lookupEvmChain(inv.chain);
+  const token = spec?.tokens.find((t) => t.symbol.toUpperCase() === inv.asset.toUpperCase());
+  if (spec && token) {
+    view.qr_uri = buildEvmUsdcUri(inv.address, units, token.address, spec.chainId);
+  }
+  // Fixed-address mode (no HD child index) carries the payer nonce in the low
+  // USDC decimals; surface it so the checkout can display the exact amount.
+  if (inv.child_index === null) {
+    view.nonce = Number(units % BigInt(NONCE_MODULUS));
+  }
+  return view;
+}
+
+function btcToSats(amountBtc: string): number {
+  return Math.round(Number(amountBtc) * 100_000_000);
+}
+
+function safeBigInt(v: string): bigint {
+  try {
+    return BigInt(v);
+  } catch {
+    return 0n;
   }
 }
 
@@ -292,6 +458,8 @@ async function main(): Promise<void> {
     db,
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
     host: process.env.HOST,
+    checkoutBaseUrl: process.env.CHECKOUT_BASE_URL,
+    planLimits: parsePlanLimits(process.env.PLAN_LIMITS),
     logger: consoleLogger,
   });
   const fleet = await startCloudFleet({

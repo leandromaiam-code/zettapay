@@ -13,6 +13,8 @@ export interface MerchantRow {
   auth_uid: string | null;
   email: string;
   name: string;
+  /** Subscription plan; absent on rows created before plans existed (= free). */
+  plan?: string | null;
   created_at: string;
 }
 
@@ -107,6 +109,8 @@ export interface CloudDb {
 
   insertInvoice(row: InvoiceRow): Promise<void>;
   getInvoice(id: string): Promise<InvoiceRow | null>;
+  /** Invoices a merchant created at or after `sinceIso` (plan usage metering). */
+  countInvoicesSince(merchantId: string, sinceIso: string): Promise<number>;
   listPendingInvoices(opts: ListPendingOpts): Promise<InvoiceRow[]>;
   updateInvoice(id: string, patch: Partial<InvoiceRow>): Promise<InvoiceRow | null>;
 
@@ -184,6 +188,15 @@ export class MemoryCloudDb implements CloudDb {
   async getInvoice(id: string): Promise<InvoiceRow | null> {
     const row = this.invoices.get(id);
     return row ? { ...row } : null;
+  }
+
+  async countInvoicesSince(merchantId: string, sinceIso: string): Promise<number> {
+    const since = Date.parse(sinceIso);
+    let n = 0;
+    for (const row of this.invoices.values()) {
+      if (row.merchant_id === merchantId && Date.parse(row.created_at) >= since) n++;
+    }
+    return n;
   }
 
   async listPendingInvoices(opts: ListPendingOpts): Promise<InvoiceRow[]> {
