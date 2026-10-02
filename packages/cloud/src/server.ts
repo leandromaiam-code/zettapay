@@ -27,16 +27,25 @@ import { SupabaseStorageAdapter } from './storage.js';
 import { SupabaseRestDb } from './supabase-db.js';
 import { startCloudFleet } from './webhook-fleet.js';
 import { authenticate, CloudRateLimiter, type RateLimitConfig } from './auth.js';
+import { AccountError, Accounts } from './accounts.js';
+import { Billing, BillingError } from './billing.js';
 import {
-  DEFAULT_PLAN,
   DEFAULT_PLAN_LIMITS,
+  DEFAULT_PLAN_PRICES,
+  effectivePlan,
   limitForPlan,
   monthStartIso,
   parsePlanLimits,
+  parsePlanPrices,
   type PlanLimits,
+  type PlanPrices,
 } from './plans.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
+/** Stripe events can be larger than our own request bodies. */
+const MAX_WEBHOOK_BODY_BYTES = 512 * 1024;
+/** Open signup is throttled per client address. */
+const SIGNUP_RATE_LIMIT: RateLimitConfig = { perKeyPerWindow: 5, windowMs: 60 * 60 * 1000 };
 const API_PREFIX = '/api/v1';
 
 const noopLogger: Logger = {
@@ -59,6 +68,14 @@ export interface CloudApiServerOptions {
   checkoutBaseUrl?: string;
   /** Monthly invoice cap per plan. `null` disables plan enforcement entirely. */
   planLimits?: PlanLimits | null;
+  /** Monthly price per paid plan (USD), shown by GET /plans. */
+  planPrices?: PlanPrices;
+  /** Self-serve accounts (signup + dashboard). Built from `db` when omitted. */
+  accounts?: Accounts;
+  /** Subscription billing. When omitted, plans can only be assigned by the operator. */
+  billing?: Billing | null;
+  /** Per-address signup throttle. `null` disables it (tests). */
+  signupRateLimit?: RateLimitConfig | null;
 }
 
 export class CloudApiServer {
@@ -70,6 +87,10 @@ export class CloudApiServer {
   private readonly log: Logger;
   private readonly checkoutBaseUrl: string | null;
   private readonly planLimits: PlanLimits | null;
+  private readonly planPrices: PlanPrices;
+  private readonly accounts: Accounts;
+  private readonly billing: Billing | null;
+  private readonly signupLimiter: CloudRateLimiter | null;
   private server: Server | null = null;
 
   constructor(opts: CloudApiServerOptions) {
@@ -80,6 +101,11 @@ export class CloudApiServer {
     this.limiter = opts.rateLimit === null ? null : new CloudRateLimiter(opts.rateLimit ?? undefined);
     this.log = opts.logger ?? noopLogger;
     this.planLimits = opts.planLimits === null ? null : (opts.planLimits ?? DEFAULT_PLAN_LIMITS);
+    this.planPrices = opts.planPrices ?? DEFAULT_PLAN_PRICES;
+    this.accounts = opts.accounts ?? new Accounts({ db: this.db, planLimits: this.planLimits });
+    this.billing = opts.billing ?? null;
+    this.signupLimiter =
+      opts.signupRateLimit === null ? null : new CloudRateLimiter(opts.signupRateLimit ?? SIGNUP_RATE_LIMIT);
     this.checkoutBaseUrl = opts.checkoutBaseUrl ? opts.checkoutBaseUrl.replace(/\/$/, '') : null;
   }
 
@@ -162,7 +188,146 @@ export class CloudApiServer {
       return;
     }
 
+    if (method === 'GET' && path === `${API_PREFIX}/plans`) {
+      this.sendPublic(res, 200, this.describePlans());
+      return;
+    }
+    if (method === 'POST' && path === `${API_PREFIX}/signup`) {
+      await this.handleSignup(req, res);
+      return;
+    }
+    if (method === 'GET' && path === `${API_PREFIX}/me`) {
+      await this.withMerchant(req, res, (id) => this.accounts.overview(id));
+      return;
+    }
+    if (method === 'GET' && path === `${API_PREFIX}/invoices`) {
+      const limit = Number(new URL(req.url ?? '/', 'http://x').searchParams.get('limit') ?? 25);
+      await this.withMerchant(req, res, async (id) => ({
+        invoices: (await this.accounts.recentInvoices(id, Number.isFinite(limit) ? limit : 25)).map(serializeInvoiceRow),
+      }));
+      return;
+    }
+    if (method === 'POST' && path === `${API_PREFIX}/webhook`) {
+      await this.withMerchant(req, res, async (id) => {
+        const body = await readJsonBody(req);
+        return this.accounts.setWebhook(id, body.webhook_url);
+      });
+      return;
+    }
+    if (method === 'POST' && path === `${API_PREFIX}/billing/checkout`) {
+      await this.withMerchant(req, res, async (id) => {
+        if (!this.billing) throw new BillingError('method_unavailable', 'billing is not enabled', 409);
+        const body = await readJsonBody(req);
+        return this.billing.createCheckout(
+          id,
+          String(body.plan ?? ''),
+          String(body.method ?? 'crypto'),
+          typeof body.asset === 'string' ? body.asset : 'usdc',
+        );
+      });
+      return;
+    }
+    if (method === 'POST' && path === `${API_PREFIX}/billing/stripe/webhook`) {
+      await this.handleStripeWebhook(req, res);
+      return;
+    }
+
     this.send(res, 404, { error: { code: 'not_found' } });
+  }
+
+  /** Public plan catalogue: caps, prices and the payment methods on offer. */
+  private describePlans(): Record<string, unknown> {
+    const limits = this.planLimits ?? {};
+    return {
+      plans: Object.keys(limits)
+        .filter((name) => name === 'free' || name in this.planPrices)
+        .map((name) => ({
+          plan: name,
+          invoices_per_month: limits[name] ?? null,
+          price_usd_per_month: this.planPrices[name] ?? 0,
+        })),
+      payment_methods: this.billing?.methods ?? [],
+      transaction_fee: 0,
+    };
+  }
+
+  private clientAddress(req: IncomingMessage): string {
+    const fwd = req.headers['x-forwarded-for'];
+    const first = (Array.isArray(fwd) ? fwd[0] : fwd)?.split(',')[0]?.trim();
+    return first || req.socket.remoteAddress || 'unknown';
+  }
+
+  /** Run an authenticated JSON handler, mapping domain errors to HTTP replies. */
+  private async withMerchant(
+    req: IncomingMessage,
+    res: ServerResponse,
+    run: (merchantId: string) => Promise<unknown>,
+  ): Promise<void> {
+    const merchantId = await this.requireMerchant(req, res);
+    if (!merchantId) return;
+    try {
+      this.send(res, 200, await run(merchantId));
+    } catch (e) {
+      this.sendError(res, e);
+    }
+  }
+
+  private sendError(res: ServerResponse, e: unknown): void {
+    if (e instanceof AccountError || e instanceof BillingError) {
+      this.send(res, e.status, { error: { code: e.code, message: e.message } });
+      return;
+    }
+    const message = e instanceof Error ? e.message : 'unexpected error';
+    if (message === 'body too large' || message === 'invalid JSON body') {
+      this.send(res, 400, { error: { code: 'bad_body', message } });
+      return;
+    }
+    this.log.error('cloud_api.request_failed', { message });
+    this.send(res, 500, { error: { code: 'internal_error' } });
+  }
+
+  private async handleSignup(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (this.signupLimiter) {
+      const decision = this.signupLimiter.hit(this.clientAddress(req));
+      if (!decision.allowed) {
+        if (decision.retryAfterSeconds) res.setHeader('retry-after', String(decision.retryAfterSeconds));
+        this.send(res, 429, { error: { code: 'rate_limited', message: 'too many signups from this address' } });
+        return;
+      }
+    }
+    try {
+      const body = await readJsonBody(req);
+      this.send(res, 201, await this.accounts.signup(body));
+    } catch (e) {
+      this.sendError(res, e);
+    }
+  }
+
+  private async handleStripeWebhook(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    if (!this.billing) {
+      this.send(res, 404, { error: { code: 'not_found' } });
+      return;
+    }
+    let raw: string;
+    try {
+      raw = await readRawBody(req, MAX_WEBHOOK_BODY_BYTES);
+    } catch {
+      this.send(res, 400, { error: { code: 'bad_body' } });
+      return;
+    }
+    const header = req.headers['stripe-signature'];
+    if (!this.billing.verifyStripeSignature(raw, Array.isArray(header) ? header[0] : header)) {
+      this.send(res, 400, { error: { code: 'bad_signature' } });
+      return;
+    }
+    try {
+      await this.billing.handleStripeEvent(JSON.parse(raw) as Record<string, unknown>);
+      this.send(res, 200, { received: true });
+    } catch (e) {
+      // A 5xx makes Stripe retry, which is what we want when our database hiccups.
+      this.log.error('cloud_api.stripe_event_failed', { message: e instanceof Error ? e.message : String(e) });
+      this.send(res, 500, { error: { code: 'internal_error' } });
+    }
   }
 
   /** Resolve the merchant from the API key header, or null after sending 401. */
@@ -224,7 +389,7 @@ export class CloudApiServer {
   private async withinPlan(merchantId: string, res: ServerResponse): Promise<boolean> {
     if (!this.planLimits) return true;
     const merchant = await this.db.getMerchant(merchantId);
-    const plan = merchant?.plan && merchant.plan in this.planLimits ? merchant.plan : DEFAULT_PLAN;
+    const plan = effectivePlan(merchant);
     const limit = limitForPlan(this.planLimits, plan);
     if (limit === null) return true;
     const used = await this.db.countInvoicesSince(merchantId, monthStartIso());
@@ -443,6 +608,42 @@ export function serializeInvoice(inv: Invoice): Record<string, unknown> {
   return base;
 }
 
+/** Dashboard view of an invoice row (the merchant's own data; no secrets exist on it). */
+function serializeInvoiceRow(row: {
+  id: string;
+  chain: string;
+  asset: string;
+  amount_units: string | null;
+  address: string;
+  status: string;
+  tx_hash: string | null;
+  expires_at: string;
+  created_at: string;
+  paid_at: string | null;
+}): Record<string, unknown> {
+  const evm = row.chain !== 'btc';
+  const units = Number(row.amount_units ?? '');
+  return {
+    invoice_id: row.id,
+    chain: row.chain,
+    asset: row.asset,
+    amount: evm && Number.isInteger(units) ? formatUsdc(units) : (row.amount_units ?? ''),
+    receive_address: row.address,
+    status: row.status === 'pending' && Date.parse(row.expires_at) < Date.now() ? 'expired' : row.status,
+    tx_hash: row.tx_hash,
+    created_at: row.created_at,
+    paid_at: row.paid_at,
+    expires_at: row.expires_at,
+  };
+}
+
+function csv(raw: string | undefined): string[] {
+  return (raw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 const consoleLogger: Logger = {
   info: (msg, meta) => process.stdout.write(`${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
   warn: (msg, meta) => process.stderr.write(`${msg} ${meta ? JSON.stringify(meta) : ''}\n`),
@@ -453,13 +654,32 @@ const consoleLogger: Logger = {
 async function main(): Promise<void> {
   const db = SupabaseRestDb.fromEnv(process.env);
   const storage = new SupabaseStorageAdapter(db);
+  const env = process.env;
+  const planLimits = parsePlanLimits(env.PLAN_LIMITS);
+  const planPrices = parsePlanPrices(env.PLAN_PRICES);
+  const stripePrices: Record<string, string> = {};
+  if (env.STRIPE_PRICE_STARTER) stripePrices.starter = env.STRIPE_PRICE_STARTER;
+  if (env.STRIPE_PRICE_PRO) stripePrices.pro = env.STRIPE_PRICE_PRO;
+  const billing = new Billing({
+    db,
+    storage,
+    prices: planPrices,
+    billingMerchantId: env.BILLING_MERCHANT_ID,
+    stripe: env.STRIPE_SECRET_KEY
+      ? { secretKey: env.STRIPE_SECRET_KEY, webhookSecret: env.STRIPE_WEBHOOK_SECRET, priceIds: stripePrices }
+      : undefined,
+    siteUrl: env.CHECKOUT_BASE_URL,
+    logger: consoleLogger,
+  });
   const server = new CloudApiServer({
     storage,
     db,
+    planPrices,
+    billing,
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
     host: process.env.HOST,
     checkoutBaseUrl: process.env.CHECKOUT_BASE_URL,
-    planLimits: parsePlanLimits(process.env.PLAN_LIMITS),
+    planLimits,
     logger: consoleLogger,
   });
   const fleet = await startCloudFleet({
@@ -467,11 +687,15 @@ async function main(): Promise<void> {
     btcWsUrl: process.env.BTC_WS_URL,
     btcRestBase: process.env.BTC_REST_BASE,
     baseRpcUrl: process.env.BASE_RPC_URL,
+    db,
+    baseRpcUrls: csv(env.BASE_RPC_URLS),
     logger: consoleLogger,
   });
+  billing.start();
   await server.start();
 
   const shutdown = (): void => {
+    billing.stop();
     void Promise.allSettled([server.stop(), fleet.stop()]).then(() => process.exit(0));
   };
   process.on('SIGINT', shutdown);
@@ -486,29 +710,32 @@ if (invokedDirectly) {
   });
 }
 
-function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+function readRawBody(req: IncomingMessage, maxBytes: number): Promise<string> {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
     req.on('data', (c: Buffer) => {
       size += c.length;
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         reject(new Error('body too large'));
         req.destroy();
         return;
       }
       chunks.push(c);
     });
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString('utf8').trim();
-      if (!raw) return resolve({});
-      try {
-        const parsed = JSON.parse(raw) as unknown;
-        resolve(typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {});
-      } catch {
-        reject(new Error('invalid JSON body'));
-      }
-    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
     req.on('error', reject);
   });
+}
+
+async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const raw = (await readRawBody(req, MAX_BODY_BYTES)).trim();
+  if (!raw) return {};
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error('invalid JSON body');
+  }
+  return typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {};
 }

@@ -15,6 +15,8 @@ export interface MerchantRow {
   name: string;
   /** Subscription plan; absent on rows created before plans existed (= free). */
   plan?: string | null;
+  /** When the paid plan lapses back to free; null = no expiry (operator-assigned). */
+  plan_expires_at?: string | null;
   created_at: string;
 }
 
@@ -78,6 +80,21 @@ export interface WebhookEventRow {
   created_at: string;
 }
 
+export interface SubscriptionRow {
+  id: string;
+  merchant_id: string;
+  plan: string;
+  method: 'crypto' | 'stripe';
+  status: 'pending' | 'active' | 'expired' | 'canceled';
+  /** ZettaPay invoice paying for the plan (crypto). */
+  invoice_id: string | null;
+  stripe_session_id: string | null;
+  stripe_subscription_id: string | null;
+  amount_usd: number;
+  period_end: string | null;
+  created_at: string;
+}
+
 export interface ListPendingOpts {
   chain?: string;
   limit?: number;
@@ -92,11 +109,15 @@ export interface ListPendingOpts {
  */
 export interface CloudDb {
   getMerchant(id: string): Promise<MerchantRow | null>;
+  findMerchantByEmail(email: string): Promise<MerchantRow | null>;
   insertMerchant(row: MerchantRow): Promise<void>;
+  updateMerchant(id: string, patch: Partial<MerchantRow>): Promise<void>;
 
   getChains(merchantId: string): Promise<MerchantChainRow[]>;
   getChain(merchantId: string, chain: CloudChain): Promise<MerchantChainRow | null>;
   insertChain(row: MerchantChainRow): Promise<void>;
+  /** Every distinct fixed receive address configured by any merchant. */
+  listFixedAddresses(): Promise<string[]>;
   /**
    * Atomic compare-and-set of a chain's `next_child_index`. Returns true only
    * when the stored value still equalled `expected` (and was advanced to
@@ -106,16 +127,25 @@ export interface CloudDb {
 
   findActiveApiKey(hash: string): Promise<MerchantKeyRow | null>;
   insertApiKey(row: MerchantKeyRow): Promise<void>;
+  listApiKeys(merchantId: string): Promise<MerchantKeyRow[]>;
 
   insertInvoice(row: InvoiceRow): Promise<void>;
   getInvoice(id: string): Promise<InvoiceRow | null>;
   /** Invoices a merchant created at or after `sinceIso` (plan usage metering). */
   countInvoicesSince(merchantId: string, sinceIso: string): Promise<number>;
+  /** A merchant's most recent invoices, newest first. */
+  listInvoicesForMerchant(merchantId: string, limit: number): Promise<InvoiceRow[]>;
   listPendingInvoices(opts: ListPendingOpts): Promise<InvoiceRow[]>;
   updateInvoice(id: string, patch: Partial<InvoiceRow>): Promise<InvoiceRow | null>;
 
   getWebhook(merchantId: string): Promise<WebhookRow | null>;
   insertWebhook(row: WebhookRow): Promise<void>;
+  updateWebhook(id: string, patch: Partial<WebhookRow>): Promise<void>;
+
+  insertSubscription(row: SubscriptionRow): Promise<void>;
+  updateSubscription(id: string, patch: Partial<SubscriptionRow>): Promise<void>;
+  listPendingCryptoSubscriptions(): Promise<SubscriptionRow[]>;
+  findSubscriptionByStripeId(stripeSubscriptionId: string): Promise<SubscriptionRow | null>;
 
   insertWebhookEvent(row: WebhookEventRow): Promise<void>;
   getWebhookEvent(id: string): Promise<WebhookEventRow | null>;
@@ -137,13 +167,67 @@ export class MemoryCloudDb implements CloudDb {
   private readonly invoices = new Map<string, InvoiceRow>();
   private readonly webhooks = new Map<string, WebhookRow>();
   private readonly events = new Map<string, WebhookEventRow>();
+  private readonly subscriptions = new Map<string, SubscriptionRow>();
 
   async getMerchant(id: string): Promise<MerchantRow | null> {
     return this.merchants.get(id) ?? null;
   }
 
+  async findMerchantByEmail(email: string): Promise<MerchantRow | null> {
+    const found = [...this.merchants.values()].find((m) => m.email === email);
+    return found ? { ...found } : null;
+  }
+
   async insertMerchant(row: MerchantRow): Promise<void> {
     this.merchants.set(row.id, { ...row });
+  }
+
+  async updateMerchant(id: string, patch: Partial<MerchantRow>): Promise<void> {
+    const row = this.merchants.get(id);
+    if (row) this.merchants.set(id, { ...row, ...patch, id: row.id });
+  }
+
+  async listFixedAddresses(): Promise<string[]> {
+    const out = new Set<string>();
+    for (const c of this.chains.values()) if (c.fixed_address) out.add(c.fixed_address);
+    return [...out];
+  }
+
+  async listApiKeys(merchantId: string): Promise<MerchantKeyRow[]> {
+    return [...this.keys.values()].filter((k) => k.merchant_id === merchantId).map((k) => ({ ...k }));
+  }
+
+  async listInvoicesForMerchant(merchantId: string, limit: number): Promise<InvoiceRow[]> {
+    return [...this.invoices.values()]
+      .filter((i) => i.merchant_id === merchantId)
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, limit)
+      .map((i) => ({ ...i }));
+  }
+
+  async updateWebhook(id: string, patch: Partial<WebhookRow>): Promise<void> {
+    const row = this.webhooks.get(id);
+    if (row) this.webhooks.set(id, { ...row, ...patch, id: row.id, merchant_id: row.merchant_id });
+  }
+
+  async insertSubscription(row: SubscriptionRow): Promise<void> {
+    this.subscriptions.set(row.id, { ...row });
+  }
+
+  async updateSubscription(id: string, patch: Partial<SubscriptionRow>): Promise<void> {
+    const row = this.subscriptions.get(id);
+    if (row) this.subscriptions.set(id, { ...row, ...patch, id: row.id, merchant_id: row.merchant_id });
+  }
+
+  async listPendingCryptoSubscriptions(): Promise<SubscriptionRow[]> {
+    return [...this.subscriptions.values()]
+      .filter((s) => s.status === 'pending' && s.method === 'crypto')
+      .map((s) => ({ ...s }));
+  }
+
+  async findSubscriptionByStripeId(stripeSubscriptionId: string): Promise<SubscriptionRow | null> {
+    const found = [...this.subscriptions.values()].find((s) => s.stripe_subscription_id === stripeSubscriptionId);
+    return found ? { ...found } : null;
   }
 
   async getChains(merchantId: string): Promise<MerchantChainRow[]> {

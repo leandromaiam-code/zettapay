@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay Cloud — managed, non-custodial crypto payments. Join the early-access waitlist, or self-host the open-source listener today." />
-  <meta property="og:title" content="ZettaPay Cloud — early access" />
-  <meta property="og:description" content="Let ZettaPay host the listener for you. Still fully non-custodial — funds land directly in your wallet. Join the waitlist." />
-  <title>ZettaPay Cloud — early access</title>
+  <meta name="description" content="ZettaPay Cloud — get paid in crypto straight to your wallet. Create an account with a public key, get an API key, and start creating invoices. Non-custodial." />
+  <meta property="og:title" content="ZettaPay Cloud — account" />
+  <meta property="og:description" content="Create a ZettaPay Cloud account with a public key only. Funds land directly in your wallet; we never hold keys or money." />
+  <meta name="robots" content="noindex" />
+  <title>ZettaPay Cloud — account</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,10 +18,10 @@
     tailwind.config = {
       theme: { extend: {
         fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
-        colors: { royal:'#4F6BFF','royal-bright':'#6B82FF','deep':'#0A0A0A','mint':'#14F195','solana':'#9945FF','muted':'#94A3B8' },
-        animation: { 'fade-up':'fadeUp 0.8s ease-out forwards','glow-pulse':'glowPulse 4s ease-in-out infinite' },
+        colors: { royal:'#4F6BFF','royal-bright':'#6B82FF','deep':'#0A0A0A','mint':'#14F195','grape':'#9945FF','muted':'#94A3B8' },
+        animation: { 'fade-up':'fadeUp 0.6s ease-out forwards','glow-pulse':'glowPulse 4s ease-in-out infinite' },
         keyframes: {
-          fadeUp: { '0%':{opacity:'0',transform:'translateY(30px)'}, '100%':{opacity:'1',transform:'translateY(0)'} },
+          fadeUp: { '0%':{opacity:'0',transform:'translateY(20px)'}, '100%':{opacity:'1',transform:'translateY(0)'} },
           glowPulse: { '0%,100%':{opacity:'0.3'}, '50%':{opacity:'0.6'} },
         },
       } },
@@ -28,105 +29,489 @@
   </script>
   <style>
     :root { color-scheme: dark; }
-    html { scroll-behavior: smooth; }
     body { background:#0A0A0A; color:#FFFFFF; font-family:'Inter',ui-sans-serif,system-ui; overflow-x:hidden; }
     .grid-bg { background-image: linear-gradient(rgba(79,107,255,0.03) 1px,transparent 1px), linear-gradient(90deg,rgba(79,107,255,0.03) 1px,transparent 1px); background-size:50px 50px; }
     .gradient-text { background:linear-gradient(135deg,#4F6BFF 0%,#14F195 50%,#9945FF 100%); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
     .glass { background:rgba(79,107,255,0.05); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(79,107,255,0.15); }
     .glow-orb { position:absolute; border-radius:50%; filter:blur(120px); opacity:0.3; pointer-events:none; }
-    .btn-primary { background:linear-gradient(135deg,#4F6BFF 0%,#6B82FF 100%); color:#FFFFFF; transition:all 0.3s ease; box-shadow:0 0 30px rgba(79,107,255,0.3); }
-    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 40px rgba(79,107,255,0.5); }
-    .btn-ghost { background:rgba(79,107,255,0.05); border:1px solid rgba(79,107,255,0.3); color:#FFFFFF; transition:all 0.3s ease; }
-    .btn-ghost:hover { background:rgba(79,107,255,0.1); border-color:rgba(79,107,255,0.6); }
+    .btn-primary { background:linear-gradient(135deg,#4F6BFF 0%,#6B82FF 100%); color:#FFFFFF; transition:all 0.2s ease; box-shadow:0 0 30px rgba(79,107,255,0.3); }
+    .btn-primary:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 8px 40px rgba(79,107,255,0.5); }
+    .btn-ghost { background:rgba(79,107,255,0.05); border:1px solid rgba(79,107,255,0.3); color:#FFFFFF; transition:all 0.2s ease; }
+    .btn-ghost:hover:not(:disabled) { background:rgba(79,107,255,0.1); border-color:rgba(79,107,255,0.6); }
+    button:disabled { opacity:0.5; cursor:not-allowed; }
     .logo-wordmark { filter:invert(1) brightness(2); }
-    input { font-family:inherit; }
+    input, select, button { font-family:inherit; }
+    .field { width:100%; background:#0A0A0A; border:1px solid rgba(79,107,255,0.3); border-radius:0.75rem; padding:0.7rem 1rem; color:#fff; font-size:0.9rem; }
+    .field:focus { outline:none; border-color:#6B82FF; }
+    .field::placeholder { color:rgba(148,163,184,0.5); }
+    .label { display:block; font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.12em; text-transform:uppercase; color:#94A3B8; margin-bottom:0.4rem; }
+    .eyebrow { font-family:'JetBrains Mono',monospace; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:#14F195; }
+    .mono-wrap { font-family:'JetBrains Mono',monospace; font-size:0.8rem; word-break:break-all; }
+    .tab[aria-selected="true"] { background:rgba(79,107,255,0.18); color:#fff; }
+    .bar { height:8px; border-radius:999px; background:rgba(79,107,255,0.15); overflow:hidden; }
+    .bar > span { display:block; height:100%; background:linear-gradient(90deg,#4F6BFF,#14F195); }
+    table { width:100%; border-collapse:collapse; font-size:0.82rem; }
+    th { text-align:left; font-family:'JetBrains Mono',monospace; font-size:0.65rem; letter-spacing:0.12em; text-transform:uppercase; color:#94A3B8; padding:0.5rem 0.75rem; }
+    td { padding:0.6rem 0.75rem; border-top:1px solid rgba(79,107,255,0.12); vertical-align:top; }
+    .pill { display:inline-block; padding:0.1rem 0.55rem; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:0.68rem; border:1px solid rgba(148,163,184,0.35); color:#94A3B8; }
+    .pill.confirmed { color:#14F195; border-color:rgba(20,241,149,0.5); }
+    .pill.pending { color:#FBBF24; border-color:rgba(251,191,36,0.5); }
+    [hidden] { display:none !important; }
   </style>
   <script src="/theme-toggle.js" defer></script>
 </head>
 <body class="grid-bg">
   <div class="glow-orb animate-glow-pulse" style="background:#4F6BFF; width:600px; height:600px; top:-200px; right:-200px;"></div>
-  <div class="glow-orb" style="background:#14F195; width:500px; height:500px; bottom:10%; left:-150px; opacity:0.12;"></div>
 
-  <!-- NAV -->
   <nav class="fixed top-0 left-0 right-0 z-50 px-4 lg:px-12 py-4">
-    <div class="max-w-7xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between glass rounded-full px-6 py-3">
       <a href="/" class="flex items-center gap-3"><img src="/Logo_black_letter.png" alt="ZettaPay" class="h-5 logo-wordmark" /></a>
       <div class="flex items-center gap-3">
-        <a href="/" class="text-muted hover:text-white transition text-sm font-medium">&larr; Home</a>
-        <a href="https://github.com/leandromaiam-code/zettapay" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm">Self-host instead</a>
+        <a href="/docs/api" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">API docs</a>
+        <a href="/pricing" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Pricing</a>
+        <button id="signOut" class="btn-ghost px-4 py-2 rounded-full font-semibold text-sm" hidden>Sign out</button>
       </div>
     </div>
   </nav>
 
-  <section class="relative min-h-screen flex items-center px-4 lg:px-12 py-32">
-    <div class="max-w-2xl mx-auto w-full text-center">
-      <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 mb-8 animate-fade-up">
-        <span class="w-2 h-2 rounded-full bg-mint animate-glow-pulse"></span>
-        <span class="text-xs font-mono text-muted uppercase tracking-widest">Cloud &middot; early access</span>
+  <main class="relative max-w-6xl mx-auto px-4 lg:px-12 pt-32 pb-24">
+
+    <!-- ============ SIGNED OUT ============ -->
+    <section id="gate" class="max-w-2xl mx-auto animate-fade-up" hidden>
+      <div class="text-center mb-8">
+        <div class="eyebrow mb-4">ZettaPay Cloud &middot; early access</div>
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight mb-4">Get paid in crypto,<br/><span class="gradient-text">straight to your wallet</span></h1>
+        <p class="text-muted leading-relaxed">
+          Give us a <span class="text-white font-semibold">public</span> key and we watch the chain for you.
+          Funds land directly in your wallet &mdash; we never hold keys or money, and there is no transaction fee.
+        </p>
       </div>
 
-      <h1 class="text-4xl md:text-6xl font-bold mb-6 tracking-tight animate-fade-up">
-        Let us host the<br/><span class="gradient-text">listener for you</span>
-      </h1>
+      <div class="glass rounded-2xl p-2 flex gap-2 mb-4" role="tablist">
+        <button class="tab flex-1 rounded-xl py-2 text-sm font-semibold text-muted" role="tab" aria-selected="true" data-tab="signup">Create account</button>
+        <button class="tab flex-1 rounded-xl py-2 text-sm font-semibold text-muted" role="tab" aria-selected="false" data-tab="signin">I have an API key</button>
+      </div>
 
-      <p class="text-muted text-lg leading-relaxed mb-4 animate-fade-up" style="animation-delay:0.15s; animation-fill-mode:both;">
-        ZettaPay Cloud runs the chain listener so you don&rsquo;t have to &mdash; perfect for serverless setups.
-        Still <span class="text-white font-semibold">fully non-custodial</span>: we watch the chain, but the funds land
-        <span class="text-white font-semibold">directly in your wallet</span>. We never touch them.
-      </p>
-
-      <p class="text-sm font-mono text-muted/70 uppercase tracking-widest mb-10 animate-fade-up" style="animation-delay:0.2s; animation-fill-mode:both;">
-        Early access &mdash; request yours below
-      </p>
-
-      <form id="waitlistForm" class="glass rounded-2xl p-6 md:p-8 text-left animate-fade-up" style="animation-delay:0.25s; animation-fill-mode:both;">
-        <label for="email" class="text-xs font-mono text-mint uppercase tracking-widest">Request Cloud early access</label>
-        <div class="flex flex-col sm:flex-row gap-3 mt-3">
-          <input id="email" name="email" type="email" required placeholder="you@company.com"
-            class="flex-1 bg-deep border border-royal/30 rounded-full px-5 py-3 text-white placeholder:text-muted/50 focus:outline-none focus:border-royal-bright transition" />
-          <button type="submit" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm whitespace-nowrap">Join waitlist</button>
+      <form id="signupForm" class="glass rounded-2xl p-6 md:p-8 space-y-5">
+        <div class="grid sm:grid-cols-2 gap-4">
+          <div><label class="label" for="su-email">Email</label><input class="field" id="su-email" type="email" required autocomplete="email" placeholder="you@shop.com" /></div>
+          <div><label class="label" for="su-shop">Shop name</label><input class="field" id="su-shop" required minlength="2" maxlength="80" placeholder="Shown on the checkout page" /></div>
         </div>
-        <p id="formMsg" class="text-sm text-mint mt-4 hidden">Thanks &mdash; you&rsquo;re on the list. We&rsquo;ll email you when Cloud opens.</p>
-        <p class="text-xs text-muted/60 mt-4 leading-relaxed">
-          Prefer full control? The listener is open source &mdash;
-          <a href="https://github.com/leandromaiam-code/zettapay" class="text-royal-bright hover:underline">self-host it today</a>
-          with <code class="font-mono">npm i -g @zettapay/listener</code>.
+        <div>
+          <label class="label" for="su-btc">Bitcoin &mdash; extended public key (zpub / xpub)</label>
+          <input class="field mono-wrap" id="su-btc" autocomplete="off" spellcheck="false" placeholder="zpub6r..." />
+          <p class="text-xs text-muted/70 mt-1">Each invoice gets its own address derived from this key. Optional if you only take stablecoins.</p>
+        </div>
+        <div>
+          <label class="label" for="su-base">USDC / USDT on Base &mdash; receive address or xpub</label>
+          <input class="field mono-wrap" id="su-base" autocomplete="off" spellcheck="false" placeholder="0x... or xpub6C..." />
+          <p class="text-xs text-muted/70 mt-1">An address is the simplest: invoices are told apart by a few extra decimals in the amount.</p>
+        </div>
+        <div>
+          <label class="label" for="su-webhook">Webhook URL (optional)</label>
+          <input class="field" id="su-webhook" type="url" placeholder="https://your-site.com/webhooks/zettapay" />
+          <p class="text-xs text-muted/70 mt-1">We POST a signed event here when a payment confirms. You can set it later.</p>
+        </div>
+        <p class="text-xs text-muted/80 leading-relaxed border border-royal/20 rounded-xl p-3">
+          <span class="text-white font-semibold">Public keys only.</span> Never paste a private key, a seed phrase or anything starting with
+          <code class="font-mono">xprv</code> / <code class="font-mono">zprv</code> &mdash; ZettaPay does not need it and will refuse it.
         </p>
+        <button type="submit" class="btn-primary w-full py-3 rounded-full font-semibold text-sm">Create account &mdash; free up to 50 invoices / month</button>
+        <p id="signupMsg" class="text-sm" hidden></p>
       </form>
 
-      <div class="mt-10 text-xs font-mono text-muted/40 uppercase tracking-widest animate-fade-up" style="animation-delay:0.3s; animation-fill-mode:both;">
-        Non-custodial &middot; Bitcoin &middot; USDC on Base &middot; USDT on Base
+      <form id="signinForm" class="glass rounded-2xl p-6 md:p-8 space-y-5" hidden>
+        <div>
+          <label class="label" for="si-key">API key</label>
+          <input class="field mono-wrap" id="si-key" type="password" autocomplete="off" spellcheck="false" placeholder="zp_live_..." required />
+          <p class="text-xs text-muted/70 mt-1">Kept in this browser tab only, and cleared when you close it.</p>
+        </div>
+        <button type="submit" class="btn-primary w-full py-3 rounded-full font-semibold text-sm">Open dashboard</button>
+        <p id="signinMsg" class="text-sm" hidden></p>
+      </form>
+
+      <p class="text-center text-xs text-muted/60 mt-6">
+        Prefer to run it yourself? The listener is open source &mdash;
+        <a href="/docs/quickstart" class="text-royal-bright hover:underline">self-host it</a>.
+      </p>
+    </section>
+
+    <!-- ============ SIGNED IN ============ -->
+    <section id="dash" class="space-y-6" hidden>
+      <div id="billingNote" class="glass rounded-2xl p-4 text-sm" hidden></div>
+
+      <div id="secrets" class="rounded-2xl p-6 border border-mint/40" style="background:rgba(20,241,149,0.06);" hidden>
+        <div class="eyebrow mb-2">Save these now &mdash; shown only once</div>
+        <div class="space-y-3">
+          <div id="secKeyRow">
+            <div class="label">API key</div>
+            <div class="flex gap-2 items-start"><code id="secKey" class="mono-wrap flex-1"></code><button class="btn-ghost px-3 py-1 rounded-full text-xs" data-copy="secKey">Copy</button></div>
+          </div>
+          <div id="secHookRow" hidden>
+            <div class="label">Webhook signing secret</div>
+            <div class="flex gap-2 items-start"><code id="secHook" class="mono-wrap flex-1"></code><button class="btn-ghost px-3 py-1 rounded-full text-xs" data-copy="secHook">Copy</button></div>
+          </div>
+        </div>
+        <p class="text-xs text-muted mt-3">We store only a hash of the API key. If you lose it, we cannot recover it.</p>
       </div>
-    </div>
-  </section>
+
+      <div class="grid lg:grid-cols-3 gap-6">
+        <div class="glass rounded-2xl p-6 lg:col-span-2">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <div class="eyebrow mb-1">Account</div>
+              <h1 id="shopName" class="text-2xl font-bold"></h1>
+              <div id="shopEmail" class="text-sm text-muted"></div>
+            </div>
+            <div class="text-right">
+              <div class="label">Plan</div>
+              <div id="planName" class="text-xl font-bold capitalize"></div>
+              <div id="planExpiry" class="text-xs text-muted"></div>
+            </div>
+          </div>
+          <div class="label">Invoices this month</div>
+          <div class="flex items-center gap-3">
+            <div class="bar flex-1"><span id="usageBar" style="width:0%"></span></div>
+            <div id="usageText" class="font-mono text-sm"></div>
+          </div>
+        </div>
+
+        <div class="glass rounded-2xl p-6">
+          <div class="eyebrow mb-3">You receive at</div>
+          <div id="chains" class="space-y-3 text-sm"></div>
+          <p class="text-xs text-muted/70 mt-3">Public material only. To change it, contact us.</p>
+        </div>
+      </div>
+
+      <div class="grid lg:grid-cols-2 gap-6">
+        <form id="invoiceForm" class="glass rounded-2xl p-6 space-y-4">
+          <div class="eyebrow">Create an invoice</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="label" for="inv-asset">Asset</label><select class="field" id="inv-asset"></select></div>
+            <div><label class="label" for="inv-amount" id="inv-amount-label">Amount</label><input class="field" id="inv-amount" type="number" min="0" step="any" required /></div>
+          </div>
+          <button type="submit" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Create invoice</button>
+          <div id="invoiceOut" class="text-sm space-y-1" hidden>
+            <div>Checkout link: <a id="invoiceLink" class="text-royal-bright hover:underline mono-wrap" target="_blank" rel="noopener"></a></div>
+            <div class="text-muted">Send exactly <span id="invoiceAmount" class="text-white font-mono"></span> to <span id="invoiceAddr" class="mono-wrap text-white"></span></div>
+          </div>
+          <p id="invoiceMsg" class="text-sm" hidden></p>
+        </form>
+
+        <form id="webhookForm" class="glass rounded-2xl p-6 space-y-4">
+          <div class="eyebrow">Webhook</div>
+          <div class="text-sm text-muted">Current: <span id="hookCurrent" class="mono-wrap text-white"></span></div>
+          <div><label class="label" for="hook-url">New endpoint (https)</label><input class="field" id="hook-url" type="url" required placeholder="https://your-site.com/webhooks/zettapay" /></div>
+          <button type="submit" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">Save and rotate secret</button>
+          <p class="text-xs text-muted/70">Saving issues a new signing secret. See the <a href="/docs/webhook" class="text-royal-bright hover:underline">webhook reference</a>.</p>
+          <p id="hookMsg" class="text-sm" hidden></p>
+        </form>
+      </div>
+
+      <div class="glass rounded-2xl p-6">
+        <div class="flex items-center justify-between mb-3">
+          <div class="eyebrow">Recent invoices</div>
+          <button id="refresh" class="btn-ghost px-3 py-1 rounded-full text-xs">Refresh</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table>
+            <thead><tr><th>Created</th><th>Asset</th><th>Amount</th><th>Status</th><th>Invoice</th></tr></thead>
+            <tbody id="invoiceRows"></tbody>
+          </table>
+        </div>
+        <p id="invoiceEmpty" class="text-sm text-muted py-4" hidden>No invoices yet. Create one above, or call <code class="font-mono">POST /api/v1/invoice</code> with your API key.</p>
+      </div>
+
+      <div class="glass rounded-2xl p-6">
+        <div class="eyebrow mb-1">Plans</div>
+        <p class="text-sm text-muted mb-4">A flat monthly price by invoice volume. No transaction fee &mdash; your payments never pass through us.</p>
+        <div id="plans" class="grid md:grid-cols-3 gap-4"></div>
+        <p id="planMsg" class="text-sm mt-3" hidden></p>
+      </div>
+    </section>
+  </main>
 
   <script>
-    const form = document.getElementById('waitlistForm');
-    const msg = document.getElementById('formMsg');
-    if (form) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('email');
-        if (!email.value) return;
-        const button = form.querySelector('button[type="submit"]');
-        button.disabled = true;
-        try {
-          const resp = await fetch('/api/waitlist', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ email: email.value }),
-          });
-          if (!resp.ok) throw new Error('waitlist ' + resp.status);
-          msg.textContent = 'Thanks \u2014 you\u2019re on the list. We\u2019ll email you when your Cloud access is ready.';
-          email.value = '';
-          email.disabled = true;
-        } catch (_) {
-          msg.textContent = 'We could not save your email right now. Please try again in a moment.';
-          button.disabled = false;
+    (function () {
+      'use strict';
+      var API = '/api/v1';
+      var KEY_SLOT = 'zp-cloud-key';
+      var $ = function (id) { return document.getElementById(id); };
+      var apiKey = null;
+      try { apiKey = sessionStorage.getItem(KEY_SLOT); } catch (_) {}
+
+      function show(el, on) { el.hidden = !on; }
+      function say(el, text, ok) {
+        el.textContent = text;
+        el.style.color = ok ? '#14F195' : '#F87171';
+        show(el, !!text);
+      }
+      function el(tag, cls, text) {
+        var n = document.createElement(tag);
+        if (cls) n.className = cls;
+        if (text !== undefined) n.textContent = text;
+        return n;
+      }
+
+      async function api(path, opts) {
+        opts = opts || {};
+        var headers = { 'content-type': 'application/json' };
+        if (opts.auth !== false && apiKey) headers['x-zettapay-api-key'] = apiKey;
+        var resp = await fetch(API + path, {
+          method: opts.method || 'GET',
+          headers: headers,
+          body: opts.body ? JSON.stringify(opts.body) : undefined,
+        });
+        var data = null;
+        try { data = await resp.json(); } catch (_) {}
+        if (!resp.ok) {
+          var err = new Error((data && data.error && (data.error.message || data.error.code)) || ('request failed (' + resp.status + ')'));
+          err.status = resp.status;
+          err.code = data && data.error && data.error.code;
+          throw err;
         }
-        msg.classList.remove('hidden');
+        return data;
+      }
+
+      // ---- tabs -----------------------------------------------------------
+      document.querySelectorAll('.tab').forEach(function (tab) {
+        tab.addEventListener('click', function () {
+          document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', String(t === tab)); });
+          show($('signupForm'), tab.dataset.tab === 'signup');
+          show($('signinForm'), tab.dataset.tab === 'signin');
+        });
       });
-    }
+
+      // ---- sign up --------------------------------------------------------
+      $('signupForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = this.querySelector('button[type="submit"]');
+        var base = $('su-base').value.trim();
+        var body = { email: $('su-email').value.trim(), shop_name: $('su-shop').value.trim() };
+        if ($('su-btc').value.trim()) body.btc_xpub = $('su-btc').value.trim();
+        if (base) body[/^0x/i.test(base) ? 'base_address' : 'base_xpub'] = base;
+        if ($('su-webhook').value.trim()) body.webhook_url = $('su-webhook').value.trim();
+        if (!body.btc_xpub && !base) { say($('signupMsg'), 'Add a Bitcoin xpub, a Base address, or both.', false); return; }
+        btn.disabled = true;
+        say($('signupMsg'), '', true);
+        try {
+          var out = await api('/signup', { method: 'POST', body: body, auth: false });
+          apiKey = out.api_key;
+          try { sessionStorage.setItem(KEY_SLOT, apiKey); } catch (_) {}
+          $('secKey').textContent = out.api_key;
+          if (out.webhook_secret) { $('secHook').textContent = out.webhook_secret; show($('secHookRow'), true); }
+          show($('secrets'), true);
+          await openDashboard();
+        } catch (err) {
+          say($('signupMsg'), err.status === 429 ? 'Too many signups from this network. Try again later.' : err.message, false);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      // ---- sign in --------------------------------------------------------
+      $('signinForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        apiKey = $('si-key').value.trim();
+        try {
+          await openDashboard();
+          try { sessionStorage.setItem(KEY_SLOT, apiKey); } catch (_) {}
+          $('si-key').value = '';
+        } catch (err) {
+          apiKey = null;
+          say($('signinMsg'), err.status === 401 ? 'That API key is not valid.' : err.message, false);
+        }
+      });
+
+      $('signOut').addEventListener('click', function () {
+        apiKey = null;
+        try { sessionStorage.removeItem(KEY_SLOT); } catch (_) {}
+        show($('secrets'), false);
+        show($('dash'), false);
+        show($('signOut'), false);
+        show($('gate'), true);
+      });
+
+      document.addEventListener('click', function (e) {
+        var id = e.target && e.target.dataset && e.target.dataset.copy;
+        if (!id) return;
+        navigator.clipboard.writeText($(id).textContent).then(function () {
+          e.target.textContent = 'Copied';
+          setTimeout(function () { e.target.textContent = 'Copy'; }, 1500);
+        });
+      });
+
+      // ---- dashboard ------------------------------------------------------
+      var me = null;
+
+      function renderAccount() {
+        $('shopName').textContent = me.shop_name;
+        $('shopEmail').textContent = me.email;
+        $('planName').textContent = me.plan;
+        $('planExpiry').textContent = me.plan_expires_at ? 'renews or lapses on ' + new Date(me.plan_expires_at).toLocaleDateString() : '';
+        var used = me.usage.invoices_this_month, limit = me.usage.monthly_limit;
+        $('usageText').textContent = limit === null ? used + ' / unlimited' : used + ' / ' + limit;
+        $('usageBar').style.width = (limit ? Math.min(100, Math.round((used / limit) * 100)) : 0) + '%';
+        $('hookCurrent').textContent = me.webhook_url || 'not set';
+
+        var chains = $('chains');
+        chains.textContent = '';
+        var assetSelect = $('inv-asset');
+        assetSelect.textContent = '';
+        me.chains.forEach(function (c) {
+          var row = el('div');
+          row.appendChild(el('div', 'text-white font-semibold', c.chain === 'btc' ? 'Bitcoin' : 'Base (USDC, USDT)'));
+          row.appendChild(el('div', 'mono-wrap text-muted', c.fixed_address || c.xpub || ''));
+          row.appendChild(el('div', 'text-xs text-muted/70', c.mode === 'xpub' ? 'one address per invoice' : 'fixed address + amount nonce'));
+          chains.appendChild(row);
+          if (c.chain === 'btc') assetSelect.appendChild(new Option('BTC', 'btc'));
+          if (c.chain === 'base') {
+            assetSelect.appendChild(new Option('USDC on Base', 'usdc'));
+            if (c.mode !== 'xpub') assetSelect.appendChild(new Option('USDT on Base', 'usdt'));
+          }
+        });
+        updateAmountLabel();
+      }
+
+      function updateAmountLabel() {
+        var btc = $('inv-asset').value === 'btc';
+        $('inv-amount-label').textContent = btc ? 'Amount (sats)' : 'Amount (USD)';
+        $('inv-amount').step = btc ? '1' : '0.01';
+        $('inv-amount').placeholder = btc ? '50000' : '29.00';
+      }
+      $('inv-asset').addEventListener('change', updateAmountLabel);
+
+      async function loadInvoices() {
+        var data = await api('/invoices?limit=25');
+        var rows = $('invoiceRows');
+        rows.textContent = '';
+        show($('invoiceEmpty'), data.invoices.length === 0);
+        data.invoices.forEach(function (inv) {
+          var tr = el('tr');
+          tr.appendChild(el('td', 'text-muted whitespace-nowrap', new Date(inv.created_at).toLocaleString()));
+          tr.appendChild(el('td', '', inv.asset + (inv.chain === 'btc' ? '' : ' · ' + inv.chain)));
+          tr.appendChild(el('td', 'font-mono', inv.amount));
+          var st = el('td');
+          st.appendChild(el('span', 'pill ' + inv.status, inv.status));
+          tr.appendChild(st);
+          var link = el('td');
+          var a = el('a', 'text-royal-bright hover:underline mono-wrap', inv.invoice_id.slice(0, 16) + '…');
+          a.href = '/checkout/' + encodeURIComponent(inv.invoice_id);
+          a.target = '_blank';
+          a.rel = 'noopener';
+          link.appendChild(a);
+          tr.appendChild(link);
+          rows.appendChild(tr);
+        });
+      }
+
+      async function loadPlans() {
+        var data = await api('/plans', { auth: false });
+        var box = $('plans');
+        box.textContent = '';
+        data.plans.forEach(function (p) {
+          var current = p.plan === me.plan;
+          var card = el('div', 'rounded-2xl p-5 border ' + (current ? 'border-mint/60' : 'border-royal/20'));
+          card.appendChild(el('div', 'eyebrow', p.plan + (current ? ' · current' : '')));
+          card.appendChild(el('div', 'text-3xl font-bold mt-2', p.price_usd_per_month ? '$' + p.price_usd_per_month : '$0'));
+          card.appendChild(el('div', 'text-xs text-muted mb-3', p.price_usd_per_month ? 'per month' : 'free'));
+          card.appendChild(el('div', 'text-sm mb-4', p.invoices_per_month === null ? 'Unlimited invoices' : 'Up to ' + p.invoices_per_month.toLocaleString() + ' invoices / month'));
+          if (p.price_usd_per_month) {
+            var labels = { crypto: 'Pay with USDC', stripe: 'Pay by card' };
+            data.payment_methods.forEach(function (method) {
+              var b = el('button', (method === 'crypto' ? 'btn-primary' : 'btn-ghost') + ' w-full py-2 rounded-full text-sm font-semibold mb-2', labels[method] || method);
+              b.addEventListener('click', function () { checkout(p.plan, method, b); });
+              card.appendChild(b);
+            });
+            if (data.payment_methods.length === 0) card.appendChild(el('div', 'text-xs text-muted', 'Contact us to upgrade.'));
+          }
+          box.appendChild(card);
+        });
+      }
+
+      async function checkout(plan, method, btn) {
+        btn.disabled = true;
+        say($('planMsg'), '', true);
+        try {
+          var out = await api('/billing/checkout', { method: 'POST', body: { plan: plan, method: method } });
+          window.location.href = out.checkout_url;
+        } catch (err) {
+          say($('planMsg'), err.message, false);
+          btn.disabled = false;
+        }
+      }
+
+      $('invoiceForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var asset = $('inv-asset').value, amount = Number($('inv-amount').value);
+        var body = asset === 'btc' ? { chain: 'btc', amount_sats: Math.round(amount) } : { chain: 'base', amount_usd: amount, asset: asset };
+        show($('invoiceOut'), false);
+        say($('invoiceMsg'), '', true);
+        try {
+          var inv = await api('/invoice', { method: 'POST', body: body });
+          var url = inv.checkout_url || ('/checkout/' + encodeURIComponent(inv.invoice_id));
+          $('invoiceLink').textContent = url;
+          $('invoiceLink').href = url;
+          $('invoiceAmount').textContent = asset === 'btc' ? inv.amount_btc + ' BTC' : inv.amount_usdc + ' ' + inv.asset;
+          $('invoiceAddr').textContent = inv.receive_address;
+          show($('invoiceOut'), true);
+          await refreshAll();
+        } catch (err) {
+          say($('invoiceMsg'), err.code === 'plan_limit_reached' ? 'You reached this month’s invoice limit for your plan. Upgrade below to keep creating invoices.' : err.message, false);
+        }
+      });
+
+      $('webhookForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        try {
+          var out = await api('/webhook', { method: 'POST', body: { webhook_url: $('hook-url').value.trim() } });
+          $('secHook').textContent = out.webhook_secret;
+          show($('secHookRow'), true);
+          show($('secKeyRow'), !!$('secKey').textContent);
+          show($('secrets'), true);
+          $('hook-url').value = '';
+          say($('hookMsg'), 'Saved. The new signing secret is shown at the top of the page — store it now.', true);
+          await refreshAll();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) {
+          say($('hookMsg'), err.message, false);
+        }
+      });
+
+      $('refresh').addEventListener('click', function () { refreshAll().catch(function () {}); });
+
+      async function refreshAll() {
+        me = await api('/me');
+        renderAccount();
+        await Promise.all([loadInvoices(), loadPlans()]);
+      }
+
+      async function openDashboard() {
+        await refreshAll();
+        show($('gate'), false);
+        show($('dash'), true);
+        show($('signOut'), true);
+        var billing = new URLSearchParams(window.location.search).get('billing');
+        if (billing) {
+          var note = $('billingNote');
+          note.textContent = billing === 'success'
+            ? 'Payment received. Your plan updates as soon as the payment is confirmed — refresh in a moment.'
+            : 'Checkout was cancelled. Your plan did not change.';
+          show(note, true);
+          history.replaceState(null, '', window.location.pathname);
+        }
+      }
+
+      if (apiKey) {
+        openDashboard().catch(function () {
+          apiKey = null;
+          try { sessionStorage.removeItem(KEY_SLOT); } catch (_) {}
+          show($('gate'), true);
+        });
+      } else {
+        show($('gate'), true);
+      }
+    })();
   </script>
 </body>
 </html>
