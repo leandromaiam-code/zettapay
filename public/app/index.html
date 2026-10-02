@@ -76,11 +76,11 @@
       </p>
 
       <p class="text-sm font-mono text-muted/70 uppercase tracking-widest mb-10 animate-fade-up" style="animation-delay:0.2s; animation-fill-mode:both;">
-        Coming soon &mdash; join the waitlist below
+        Early access &mdash; request yours below
       </p>
 
       <form id="waitlistForm" class="glass rounded-2xl p-6 md:p-8 text-left animate-fade-up" style="animation-delay:0.25s; animation-fill-mode:both;">
-        <label for="email" class="text-xs font-mono text-mint uppercase tracking-widest">Get notified when Cloud opens</label>
+        <label for="email" class="text-xs font-mono text-mint uppercase tracking-widest">Request Cloud early access</label>
         <div class="flex flex-col sm:flex-row gap-3 mt-3">
           <input id="email" name="email" type="email" required placeholder="you@company.com"
             class="flex-1 bg-deep border border-royal/30 rounded-full px-5 py-3 text-white placeholder:text-muted/50 focus:outline-none focus:border-royal-bright transition" />
@@ -104,14 +104,27 @@
     const form = document.getElementById('waitlistForm');
     const msg = document.getElementById('formMsg');
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('email');
         if (!email.value) return;
-        try { localStorage.setItem('zp-cloud-waitlist', email.value); } catch (_) {}
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        try {
+          const resp = await fetch('/api/waitlist', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ email: email.value }),
+          });
+          if (!resp.ok) throw new Error('waitlist ' + resp.status);
+          msg.textContent = 'Thanks \u2014 you\u2019re on the list. We\u2019ll email you when your Cloud access is ready.';
+          email.value = '';
+          email.disabled = true;
+        } catch (_) {
+          msg.textContent = 'We could not save your email right now. Please try again in a moment.';
+          button.disabled = false;
+        }
         msg.classList.remove('hidden');
-        email.value = '';
-        email.disabled = true;
       });
     }
   </script>

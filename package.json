@@ -2,7 +2,7 @@
   "name": "zettapay",
   "version": "0.0.0",
   "private": true,
-  "description": "ZettaPay — universal Solana payment protocol monorepo",
+  "description": "ZettaPay — non-custodial crypto payments (BTC, USDC/USDT on Base) monorepo",
   "license": "MIT",
   "workspaces": [
     "packages/*"

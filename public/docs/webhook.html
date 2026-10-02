@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay webhook reference — event types, signature verification (HMAC-SHA256), retry policy, replay protection, idempotency." />
+  <meta name="description" content="ZettaPay webhook reference — event types, payloads, HMAC-SHA256 signature over the raw body, retry policy, replay protection, idempotency." />
   <meta name="theme-color" content="#0A0A0A" />
   <meta property="og:title" content="ZettaPay · Webhook reference" />
-  <meta property="og:description" content="Verify ZettaPay webhooks. HMAC-SHA256 signatures, 300 s tolerance window, idempotent by tx_hash." />
+  <meta property="og:description" content="Verify ZettaPay webhooks. HMAC-SHA256 over the raw body, millisecond timestamp, stable event id, up to 10 attempts." />
   <title>ZettaPay · Webhook reference</title>
   <link rel="icon" href="/Logo_symbol.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +19,7 @@
     tailwind.config = {
       theme: { extend: {
         fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
-        colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+        colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', violet:'#9945FF', muted:'#94A3B8' },
       }},
     };
   </script>
@@ -191,7 +191,7 @@
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="/" class="text-muted hover:text-white transition">Home</a>
         <a href="/docs" class="text-white">Docs</a>
-        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
       </div>
       <a href="/docs/quickstart" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Quickstart →</a>
@@ -210,7 +210,7 @@
             <a href="#headers" class="toc-link">Headers</a>
             <a href="#body" class="toc-link">Body schema</a>
             <a href="#events" class="toc-link">Event types</a>
-            <a href="#networks" class="toc-link">Networks &amp; finality</a>
+            <a href="#networks" class="toc-link">Confirmations</a>
             <a href="#signature" class="toc-link">Signature scheme</a>
             <a href="#verify" class="toc-link">Verify examples</a>
             <a href="#replay" class="toc-link">Replay protection</a>
@@ -228,31 +228,39 @@
             <span class="gradient-text">Webhook</span> reference.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            Stripe-grade webhooks for on-chain payments. HMAC-SHA256 signatures, 300 s tolerance window, at-least-once
-            delivery with exponential backoff, idempotent by <code class="text-mint font-mono text-sm">tx_hash</code>.
+            Signed webhooks for on-chain payments. HMAC-SHA256 over the raw body, a millisecond timestamp for
+            replay protection, at-least-once delivery with up to 10 attempts, and a stable
+            <code class="text-mint font-mono text-sm">X-ZettaPay-Event-Id</code> for de-duplication.
           </p>
         </header>
 
         <section id="overview" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Overview</h2>
           <p class="text-muted leading-relaxed mb-4">
-            When ZettaPay's chain listener detects a transaction that matches an open invoice — by destination
-            address, amount, and (where supported) memo — it POSTs a signed JSON event to the HTTPS URL you
-            registered at signup. The payload tells you which invoice was paid, on which network, with which
-            <code class="text-mint font-mono text-sm">tx_hash</code>. You verify the signature, look up your
-            order by <code class="text-mint font-mono text-sm">customer_ref</code>, mark it paid, and respond
+            When the listener sees a payment that matches an open invoice — by receive address and amount — and it
+            reaches the required confirmations, it POSTs a signed JSON event to your webhook URL. The payload tells
+            you which invoice was paid, on which chain, in which asset, and — where a single transaction identifies the payment — the
+            <code class="text-mint font-mono text-sm">tx_hash</code>. You verify the signature, look up your order
+            by <code class="text-mint font-mono text-sm">invoice_id</code>, mark it paid, and respond
             <code class="text-mint font-mono text-sm">2xx</code>.
+          </p>
+          <p class="text-muted leading-relaxed">
+            The contract is identical for the self-hosted listener and for Cloud. On the self-hosted listener the
+            URL and secret are the <code class="text-mint font-mono text-sm">MERCHANT_WEBHOOK_URL</code> and
+            <code class="text-mint font-mono text-sm">MERCHANT_WEBHOOK_SECRET</code> environment variables;
+            <code class="text-mint font-mono text-sm">zettapay-listener init</code> generates the secret
+            (<code class="text-mint font-mono text-sm">whsec_…</code>) and prints it once.
           </p>
         </section>
 
         <section id="delivery" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Delivery semantics</h2>
           <ul class="space-y-2 text-muted leading-relaxed">
-            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Transport.</strong> HTTPS only. HTTP URLs are rejected at registration.</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Method.</strong> <code class="text-mint font-mono text-sm">POST</code> with <code class="text-mint font-mono text-sm">Content-Type: application/json</code>.</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Success.</strong> Any <code>2xx</code> response within 10 s is treated as acknowledged.</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Failure.</strong> Non-2xx or timeout triggers retry with exponential backoff (see <a class="text-royal-bright underline" href="#retries">retries</a>).</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> <strong class="text-white">Order.</strong> Events for the same invoice are delivered in confirmation order; cross-invoice ordering is not guaranteed.</li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Transport.</strong> HTTPS only. The single exception is <code class="text-mint font-mono text-sm">http://localhost</code> / <code class="text-mint font-mono text-sm">127.0.0.1</code>, allowed for development; the listener refuses to start with any other plain-HTTP URL.</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Method.</strong> <code class="text-mint font-mono text-sm">POST</code> with <code class="text-mint font-mono text-sm">Content-Type: application/json</code>.</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Success.</strong> Any <code>2xx</code> response within 10 s is treated as acknowledged.</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Failure.</strong> A non-2xx response or a timeout schedules a retry (see <a class="text-royal-bright underline" href="#retries">retries</a>).</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">At least once.</strong> The same event can arrive more than once — de-duplicate (see <a class="text-royal-bright underline" href="#idempotency">idempotency</a>).</span></li>
           </ul>
         </section>
 
@@ -266,23 +274,23 @@
               <tbody>
                 <tr>
                   <td><code>X-ZettaPay-Signature</code></td>
-                  <td class="text-muted">Hex-encoded HMAC-SHA256 of <code>"{timestamp}.{raw_body}"</code> using your <code>webhook_secret</code>.</td>
+                  <td class="text-muted">Hex-encoded HMAC-SHA256 of the raw request body, keyed by your webhook secret.</td>
                 </tr>
                 <tr>
                   <td><code>X-ZettaPay-Timestamp</code></td>
-                  <td class="text-muted">Unix epoch seconds (UTC) when ZettaPay built the event. Reject if outside a 300 s tolerance window.</td>
+                  <td class="text-muted">Unix epoch <strong class="text-white">milliseconds</strong> at the moment of this delivery attempt. Reject if more than 5 minutes off.</td>
                 </tr>
                 <tr>
                   <td><code>X-ZettaPay-Event-Id</code></td>
-                  <td class="text-muted">Stable id for this delivery attempt — useful for de-dupe and log correlation.</td>
+                  <td class="text-muted">Id of the event. The same on every retry of that event — your de-duplication key.</td>
                 </tr>
                 <tr>
-                  <td><code>X-ZettaPay-Delivery-Attempt</code></td>
+                  <td><code>X-ZettaPay-Attempt</code></td>
                   <td class="text-muted">Integer, 1-based. First delivery is <code>1</code>; retries increment.</td>
                 </tr>
                 <tr>
-                  <td><code>User-Agent</code></td>
-                  <td class="text-muted"><code>ZettaPay-Webhooks/1</code></td>
+                  <td><code>Content-Type</code></td>
+                  <td class="text-muted"><code>application/json</code></td>
                 </tr>
               </tbody>
             </table>
@@ -291,36 +299,72 @@
 
         <section id="body" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Body schema</h2>
-          <p class="text-muted leading-relaxed mb-4">All events share the same envelope.</p>
+          <p class="text-muted leading-relaxed mb-4">
+            A flat JSON object. The first eight fields are common to every
+            <code class="text-mint font-mono text-sm">invoice.confirmed</code> event; a few extra fields depend on
+            how the payment was detected.
+          </p>
 
           <div class="code-card" data-tabs="body">
             <div class="tabs">
-              <button class="tab-btn active" data-tab="json">JSON</button>
+              <button class="tab-btn active" data-tab="btc">Bitcoin</button>
+              <button class="tab-btn" data-tab="base">Base · xpub</button>
+              <button class="tab-btn" data-tab="fixed">Base · fixed address</button>
               <button class="tab-btn" data-tab="schema">Field reference</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="json" class="block">{
-  <span class="tk-s">"invoice_id"</span>:        <span class="tk-s">"inv_01HMABCD..."</span>,
-  <span class="tk-s">"event"</span>:             <span class="tk-s">"payment.confirmed"</span>,
-  <span class="tk-s">"amount"</span>:            <span class="tk-s">"19.90"</span>,
-  <span class="tk-s">"currency"</span>:          <span class="tk-s">"USDC"</span>,
-  <span class="tk-s">"network"</span>:           <span class="tk-s">"solana"</span>,
-  <span class="tk-s">"tx_hash"</span>:           <span class="tk-s">"5jkA..."</span>,
-  <span class="tk-s">"confirmations"</span>:     <span class="tk-n">1</span>,
-  <span class="tk-s">"customer_address"</span>:  <span class="tk-s">"7Np41oeY..."</span>,
-  <span class="tk-s">"customer_ref"</span>:      <span class="tk-s">"order_42"</span>,
-  <span class="tk-s">"created_at"</span>:        <span class="tk-s">"2026-05-17T12:34:56Z"</span>
+<pre data-pane="btc" class="block">{
+  <span class="tk-s">"event"</span>:         <span class="tk-s">"invoice.confirmed"</span>,
+  <span class="tk-s">"invoice_id"</span>:    <span class="tk-s">"inv_..."</span>,
+  <span class="tk-s">"merchant_id"</span>:   <span class="tk-s">"mer_..."</span>,
+  <span class="tk-s">"chain"</span>:         <span class="tk-s">"btc"</span>,
+  <span class="tk-s">"asset"</span>:         <span class="tk-s">"BTC"</span>,
+  <span class="tk-s">"amount"</span>:        <span class="tk-s">"0.0005"</span>,
+  <span class="tk-s">"address"</span>:       <span class="tk-s">"bc1q..."</span>,
+  <span class="tk-s">"tx_hash"</span>:       <span class="tk-s">"..."</span>,
+  <span class="tk-s">"confirmations"</span>: <span class="tk-n">3</span>,
+  <span class="tk-s">"confirmed_at"</span>:  <span class="tk-s">"2026-06-01T12:01:00.000Z"</span>
 }</pre>
-<pre data-pane="schema" class="hidden"><span class="tk-s">invoice_id</span>        <span class="tk-c">string  · ZettaPay invoice id (inv_*)</span>
-<span class="tk-s">event</span>             <span class="tk-c">string  · see "Event types" below</span>
-<span class="tk-s">amount</span>            <span class="tk-c">string  · decimal as a string (avoid float drift)</span>
-<span class="tk-s">currency</span>          <span class="tk-c">string  · "BTC" | "ETH" | "USDC"</span>
-<span class="tk-s">network</span>           <span class="tk-c">string  · "bitcoin" | "ethereum" | "base" | "polygon" | "solana"</span>
-<span class="tk-s">tx_hash</span>           <span class="tk-c">string  · on-chain transaction hash / signature</span>
-<span class="tk-s">confirmations</span>     <span class="tk-c">number  · confirmations at delivery time</span>
-<span class="tk-s">customer_address</span>  <span class="tk-c">string  · the address that paid</span>
-<span class="tk-s">customer_ref</span>      <span class="tk-c">string  · whatever you set on the invoice</span>
-<span class="tk-s">created_at</span>        <span class="tk-c">string  · ISO-8601 UTC</span></pre>
+<pre data-pane="base" class="hidden">{
+  <span class="tk-s">"event"</span>:        <span class="tk-s">"invoice.confirmed"</span>,
+  <span class="tk-s">"invoice_id"</span>:   <span class="tk-s">"inv_..."</span>,
+  <span class="tk-s">"merchant_id"</span>:  <span class="tk-s">"mer_..."</span>,
+  <span class="tk-s">"chain"</span>:        <span class="tk-s">"base"</span>,
+  <span class="tk-s">"asset"</span>:        <span class="tk-s">"USDC"</span>,
+  <span class="tk-s">"amount"</span>:       <span class="tk-s">"42000000"</span>,          <span class="tk-c">// token base units (6 decimals)</span>
+  <span class="tk-s">"address"</span>:      <span class="tk-s">"0x..."</span>,
+  <span class="tk-s">"tx_hash"</span>:      <span class="tk-k">null</span>,                <span class="tk-c">// detected by balance — no single transaction</span>
+  <span class="tk-s">"balance"</span>:      <span class="tk-s">"42000000"</span>,          <span class="tk-c">// balance observed on the invoice address</span>
+  <span class="tk-s">"confirmed_at"</span>: <span class="tk-s">"2026-06-01T12:01:00.000Z"</span>
+}</pre>
+<pre data-pane="fixed" class="hidden">{
+  <span class="tk-s">"event"</span>:         <span class="tk-s">"invoice.confirmed"</span>,
+  <span class="tk-s">"invoice_id"</span>:    <span class="tk-s">"inv_..."</span>,
+  <span class="tk-s">"merchant_id"</span>:   <span class="tk-s">"mer_..."</span>,
+  <span class="tk-s">"chain"</span>:         <span class="tk-s">"base"</span>,
+  <span class="tk-s">"asset"</span>:         <span class="tk-s">"USDT"</span>,
+  <span class="tk-s">"token_address"</span>: <span class="tk-s">"0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"</span>,
+  <span class="tk-s">"amount"</span>:        <span class="tk-s">"29000042"</span>,         <span class="tk-c">// token base units, nonce included</span>
+  <span class="tk-s">"address"</span>:       <span class="tk-s">"0xC4a7..."</span>,
+  <span class="tk-s">"tx_hash"</span>:       <span class="tk-s">"..."</span>,
+  <span class="tk-s">"value"</span>:         <span class="tk-s">"29000042"</span>,         <span class="tk-c">// amount actually transferred</span>
+  <span class="tk-s">"metadata"</span>:      { <span class="tk-s">"mode"</span>: <span class="tk-s">"fixed-address"</span>, <span class="tk-s">"ref"</span>: <span class="tk-s">"inv_..."</span>, <span class="tk-s">"nonce"</span>: <span class="tk-n">42</span>, <span class="tk-s">"asset"</span>: <span class="tk-s">"USDT"</span> },
+  <span class="tk-s">"confirmed_at"</span>:  <span class="tk-s">"2026-06-01T12:01:00.000Z"</span>
+}</pre>
+<pre data-pane="schema" class="hidden"><span class="tk-s">event</span>          <span class="tk-c">string  · "invoice.confirmed" | "payment.orphan"</span>
+<span class="tk-s">invoice_id</span>     <span class="tk-c">string  · id returned when the invoice was created</span>
+<span class="tk-s">merchant_id</span>    <span class="tk-c">string  · the merchant the invoice belongs to</span>
+<span class="tk-s">chain</span>          <span class="tk-c">string  · "btc" | "base"</span>
+<span class="tk-s">asset</span>          <span class="tk-c">string  · "BTC" | "USDC" | "USDT"</span>
+<span class="tk-s">amount</span>         <span class="tk-c">string  · invoice amount: decimal BTC, or token base units on Base</span>
+<span class="tk-s">address</span>        <span class="tk-c">string  · receive address that was paid</span>
+<span class="tk-s">tx_hash</span>        <span class="tk-c">string  · on-chain transaction hash (null in Base xpub mode)</span>
+<span class="tk-s">confirmed_at</span>   <span class="tk-c">string  · ISO 8601 timestamp</span>
+<span class="tk-s">confirmations</span>  <span class="tk-c">number  · Bitcoin only</span>
+<span class="tk-s">balance</span>        <span class="tk-c">string  · Base xpub mode only, token base units</span>
+<span class="tk-s">token_address</span>  <span class="tk-c">string  · Base fixed-address mode only, ERC-20 contract</span>
+<span class="tk-s">value</span>          <span class="tk-c">string  · Base fixed-address mode only, token base units</span>
+<span class="tk-s">metadata</span>       <span class="tk-c">object  · Base fixed-address mode only: mode, ref, nonce, asset</span></pre>
           </div>
         </section>
 
@@ -333,280 +377,260 @@
               </thead>
               <tbody>
                 <tr>
-                  <td><code>payment.detected</code></td>
-                  <td class="text-muted">A matching transaction is observed in the mempool / unconfirmed. <em>Optional</em> — opt in per webhook endpoint.</td>
+                  <td><code>invoice.confirmed</code></td>
+                  <td class="text-muted">The payment for an invoice reached the required confirmations. <strong>The signal you should act on.</strong></td>
                 </tr>
                 <tr>
-                  <td><code>payment.confirmed</code></td>
-                  <td class="text-muted">Transaction reached the configured confirmation threshold for the network. <strong>The signal you should act on.</strong></td>
-                </tr>
-                <tr>
-                  <td><code>payment.underpaid</code></td>
-                  <td class="text-muted">A confirmed transaction landed but was less than <code>amount</code>. Includes the actual amount received.</td>
-                </tr>
-                <tr>
-                  <td><code>payment.overpaid</code></td>
-                  <td class="text-muted">Confirmed transaction exceeded <code>amount</code> (rare; useful for tipping flows).</td>
-                </tr>
-                <tr>
-                  <td><code>invoice.expired</code></td>
-                  <td class="text-muted">Invoice hit its expiry window with no matching transaction. Safe to fail the order client-side.</td>
+                  <td><code>payment.orphan</code></td>
+                  <td class="text-muted">Fixed-address mode only. A transfer reached your fixed address but matches no open invoice — the amount was not exact, or the invoice had expired. It carries <code>chain</code>, <code>asset</code>, <code>token_address</code>, <code>address</code>, <code>tx_hash</code>, <code>value</code> and <code>detected_at</code>, and no <code>invoice_id</code>. The funds are in your wallet; no invoice is marked paid. Handle it manually.</td>
                 </tr>
               </tbody>
             </table>
           </div>
+          <p class="text-sm text-muted mt-4">
+            There is no webhook for expiry. To learn that an invoice expired unpaid, read
+            <code class="text-mint font-mono text-xs">GET /invoice/:id</code>.
+          </p>
         </section>
 
         <section id="networks" class="scroll-mt-32 mb-14">
-          <h2 class="text-2xl font-bold mb-3">Networks &amp; finality</h2>
+          <h2 class="text-2xl font-bold mb-3">Confirmations</h2>
           <p class="text-muted leading-relaxed mb-4">
-            ZettaPay runs its own RPC listeners on every supported network. Default confirmation thresholds:
+            <code class="text-mint font-mono text-sm">invoice.confirmed</code> is sent only once the payment is
+            considered final enough for its size.
           </p>
           <div class="code-card overflow-hidden">
             <table class="spec">
               <thead>
-                <tr><th>Network</th><th>Default confs</th><th>Typical latency</th></tr>
+                <tr><th>Chain</th><th>Rule</th></tr>
               </thead>
               <tbody>
-                <tr><td><code>solana</code></td><td class="text-muted"><code>finalized</code> commitment</td><td class="text-muted">&lt; 2 s</td></tr>
-                <tr><td><code>ethereum</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 12 s</td></tr>
-                <tr><td><code>base</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
-                <tr><td><code>polygon</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 2 s</td></tr>
-                <tr><td><code>bitcoin</code></td><td class="text-muted"><code>1</code></td><td class="text-muted">~ 10 min</td></tr>
+                <tr><td><code>btc</code></td><td class="text-muted">Tiered by invoice amount: 1 confirmation below 0.001 BTC, 3 below 0.01 BTC, 6 from 0.01 BTC up.</td></tr>
+                <tr><td><code>base</code> · xpub mode</td><td class="text-muted">The invoice's own address is read over Base RPC until it holds the invoiced amount.</td></tr>
+                <tr><td><code>base</code> · fixed address</td><td class="text-muted">The transfer must match an open invoice's amount exactly and be reported by at least two independent RPCs with the required confirmations. With a single source the payment stays pending.</td></tr>
               </tbody>
             </table>
           </div>
-          <div class="callout mt-5">
-            <strong>Reorgs.</strong> If a confirmed transaction is rolled back, ZettaPay re-fires the event when the
-            new canonical chain re-includes (or omits) it. Always trust the latest event for a given
-            <code>tx_hash</code> over a stale one.
-          </div>
+          <p class="text-sm text-muted mt-4">
+            Bitcoin is watched through mempool.space and Base through public RPC by default. Self-hosters can
+            point <code class="text-mint font-mono text-xs">BASE_RPC_URL</code> at their own node.
+          </p>
         </section>
 
         <section id="signature" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Signature scheme</h2>
           <p class="text-muted leading-relaxed mb-4">
-            ZettaPay signs the concatenation
-            <code class="text-mint font-mono text-sm">"{X-ZettaPay-Timestamp}.{raw_body}"</code> with HMAC-SHA256
-            using your <code class="text-mint font-mono text-sm">webhook_secret</code>, hex-encoded. To verify:
+            The signature covers the request body, byte for byte:
           </p>
-          <ol class="space-y-2 text-muted leading-relaxed list-decimal pl-5 mb-5">
-            <li>Read the raw request body <em>as bytes</em>. Do not pre-parse JSON — re-serialization changes whitespace.</li>
-            <li>Read <code class="text-mint font-mono text-sm">X-ZettaPay-Signature</code> and <code class="text-mint font-mono text-sm">X-ZettaPay-Timestamp</code>.</li>
-            <li>Reject if <code>|now - timestamp| &gt; 300</code> seconds.</li>
-            <li>Compute <code>hmac_sha256(secret, f"{timestamp}.{body}")</code>, hex-encode.</li>
-            <li>Compare against the header using a <strong class="text-white">constant-time</strong> comparator (<code>crypto.timingSafeEqual</code>, <code>hmac.compare_digest</code>, <code>hash_equals</code>, <code>subtle::ConstantTimeEq</code>).</li>
-            <li>Process the event.</li>
-          </ol>
+          <div class="code-card">
+<pre>signature = hex( HMAC_SHA256( key = webhook_secret, message = raw_body ) )</pre>
+          </div>
+          <ul class="space-y-2 text-muted leading-relaxed mt-5">
+            <li class="flex gap-3"><span class="text-mint">›</span> <span>Use the <strong class="text-white">raw bytes</strong> you received. Parsing the JSON and serializing it again changes the bytes and breaks the signature.</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span>Compare in <strong class="text-white">constant time</strong>.</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span>The timestamp is a separate header and is not part of the signed message — check it as well (see <a class="text-royal-bright underline" href="#replay">replay protection</a>).</span></li>
+          </ul>
         </section>
 
         <section id="verify" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Verify examples</h2>
           <p class="text-muted leading-relaxed mb-4">
-            Pure-stdlib verification, no SDK required. Copy, drop into your handler, done.
+            Standard library only — no package needed.
           </p>
 
           <div class="code-card" data-tabs="verify">
             <div class="tabs">
-              <button class="tab-btn active" data-tab="ts">TypeScript</button>
+              <button class="tab-btn active" data-tab="node">Node.js</button>
               <button class="tab-btn" data-tab="py">Python</button>
               <button class="tab-btn" data-tab="php">PHP</button>
-              <button class="tab-btn" data-tab="rs">Rust</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ts" class="block"><span class="tk-k">import</span> { createHmac, timingSafeEqual } <span class="tk-k">from</span> <span class="tk-s">'node:crypto'</span>;
+<pre data-pane="node" class="block"><span class="tk-k">import</span> express <span class="tk-k">from</span> <span class="tk-s">'express'</span>;
+<span class="tk-k">import</span> { createHmac, timingSafeEqual } <span class="tk-k">from</span> <span class="tk-s">'node:crypto'</span>;
 
-<span class="tk-k">export function</span> <span class="tk-f">verifyZettaPay</span>(
-  rawBody: <span class="tk-t">Buffer</span>,
-  signature: <span class="tk-t">string</span>,
-  timestamp: <span class="tk-t">string</span>,
-  secret: <span class="tk-t">string</span>,
-  toleranceSec = <span class="tk-n">300</span>,
-): <span class="tk-t">void</span> {
-  <span class="tk-k">const</span> ts = parseInt(timestamp, <span class="tk-n">10</span>);
-  <span class="tk-k">if</span> (!Number.<span class="tk-f">isFinite</span>(ts)) <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'bad timestamp'</span>);
+<span class="tk-k">const</span> SECRET = process.env.<span class="tk-t">MERCHANT_WEBHOOK_SECRET</span>;
+<span class="tk-k">const</span> TOLERANCE_MS = <span class="tk-n">5</span> * <span class="tk-n">60</span> * <span class="tk-n">1000</span>;
 
-  <span class="tk-k">const</span> now = Math.<span class="tk-f">floor</span>(<span class="tk-t">Date</span>.<span class="tk-f">now</span>() / <span class="tk-n">1000</span>);
-  <span class="tk-k">if</span> (Math.<span class="tk-f">abs</span>(now - ts) &gt; toleranceSec) {
-    <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'timestamp outside tolerance'</span>);
-  }
+<span class="tk-k">function</span> <span class="tk-f">verify</span>(rawBody, sig, ts) {
+  <span class="tk-k">if</span> (!sig || !ts) <span class="tk-k">return false</span>;
+  <span class="tk-k">if</span> (Math.<span class="tk-f">abs</span>(Date.<span class="tk-f">now</span>() - Number(ts)) &gt; TOLERANCE_MS) <span class="tk-k">return false</span>;
+  <span class="tk-k">const</span> expected = <span class="tk-f">createHmac</span>(<span class="tk-s">'sha256'</span>, SECRET).<span class="tk-f">update</span>(rawBody).<span class="tk-f">digest</span>();
+  <span class="tk-k">const</span> given = Buffer.<span class="tk-f">from</span>(sig, <span class="tk-s">'hex'</span>);
+  <span class="tk-k">return</span> given.length === expected.length &amp;&amp; <span class="tk-f">timingSafeEqual</span>(given, expected);
+}
 
-  <span class="tk-k">const</span> expected = <span class="tk-f">createHmac</span>(<span class="tk-s">'sha256'</span>, secret)
-    .<span class="tk-f">update</span>(`${timestamp}.${rawBody.<span class="tk-f">toString</span>(<span class="tk-s">'utf8'</span>)}`)
-    .<span class="tk-f">digest</span>(<span class="tk-s">'hex'</span>);
+<span class="tk-k">const</span> app = <span class="tk-f">express</span>();
+<span class="tk-k">const</span> seen = <span class="tk-k">new</span> <span class="tk-t">Set</span>();   <span class="tk-c">// use your database in production</span>
 
-  <span class="tk-k">const</span> sigBuf = <span class="tk-t">Buffer</span>.<span class="tk-f">from</span>(signature, <span class="tk-s">'hex'</span>);
-  <span class="tk-k">const</span> expBuf = <span class="tk-t">Buffer</span>.<span class="tk-f">from</span>(expected, <span class="tk-s">'hex'</span>);
-  <span class="tk-k">if</span> (sigBuf.length !== expBuf.length || !<span class="tk-f">timingSafeEqual</span>(sigBuf, expBuf)) {
-    <span class="tk-k">throw new</span> <span class="tk-t">Error</span>(<span class="tk-s">'signature mismatch'</span>);
-  }
-}</pre>
-<pre data-pane="py" class="hidden"><span class="tk-k">import</span> hmac
-<span class="tk-k">import</span> hashlib
-<span class="tk-k">import</span> time
+app.<span class="tk-f">post</span>(
+  <span class="tk-s">'/webhooks/zettapay'</span>,
+  express.<span class="tk-f">raw</span>({ type: <span class="tk-s">'application/json'</span> }),   <span class="tk-c">// raw Buffer, not parsed JSON</span>
+  <span class="tk-k">async</span> (req, res) =&gt; {
+    <span class="tk-k">const</span> ok = <span class="tk-f">verify</span>(
+      req.body,
+      req.<span class="tk-f">header</span>(<span class="tk-s">'X-ZettaPay-Signature'</span>),
+      req.<span class="tk-f">header</span>(<span class="tk-s">'X-ZettaPay-Timestamp'</span>),
+    );
+    <span class="tk-k">if</span> (!ok) <span class="tk-k">return</span> res.<span class="tk-f">status</span>(<span class="tk-n">401</span>).<span class="tk-f">send</span>(<span class="tk-s">'invalid signature'</span>);
 
+    <span class="tk-k">const</span> eventId = req.<span class="tk-f">header</span>(<span class="tk-s">'X-ZettaPay-Event-Id'</span>);
+    <span class="tk-k">if</span> (seen.<span class="tk-f">has</span>(eventId)) <span class="tk-k">return</span> res.<span class="tk-f">status</span>(<span class="tk-n">200</span>).<span class="tk-f">send</span>(<span class="tk-s">'duplicate'</span>);
 
-<span class="tk-k">class</span> <span class="tk-t">WebhookError</span>(<span class="tk-t">Exception</span>): <span class="tk-k">pass</span>
-
-
-<span class="tk-k">def</span> <span class="tk-f">verify_zettapay</span>(
-    raw_body: bytes,
-    signature: str,
-    timestamp: str,
-    secret: str,
-    tolerance_sec: int = <span class="tk-n">300</span>,
-) -&gt; <span class="tk-k">None</span>:
-    <span class="tk-k">try</span>:
-        ts = <span class="tk-f">int</span>(timestamp)
-    <span class="tk-k">except</span> <span class="tk-t">ValueError</span>:
-        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"bad timestamp"</span>)
-
-    <span class="tk-k">if</span> <span class="tk-f">abs</span>(<span class="tk-f">int</span>(time.<span class="tk-f">time</span>()) - ts) &gt; tolerance_sec:
-        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"timestamp outside tolerance"</span>)
-
-    payload  = <span class="tk-f">f"{ts}."</span>.<span class="tk-f">encode</span>() + raw_body
-    expected = hmac.<span class="tk-f">new</span>(secret.<span class="tk-f">encode</span>(), payload, hashlib.sha256).<span class="tk-f">hexdigest</span>()
-
-    <span class="tk-k">if not</span> hmac.<span class="tk-f">compare_digest</span>(expected, signature):
-        <span class="tk-k">raise</span> <span class="tk-t">WebhookError</span>(<span class="tk-s">"signature mismatch"</span>)</pre>
-<pre data-pane="php" class="hidden"><span class="tk-k">&lt;?php</span>
-<span class="tk-k">declare</span>(strict_types=<span class="tk-n">1</span>);
-
-<span class="tk-k">final class</span> <span class="tk-t">ZettaPayWebhook</span>
-{
-    <span class="tk-k">public static function</span> <span class="tk-f">verify</span>(
-        <span class="tk-t">string</span> <span class="tk-s">$rawBody</span>,
-        <span class="tk-t">string</span> <span class="tk-s">$signature</span>,
-        <span class="tk-t">string</span> <span class="tk-s">$timestamp</span>,
-        <span class="tk-t">string</span> <span class="tk-s">$secret</span>,
-        <span class="tk-t">int</span>    <span class="tk-s">$toleranceSec</span> = <span class="tk-n">300</span>,
-    ): <span class="tk-t">void</span> {
-        <span class="tk-k">if</span> (!<span class="tk-f">ctype_digit</span>(<span class="tk-s">$timestamp</span>)) {
-            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'bad timestamp'</span>);
-        }
-        <span class="tk-s">$ts</span> = (<span class="tk-t">int</span>) <span class="tk-s">$timestamp</span>;
-        <span class="tk-k">if</span> (<span class="tk-f">abs</span>(<span class="tk-f">time</span>() - <span class="tk-s">$ts</span>) &gt; <span class="tk-s">$toleranceSec</span>) {
-            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'timestamp outside tolerance'</span>);
-        }
-
-        <span class="tk-s">$expected</span> = <span class="tk-f">hash_hmac</span>(<span class="tk-s">'sha256'</span>, <span class="tk-s">$timestamp</span> . <span class="tk-s">'.'</span> . <span class="tk-s">$rawBody</span>, <span class="tk-s">$secret</span>);
-        <span class="tk-k">if</span> (!<span class="tk-f">hash_equals</span>(<span class="tk-s">$expected</span>, <span class="tk-s">$signature</span>)) {
-            <span class="tk-k">throw new</span> \<span class="tk-t">RuntimeException</span>(<span class="tk-s">'signature mismatch'</span>);
-        }
+    <span class="tk-k">const</span> event = JSON.<span class="tk-f">parse</span>(req.body.<span class="tk-f">toString</span>(<span class="tk-s">'utf8'</span>));
+    <span class="tk-k">if</span> (event.event === <span class="tk-s">'invoice.confirmed'</span>) {
+      <span class="tk-k">await</span> <span class="tk-f">markOrderPaid</span>(event.invoice_id, event.tx_hash);   <span class="tk-c">// your own function</span>
     }
-}</pre>
-<pre data-pane="rs" class="hidden"><span class="tk-k">use</span> hmac::{<span class="tk-t">Hmac</span>, <span class="tk-t">Mac</span>};
-<span class="tk-k">use</span> sha2::<span class="tk-t">Sha256</span>;
-<span class="tk-k">use</span> std::time::{<span class="tk-t">SystemTime</span>, <span class="tk-t">UNIX_EPOCH</span>};
-<span class="tk-k">use</span> subtle::<span class="tk-t">ConstantTimeEq</span>;
+    seen.<span class="tk-f">add</span>(eventId);
+    res.<span class="tk-f">status</span>(<span class="tk-n">200</span>).<span class="tk-f">send</span>(<span class="tk-s">'ok'</span>);
+  },
+);</pre>
+<pre data-pane="py" class="hidden"><span class="tk-k">import</span> hashlib, hmac, json, os, time
+<span class="tk-k">from</span> flask <span class="tk-k">import</span> <span class="tk-t">Flask</span>, request, abort
 
-<span class="tk-k">type</span> <span class="tk-t">HmacSha256</span> = <span class="tk-t">Hmac</span>&lt;<span class="tk-t">Sha256</span>&gt;;
+app = <span class="tk-t">Flask</span>(__name__)
+SECRET = os.environ[<span class="tk-s">"MERCHANT_WEBHOOK_SECRET"</span>].<span class="tk-f">encode</span>()
+TOLERANCE_MS = <span class="tk-n">5</span> * <span class="tk-n">60</span> * <span class="tk-n">1000</span>
 
-<span class="tk-k">pub fn</span> <span class="tk-f">verify_zettapay</span>(
-    raw_body: &amp;[u8],
-    signature_hex: &amp;str,
-    timestamp: &amp;str,
-    secret: &amp;[u8],
-    tolerance_sec: u64,
-) -&gt; <span class="tk-t">Result</span>&lt;(), &amp;<span class="tk-s">'static</span> <span class="tk-t">str</span>&gt; {
-    <span class="tk-k">let</span> ts: u64 = timestamp.<span class="tk-f">parse</span>().<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad timestamp"</span>)?;
-    <span class="tk-k">let</span> now  = <span class="tk-t">SystemTime</span>::<span class="tk-f">now</span>().<span class="tk-f">duration_since</span>(<span class="tk-t">UNIX_EPOCH</span>).<span class="tk-f">unwrap</span>().<span class="tk-f">as_secs</span>();
-    <span class="tk-k">if</span> now.<span class="tk-f">abs_diff</span>(ts) &gt; tolerance_sec {
-        <span class="tk-k">return</span> <span class="tk-t">Err</span>(<span class="tk-s">"timestamp outside tolerance"</span>);
-    }
+<span class="tk-k">def</span> <span class="tk-f">verify</span>(raw: bytes, sig: str, ts: str) -&gt; bool:
+    <span class="tk-k">if not</span> sig <span class="tk-k">or not</span> ts <span class="tk-k">or not</span> ts.<span class="tk-f">isdigit</span>():
+        <span class="tk-k">return</span> <span class="tk-n">False</span>
+    <span class="tk-k">if</span> <span class="tk-f">abs</span>(time.<span class="tk-f">time</span>() * <span class="tk-n">1000</span> - <span class="tk-f">int</span>(ts)) &gt; TOLERANCE_MS:
+        <span class="tk-k">return</span> <span class="tk-n">False</span>
+    expected = hmac.<span class="tk-f">new</span>(SECRET, raw, hashlib.sha256).<span class="tk-f">hexdigest</span>()
+    <span class="tk-k">return</span> hmac.<span class="tk-f">compare_digest</span>(expected, sig.<span class="tk-f">lower</span>())
 
-    <span class="tk-k">let mut</span> mac = <span class="tk-t">HmacSha256</span>::<span class="tk-f">new_from_slice</span>(secret).<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad key"</span>)?;
-    mac.<span class="tk-f">update</span>(timestamp.<span class="tk-f">as_bytes</span>());
-    mac.<span class="tk-f">update</span>(b<span class="tk-s">"."</span>);
-    mac.<span class="tk-f">update</span>(raw_body);
-    <span class="tk-k">let</span> expected = mac.<span class="tk-f">finalize</span>().<span class="tk-f">into_bytes</span>();
+<span class="tk-k">@app.post</span>(<span class="tk-s">"/webhooks/zettapay"</span>)
+<span class="tk-k">def</span> <span class="tk-f">on_event</span>():
+    raw = request.<span class="tk-f">get_data</span>()                 <span class="tk-c"># raw bytes, NOT request.json</span>
+    <span class="tk-k">if not</span> <span class="tk-f">verify</span>(raw,
+                  request.headers.<span class="tk-f">get</span>(<span class="tk-s">"X-ZettaPay-Signature"</span>, <span class="tk-s">""</span>),
+                  request.headers.<span class="tk-f">get</span>(<span class="tk-s">"X-ZettaPay-Timestamp"</span>, <span class="tk-s">""</span>)):
+        <span class="tk-f">abort</span>(<span class="tk-n">401</span>)
 
-    <span class="tk-k">let</span> sig = hex::<span class="tk-f">decode</span>(signature_hex).<span class="tk-f">map_err</span>(|_| <span class="tk-s">"bad sig"</span>)?;
-    <span class="tk-k">if</span> sig.<span class="tk-f">ct_eq</span>(&amp;expected).<span class="tk-f">into</span>() { <span class="tk-t">Ok</span>(()) } <span class="tk-k">else</span> { <span class="tk-t">Err</span>(<span class="tk-s">"signature mismatch"</span>) }
-}</pre>
+    event = json.<span class="tk-f">loads</span>(raw)
+    <span class="tk-k">if</span> event[<span class="tk-s">"event"</span>] == <span class="tk-s">"invoice.confirmed"</span>:
+        <span class="tk-f">mark_order_paid</span>(event[<span class="tk-s">"invoice_id"</span>], event[<span class="tk-s">"tx_hash"</span>])   <span class="tk-c"># your own function</span>
+    <span class="tk-k">return</span> <span class="tk-s">"ok"</span>, <span class="tk-n">200</span></pre>
+<pre data-pane="php" class="hidden"><span class="tk-s">$secret</span> = <span class="tk-f">getenv</span>(<span class="tk-s">'MERCHANT_WEBHOOK_SECRET'</span>);
+<span class="tk-s">$raw</span>    = <span class="tk-f">file_get_contents</span>(<span class="tk-s">'php://input'</span>);            <span class="tk-c">// raw body</span>
+<span class="tk-s">$sig</span>    = <span class="tk-s">$_SERVER</span>[<span class="tk-s">'HTTP_X_ZETTAPAY_SIGNATURE'</span>] ?? <span class="tk-s">''</span>;
+<span class="tk-s">$ts</span>     = <span class="tk-s">$_SERVER</span>[<span class="tk-s">'HTTP_X_ZETTAPAY_TIMESTAMP'</span>] ?? <span class="tk-s">''</span>;
+
+<span class="tk-s">$fresh</span>    = <span class="tk-f">ctype_digit</span>(<span class="tk-s">$ts</span>) &amp;&amp; <span class="tk-f">abs</span>(<span class="tk-f">microtime</span>(<span class="tk-k">true</span>) * <span class="tk-n">1000</span> - (<span class="tk-k">float</span>) <span class="tk-s">$ts</span>) &lt;= <span class="tk-n">300000</span>;
+<span class="tk-s">$expected</span> = <span class="tk-f">hash_hmac</span>(<span class="tk-s">'sha256'</span>, <span class="tk-s">$raw</span>, <span class="tk-s">$secret</span>);
+
+<span class="tk-k">if</span> (!<span class="tk-s">$fresh</span> || !<span class="tk-f">hash_equals</span>(<span class="tk-s">$expected</span>, <span class="tk-f">strtolower</span>(<span class="tk-s">$sig</span>))) {
+    <span class="tk-f">http_response_code</span>(<span class="tk-n">401</span>);
+    <span class="tk-k">exit</span>(<span class="tk-s">'invalid signature'</span>);
+}
+
+<span class="tk-s">$event</span> = <span class="tk-f">json_decode</span>(<span class="tk-s">$raw</span>, <span class="tk-k">true</span>);
+<span class="tk-k">if</span> (<span class="tk-s">$event</span>[<span class="tk-s">'event'</span>] === <span class="tk-s">'invoice.confirmed'</span>) {
+    <span class="tk-f">mark_order_paid</span>(<span class="tk-s">$event</span>[<span class="tk-s">'invoice_id'</span>], <span class="tk-s">$event</span>[<span class="tk-s">'tx_hash'</span>]);   <span class="tk-c">// your own function</span>
+}
+<span class="tk-f">echo</span> <span class="tk-s">'ok'</span>;</pre>
           </div>
         </section>
 
         <section id="replay" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Replay protection</h2>
           <p class="text-muted leading-relaxed mb-4">
-            The 300 s tolerance on <code>X-ZettaPay-Timestamp</code> bounds any attacker's replay window. Combine with
-            <a class="text-royal-bright underline" href="#idempotency">idempotency</a> for full coverage: even if an attacker
-            captures a valid request within the window, your unique constraint on <code>tx_hash</code> ensures the order
-            cannot be marked paid twice.
+            <code class="text-mint font-mono text-sm">X-ZettaPay-Timestamp</code> is set fresh on every delivery
+            attempt, in unix <strong class="text-white">milliseconds</strong>. Reject a request whose timestamp is
+            more than five minutes away from your server's clock, so a captured request cannot be replayed later.
           </p>
           <div class="callout">
-            <strong>Clock drift.</strong> If your server's clock drifts &gt; 5 minutes from UTC, signature verification
-            will fail in ways that look like attacks. Run NTP. <code>X-ZettaPay-Timestamp</code> is always UTC seconds.
+            <strong>Milliseconds, not seconds.</strong> Compare against <code>Date.now()</code>, or multiply a
+            seconds clock by 1000. Keep your server clock in sync (NTP).
           </div>
         </section>
 
         <section id="idempotency" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Idempotency</h2>
           <p class="text-muted leading-relaxed mb-4">
-            ZettaPay aims for exactly-once <em>logical</em> delivery: a successful event is never re-fired with the
-            same <code>tx_hash</code>. In practice, network failures mean you may receive the same logical event more
-            than once across retries — same <code>tx_hash</code>, same <code>invoice_id</code>. Defense in depth:
+            Delivery is at least once: if your endpoint processed an event but the acknowledgement was lost, the
+            event comes again. Every retry of an event carries the same
+            <code class="text-mint font-mono text-sm">X-ZettaPay-Event-Id</code>, so store the ids you have
+            processed and answer <code class="text-mint font-mono text-sm">200</code> to a repeat without doing
+            the work twice. A unique constraint on <code class="text-mint font-mono text-sm">invoice_id</code>
+            in your orders table gives the same guarantee for <code>invoice.confirmed</code>.
           </p>
-          <ul class="space-y-2 text-muted leading-relaxed">
-            <li class="flex gap-3"><span class="text-mint">›</span> Add a <code>UNIQUE (tx_hash)</code> constraint on your payments table; let the INSERT fail on duplicate.</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> Or upsert by <code>invoice_id</code> and treat repeated calls as no-ops.</li>
-            <li class="flex gap-3"><span class="text-mint">›</span> Return <code>200</code> on duplicates so ZettaPay stops retrying.</li>
-          </ul>
+          <p class="text-muted leading-relaxed">
+            If you suspect a missed delivery, reconcile by reading
+            <code class="text-mint font-mono text-sm">GET /invoice/:id</code> — it returns the current
+            <code>status</code> and <code>tx_hash</code>.
+          </p>
         </section>
 
         <section id="retries" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Retry policy</h2>
           <p class="text-muted leading-relaxed mb-4">
-            Non-2xx responses (and 10 s timeouts) trigger retry with exponential backoff + full jitter:
+            A non-2xx response, a network error or a 10 s timeout schedules the next attempt on a fixed curve, up
+            to 10 attempts in total:
           </p>
           <div class="code-card overflow-hidden">
             <table class="spec">
-              <thead><tr><th>Attempt</th><th>Delay (approx)</th></tr></thead>
+              <thead><tr><th>After failed attempt</th><th>Wait before the next one</th></tr></thead>
               <tbody>
-                <tr><td><code>1</code></td><td class="text-muted">immediate</td></tr>
-                <tr><td><code>2</code></td><td class="text-muted">10 s</td></tr>
+                <tr><td><code>1</code></td><td class="text-muted">1 s</td></tr>
+                <tr><td><code>2</code></td><td class="text-muted">5 s</td></tr>
                 <tr><td><code>3</code></td><td class="text-muted">30 s</td></tr>
                 <tr><td><code>4</code></td><td class="text-muted">2 min</td></tr>
                 <tr><td><code>5</code></td><td class="text-muted">10 min</td></tr>
-                <tr><td><code>6</code></td><td class="text-muted">1 h</td></tr>
-                <tr><td><code>7</code></td><td class="text-muted">6 h</td></tr>
-                <tr><td><code>8</code> (final)</td><td class="text-muted">24 h</td></tr>
+                <tr><td><code>6</code></td><td class="text-muted">30 min</td></tr>
+                <tr><td><code>7</code></td><td class="text-muted">1 h</td></tr>
+                <tr><td><code>8</code></td><td class="text-muted">3 h</td></tr>
+                <tr><td><code>9</code></td><td class="text-muted">12 h</td></tr>
+                <tr><td><code>10</code> (final)</td><td class="text-muted">no further attempts</td></tr>
               </tbody>
             </table>
           </div>
           <p class="text-sm text-muted mt-4">
-            After the final attempt, the event is parked in the dashboard's <em>Webhook deliveries</em> log and can
-            be replayed manually. Successful events that you missed never go to a dead-letter queue silently — you
-            can always replay from the log.
+            After the tenth failed attempt the event is no longer delivered. The invoice itself is unaffected —
+            read its state with <code class="text-mint font-mono text-xs">GET /invoice/:id</code>.
           </p>
         </section>
 
         <section id="testing" class="scroll-mt-32 mb-14">
           <h2 class="text-2xl font-bold mb-3">Testing locally</h2>
           <p class="text-muted leading-relaxed mb-4">
-            Expose your dev server with a tunnel and have ZettaPay deliver to it.
+            <code class="text-mint font-mono text-sm">@zettapay/receiver</code> is a small local webhook receiver.
+            It performs the same checks your endpoint must make — signature and replay window — and prints every
+            delivery. Point the listener at it, or send it a hand-signed event.
           </p>
           <div class="code-card" data-tabs="test">
             <div class="tabs">
-              <button class="tab-btn active" data-tab="ngrok">ngrok</button>
-              <button class="tab-btn" data-tab="cf">cloudflared</button>
+              <button class="tab-btn active" data-tab="recv">Run the receiver</button>
+              <button class="tab-btn" data-tab="env">Point the listener at it</button>
               <button class="tab-btn" data-tab="send">Send a test event</button>
             </div>
             <button class="copy-btn" data-copy>Copy</button>
-<pre data-pane="ngrok" class="block"><span class="tk-c"># Expose your local Express / Flask / Slim server on a public HTTPS URL</span>
-ngrok http 3000
+<pre data-pane="recv" class="block"><span class="tk-c"># Listens on http://127.0.0.1:9876/webhook</span>
+npx @zettapay/receiver listen --port 9876 --secret whsec_xxxxxxxxxxxx --pretty</pre>
+<pre data-pane="env" class="hidden"><span class="tk-c"># .env of the listener — plain http is accepted for localhost only</span>
+MERCHANT_WEBHOOK_URL=http://127.0.0.1:9876/webhook
+MERCHANT_WEBHOOK_SECRET=whsec_xxxxxxxxxxxx</pre>
+<pre data-pane="send" class="hidden"><span class="tk-c"># Sign a body by hand and post it to the receiver (or to your own endpoint).</span>
+WEBHOOK_SECRET=whsec_xxxxxxxxxxxx
+TS=$(($(date +%s) * 1000))
+BODY=<span class="tk-s">'{"event":"invoice.confirmed","invoice_id":"inv_test","chain":"btc","asset":"BTC","amount":"0.0005","tx_hash":"test"}'</span>
+SIG=$(printf <span class="tk-s">'%s'</span> <span class="tk-s">"$BODY"</span> | openssl dgst -sha256 -hmac <span class="tk-s">"$WEBHOOK_SECRET"</span> | awk <span class="tk-s">'{print $2}'</span>)
 
-<span class="tk-c"># Copy the https://*.ngrok.io URL into the merchant dashboard's</span>
-<span class="tk-c"># Webhooks panel, append your route (e.g. /webhooks/zettapay).</span></pre>
-<pre data-pane="cf" class="hidden"><span class="tk-c"># Same idea, with Cloudflare Tunnel</span>
-cloudflared tunnel --url http://localhost:3000</pre>
-<pre data-pane="send" class="hidden"><span class="tk-c"># Fire a synthetic payment.confirmed event at the URL you registered.</span>
-curl -X POST https://api.zettapay.dev/webhooks/test \
-  -H <span class="tk-s">"Authorization: Bearer $ZETTAPAY_API_KEY"</span> \
+curl -X POST http://127.0.0.1:9876/webhook \
   -H <span class="tk-s">"Content-Type: application/json"</span> \
-  -d <span class="tk-s">'{ "event": "payment.confirmed", "network": "solana", "amount": "1.00" }'</span></pre>
+  -H <span class="tk-s">"X-ZettaPay-Signature: $SIG"</span> \
+  -H <span class="tk-s">"X-ZettaPay-Timestamp: $TS"</span> \
+  -d <span class="tk-s">"$BODY"</span></pre>
           </div>
+          <p class="text-sm text-muted mt-4">
+            A valid request gets <code class="text-mint font-mono text-xs">200 {"ok": true, ...}</code>; a bad
+            signature gets <code class="text-mint font-mono text-xs">401 invalid_signature</code>; a timestamp
+            older than five minutes gets <code class="text-mint font-mono text-xs">401 timestamp_too_old</code>.
+            To test your real endpoint from another machine, expose it over HTTPS with a tunnel such as
+            <code class="text-mint font-mono text-xs">ngrok</code> or
+            <code class="text-mint font-mono text-xs">cloudflared</code> and use that URL as
+            <code class="text-mint font-mono text-xs">MERCHANT_WEBHOOK_URL</code>.
+          </p>
         </section>
 
         <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
@@ -621,7 +645,7 @@ curl -X POST https://api.zettapay.dev/webhooks/test \
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
+        <span>© 2026 ZettaPay · non-custodial crypto payments</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/theme.css" />
   <meta name="description" content="ZettaPay privacy policy — what we collect, why, and how we protect it. We never custody funds and never request wallet connections." />
   <meta property="og:title" content="Privacy Policy — ZettaPay" />
-  <meta property="og:description" content="What ZettaPay collects, why, and how we protect it. Wallet-less, custody-less by design." />
+  <meta property="og:description" content="What ZettaPay collects, why, and how we protect it. Non-custodial and identity-free by design." />
   <meta property="og:type" content="website" />
   <title>Privacy Policy — ZettaPay</title>
   <link rel="icon" type="image/png" href="/Logo_symbol.png" />
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'grape': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -101,8 +101,8 @@
         <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
-        <a href="/signup" class="px-4 py-2 rounded-full font-semibold text-sm" style="background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%); color: #fff;">Sign up</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/app" class="px-4 py-2 rounded-full font-semibold text-sm" style="background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%); color: #fff;">Start free</a>
       </div>
     </div>
   </nav>
@@ -124,98 +124,95 @@
   <section class="px-4 lg:px-12 pb-24">
     <div class="max-w-4xl mx-auto glass rounded-2xl p-8 md:p-12 prose-zp">
 
-      <p>This policy describes how ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) handles information when you integrate our payment APIs, use our merchant dashboard, or pay an invoice generated through our infrastructure. We process the minimum data required to operate a Solana USDC payment protocol &mdash; nothing more.</p>
+      <p>This policy describes how ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) handles information when you use this website, use ZettaPay Cloud and its API, or pay an invoice created through our infrastructure. We process the minimum data required to operate a non-custodial crypto payment service &mdash; nothing more.</p>
 
-      <h2>1. Wallet-less by design</h2>
-      <p>ZettaPay <strong>never requests a wallet connection</strong>. We do not custody funds. We do not hold private keys. Every transaction settles directly from payer to merchant on Solana. Our role is limited to:</p>
+      <h2>1. Non-custodial by design</h2>
+      <p>ZettaPay <strong>never requests a wallet connection</strong>. We do not custody funds. We do not hold private keys and we never sign transactions. Every payment settles directly from payer to merchant on-chain, in Bitcoin or in USDC / USDT on Base. Our role is limited to:</p>
       <ul>
-        <li>Generating Solana Pay URIs and QR codes from public information.</li>
-        <li>Observing the public Solana ledger to detect confirmed transfers.</li>
+        <li>Working out where each invoice should be paid, from the public key material the merchant supplied.</li>
+        <li>Observing the public Bitcoin and Base ledgers to detect confirmed transfers.</li>
         <li>Dispatching signed webhooks to merchant endpoints on confirmation.</li>
       </ul>
 
-      <h2>2. What we collect</h2>
-
-      <h3>2.1 Merchant data</h3>
+      <h2>2. Self-hosted and Cloud</h2>
       <ul>
-        <li><strong>Public wallet address</strong> &mdash; supplied by you at signup; appears on-chain.</li>
-        <li><strong>Merchant handle</strong> &mdash; a short slug you choose (e.g. <code>@my-store</code>).</li>
-        <li><strong>Contact email</strong> &mdash; for magic-link authentication and operational notices.</li>
+        <li><strong>Self-hosted.</strong> The open-source listener (<code>@zettapay/listener</code>) runs on your own infrastructure. Your configuration, invoices and webhooks stay with you; the listener sends us no telemetry and you need no account with us.</li>
+        <li><strong>Cloud.</strong> We run the listener for you. The rest of this policy describes what that involves.</li>
+      </ul>
+
+      <h2>3. What we collect</h2>
+
+      <h3>3.1 Merchant data (Cloud)</h3>
+      <ul>
+        <li><strong>Contact email</strong> &mdash; for access to your account and operational notices.</li>
+        <li><strong>Shop name</strong> &mdash; the name you choose for your account.</li>
+        <li><strong>Public key material</strong> &mdash; a BIP-84 xpub for Bitcoin, and an xpub or a fixed receive address for Base. This is public information: it lets us derive and watch receive addresses, and cannot move funds.</li>
         <li><strong>Webhook URL</strong> &mdash; required to be served over TLS.</li>
-        <li><strong>API key fingerprint</strong> &mdash; we store a hashed prefix to enable rotation; full keys are never persisted in cleartext.</li>
       </ul>
 
-      <h3>2.2 Transaction metadata</h3>
+      <h3>3.2 Invoice metadata (Cloud)</h3>
       <ul>
-        <li>Invoice identifiers, amounts (USDC), timestamps, and Solana transaction signatures &mdash; all of which are already public on-chain.</li>
-        <li>Optional <code>metadata</code> fields you attach to invoices (e.g. order IDs). Treat this surface as semi-public.</li>
+        <li>Invoice identifiers, amounts, asset and chain, statuses, timestamps, public receive addresses and transaction hashes. Addresses and transactions are already public on-chain.</li>
+        <li>Optional <code>metadata</code> fields you attach to invoices (e.g. order IDs). Do not put personal data there.</li>
       </ul>
 
-      <h3>2.3 Operational data</h3>
+      <h3>3.3 Operational data</h3>
       <ul>
-        <li>Request logs (IP, user agent, endpoint, status) retained for 30 days for abuse detection and rate limiting.</li>
-        <li>Error traces via Sentry (scrubbed of headers, tokens, and request bodies).</li>
-        <li>Dashboard analytics sessions tied to your merchant handle, not personal identifiers.</li>
+        <li>Request logs (IP, user agent, endpoint, status), used for abuse detection and rate limiting.</li>
+        <li>Error traces via Sentry.</li>
       </ul>
 
-      <h2>3. What we do not collect</h2>
+      <h2>4. What we do not collect</h2>
       <ul>
-        <li>Private keys, seed phrases, or signed transaction blobs from any wallet.</li>
-        <li>Cardholder data, bank account numbers, or routing information &mdash; we do not process fiat directly.</li>
-        <li>KYC documents. Identity verification, when required, is performed by our fiat onramp partner (MoonPay) under their own privacy policy.</li>
+        <li>Private keys, seed phrases, or signed transactions from any wallet.</li>
+        <li>Identity documents of any kind. ZettaPay is identity-free: there are no identity checks for merchants or for payers.</li>
+        <li>Cardholder data or bank details for the payments you receive &mdash; ZettaPay does not process fiat payments between payers and merchants.</li>
         <li>Behavioral tracking cookies or third-party advertising pixels.</li>
       </ul>
 
-      <h2>4. How we use information</h2>
+      <h2>5. How we use information</h2>
       <ul>
-        <li>To route payments, generate QR codes, and confirm settlements on Solana.</li>
-        <li>To authenticate merchant API calls and dashboard sessions.</li>
-        <li>To send transactional notifications (webhook deliveries, daily digests, security alerts).</li>
-        <li>To enforce rate limits, detect abuse, and comply with applicable law.</li>
+        <li>To create invoices, watch the chain and confirm payments.</li>
+        <li>To authenticate merchant API calls and account sessions.</li>
+        <li>To deliver webhooks and send operational or security notices.</li>
+        <li>To apply plan limits, enforce rate limits, detect abuse, and comply with applicable law.</li>
       </ul>
       <p>We <strong>do not</strong> sell or rent your data, and we do not share it for marketing purposes.</p>
 
-      <h2>5. Sub-processors</h2>
-      <p>We rely on a short list of infrastructure providers, each bound by data-processing agreements:</p>
+      <h2>6. Sub-processors</h2>
+      <p>We rely on a short list of infrastructure providers:</p>
       <ul>
         <li><strong>Vercel</strong> &mdash; hosting and edge compute.</li>
-        <li><strong>Supabase</strong> &mdash; managed Postgres, row-level security.</li>
-        <li><strong>Sentry</strong> &mdash; error monitoring (scrubbed payloads).</li>
-        <li><strong>MoonPay</strong> &mdash; fiat onramp (operates under its own privacy policy and KYC obligations).</li>
-        <li><strong>Helius / Triton / public Solana RPC</strong> &mdash; read-only access to public ledger state.</li>
+        <li><strong>Supabase</strong> &mdash; managed Postgres.</li>
+        <li><strong>Sentry</strong> &mdash; error monitoring.</li>
+        <li><strong>Blockchain RPC providers</strong> &mdash; read-only access to public Bitcoin and Base ledger state.</li>
       </ul>
 
-      <h2>6. Data retention</h2>
+      <h2>7. Data retention</h2>
+      <p>We keep account and invoice records for as long as your account is active, and operational logs only as long as they are useful for the purposes above. You may request deletion of your merchant account through the contact channel below. On-chain records cannot be deleted &mdash; that is the nature of public blockchains.</p>
+
+      <h2>8. Your rights</h2>
+      <p>Subject to local law, you may request access to, correction of, or deletion of personal data we hold about you. Contact us through the channel in section 13 and we will respond within 30 days. EU and UK residents have additional rights under the GDPR/UK GDPR, including the right to lodge a complaint with a supervisory authority.</p>
+
+      <h2>9. Security</h2>
       <ul>
-        <li>Transaction records: retained for 7 years for accounting and audit traceability.</li>
-        <li>Webhook delivery logs: 90 days.</li>
-        <li>Request logs and rate-limit counters: 30 days.</li>
-        <li>Sentry traces: 90 days.</li>
-      </ul>
-      <p>You may request deletion of your merchant account by emailing the address below. On-chain records cannot be deleted &mdash; that is the nature of public blockchains.</p>
-
-      <h2>7. Your rights</h2>
-      <p>Subject to local law, you may request access to, correction of, or deletion of personal data we hold about you. Contact <a href="mailto:privacy@zettapay.dev">privacy@zettapay.dev</a> and we will respond within 30 days. EU and UK residents have additional rights under the GDPR/UK GDPR, including the right to lodge a complaint with a supervisory authority.</p>
-
-      <h2>8. Security</h2>
-      <ul>
-        <li>TLS 1.2+ enforced on every endpoint.</li>
-        <li>Webhooks signed with HMAC-SHA256 and replay-protected with idempotency keys.</li>
-        <li>Database row-level security; service-role keys never reach the client bundle.</li>
-        <li>Continuous static analysis on Rust on-chain code; bug bounty active prior to mainnet expansion.</li>
+        <li>TLS enforced on every endpoint.</li>
+        <li>Webhooks signed with HMAC-SHA256, with replay protection.</li>
+        <li>Database credentials are kept server-side and never reach the browser.</li>
+        <li>We hold only public key material, so a breach of our systems cannot move your funds.</li>
       </ul>
 
-      <h2>9. International transfers</h2>
+      <h2>10. International transfers</h2>
       <p>Our infrastructure is global. By using ZettaPay you consent to processing of operational data in jurisdictions where our sub-processors operate. Where applicable, transfers from the EEA/UK rely on Standard Contractual Clauses.</p>
 
-      <h2>10. Children</h2>
+      <h2>11. Children</h2>
       <p>ZettaPay is not directed to individuals under 18. We do not knowingly collect data from minors.</p>
 
-      <h2>11. Changes</h2>
-      <p>We will publish material changes here with a revised &ldquo;effective date&rdquo;. Continued use of the protocol after a change constitutes acceptance of the revised policy.</p>
+      <h2>12. Changes</h2>
+      <p>We will publish material changes here with a revised &ldquo;effective date&rdquo;. Continued use of the service after a change constitutes acceptance of the revised policy.</p>
 
-      <h2>12. Contact</h2>
-      <p>Privacy questions: <a href="mailto:privacy@zettapay.dev">privacy@zettapay.dev</a><br/>General support: <a href="/contact">/contact</a></p>
+      <h2>13. Contact</h2>
+      <p>Privacy questions: open an issue at <a href="https://github.com/leandromaiam-code/zettapay/issues">github.com/leandromaiam-code/zettapay</a> saying you have a privacy request &mdash; please keep personal details out of the public thread and we will follow up from there.<br/>General support: <a href="/contact">/contact</a></p>
 
     </div>
   </section>
@@ -228,14 +225,14 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Non-custodial crypto payments. Self-hosted open source or managed Cloud. Bitcoin &middot; USDC on Base &middot; USDT on Base.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
         <ul class="space-y-2 text-sm">
           <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
           <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
-          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/app" class="text-muted hover:text-white transition">Cloud (early access)</a></li>
           <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
         </ul>
       </div>
@@ -257,7 +254,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Non-custodial &middot; Bitcoin &middot; USDC &middot; USDT</span>
     </div>
   </footer>
 </body>

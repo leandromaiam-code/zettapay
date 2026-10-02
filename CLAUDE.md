@@ -1,115 +1,82 @@
-# Veridian Starter — CLAUDE.md
+# ZettaPay — CLAUDE.md
 
-## Sobre este produto
-Este produto foi gerado pelo **Veridian Fabric** a partir de uma ideia/premissas. Editar este arquivo é editar a constituição do produto.
+Constitution of this repository for any agent or developer working in it. The
+canonical Layer 0 lives in the Fabric workspace `zettapay`; this file mirrors it.
 
-## Premissas centrais (Layer 0 — REGRAS, não sugestões)
+## What the product is
 
-### Stack
-1. Next.js 16 (App Router, Server Components, Server Actions, Turbopack)
-2. React 19 + TypeScript strict
-3. Tailwind CSS 4 (sem styled-components, sem CSS-in-JS)
-4. Supabase (Postgres + RLS + Auth + Realtime)
-5. Vercel para deploy
+Non-custodial crypto payments. A merchant gives ZettaPay **public** material
+only (BIP-84 xpub for Bitcoin; xpub or fixed receive address for Base). ZettaPay
+derives a receive address per invoice, watches the chain, and delivers an
+HMAC-signed webhook when the payment confirms. Funds settle directly in the
+merchant's wallet.
 
-### Arquitetura
-6. Multi-tenant com schema dedicado: todas as tabelas vivem em `<slug>.*`
-7. Supabase client configurado com `db: { schema: '<slug>' }` via env var
-8. RLS sempre ativada — políticas usam `auth.uid()` direto
-9. Auth compartilhada via `auth.users` (default Supabase)
-10. Storage bucket: `workspaces/<slug>/`
+- **Assets:** BTC, and USDC / USDT on Base. Nothing else.
+- **Self-hosted:** `packages/listener` (`@zettapay/listener`) — open source, free, no limits.
+- **Cloud:** `packages/cloud` (`@zettapay/cloud`) — the same listener core run
+  multi-tenant over Supabase (`zettapay_*` tables), API under `/api/v1`, hosted checkout.
+- **Customers:** developers and small online businesses that want to accept
+  crypto without a custodian, and AI agents (via `@zettapay/mcp`, `llms.txt`, OpenAPI).
 
-### Brand & UX (Manual de Marca Veridian V2)
-11. Paleta principal: Forest (#0a1612), Brass (#d4a961), Parchment (#f5e6c8)
-12. Acentos: Emerald glow, Ember soft
-13. Fontes: Cormorant Garamond (display/numerais), Manrope (body), Cinzel (uppercase brand), JetBrains Mono (code/eyebrows)
-14. Glassmorphism dark + light theme toggle
-15. Iron Man arc reactor animations (orb pulsante, stagger reveal, HUD scan)
+## Business model
 
-### Performance
-16. LCP < 2.5s, CLS < 0.1, TBT < 300ms
-17. Bundle inicial < 200kb gzip
-18. Imagens via next/image, lazy load por default
-19. Server components por padrão (use 'use client' só quando necessário)
+- No per-transaction fee, ever. ZettaPay is not in the flow of funds.
+- Self-hosted is free forever.
+- Cloud is a flat monthly subscription by invoice volume (`packages/cloud/src/plans.ts`):
+  the plan caps how many invoices a merchant may create per calendar month.
+  The subscription may be paid by card or in crypto through ZettaPay itself.
 
-### Segurança & Compliance
-20. Zero secrets em código — apenas env vars
-21. Service role key NUNCA exposta no client
-22. CSP headers configurados em middleware
-23. Rate limit em endpoints sensíveis
-24. Audit append-only em `audit_journal` para ações críticas
+## Hard Rules (never violate; enforced by `scripts/hr-scan.mjs`)
 
-### Discipline de código
-25. Código proprietário Veridian — NÃO mencionar Claude/Anthropic em commits, PRs, comentários
-26. Brand voice: nunca "revolução", "disruption", "sinergia", "game-changer"
-27. PT-BR como default de UI; i18n via dictionary keys, sem strings hardcoded
-28. Total responsividade (desktop ultrawide → mobile → PWA installable)
-29. Testes em paths críticos (auth, payments, RLS) — coverage > 70%
+Source of truth: `fabric/seed/zettapay_hrs.json`. Explanation: `docs/HR-GATES.md`.
 
-### AutoDev Cycle
-30. Cada mission = 1 branch `auto/<id>-<slug>` → 1 PR → revisão (humana ou autônoma) → merge → deploy
-31. Build verde é gate obrigatório antes de qualquer merge
-32. Premissas Validator roda antes de spawn de mission e pode bloquear
+1. **HR-CUSTODY** — never hold, generate, store or sign with a private key that controls merchant or customer funds. No master seed, no sweep, no signing service.
+2. **HR-WALLET-LESS** — never ask anyone to connect a wallet. No `wallet.connect()`, no wallet-adapter UI, no "Connect Wallet" button.
+3. **HR-PII-MINIMAL** — onboarding collects email + shop name only. No identity documents. In public copy say "identity-free", never "KYC".
+4. **HR-SECRETS-IN-GIT** (blocker) — no real keys or secrets in git; placeholders only.
+5. **HR-PHONE-HOME** — the self-hosted listener never calls a ZettaPay-controlled domain. No hard-coded ZettaPay URLs in shipped code or public pages; use configuration or relative links.
+6. **HR-OPTIONAL-DEPS** — storage backends are optional peer dependencies of the listener.
+7. **HR-STORAGE-ADAPTER** — all listener persistence goes through `StorageAdapter`.
 
-## Como customizar este produto
+Run before every PR: `node scripts/hr-scan.mjs diff`.
 
-### Adicionar premissa específica
-Edite a seção **"Premissas específicas deste produto"** abaixo. Não remova as 32 acima.
+## Engineering rules
 
-### Trocar paleta
-1. Edite `src/app/globals.css` os tokens `--color-*`
-2. Edite `tailwind.config.ts` o themeExtend
-3. Submeta como mission "Update brand palette"
+- The listener core (`packages/listener/src`) is the product. Cloud is a thin
+  shell around it — never fork the payment logic into `packages/cloud`.
+- Additive changes only on the wire contract: the listener HTTP API, the Cloud
+  `/api/v1` API and the webhook payload/signature stay backward compatible.
+- Tenant isolation in Cloud: every authenticated request is scoped to the
+  merchant resolved from the API key; another tenant's invoice is a plain 404.
+- Database changes ship as idempotent, additive SQL in `packages/cloud/migrations/`.
+  Never drop or truncate; the Supabase project is shared with other products.
+- TypeScript strict. Tests for anything touching derivation, confirmation,
+  auth, plan limits or webhook signing.
+- English for code, docs and public copy.
+- Do not claim what does not exist: no supported chain, SDK, integration,
+  audit, partner or number may appear in docs or on the site unless it is real
+  and verifiable in this repository or on a public registry.
+- Do not mention AI tooling in commits, PRs or comments.
 
-### Adicionar tabela
-1. Crie migration em `supabase/migrations/<timestamp>_<name>.sql`
-2. Tabela DEVE ter `<slug>.<entity>` (schema dedicado)
-3. RLS policy obrigatória usando `auth.uid()`
+## Legacy — do not build on it
 
-## Premissas específicas deste produto
+The repository still contains the pre-pivot Solana / x402 product. It is not
+deployed, published or supported: `packages/api`, `packages/legacy-custodial`,
+`programs/`, `idl/`, `Anchor.toml`, `packages/sdk-{go,php,python,rust}`,
+`plugins/`, `legacy/`, and most of `docs/` (Mintlify sources).
 
-> _(Esta seção é preenchida pelo Plan Squad durante Genesis. Edite para refinar.)_
+## Where things run
 
-- TODO: business model
-- TODO: target persona
-- TODO: differentiation
+- Website + docs: Vercel project `zettapay` (static `public/` + a few functions in `api/`).
+- Cloud API + watcher fleet: long-running Node process (`node packages/cloud/dist/server.js`), not serverless.
+- Packages: npm, published by tag via `.github/workflows/npm-publish.yml`.
 
-## Workflow de execução
-
-1. **Mission entra** via dashboard ou autodev
-2. **Premissas Validator** valida contra esta constituição
-3. Se passa, **claude-code** spawna em `/opt/fabric-workspaces/<slug>/`
-4. Implementa, builda local, abre PR
-5. **Auto-review squad** valida diff vs premissas + smoke test no preview
-6. **Auto-merge** se todos os gates verdes
-7. **Vercel deploy** automático em produção
-
-## Comandos úteis
+## Commands
 
 ```bash
-npm run dev              # local
-npm run build            # CI gate
-npm run typecheck        # tsc --noEmit
-npm run lint             # eslint
-npm run test             # vitest
-npx supabase migration new # nova migration
-```
-
-## Estrutura
-
-```
-src/
-├── app/
-│   ├── (app)/[workspace]/   # rotas autenticadas
-│   ├── login/
-│   ├── signup/
-│   └── api/
-├── components/              # reutilizáveis
-├── lib/
-│   ├── supabase/           # client schema-aware
-│   ├── types.ts
-│   └── utils.ts
-└── middleware.ts            # auth gating
-supabase/
-└── migrations/             # 0001_init.sql (schema + RLS templates)
+npm install
+npm run build --workspace @zettapay/listener
+npm test  --workspace @zettapay/listener
+npm run build --workspace @zettapay/cloud && npm test --workspace @zettapay/cloud
+node scripts/hr-scan.mjs diff
 ```

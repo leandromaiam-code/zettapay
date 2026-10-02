@@ -32,6 +32,7 @@ const PATH_ALLOWLIST = [
   /^public\/install\//,
   /^packages\/legacy-solana\//,
   /^packages\/legacy-custodial\//,
+  /^legacy\//,
   /(^|\/)kyc(\.[a-z]+)?$/i,
   /(^|\/)kyc\//i,
   /(^|\/)sumsub/i,

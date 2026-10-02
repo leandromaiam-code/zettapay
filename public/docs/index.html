@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay developer documentation — quickstart, SDK references, and protocol spec." />
+  <meta name="description" content="ZettaPay developer documentation — self-hosted listener quickstart, checkout guide, HTTP API and webhook reference." />
   <meta name="theme-color" content="#0A0A0A" />
   <title>ZettaPay · Docs</title>
   <link rel="icon" href="/Logo_symbol.png" />
@@ -16,7 +16,7 @@
   <script>
     tailwind.config = { theme: { extend: {
       fontFamily: { sans: ['Inter','ui-sans-serif','system-ui'], mono: ['JetBrains Mono','ui-monospace','monospace'] },
-      colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', solana:'#9945FF', muted:'#94A3B8' },
+      colors: { royal:'#4F6BFF', 'royal-bright':'#6B82FF', mint:'#14F195', violet:'#9945FF', muted:'#94A3B8' },
     }}};
   </script>
   <style>
@@ -71,7 +71,7 @@
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="/" class="text-muted hover:text-white transition">Home</a>
         <a href="/docs" class="text-white">Docs</a>
-        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
       </div>
       <a href="/docs/quickstart" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Quickstart →</a>
@@ -85,30 +85,40 @@
         Build with <span class="gradient-text">ZettaPay</span>.
       </h1>
       <p class="text-lg lg:text-xl text-muted max-w-2xl leading-relaxed">
-        Multi-chain, non-custodial crypto payments that confirm themselves. Install the SDK, configure your pubkey
-        in env vars (<code class="text-mint font-mono text-sm">MERCHANT_BTC_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_ETH_PUBKEY</code> / <code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code>) — we watch the chain
-        and post a signed webhook the moment the customer pays. BTC, ETH (mainnet + L2s), USDC on Solana. Open
-        SDKs in TypeScript, Python, PHP and Rust. x402 + MCP native.
+        Non-custodial crypto payments that confirm themselves. You supply public material only — a BIP-84 xpub for
+        Bitcoin, and an xpub or a fixed receive address for Base — and the listener derives receive addresses,
+        watches the chain and posts an HMAC-signed webhook when the customer pays. Bitcoin, plus USDC and USDT on
+        Base. Funds go straight to your wallet. Run it yourself with the open-source
+        <code class="text-mint font-mono text-sm">@zettapay/listener</code>, or use ZettaPay Cloud.
       </p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-      <a href="/docs/embed" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Start here · no code</div>
-        <div class="text-2xl font-bold mb-2">Embed quickstart · 5 min</div>
+      <a href="/docs/quickstart" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Start here · self-hosted</div>
+        <div class="text-2xl font-bold mb-2">Quickstart</div>
         <p class="text-muted text-sm leading-relaxed">
-          Get your API key, drop a <code class="text-mint">&lt;script&gt;</code> tag with your pubkey in your <code class="text-mint">&lt;head&gt;</code> — done.
-          Recipes for plain HTML, vanilla JS, React and Next.js.
+          <code class="text-mint">npm install -g @zettapay/listener</code>, run
+          <code class="text-mint">zettapay-listener init</code> and <code class="text-mint">start</code>, create an
+          invoice with <code class="text-mint">POST /invoice</code>, verify the webhook. Free, no fees, no limits.
         </p>
       </a>
 
-      <a href="/docs/quickstart" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">For developers</div>
-        <div class="text-2xl font-bold mb-2">SDK quickstart · 5 min</div>
+      <a href="/app" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Managed · early access</div>
+        <div class="text-2xl font-bold mb-2">ZettaPay Cloud</div>
         <p class="text-muted text-sm leading-relaxed">
-          Get your API key, install the SDK, configure your pubkey in env vars
-          (<code class="text-mint">ZETTAPAY_API_KEY</code> + <code class="text-mint">MERCHANT_*_PUBKEY</code>), call <code class="text-mint">zp.register()</code>, verify the webhook. Snippets in
-          TypeScript, Python, PHP and Rust.
+          The same listener core, run for you as a multi-tenant service. Still non-custodial. Onboarding is manual
+          during early access: an email, a shop name and a public xpub or address.
+        </p>
+      </a>
+
+      <a href="/docs/embed" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Guide</div>
+        <div class="text-2xl font-bold mb-2">Checkout on your site</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Send the payer to the hosted checkout link returned by Cloud, or render the
+          <code class="text-mint">qr_uri</code> and receive address yourself and poll the invoice status.
         </p>
       </a>
 
@@ -116,50 +126,8 @@
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Reference</div>
         <div class="text-2xl font-bold mb-2">Webhook spec</div>
         <p class="text-muted text-sm leading-relaxed">
-          HMAC-SHA256 signature, 300 s tolerance window, idempotent by <code class="text-mint">tx_hash</code>,
-          exponential-backoff retries.
-        </p>
-      </a>
-
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · TypeScript</div>
-        <div class="text-2xl font-bold mb-2">@zettapay/sdk</div>
-        <p class="text-muted text-sm leading-relaxed">
-          <code class="text-mint">npm install @zettapay/sdk</code> — full API surface, webhook verifier, on-chain helpers.
-        </p>
-      </a>
-
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-python" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · Python</div>
-        <div class="text-2xl font-bold mb-2">zettapay (PyPI)</div>
-        <p class="text-muted text-sm leading-relaxed">
-          <code class="text-mint">pip install zettapay</code> — typed client, <code class="text-mint">verify_webhook</code> helper.
-        </p>
-      </a>
-
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-php" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · PHP</div>
-        <div class="text-2xl font-bold mb-2">zettapay/sdk</div>
-        <p class="text-muted text-sm leading-relaxed">
-          <code class="text-mint">composer require zettapay/sdk</code> — PSR-18 HTTP client, <code class="text-mint">Webhook::verify</code> helper.
-        </p>
-      </a>
-
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/sdk-rust" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">SDK · Rust</div>
-        <div class="text-2xl font-bold mb-2">zettapay (crates.io)</div>
-        <p class="text-muted text-sm leading-relaxed">
-          <code class="text-mint">cargo add zettapay</code> — async tokio client, constant-time webhook verifier.
-        </p>
-      </a>
-
-      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Self-hosted · npm</div>
-        <div class="text-2xl font-bold mb-2">@zettapay/listener</div>
-        <p class="text-muted text-sm leading-relaxed">
-          <code class="text-mint">npm install @zettapay/listener</code> — non-custodial BTC payment watcher
-          you run on your own box (systemd, Docker, Railway, Fly). BIP-84 xpub in,
-          HMAC-SHA256 webhooks out. Zero phone-home. Free forever.
+          HMAC-SHA256 over the raw body, millisecond timestamp header, stable event id for de-duplication, up to
+          10 delivery attempts.
         </p>
       </a>
 
@@ -167,33 +135,70 @@
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Reference</div>
         <div class="text-2xl font-bold mb-2">HTTP API reference</div>
         <p class="text-muted text-sm leading-relaxed">
-          Every REST endpoint, webhook event, and AI-agent surface. x402 and MCP included. Errors, idempotency, rate limits.
+          Every endpoint of the self-hosted listener and of the Cloud API, with request bodies, responses, error
+          codes and rate limits.
         </p>
       </a>
 
-      <a href="/docs/embed" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">No code</div>
-        <div class="text-2xl font-bold mb-2">Embed quickstart</div>
-        <p class="text-muted text-sm leading-relaxed">
-          Paste one <code class="text-mint">&lt;script&gt;</code> tag in your <code class="text-mint">&lt;head&gt;</code>. Pay button, QR
-          code, address, all bundled.
-        </p>
-      </a>
-
-      <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-2xl p-7 block">
+      <a href="/openapi.json" class="glass rounded-2xl p-7 block">
         <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Spec</div>
-        <div class="text-2xl font-bold mb-2">x402 + MCP</div>
+        <div class="text-2xl font-bold mb-2">OpenAPI 3.1</div>
         <p class="text-muted text-sm leading-relaxed">
-          AI agents pay autonomously via the open x402 header. ZettaPay also exposes a
-          <code class="text-mint">pay_with_zettapay</code> MCP tool.
+          Machine-readable description of the listener API — import it into your HTTP client or code generator.
         </p>
       </a>
 
-      <a href="/healthz" class="glass rounded-2xl p-7 block">
-        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Operations</div>
-        <div class="text-2xl font-bold mb-2">Status &amp; health</div>
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Self-hosted · npm</div>
+        <div class="text-2xl font-bold mb-2">@zettapay/listener</div>
         <p class="text-muted text-sm leading-relaxed">
-          Liveness, readiness and metrics endpoints — plug them into your monitoring.
+          The payment watcher you run on your own box (systemd or Docker). Public xpub or address in,
+          HMAC-signed webhooks out. Open source (MIT), no phone-home.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/receiver" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Dev tool · npm</div>
+        <div class="text-2xl font-bold mb-2">@zettapay/receiver</div>
+        <p class="text-muted text-sm leading-relaxed">
+          <code class="text-mint">npx @zettapay/receiver listen</code> — a local webhook receiver that checks the
+          signature and replay window of every delivery, for development and CI.
+        </p>
+      </a>
+
+      <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/mcp" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">AI agents · npm</div>
+        <div class="text-2xl font-bold mb-2">@zettapay/mcp</div>
+        <p class="text-muted text-sm leading-relaxed">
+          A Model Context Protocol server that lets an agent create and track invoices through your own listener:
+          <code class="text-mint">create_invoice</code>, <code class="text-mint">get_invoice_status</code>,
+          <code class="text-mint">list_supported_assets</code>.
+        </p>
+      </a>
+
+      <a href="/install/ai" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Guide</div>
+        <div class="text-2xl font-bold mb-2">Install with an AI assistant</div>
+        <p class="text-muted text-sm leading-relaxed">
+          Hand the setup to your coding assistant — a ready-made prompt that installs and configures the listener.
+        </p>
+      </a>
+
+      <a href="/pricing" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">Plans</div>
+        <div class="text-2xl font-bold mb-2">Pricing</div>
+        <p class="text-muted text-sm leading-relaxed">
+          No per-transaction fee anywhere. Self-hosting is free; Cloud is a flat subscription by monthly invoice
+          volume.
+        </p>
+      </a>
+
+      <a href="/llms.txt" class="glass rounded-2xl p-7 block">
+        <div class="text-xs font-mono uppercase tracking-wider text-mint mb-2">For LLMs</div>
+        <div class="text-2xl font-bold mb-2">llms.txt</div>
+        <p class="text-muted text-sm leading-relaxed">
+          A plain-text summary of the product and API for language models. Expanded version at
+          <code class="text-mint">/llms-full.txt</code>.
         </p>
       </a>
     </div>
@@ -203,7 +208,7 @@
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
+        <span>© 2026 ZettaPay · non-custodial crypto payments</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

@@ -1,235 +1,131 @@
 # ZettaPay
 
-[![@zettapay/sdk](https://img.shields.io/npm/v/%40zettapay%2Fsdk?label=%40zettapay%2Fsdk&color=0a1612)](https://www.npmjs.com/package/@zettapay/sdk)
-[![@zettapay/widget](https://img.shields.io/npm/v/%40zettapay%2Fwidget?label=%40zettapay%2Fwidget&color=d4a961)](https://www.npmjs.com/package/@zettapay/widget)
-[![@zettapay/embed](https://img.shields.io/npm/v/%40zettapay%2Fembed?label=%40zettapay%2Fembed&color=f5e6c8)](https://www.npmjs.com/package/@zettapay/embed)
+[![@zettapay/listener](https://img.shields.io/npm/v/%40zettapay%2Flistener?label=%40zettapay%2Flistener)](https://www.npmjs.com/package/@zettapay/listener)
+[![@zettapay/sdk](https://img.shields.io/npm/v/%40zettapay%2Fsdk?label=%40zettapay%2Fsdk)](https://www.npmjs.com/package/@zettapay/sdk)
 [![license: MIT](https://img.shields.io/badge/license-MIT-f5e6c8.svg)](./LICENSE)
 
-Open-source universal payment protocol on Solana for humans and AI agents.
+**Non-custodial crypto payments that confirm themselves.** Accept Bitcoin and
+USDC / USDT on Base straight into your own wallet. ZettaPay watches the chain,
+confirms the payment and sends your backend a signed webhook. It never holds
+your keys and never touches your funds.
 
-## Install
+- **Non-custodial.** You give ZettaPay a *public* key only: a BIP-84 xpub for
+  Bitcoin, and for Base either an xpub or a fixed receive address. Every invoice
+  gets an address derived from it; the money settles on-chain, directly to you.
+- **Wallet-less and identity-free.** No wallet connection, no identity checks.
+  Onboarding is an email, a shop name and a public key.
+- **No transaction fee.** ZettaPay is not in the flow of funds, so there is no
+  percentage to take. The payer only pays the network fee of the chain.
+- **Agent-ready.** An MCP server (`@zettapay/mcp`), `llms.txt` and an OpenAPI
+  spec let AI agents create and check invoices.
 
-Two install paths — pick whichever fits your infra:
+## Two ways to run it
 
-**Cloud (managed):** Sign up at https://zettapay.vercel.app/signup, paste your
-BIP-84 xpub, get a `merchant_id`, integrate the SDK. ZettaPay runs the listener
-for you. Free up to 1k transactions/month.
+| | Self-hosted | Cloud |
+|---|---|---|
+| What | [`@zettapay/listener`](./packages/listener#readme) on your own machine | The same listener core, run by us as a multi-tenant service ([`@zettapay/cloud`](./packages/cloud#readme)) |
+| Cost | Free, open source (MIT), no limits | Flat monthly subscription by invoice volume, with a free tier |
+| Who sees what | Nothing leaves your box | We see invoice metadata and public addresses — never keys or funds |
+| Status | Published on npm | Early access — request it at `/app` on the site |
 
-**Self-hosted (npm):** Run [`@zettapay/listener`](./packages/listener#readme) on
-your own infrastructure. Free forever, zero runtime fees, you keep all keys.
-Watches BIP-84 addresses derived from your xpub on `mempool.space`, dispatches
-HMAC-SHA256 webhooks to your app. No phone-home. systemd, Docker, Railway, and
-Fly recipes in the package README.
+Both speak the same HTTP API and emit the same webhook, so you can move between
+them by changing one base URL.
+
+### Self-hosted quickstart
 
 ```bash
-# Cloud SDK + UI components
-npm install @zettapay/sdk
-npm install @zettapay/widget
-npm install @zettapay/embed
-
-# Self-hosted listener (run as a long-lived process on your box)
 npm install @zettapay/listener
-npx zettapay-listener init     # prompts for xpub + webhook URL + storage backend
-npx zettapay-listener start    # long-running watcher + webhook dispatcher
+npx zettapay-listener init     # asks for your xpub / address and webhook URL
+npx zettapay-listener start    # watcher + webhook dispatcher + HTTP API
 ```
 
-The install wizard at [/install/ai](https://zettapay.vercel.app/install/ai)
-generates a canonical AI-assistant prompt for either path — pick **Cloud** or
-**Self-hosted** at the top, paste in Claude Code / Cursor / Codex / Lovable
-/ Aider, review the PR. Health gate: `GET /api/test/acceptance/self-hosted-listener`
-reports npm publish status + repo artifact presence + design-doc availability.
+Full guide, environment variables, Docker and the threat model:
+[`packages/listener/README.md`](./packages/listener/README.md).
 
-All packages are published from this monorepo. A push of a `v<version>`
-git tag triggers [`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml),
-which builds and publishes `@zettapay/sdk`, `@zettapay/widget`,
-`@zettapay/embed`, and `@zettapay/listener` with npm provenance attestations.
-
-## Live deployment
-
-| Environment | URL |
-| --- | --- |
-| Production (Vercel) | https://zettapay.vercel.app |
-| Custom domain | https://zettapay.fabric.4profitai.com |
-| Documentation | https://docs.zettapay.io |
-
-Quick checks:
+### Cloud
 
 ```bash
-curl https://zettapay.vercel.app/healthz
-curl https://zettapay.vercel.app/simulate/test-merchant
+curl -X POST "$ZETTAPAY_URL/api/v1/invoice" \
+  -H "X-ZettaPay-Api-Key: $ZETTAPAY_API_KEY" \
+  -H "content-type: application/json" \
+  -d '{"chain":"base","amount_usd":29}'
 ```
 
-## Tech Stack
-- Node.js + Express + TypeScript (long-running server)
-- Vercel Serverless Functions (`/api/*`) for the public preview
-- @solana/web3.js + @solana/spl-token
-- Solana devnet (USDC mint: `4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU`)
+The response carries the receive address, a QR URI and a hosted `checkout_url`.
+Details: [`packages/cloud/README.md`](./packages/cloud/README.md) and
+[`docs/architecture/cloud-tier.md`](./docs/architecture/cloud-tier.md).
 
-## Setup
+## Supported assets
+
+| Chain | Asset | Address mode |
+|---|---|---|
+| Bitcoin | BTC | One address per invoice, derived from your xpub (BIP-84) |
+| Base | USDC, USDT | xpub (one address per invoice) **or** a fixed address + per-invoice amount nonce |
+
+Nothing else is supported today.
+
+## Packages
+
+| Package | npm | Purpose |
+|---|---|---|
+| `packages/listener` | `@zettapay/listener` | Self-hosted watcher, HTTP API, webhook dispatcher, CLI |
+| `packages/cloud` | — (not published yet) | Multi-tenant service over Supabase: API keys, plans, hosted checkout |
+| `packages/sdk` | `@zettapay/sdk` | TypeScript client + webhook signature verification (`@zettapay/sdk/server`); still carries some Solana-era helpers |
+| `packages/receiver` | `@zettapay/receiver` | Local webhook receiver for testing an integration |
+| `packages/widget` | `@zettapay/widget` | **Legacy.** Solana-era pay button; not compatible with the current listener |
+| `packages/embed` | `@zettapay/embed` | **Legacy.** Solana-era embed; not compatible with the current listener |
+| `packages/mcp` | `@zettapay/mcp` | MCP server exposing `create_invoice`, `get_invoice_status` and `list_supported_assets` to AI agents |
+
+To put a payment on a page today, create an invoice through the API and send the
+payer to the hosted `checkout_url` (Cloud), or render the returned `qr_uri` and
+address yourself and poll the invoice status.
+
+Packages are published from this monorepo: pushing a `v<version>` tag runs
+[`.github/workflows/npm-publish.yml`](./.github/workflows/npm-publish.yml), which
+publishes every package whose `package.json` version matches the tag.
+
+## Hard rules
+
+Four invariants are enforced by a scanner on every pull request
+([`docs/HR-GATES.md`](./docs/HR-GATES.md)): no custody of keys or funds, no
+wallet connection, minimal personal data, no secrets in git. Three more protect
+the self-hosted listener (no phone-home, optional storage dependencies, all
+persistence behind `StorageAdapter`).
+
+```bash
+node scripts/hr-scan.mjs diff     # what your branch adds vs origin/main
+```
+
+## Development
+
 ```bash
 npm install
-cp .env.example .env   # fill SOLANA_FEE_PAYER_SECRET
-npm run dev
+npm run build --workspace @zettapay/listener
+npm test  --workspace @zettapay/listener
+npm test  --workspace @zettapay/cloud
 ```
 
-## Endpoints
+CI ([`test.yml`](./.github/workflows/test.yml)) builds and tests the listener
+stack; `hr-scan.yml` runs the hard-rule scanner on the diff.
 
-### `POST /merchants/register`
-Receives a Phantom wallet pubkey, creates the merchant's USDC ATA on
-devnet (rent ~0.002 SOL paid by the protocol fee payer) and emits a
-memo program transaction binding the merchant id to the wallet on-chain.
+## Legacy code in this repository
 
-Request:
-```json
-{ "name": "Café Tatuapé", "email": "lojista@tatuape.com.br", "walletAddress": "<phantom-pubkey>" }
-```
+ZettaPay started as a Solana / x402 payment API and pivoted in May 2026 to the
+non-custodial model above. The earlier code is still in the tree and is **not**
+part of the product: it is not deployed, not published and not supported.
 
-Response (201):
-```json
-{
-  "merchant": { "id": "...", "walletAddress": "...", "ataAddress": "...", "status": "active" },
-  "binding": {
-    "ataAddress": "...",
-    "ataCreated": true,
-    "txSignature": "...",
-    "memoPayload": "{\"ns\":\"zettapay:merchant_register:v1\",...}",
-    "feePayer": "...",
-    "cluster": "devnet"
-  },
-  "apiKey": "zp_live_..."
-}
-```
+- `packages/api`, `packages/legacy-custodial` — the original Express API
+  (x402, on-ramp, subscriptions, fraud rules).
+- `programs/`, `idl/`, `Anchor.toml` — a Solana program that was never deployed
+  to mainnet.
+- `packages/sdk-go`, `sdk-php`, `sdk-python`, `sdk-rust`, `plugins/` — clients
+  and e-commerce plugins for that API; none were published to a registry.
+- `legacy/` — the website pages and serverless functions of that era.
+- `docs/` (Mintlify sources) — largely describes the old API; trust the package
+  READMEs and `docs/architecture/cloud-tier.md` instead.
 
-### `GET /simulate/:merchant`
-Hackathon demo simulator. Returns a deterministic synthetic merchant plus
-a fake airdrop and payment, with no on-chain side effects. Available on
-Vercel as a serverless function and on the local Express server.
+Do not build new work on any of it.
 
-```bash
-curl https://zettapay.vercel.app/simulate/test-merchant
-```
+## License
 
-## Features
-- Merchant onboarding via Phantom wallet
-- USDC P2P payments
-- MoonPay onramp (card → USDC)
-- x402 header support
-- MCP endpoint for AI agents
-- Native integration recipes for Anthropic Claude, OpenAI, and Hugging Face — see [docs/concepts/native-integrations](docs/concepts/native-integrations.mdx)
-
-## Protocol spec
-
-The public wire-level specification — URI schemes, instruction
-discriminators, PDA seeds, account layouts, error codes, and proof
-formats — lives in [`protocol/`](./protocol/README.md). This is the
-mirror of what will be published at
-[`github.com/zettapay/protocol`](https://github.com/zettapay/protocol)
-for SDK authors, wallet integrators, and indexers building against
-ZettaPay.
-
-## Vercel deployment
-
-The project ships with a thin `/api/*` serverless layer that mirrors the
-public-facing routes of the Express server. It is independent of the
-SQLite-backed long-running runtime, so it runs cleanly on Vercel without
-native modules or persistent storage.
-
-```
-api/
-├── index.ts                # GET /api      → metadata
-├── healthz.ts              # GET /healthz  → liveness
-├── simulate/[merchant].ts  # GET /simulate/:merchant → demo simulator
-└── _lib/                   # shared helpers (base58, …)
-```
-
-Routing:
-
-- `vercel.json#rewrites` exposes `/healthz` and `/simulate/:merchant` at the
-  root, matching the Express route shape.
-- Every function uses 1 GB RAM and a 30 s `maxDuration` budget.
-- The build command is a no-op — Vercel auto-detects the `api/**/*.ts` functions
-  and compiles them with its bundled `@vercel/node` runtime.
-
-Local emulation:
-
-```bash
-npx vercel dev
-curl http://localhost:3000/healthz
-curl http://localhost:3000/simulate/test-merchant
-```
-
-## OpenAPI spec & multi-language SDKs
-
-Every deployment serves a machine-readable spec for codegen:
-
-| Endpoint | Flavor |
-| --- | --- |
-| `GET /openapi.json` | OpenAPI 3.1 (source of truth) |
-| `GET /openapi-3.0.json` | OpenAPI 3.0.3 (openapi-generator-friendly) |
-| `GET /docs` | Swagger UI (Try-it-out enabled) |
-
-Committed snapshots live in [`docs/api-reference/`](./docs/api-reference/) and
-language clients can be regenerated on demand:
-
-```bash
-npm run openapi:export    # refresh both 3.1 and 3.0 snapshots
-npm run sdk:generate      # python + go + rust + php via openapi-generator-cli
-```
-
-The TypeScript SDK in [`packages/sdk`](./packages/sdk) is hand-tuned and
-canonical; the other packages (`sdk-python`, `sdk-go`, `sdk-rust`,
-`sdk-php`) have generated stubs sitting alongside vendored hand-written
-clients. See [`docs/sdk/multi-language.mdx`](./docs/sdk/multi-language.mdx)
-for the full workflow.
-
-## Documentation site
-
-The public docs at [docs.zettapay.io](https://docs.zettapay.io) live in
-[`docs/`](./docs) and are rendered by [Mintlify](https://mintlify.com).
-Mintlify builds directly from the `main` branch — there is no Vercel
-build for the docs site.
-
-```bash
-npm run docs:dev      # local preview at http://localhost:3000
-npm run docs:check    # validate links and references
-```
-
-See [`docs/README.md`](./docs/README.md) for the full structure and
-Algolia DocSearch configuration.
-
-## Docker
-
-Multi-stage `node:20-alpine` image. The runtime stage runs as non-root, exposes
-port `3001` and ships a Node-based `HEALTHCHECK` against `/healthz`.
-
-```bash
-cp .env.example .env
-docker compose up --build
-curl http://localhost:3001/healthz
-```
-
-SQLite state is persisted in the named volume `zettapay-data` (mounted at
-`/app/data` inside the container).
-
-## Community
-
-The ZettaPay Discord is the primary support and discussion surface for
-merchants, agent builders, and SDK users. The server layout — channels
-(`#help`, `#showcase`, `#api`, `#announcements`, …), roles, rules, and the
-companion welcome + role bot — lives in
-[`community/discord/`](./community/discord/README.md).
-
-## Security and audit
-
-Per ZettaPay constitution rules 16, 18 and 19, mainnet launch is gated
-on a third-party audit of the on-chain program (OtterSec or Halborn)
-plus a public bug bounty.
-
-The audit submission package lives in [`audit/`](./audit) and contains
-the threat model, scope, security assumptions, self-disclosed known
-issues, the parallel $50k bug bounty terms, and the engagement
-logistics for the audit firm. The on-chain program itself is in
-[`programs/zettapay/src/lib.rs`](./programs/zettapay/src/lib.rs).
-
-Vulnerability disclosures: `security@zettapay.io`. Public bounty
-program details: [`audit/BUG_BOUNTY.md`](./audit/BUG_BOUNTY.md).
+MIT — see [LICENSE](./LICENSE).

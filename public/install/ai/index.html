@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="Install ZettaPay with an AI assistant. Copy the canonical prompt, paste it in Claude Code, Cursor, Codex, Lovable or Aider, review the PR. Non-custodial, open-source, audited." />
+  <meta name="description" content="Install ZettaPay with an AI assistant. Copy the canonical prompt, paste it in Claude Code, Cursor, Codex, Lovable or Aider, review the PR. Bitcoin and USDC/USDT on Base. Non-custodial, open-source." />
   <meta property="og:title" content="ZettaPay — Install with AI · 1 minute" />
-  <meta property="og:description" content="Paste one prompt into your AI coding assistant. It detects your stack, wires the SDK, and opens a PR you review and merge." />
+  <meta property="og:description" content="Paste one prompt into your AI coding assistant. It detects your stack, wires invoices and the signed webhook, and opens a PR you review and merge." />
   <meta name="robots" content="index, follow" />
   <title>ZettaPay — Install with AI · 1 minute</title>
   <link rel="icon" href="/Logo_symbol.png" />
@@ -333,7 +333,7 @@
           Paste one prompt. <span class="gradient-text">Review the PR.</span>
         </h1>
         <p class="text-muted text-base max-w-2xl mx-auto leading-relaxed">
-          Your AI coding assistant detects this project&rsquo;s stack, wires the ZettaPay SDK, and opens a pull request.
+          Your AI coding assistant detects this project&rsquo;s stack, wires ZettaPay invoices and the signed webhook, and opens a pull request.
           <span class="text-white font-medium">You review the diff before merging.</span> No secrets sent to ZettaPay servers.
         </p>
         <div class="flex flex-wrap justify-center items-center gap-2 mt-5">
@@ -350,11 +350,11 @@
         <div role="tablist" aria-label="Install path" class="grid grid-cols-1 md:grid-cols-2 gap-3" id="mode-tabs">
           <button role="tab" type="button" class="mode-tab" data-mode="cloud" aria-selected="true" aria-controls="prompt-area" id="tab-mode-cloud">
             <div class="mode-tab-title">Cloud &middot; managed</div>
-            <div class="mode-tab-sub">Hosted checkout + hosted listener. Free up to 1k tx/month. Signup &rarr; merchant_id &rarr; integrate.</div>
+            <div class="mode-tab-sub">We run the listener for you. Early access: request it at <span class="font-mono text-mint">/app</span>, get a base URL + API key. Flat subscription, no per-transaction fee.</div>
           </button>
           <button role="tab" type="button" class="mode-tab" data-mode="self" aria-selected="false" aria-controls="prompt-area" id="tab-mode-self">
             <div class="mode-tab-title">Self-hosted &middot; npm</div>
-            <div class="mode-tab-sub">Run <code class="font-mono text-mint">@zettapay/listener</code> on your own box. Free forever, zero deps, you keep all keys.</div>
+            <div class="mode-tab-sub">Run <code class="font-mono text-mint">@zettapay/listener</code> on your own box. Free, no account, nothing phones home, you keep all keys.</div>
           </button>
         </div>
       </div>
@@ -398,31 +398,37 @@
             <span class="step-num">2</span>
             <div class="flex-1">
               <div class="font-semibold text-base mb-0.5">Drop in your details</div>
-              <div class="text-sm text-muted">These get embedded in the prompt &mdash; not sent to ZettaPay. Defaults work for demos.</div>
+              <div class="text-sm text-muted">These get embedded in the prompt &mdash; not sent to ZettaPay. <span id="details-hint">Cloud is in early access: <a href="/app" class="text-royal-bright hover:underline">request it at /app</a> to get your base URL and API key. Plans are on <a href="/pricing" class="text-royal-bright hover:underline">/pricing</a>.</span></div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="md:col-span-2">
-              <label for="f-merchant" class="field-label">Merchant ID <span class="opt">required &middot; from <a href="/signup" class="text-royal-bright hover:underline">/signup</a></span></label>
-              <input id="f-merchant" type="text" class="field-input" placeholder="mch_..." spellcheck="false" autocomplete="off" />
+            <div class="md:col-span-2" data-cloud-only>
+              <label for="f-base" class="field-label">Cloud base URL <span class="opt">from your early-access welcome &middot; <a href="/app" class="text-royal-bright hover:underline">request access</a></span></label>
+              <input id="f-base" type="text" class="field-input" placeholder="https://&lt;your-cloud-base-url&gt;" spellcheck="false" autocomplete="off" />
+            </div>
+
+            <div class="md:col-span-2" data-cloud-only>
+              <label for="f-keyenv" class="field-label">API key env var name <span class="opt">the name only &middot; never paste the key itself</span></label>
+              <input id="f-keyenv" type="text" class="field-input" placeholder="ZETTAPAY_API_KEY" spellcheck="false" autocomplete="off" maxlength="64" />
             </div>
 
             <div class="md:col-span-2">
-              <label for="f-webhook" class="field-label">Your webhook URL <span class="opt">optional &middot; https://your-site.com/api/zp/webhook</span></label>
-              <input id="f-webhook" type="text" class="field-input" placeholder="https://your-site.com/api/zp/webhook" spellcheck="false" autocomplete="off" />
+              <label for="f-webhook" class="field-label">Webhook endpoint <span class="opt">path or full https URL in your app</span></label>
+              <input id="f-webhook" type="text" class="field-input" placeholder="/api/zp/webhook" spellcheck="false" autocomplete="off" />
             </div>
 
             <div>
-              <label for="f-chain" class="field-label">Primary chain</label>
+              <label for="f-chain" class="field-label">Primary rail</label>
               <select id="f-chain" class="field-input">
                 <option value="btc">BTC &middot; native Bitcoin</option>
                 <option value="usdc_base">USDC on Base</option>
+                <option value="usdt_base">USDT on Base</option>
               </select>
             </div>
 
             <div>
-              <label for="f-amount" class="field-label">Amount (USD)</label>
+              <label for="f-amount" class="field-label">Example amount (USD)</label>
               <input id="f-amount" type="number" min="0" step="0.01" class="field-input" placeholder="9.99" />
             </div>
 
@@ -471,7 +477,7 @@
             <div class="flex-1">
               <div class="font-semibold text-base mb-0.5">Paste it in <span id="tool-name-4">Claude Code</span> chat &middot; press Enter</div>
               <div class="text-sm text-muted leading-relaxed">
-                Your AI will read the repo, decide between hosted checkout and SDK install, add a payment button, wrap changes with <code class="font-mono text-mint">// ZETTAPAY-START</code> / <code class="font-mono text-mint">// ZETTAPAY-END</code>, and open a PR titled <code class="font-mono">feat: add ZettaPay crypto payments</code>.
+                Your AI will read the repo, find the server lane, add an invoice endpoint, a signed-webhook handler and a &ldquo;Pay with crypto&rdquo; button, wrap changes with <code class="font-mono text-mint">// ZETTAPAY-START</code> / <code class="font-mono text-mint">// ZETTAPAY-END</code>, and open a PR titled <code class="font-mono">feat: add ZettaPay non-custodial crypto payments</code>.
                 <span class="block mt-2 text-white">Merge when the diff looks right. That&rsquo;s the install.</span>
               </div>
             </div>
@@ -488,7 +494,7 @@
         </div>
         <div>
           ZettaPay is <a class="text-royal-bright hover:underline" href="https://github.com/leandromaiam-code/zettapay" target="_blank" rel="noopener">100% open-source</a>.
-          The prompt above is the entire integration spec &mdash; nothing hidden, nothing phoned home. Payments flow directly from your customer&rsquo;s wallet to your payout address.
+          The prompt above is the entire integration spec &mdash; nothing hidden, nothing phoned home. Payments flow directly from your customer&rsquo;s wallet to your own address. No per-transaction fee: self-hosted is free, Cloud is a flat subscription (<a class="text-royal-bright hover:underline" href="/pricing">pricing</a>).
         </div>
       </section>
 
@@ -503,8 +509,9 @@
 
   // ---------- defaults (work even without any user input) ----------
   const DEFAULTS = {
-    merchant: 'mch_3ba7d521307243ae48fef9ec',
-    webhook:  '',
+    base:     '',
+    keyenv:   'ZETTAPAY_API_KEY',
+    webhook:  '/api/zp/webhook',
     chain:    'btc',
     amount:   '9.99',
     currency: 'USD',
@@ -541,7 +548,8 @@ show the full diff before committing. If type errors appear, fix them in
 the same turn — do not commit a broken build. Detect the server lane the
 webhook will live in (app/api/**, api/**, supabase/functions/**,
 wrangler.toml, netlify/functions/**) BEFORE deciding where to place the
-HMAC handler — the webhook_secret must never reach the browser bundle.`,
+HMAC handler — the API key and the webhook secret must never reach the
+browser bundle.`,
     },
     lovable: {
       name: 'Lovable',
@@ -551,9 +559,9 @@ HMAC handler — the webhook_secret must never reach the browser bundle.`,
 Lovable projects are typically Vite + React + Supabase. If supabase/ exists,
 put the webhook in supabase/functions/zp-webhook/index.ts and the invoice
 creator in supabase/functions/create-invoice/index.ts (Deno runtime —
-HMAC-SHA256 is in the std crypto module). Add ZETTAPAY_MERCHANT_ID and
-ZETTAPAY_WEBHOOK_SECRET as Supabase secrets via the dashboard; never embed
-them in the client bundle. Verify Lovable's preview compiles before opening
+HMAC-SHA256 is available through Web Crypto: crypto.subtle). Add the API
+key and the webhook secret as Supabase secrets via the dashboard; never
+embed them in the client bundle. Verify Lovable's preview compiles before opening
 the PR, and keep button styling consistent with the existing design tokens.`,
     },
     aider: {
@@ -571,21 +579,57 @@ with the title above.`,
     },
   };
 
+  // ---------- shared helpers ----------
+  // Rail picked in the form -> the { chain, asset } pair the invoice API takes.
+  const RAILS = {
+    btc:       { chain: 'btc',  asset: 'BTC',  label: 'Bitcoin (native, BIP-84)' },
+    usdc_base: { chain: 'base', asset: 'usdc', label: 'USDC on Base' },
+    usdt_base: { chain: 'base', asset: 'usdt', label: 'USDT on Base' },
+  };
+
+  // Accepts either a path ("/api/zp/webhook") or a full URL and returns both.
+  function splitWebhook(input) {
+    const w = (input || '').trim() || DEFAULTS.webhook;
+    const m = w.match(/^https?:\/\/[^\/]+(\/.*)?$/i);
+    if (m) return { url: w, path: m[1] || '/' };
+    const p = w.charAt(0) === '/' ? w : '/' + w;
+    return { url: 'https://your-site.com' + p, path: p };
+  }
+
+  // The prompt only ever carries the NAME of the env var that holds the API
+  // key. Anything that does not look like an env var name (e.g. a pasted key)
+  // is discarded so a secret can never end up in the generated prompt.
+  function safeEnvName(input) {
+    const v = (input || '').trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(v)) return DEFAULTS.keyenv;
+    if (/^zp_(live|test)_/i.test(v)) return DEFAULTS.keyenv;
+    return v;
+  }
+
+  function invoiceBodyExample(rail, amount) {
+    return rail.chain === 'btc'
+      ? '{ "chain": "btc", "amount_sats": <positive integer> }'
+      : '{ "chain": "base", "amount_usd": ' + amount + ', "asset": "' + rail.asset + '" }';
+  }
+
   // ---------- prompt template (CLOUD) ----------
   function buildPromptCloud(toolKey, vals) {
     const tool = TOOLS[toolKey];
-    const merchantId = vals.merchant || 'mch_REPLACE_ME';
-    const webhookUrl = vals.webhook || 'https://your-site.com/api/zp/webhook';
-    const chain = vals.chain || 'btc';
+    const rail = RAILS[vals.chain] || RAILS.btc;
+    const hook = splitWebhook(vals.webhook);
+    const keyEnv = safeEnvName(vals.keyenv);
+    const baseUrl = (vals.base || '').trim().replace(/\/+$/, '') || 'https://REPLACE_WITH_YOUR_CLOUD_BASE_URL';
     const amount = vals.amount || '9.99';
     const currency = vals.currency || 'USD';
     const label = vals.label || 'Subscription';
 
     return [
-`Integrate ZettaPay (non-custodial P2P crypto payments — funds flow direct
-to the merchant, ZettaPay never custodies any keys; a hosted listener
-confirms inbound payments and signals the merchant via an HMAC-SHA256
-signed webhook).
+`Integrate ZettaPay CLOUD (managed, non-custodial crypto payments). The
+merchant's backend creates invoices over a small HTTP API; the customer pays
+from any wallet straight to the merchant's own address; ZettaPay Cloud
+watches the chain and POSTs an HMAC-SHA256-signed webhook when the payment
+confirms. ZettaPay never holds funds or keys. Supported rails: Bitcoin,
+USDC on Base, USDT on Base — nothing else.
 
 == HARD CONSTRAINTS — DO NOT VIOLATE ==
 (a) HR-WALLET-LESS — Merchant side has no wallet UI. Never call
@@ -593,59 +637,57 @@ signed webhook).
     (e.g. window.ethereum or any other wallet bridge), never add
     "Connect Wallet" / "Connect Phantom" / "Connect MetaMask" buttons,
     never import @wallet-adapter-* UI packages. The customer pays from
-    their own wallet by scanning the QR or copying the receive address
-    that ZettaPay renders on /checkout?invoice=<id>.
-(b) HR-CUSTODY — Never store, derive, log, or transmit the merchant's
-    private extended key, seed, mnemonic, or any signing material.
-    ZettaPay only ever receives the merchant's PUBLIC xpub during signup.
-    Do not write client-side address derivation from any merchant seed.
-(c) HR-SECRETS-IN-GIT — ZETTAPAY_WEBHOOK_SECRET and the merchant's xpub
-    live ONLY in server-side env vars. Add placeholder lines to
-    .env.example — never commit real values.
-(d) HR-PII-MINIMAL — Collect only { email, shop_name } from the merchant.
-    Do NOT add phone, address, tax-id, KYC fields, or any other PII.
+    their own wallet by scanning the QR or copying the receive address.
+(b) HR-CUSTODY — Never store, derive, log, or transmit a private extended
+    key, seed, mnemonic, or any signing material. ZettaPay only ever
+    received the merchant's PUBLIC xpub / receive address at provisioning.
+    Do not write address derivation from any merchant seed.
+(c) HR-SECRETS-IN-GIT — The API key and the webhook secret live ONLY in
+    server-side env vars. Add placeholder lines to .env.example — never
+    commit real values, never ship them to the browser bundle, never print
+    them in logs or in the PR.
+(d) HR-PII-MINIMAL — Identity-free. Do NOT add phone, address, tax-id,
+    identity-verification fields, or any other PII to the checkout.
 
 == MERCHANT SETUP — context only, already done ==
-The merchant generated a 12/24-word mnemonic OFFLINE in their own wallet
-software (Sparrow / Electrum / hardware wallet), extracted only the
-BIP-84 zpub (native segwit public key — starts with "zpub"), and
-registered it with ZettaPay:
+ZettaPay Cloud is in early access. Access was requested on the ZettaPay
+site (/app) and the operator provisioned this merchant by hand from public
+material only: email, shop name, a BIP-84 zpub for Bitcoin and/or — for
+Base — an xpub or a fixed 0x receive address, plus the webhook URL. The
+merchant received:
+  - a Cloud base URL
+  - an API key (zp_live_..., shown once)
+There is no self-serve signup, no merchant-register endpoint and no
+dashboard — do not look for them and do not invent them.
+NEVER ask the merchant for a private extended key or mnemonic.
 
-  curl -X POST https://zettapay.vercel.app/api/merchants/register \\
-    -H "content-type: application/json" \\
-    -d '{"email":"shop@example.com","shop_name":"Acme Inc","xpub":"zpub6r...","webhook_url":"${webhookUrl}"}'
-
-Response: { "merchant_id": "...", "webhook_secret": "whsec_..." }
-
-NEVER ask the merchant to share the matching private extended key or
-mnemonic. ZettaPay does not custody — the signing material stays in the
-merchant's own wallet software. Backend uses BIP84 derivation on the
-xpub to mint a fresh receive address per invoice; only the merchant can
-later spend.
-
-== MY CREDENTIALS (embed as SERVER-SIDE env vars in the new integration) ==
-ZETTAPAY_MERCHANT_ID    = "${merchantId}"
-ZETTAPAY_WEBHOOK_SECRET = "whsec_REPLACE_ME"     # server-only; never to browser
-ZETTAPAY_WEBHOOK_URL    = "${webhookUrl}"
-ZETTAPAY_CHAIN          = "${chain}"             # btc | usdc_base
-ZETTAPAY_AMOUNT_USD     = ${amount}
-ZETTAPAY_CURRENCY       = "${currency}"          # display label only
-ZETTAPAY_LABEL          = "${label}"
+== MY SETUP (SERVER-SIDE env vars of the new integration) ==
+ZETTAPAY_URL            = "${baseUrl}"
+${keyEnv}  -> holds the API key. It is ALREADY set in my environment /
+              secret manager. Read it at runtime (process.env.${keyEnv} or
+              the platform equivalent). Do NOT ask me to paste the key, do
+              NOT echo it, do NOT write it to any file.
+ZETTAPAY_WEBHOOK_SECRET -> the signing secret registered with the webhook
+              at provisioning. Server-only. Same rules as the API key.
+WEBHOOK_PATH            = "${hook.path}"
+PRIMARY_RAIL            = "${rail.label}"   # chain "${rail.chain}"${rail.chain === 'base' ? ', asset "' + rail.asset + '"' : ''}
+DISPLAY_AMOUNT          = ${amount} ${currency}     # display label only
+LABEL                   = "${label}"
 
 == TASK ==
 
-0. SANITY CHECK first — bail out if the backend is unhealthy:
-     curl -s -o /dev/null -w "%{http_code}\\n" \\
-       https://zettapay.vercel.app/api/test/acceptance/btc-payment
-   If the HTTP status is not 200, STOP and report — do not open a PR.
+0. SANITY CHECK first — bail out if the Cloud API is unreachable:
+     curl -s -o /dev/null -w "%{http_code}\\n" "$ZETTAPAY_URL/api/v1/health"
+   Expected 200 with { "ok": true, "service": "zettapay-cloud" }. If not,
+   STOP and report — do not open a PR.
 
 1. Detect stack (Next.js, Vite, SvelteKit, Remix, Astro, Express, Django,
    Rails, Laravel, Cloudflare Workers, etc) and find the existing payment
    flow (grep: stripe, checkout, billing, subscription, payment). Read
    1–2 of those files first to learn the pattern.
 
-2. Detect the SERVER lane — the webhook_secret CANNOT live in a browser
-   bundle. Pick the first lane that already exists:
+2. Detect the SERVER lane — the API key and webhook secret CANNOT live in a
+   browser bundle. Pick the first lane that already exists:
      - app/api/** or pages/api/**     → Next.js route handler
      - api/**.ts at repo root         → Vercel function
      - supabase/functions/**          → Supabase Edge Function (Deno)
@@ -655,31 +697,48 @@ ZETTAPAY_LABEL          = "${label}"
      - urls.py / views.py             → Django view
      - config/routes.rb               → Rails controller
    If the repo is a pure SPA with NO server lane, ASK the user before
-   scaffolding new infra. Prefer Supabase Edge Functions when Supabase is
-   already in the deps; otherwise a single Vercel function or Cloudflare
-   Worker is the lightest option.
+   scaffolding new infra.
 
 3. Implement TWO server endpoints, both wrapped in
    ZETTAPAY-START / ZETTAPAY-END markers.
 
    A) POST  /api/zp/create-invoice   (or platform-equivalent path)
-      Accepts: { amount_usd?, label?, chain? }  (all optional — fall back
-                                                 to env defaults)
+      Accepts from the merchant frontend: an order / cart reference. Take
+      the amount from YOUR server-side order record, never from the
+      browser.
       Calls upstream:
-        POST https://zettapay.vercel.app/api/invoices
-          { "merchant_id": ZETTAPAY_MERCHANT_ID,
-            "chain":       "btc" | "usdc_base",
-            "amount_usd":  <number>,
-            "metadata":    { "label": ..., "order_id": ... } }
-      Upstream response (200):
-        { "invoice_id", "receive_address", "amount_btc" | "amount_usdc",
-          "qr_uri", "expires_at" }
-      Return to merchant browser:
-        { "invoice_id",
-          "expires_at",
-          "checkout_url": "https://zettapay.vercel.app/checkout?invoice=" + invoice_id }
+        POST $ZETTAPAY_URL/api/v1/invoice
+        headers  X-ZettaPay-Api-Key: <value of ${keyEnv}>
+                 Content-Type: application/json
+        body (this integration's primary rail)
+                 ${invoiceBodyExample(rail, amount)}
+        other accepted bodies
+                 { "chain": "btc",  "amount_sats": <positive integer>, "memo"?: string }
+                 { "chain": "base", "amount_usd": <number>, "asset": "usdc" | "usdt" }
+      Bitcoin invoices are priced in satoshis: convert the order total to
+      sats in YOUR backend with a price source you trust. Base invoices
+      take amount_usd directly.
+      Upstream response (201) includes:
+        invoice_id, chain, asset, status, receive_address, qr_uri,
+        expires_at, and — when the operator configured hosted checkout —
+        checkout_url. BTC adds amount_btc / amount_sats; Base adds
+        amount_usdc (and, in fixed-address mode, mode + nonce).
+      Persist invoice_id against the order, then return to the browser
+      ONLY: { invoice_id, checkout_url?, receive_address, qr_uri,
+              amount (as returned), expires_at }.
+      Errors to handle — surface them, do not blindly retry:
+        401 unauthorized        key missing/invalid → config error, log it
+        402 plan_limit_reached  the plan's monthly invoice cap was hit.
+                                Show "crypto checkout temporarily
+                                unavailable", alert the merchant, and do
+                                NOT retry. Plans are a flat subscription
+                                by invoice volume (see /pricing on the
+                                ZettaPay site); there is no per-transaction
+                                fee.
+        429 rate_limited        honour the Retry-After header
+        400 chain_disabled / invalid_amount / unsupported_chain
 
-   B) POST  /api/zp/webhook          (or platform-equivalent path)
+   B) POST  ${hook.path}   (must be the path registered at provisioning)
       Verify HMAC-SHA256 in exactly this order:
         1. Read the RAW request body BEFORE any JSON.parse / express.json /
            bodyParser. Use raw Buffer / await req.text() / context.request.text().
@@ -687,61 +746,78 @@ ZETTAPAY_LABEL          = "${label}"
         3. Compare expected vs header "X-ZettaPay-Signature" using a
            CONSTANT-TIME comparison (crypto.timingSafeEqual on equal-length
            Buffers, or the platform equivalent). On mismatch → 401.
-        4. Read header "X-ZettaPay-Timestamp" as an integer epoch-seconds
-           value. If |now() - timestamp| > 300, reject as replay → 401.
-        5. Idempotency — keep a {invoice_id → processed} table (or check
-           your orders table). If invoice_id already final, return 200
+        4. Read header "X-ZettaPay-Timestamp" as unix MILLISECONDS. If
+           |now() - timestamp| > 300000, reject as replay → 401.
+        5. Idempotency — keep a table keyed by header "X-ZettaPay-Event-Id"
+           (stable across retries). If already processed, return 200
            immediately, no side effects.
         6. Update the matching order / subscription / cart in YOUR DB.
         7. Return HTTP 200 with body "{\\"ok\\":true}". Any non-2xx triggers
-           retries on ZettaPay's side.
+           retries (1s → 5s → 30s → 2m → 10m → 30m → 1h → 3h → 12h → 24h).
+      Implement the check with the platform's own crypto primitives exactly
+      as written above. @zettapay/sdk/server does export
+      verifyWebhookSignature / WebhookSignatureError, but in the current
+      SDK that helper verifies a different signing string (timestamp + "."
+      + body, epoch seconds) and will reject these deliveries — do not use
+      it here.
 
-   Webhook PAYLOAD schema (ZettaPay → merchant, JSON body):
+   Webhook PAYLOAD (ZettaPay → merchant, JSON body — identical to the
+   self-hosted listener):
      {
-       "invoice_id":      string,           // ZettaPay invoice id
-       "merchant_id":     string,           // your merchant_id
-       "status":          "confirmed" | "expired" | "underpaid",
-       "tx_hash":         string,           // on-chain tx hash
-       "amount_btc":      string,           // present when chain=btc
-       "amount_usdc":     string,           // present when chain=usdc_base
-       "amount_usd":      number,
-       "confirmations":   number,
-       "receive_address": string,           // per-invoice BIP84 child address
-       "chain":           "btc" | "usdc_base",
-       "confirmed_at":    string            // ISO-8601
+       "event":         "invoice.confirmed",
+       "invoice_id":    string,
+       "merchant_id":   string,
+       "chain":         "btc" | "base",
+       "asset":         "BTC" | "USDC" | "USDT",
+       "amount":        string,   // BTC: decimal BTC. Base: integer token
+                                  // base units (6 decimals)
+       "address":       string,   // the invoice's receive address
+       "tx_hash":       string,
+       "confirmed_at":  string    // ISO-8601
      }
+   Mark the order paid ONLY on event "invoice.confirmed". Ignore unknown
+   event names and unknown fields (e.g. "payment.orphan" reports a Base
+   transfer that matched no open invoice — log it, activate nothing).
 
 4. Implement the customer-facing payment trigger:
-   - When the customer clicks "Pay with crypto", the merchant frontend
-     calls YOUR /api/zp/create-invoice, then redirects (or opens in a new
-     tab / iframe) to checkout_url:
-       https://zettapay.vercel.app/checkout?invoice=<invoice_id>
-     ZettaPay's hosted page renders the QR code, the per-invoice receive
-     address, and polls confirmation status.
-   - The canonical hosted-checkout URL is /checkout?invoice=<invoice_id>
-     ONLY. Do NOT build a /checkout URL keyed by merchant_id — that is a
-     stale pattern from earlier ZettaPay versions and will not render a
-     valid payment session.
+   - On "Pay with crypto", the frontend calls YOUR /api/zp/create-invoice.
+   - If the response has checkout_url, redirect to it (or open it in a new
+     tab). That hosted page shows the QR, the receive address and the
+     live status.
+   - If there is no checkout_url, render the payment screen yourself from
+     receive_address + qr_uri + the exact amount + expires_at. The browser
+     may poll the PUBLIC, key-less endpoint
+       GET $ZETTAPAY_URL/api/v1/checkout/<invoice_id>
+     for display status (pending | detected | confirmed | expired). Never
+     call the authenticated endpoints from the browser.
+   - On Base in fixed-address mode the payer must send the EXACT amount
+     returned in amount_usdc (the low decimals identify the invoice). Show
+     it verbatim with a copy button — do not round it.
    - The order is marked "paid" by YOUR webhook handler (step 3B), not by
-     the browser. The UI can show "Awaiting confirmation…" and poll your
-     own order status.
+     the browser. For reconciliation your SERVER may also call
+       GET $ZETTAPAY_URL/api/v1/invoice/<invoice_id>   (API key header)
 
-5. Update .env.example with placeholder lines (do NOT commit real values):
-     ZETTAPAY_MERCHANT_ID=mch_replace_me
-     ZETTAPAY_WEBHOOK_SECRET=whsec_replace_me
-     ZETTAPAY_WEBHOOK_URL=https://your-site.com/api/zp/webhook
+5. Do NOT install @zettapay/widget or @zettapay/embed and do not load any
+   embed.js script: those packages target a discontinued version of the
+   product and do not work with this API. The integration needs no
+   ZettaPay npm package at all — plain HTTP + the platform's HMAC.
 
-6. Wrap ALL new code with markers ZETTAPAY-START / ZETTAPAY-END. Use the
+6. Update .env.example with placeholder lines (do NOT commit real values):
+     ZETTAPAY_URL=https://replace-with-your-cloud-base-url
+     ${keyEnv}=zp_live_replace_me
+     ZETTAPAY_WEBHOOK_SECRET=replace_me
+
+7. Wrap ALL new code with markers ZETTAPAY-START / ZETTAPAY-END. Use the
    language's comment syntax: // for TS/JS/Rust/Go, # for Python/Ruby,
    <!-- --> for HTML/JSX inline, /* */ for CSS. One revert grep removes
    the whole integration:
      git grep -l ZETTAPAY-START
      # then strip each block via sed/awk between the two markers
 
-7. Open a PR titled "feat: add ZettaPay non-custodial crypto payments".
+8. Open a PR titled "feat: add ZettaPay non-custodial crypto payments".
    PR body must list:
      (a) every file changed,
-     (b) the two new env vars to set (ZETTAPAY_MERCHANT_ID,
+     (b) the env vars to set (ZETTAPAY_URL, ${keyEnv},
          ZETTAPAY_WEBHOOK_SECRET) and where (Vercel project settings /
          Netlify env / Cloudflare secrets / Supabase secrets / Render env),
      (c) the one-line revert command,
@@ -754,33 +830,35 @@ Run these before opening the PR — if any fails, fix and re-check:
       → MUST be empty (HR-WALLET-LESS).
   - grep -r "mnemonic\\|seed phrase\\|extended private key\\|deriveChild" src/ app/
       → MUST be empty (HR-CUSTODY).
-  - grep -r "ZETTAPAY_WEBHOOK_SECRET=" .  excluding .env.example
-      → MUST be empty (HR-SECRETS-IN-GIT).
-  - The only /checkout URL referenced in the diff is keyed by invoice_id
-    (e.g. /checkout?invoice=<id>). No /checkout URL keyed by merchant_id
-    anywhere in the new code (stale pattern).
+  - grep -r "zp_live_[0-9a-f]\\{8,\\}" .
+      → MUST be empty (HR-SECRETS-IN-GIT). Same for any literal
+      ZETTAPAY_WEBHOOK_SECRET value outside .env.example placeholders.
+  - grep -r "@zettapay/widget\\|@zettapay/embed\\|embed.js" .
+      → MUST be empty.
+  - The API key header is only ever set in server code.
   - Webhook handler reads RAW body BEFORE JSON.parse, uses HMAC-SHA256
-    with constant-time compare, enforces ±300s on X-ZettaPay-Timestamp,
-    and is idempotent on invoice_id.
+    with constant-time compare, enforces ±300000 ms on
+    X-ZettaPay-Timestamp, and is idempotent on X-ZettaPay-Event-Id.
+  - A 402 plan_limit_reached response is surfaced, not retried.
   - All new code is between ZETTAPAY-START / ZETTAPAY-END markers.
 
-== REFERENCE — backend endpoints (already deployed, do NOT modify) ==
-  POST https://zettapay.vercel.app/api/merchants/register
-       body  { email, shop_name, xpub, webhook_url }
-       resp  { merchant_id, webhook_secret }
-  POST https://zettapay.vercel.app/api/invoices
-       body  { merchant_id, chain, amount_usd, metadata? }
-       resp  { invoice_id, receive_address, amount_btc|amount_usdc, qr_uri, expires_at }
-  GET  https://zettapay.vercel.app/checkout?invoice=<invoice_id>
-  GET  https://zettapay.vercel.app/api/test/acceptance/btc-payment
+== REFERENCE — Cloud API (already deployed, do NOT modify) ==
+  Auth header   X-ZettaPay-Api-Key: <value of ${keyEnv}>
+  POST $ZETTAPAY_URL/api/v1/invoice          create an invoice (auth)
+  GET  $ZETTAPAY_URL/api/v1/invoice/:id      fetch one of your invoices (auth)
+  GET  $ZETTAPAY_URL/api/v1/checkout/:id     public display view (no auth)
+  GET  $ZETTAPAY_URL/api/v1/health           liveness (no auth)
+  Error shape   { "error": { "code": string, "message"?: string } }
 
 Webhook signing:
   Algorithm    HMAC-SHA256, hex output
   Sig header   X-ZettaPay-Signature  = hex(hmac_sha256(webhook_secret, rawBody))
-  Time header  X-ZettaPay-Timestamp  = unix epoch seconds  (tolerance ±300s)
+  Time header  X-ZettaPay-Timestamp  = unix epoch MILLISECONDS  (tolerance ±300000)
+  Event header X-ZettaPay-Event-Id   = stable id for idempotency
+  Attempt hdr  X-ZettaPay-Attempt    = 1-indexed retry counter
   Comparison   constant-time on equal-length hex strings
 
-Docs: https://zettapay.vercel.app/docs
+Docs: /docs on the ZettaPay site · source: https://github.com/leandromaiam-code/zettapay/tree/main/packages/cloud#readme
 
 ${tool.tweak}
 
@@ -794,49 +872,53 @@ Do not skip the markers, the env-var hygiene rules, or the PR.`
   // ---------- prompt template (SELF-HOSTED) ----------
   function buildPromptSelf(toolKey, vals) {
     const tool = TOOLS[toolKey];
-    const webhookUrl = vals.webhook || 'https://your-site.com/api/zp/webhook';
-    const chain = vals.chain || 'btc';
+    const rail = RAILS[vals.chain] || RAILS.btc;
+    const webhookUrl = splitWebhook(vals.webhook).url;
+    const hookPath = splitWebhook(vals.webhook).path;
     const amount = vals.amount || '9.99';
     const currency = vals.currency || 'USD';
     const label = vals.label || 'Subscription';
 
     return [
 `Integrate ZettaPay in SELF-HOSTED mode. The merchant runs the @zettapay/listener
-package on their OWN infrastructure: it watches BIP-84 addresses derived from
-their xpub on mempool.space, then POSTs HMAC-SHA256-signed webhooks to a
-handler in their app. ZettaPay has ZERO runtime role — nothing phones home.
+package on their OWN infrastructure: it derives a receive address per invoice
+from the merchant's PUBLIC keys, watches Bitcoin (via mempool.space) and
+USDC / USDT on Base (via Base RPC), then POSTs HMAC-SHA256-signed webhooks to
+a handler in their app. ZettaPay has ZERO runtime role — nothing phones home.
+Self-hosted is free: no subscription, no per-transaction fee.
 
 == HARD CONSTRAINTS — DO NOT VIOLATE ==
 (a) HR-WALLET-LESS — No wallet UI anywhere. Never call wallet.connect(),
-    never depend on window.ethereum / window.solana / any injected provider,
+    never depend on window.ethereum or any other injected wallet provider,
     never add "Connect Wallet" / "Connect Phantom" / "Connect MetaMask"
     buttons, never import @wallet-adapter-* UI packages. The customer pays
     by scanning the QR or copying the receive address that YOUR app renders.
-(b) HR-CUSTODY — The listener accepts ONLY the merchant's PUBLIC xpub
-    (BIP-84 zpub for mainnet, vpub for testnet). Never accept, store, log,
-    or transmit the mnemonic, seed, xprv, or any signing material. The
-    private extended key stays in the merchant's wallet software (Sparrow,
-    Electrum, hardware wallet) and is never typed into a terminal that
-    runs this listener.
+(b) HR-CUSTODY — The listener accepts ONLY public material: the BIP-84
+    zpub (vpub on testnet), optionally an EVM xpub or a fixed 0x receive
+    address. Never accept, store, log, or transmit the mnemonic, seed,
+    xprv, or any signing material. The private extended key stays in the
+    merchant's wallet software (Sparrow, Electrum, hardware wallet) and is
+    never typed into a terminal that runs this listener.
 (c) HR-PHONE-HOME — The listener MUST NOT call zettapay.* hosts at runtime.
-    Its only outbound traffic is mempool.space (BTC tip + tx data) and the
-    merchant's own MERCHANT_WEBHOOK_URL.
-(d) HR-SECRETS-IN-GIT — MERCHANT_WEBHOOK_SECRET lives ONLY in server-side
-    env vars (.env, systemd EnvironmentFile, Docker --env, Railway/Fly
-    secrets manager). Never commit a real value; .env.example placeholders
-    only.
+    Its only outbound traffic is mempool.space (BTC), the Base RPC
+    endpoints (USDC / USDT) and the merchant's own MERCHANT_WEBHOOK_URL.
+(d) HR-SECRETS-IN-GIT — MERCHANT_WEBHOOK_SECRET and ZETTAPAY_API_KEY live
+    ONLY in server-side env vars (.env, systemd EnvironmentFile, Docker
+    --env, Railway/Fly secrets manager). Never commit a real value;
+    .env.example placeholders only.
 
 == MY SETUP — fill these BEFORE generating any code ==
-MERCHANT_XPUB              = "zpub6...REPLACE_WITH_YOUR_BIP84_ZPUB"  # public only
+MERCHANT_XPUB              = "zpub6...REPLACE_WITH_YOUR_BIP84_ZPUB"  # public only, required
+MERCHANT_XPUB_EVM          = ""   # optional: EVM xpub (m/44'/60'/0') → USDC on Base, one address per invoice
+MERCHANT_EVM_ADDRESS       = ""   # optional: fixed 0x address → USDC/USDT on Base for wallets without xpub
 MERCHANT_WEBHOOK_URL       = "${webhookUrl}"                          # https only
 MERCHANT_SHOP_NAME         = "${label}"
 MERCHANT_EMAIL             = "you@example.com"
-STORAGE                    = "json"                                   # default (tier-1)
+STORAGE                    = "json"                                   # json (default) | sqlite
 ZETTAPAY_DATA_DIR          = "/var/lib/zettapay/data"                 # listener state
-HEALTH_PORT                = "8787"
-PRIMARY_CHAIN              = "${chain}"
-DISPLAY_AMOUNT_USD         = ${amount}
-DISPLAY_CURRENCY           = "${currency}"
+HEALTH_PORT                = "8787"                                   # API + health, one port
+PRIMARY_RAIL               = "${rail.label}"
+DISPLAY_AMOUNT             = ${amount} ${currency}                    # display label only
 
 The xpub is the merchant's BIP-84 account-level PUBLIC key, exported
 OFFLINE from their wallet (Sparrow → Account Settings → Show xpub;
@@ -845,21 +927,19 @@ mnemonic.
 
 == TASK ==
 
-0. SANITY CHECK first — bail out if the package surface is unhealthy:
-     curl -s -o /dev/null -w "%{http_code}\\n" \\
-       https://zettapay.vercel.app/api/test/acceptance/self-hosted-listener
-   If the HTTP status is not 200, STOP and report — do not open a PR.
+0. SANITY CHECK first — bail out if the package is not installable:
+     npm view @zettapay/listener version
+   If that fails, STOP and report — do not open a PR.
 
-1. Install the listener as a sibling package or in a dedicated directory:
-     npm install @zettapay/listener
-   (Optional storage upgrades, install only when needed:
-     npm install better-sqlite3        # STORAGE=sqlite, tier-2
-     npm install @supabase/supabase-js # STORAGE=supabase, tier-3
-     npm install pg                    # STORAGE=postgres, tier-3)
+1. Install the listener (global, or as a sibling package in a dedicated
+   directory):
+     npm install -g @zettapay/listener
+   (Optional storage upgrade, install only when needed:
+     npm install better-sqlite3        # STORAGE=sqlite)
 
 2. Bootstrap the listener config in a directory the merchant controls. The
    CLI is non-interactive when every flag is passed:
-     npx zettapay-listener init \\
+     zettapay-listener init \\
        --xpub        "$MERCHANT_XPUB" \\
        --shop-name   "$MERCHANT_SHOP_NAME" \\
        --email       "$MERCHANT_EMAIL" \\
@@ -867,9 +947,19 @@ mnemonic.
        --storage     "$STORAGE" \\
        --data-dir    "$ZETTAPAY_DATA_DIR" \\
        --health-port "$HEALTH_PORT"
-   This writes a .env (chmod 0600) and seeds merchant.json. The CLI REFUSES
-   any xprv/yprv/zprv prefix or BIP-39 mnemonic (HR-CUSTODY) — surface the
-   error and do NOT retry with a wider regex if it rejects.
+   Add ONE of these to accept stablecoins on Base:
+       --xpub-evm    "$MERCHANT_XPUB_EVM"      # per-invoice address (USDC)
+       --evm-address "$MERCHANT_EVM_ADDRESS"   # fixed address (USDC / USDT)
+   This writes a .env (chmod 0600), generates MERCHANT_WEBHOOK_SECRET and
+   seeds merchant.json. The CLI REFUSES any xprv/yprv/zprv prefix or BIP-39
+   mnemonic (HR-CUSTODY) — surface the error and do NOT retry with a wider
+   regex if it rejects.
+   Then add to that .env by hand:
+       ZETTAPAY_API_KEY=<any high-entropy secret, e.g. openssl rand -hex 32>
+       MERCHANT_EVM_TOKENS=usdc,usdt     # only if USDT should be accepted too
+   ZETTAPAY_API_KEY protects POST /invoice. With NODE_ENV=production and no
+   key the listener refuses to start.
+   Validate without starting:  zettapay-listener verify-config
 
 3. Run the listener as a long-lived process. Pick ONE of these deploy paths
    based on the merchant's infrastructure:
@@ -889,10 +979,10 @@ mnemonic.
          [Install]
          WantedBy=multi-user.target
        Then: sudo systemctl enable --now zettapay-listener
-   (B) Docker:
-       Pull or build the published image, then:
-         docker run -d --restart unless-stopped \\
-           -p 8787:8787 \\
+   (B) Docker (keep it on the app's private network — do not expose 8787
+       to the internet):
+         docker run -d --name zettapay-listener --restart unless-stopped \\
+           --network <your-app-network> \\
            -v zettapay-data:/data \\
            --env-file ./.env \\
            ghcr.io/leandromaiam-code/zettapay-listener:latest
@@ -910,7 +1000,7 @@ mnemonic.
 5. Add the webhook handler to the merchant's existing app — wrap with
    ZETTAPAY-START / ZETTAPAY-END markers so a one-shot revert is possible.
 
-   POST  /api/zp/webhook   (or platform-equivalent path)
+   POST  ${hookPath}   (the path of MERCHANT_WEBHOOK_URL)
    Verify HMAC-SHA256 in exactly this order:
      1. Read the RAW request body BEFORE any JSON.parse / express.json /
         bodyParser. Use raw Buffer / await req.text() / context.request.text().
@@ -921,58 +1011,86 @@ mnemonic.
      4. Read header "X-ZettaPay-Timestamp" as unix-MILLISECONDS, reject when
         |now() - timestamp| > 300000 (replay window 5 min).
      5. Idempotency — keep a table keyed by header "X-ZettaPay-Event-Id"
-        (the listener sends a stable event id per delivery). If the event
-        id is already processed, return 200 immediately, no side effects.
+        (stable per invoice + status, also across listener restarts). If
+        the event id is already processed, return 200 immediately, no side
+        effects.
      6. Update the matching order / subscription in YOUR DB.
      7. Return 200 with body "{\\"ok\\":true}". Any non-2xx triggers the
         listener's retry curve (1s → 5s → 30s → 2m → 10m → 30m → 1h → 3h
         → 12h → 24h, then dead-letter).
+   Implement the check with the platform's own crypto primitives exactly as
+   written above (the listener README has a 6-line Node example).
+   @zettapay/sdk/server does export verifyWebhookSignature, but in the
+   current SDK that helper verifies a different signing string
+   (timestamp + "." + body, epoch seconds) and will reject the listener's
+   deliveries — do not use it here.
 
    Webhook PAYLOAD (listener → merchant, JSON body):
      {
        "event":         "invoice.confirmed",
        "invoice_id":    string,
        "merchant_id":   string,
-       "chain":         "btc" | "polygon" | "eth",
-       "asset":         "BTC" | "USDC" | "ETH",
-       "amount":        string,                  // decimal string, native units
-       "address":       string,                  // per-invoice BIP-84 child address
+       "chain":         "btc" | "base",
+       "asset":         "BTC" | "USDC" | "USDT",
+       "amount":        string,                  // BTC: decimal BTC. Base: integer
+                                                 // token base units (6 decimals)
+       "address":       string,                  // the invoice's receive address
        "tx_hash":       string,
-       "confirmations": number,
        "confirmed_at":  string                   // ISO-8601
      }
+   Mark the order paid ONLY on event "invoice.confirmed". In fixed-address
+   mode the listener also sends "payment.orphan" for a transfer whose
+   exact amount matched no open invoice — log it for manual review and
+   activate nothing.
 
-6. Implement the customer-facing payment trigger using the @zettapay/listener
-   storage APIs directly (no upstream HTTP needed — the merchant's app owns
-   the data layer):
-   - On "Pay with crypto" click, the backend:
-       (i)  derives the next receive address from MERCHANT_XPUB via BIP-84
-            at child index = merchant.next_child_index (use @scure/bip32 +
-            @scure/base + @noble/hashes; mirror the helper in the listener
-            test at packages/listener/test/install-acceptance.test.ts).
-       (ii) creates an invoice row through the StorageAdapter from
-            @zettapay/listener/storage with { id, merchant_id, chain,
-            asset, amount, address, child_index, expires_at }.
-       (iii)increments merchant.next_child_index ATOMICALLY via
-            storage.nextChildIndex(merchantId).
-   - The frontend then renders the QR code + receive address. There is no
-     hosted /checkout in self-hosted mode — the merchant owns the entire
-     payment page. The listener confirms on-chain, fires the webhook, and
-     the order flips to "paid" in step 5 above.
+6. Implement the customer-facing payment trigger against the listener's own
+   HTTP API (same host, default http://localhost:$HEALTH_PORT — server to
+   server only, never from the browser):
+   - On "Pay with crypto" click, the merchant BACKEND calls:
+       POST http://localhost:$HEALTH_PORT/invoice
+       headers  X-ZettaPay-Api-Key: <ZETTAPAY_API_KEY>
+                Content-Type: application/json
+       body (this integration's primary rail)
+                ${invoiceBodyExample(rail, amount)}
+       other accepted bodies
+                { "amount_sats": <positive integer>, "memo"?: string }      # Bitcoin
+                { "chain": "base", "amount_usd": <number>, "asset": "usdc" | "usdt" }
+     Bitcoin invoices are priced in satoshis: convert the order total to
+     sats in YOUR backend with a price source you trust.
+     The response carries invoice_id, receive_address, qr_uri, expires_at
+     and the amount fields (amount_usdc on Base; fixed-address mode adds
+     mode + nonce). 429 means the local rate limit was hit — honour
+     Retry-After.
+   - Persist invoice_id against the order and render the payment screen
+     yourself: QR from qr_uri, the receive address, the exact amount and a
+     countdown to expires_at. There is no hosted checkout in self-hosted
+     mode — the merchant owns the entire payment page.
+   - In fixed-address mode the payer must send the EXACT amount returned
+     in amount_usdc (the low decimals identify the invoice). Show it
+     verbatim with a copy button — a rounded amount becomes an orphan.
+   - Status for the UI: your backend may poll
+       GET http://localhost:$HEALTH_PORT/invoice/<invoice_id>
+     (pending | detected | confirmed | expired) and relay it. The order
+     itself flips to "paid" only in the webhook handler (step 5).
 
-7. Update .env.example with placeholder lines (do NOT commit real values):
+7. Do NOT install @zettapay/widget or @zettapay/embed and do not load any
+   embed.js script: those packages target a discontinued version of the
+   product and do not work with the listener.
+
+8. Update .env.example with placeholder lines (do NOT commit real values):
      STORAGE=json
      ZETTAPAY_DATA_DIR=/var/lib/zettapay/data
      MERCHANT_XPUB=zpub_replace_me
-     MERCHANT_WEBHOOK_URL=https://your-site.com/api/zp/webhook
-     MERCHANT_WEBHOOK_SECRET=whsec_replace_me
+     MERCHANT_WEBHOOK_URL=https://your-site.com${hookPath}
+     MERCHANT_WEBHOOK_SECRET=replace_me
+     ZETTAPAY_API_KEY=replace_me
      HEALTH_PORT=8787
 
-8. Wrap ALL new code with markers ZETTAPAY-START / ZETTAPAY-END. Use the
+9. Wrap ALL new code with markers ZETTAPAY-START / ZETTAPAY-END. Use the
    language's comment syntax. One revert grep removes the whole integration:
      git grep -l ZETTAPAY-START
 
-9. Open a PR titled "feat: add ZettaPay self-hosted non-custodial payments".
+10. Open a PR titled "feat: add ZettaPay self-hosted non-custodial payments".
    PR body must list:
      (a) every file changed,
      (b) the deploy choice (systemd / Docker / Railway / Fly / Render) and
@@ -988,28 +1106,29 @@ Run these before opening the PR — if any fails, fix and re-check:
       → MUST be empty (HR-WALLET-LESS).
   - grep -r "mnemonic\\|seed phrase\\|extended private key\\|xprv\\|zprv" src/ app/
       → MUST be empty (HR-CUSTODY).
-  - grep -r "zettapay.vercel.app\\|api.zettapay" src/ app/
-      → MUST be empty in the listener code path (HR-PHONE-HOME). The webhook
-      handler itself never reaches outward; the listener only talks to
-      mempool.space + MERCHANT_WEBHOOK_URL.
-  - grep -r "MERCHANT_WEBHOOK_SECRET=" .  excluding .env.example
+  - grep -ri "https\\?://[a-z0-9.-]*zettapay" src/ app/
+      → MUST be empty (HR-PHONE-HOME). The integration only talks to the
+      merchant's own listener; the listener only talks to mempool.space,
+      the Base RPC and MERCHANT_WEBHOOK_URL.
+  - grep -r "MERCHANT_WEBHOOK_SECRET=\\|ZETTAPAY_API_KEY=" .  excluding .env.example
       → MUST be empty (HR-SECRETS-IN-GIT).
+  - grep -r "@zettapay/widget\\|@zettapay/embed\\|embed.js" .
+      → MUST be empty.
   - Webhook handler reads RAW body BEFORE JSON.parse, uses HMAC-SHA256
     with constant-time compare, enforces ±300000ms on X-ZettaPay-Timestamp,
     and is idempotent on X-ZettaPay-Event-Id.
 
 == REFERENCE — package surface (already published) ==
   npm    @zettapay/listener
-  bin    zettapay-listener  (subcommands: init | start | healthcheck |
-                             verify-config | migrate)
+  bin    zettapay-listener  (subcommands: init | start | verify-config |
+                             derive-address | create-invoice | healthcheck |
+                             migrate)
+  http   POST /invoice · GET /invoice/:id · GET /health   (default port 8787)
   exports
          import { JsonFileStorage, SqliteStorage } from '@zettapay/listener/storage';
          import { BtcListener, WebhookDispatcher, HealthServer } from '@zettapay/listener';
-  health GET http://localhost:HEALTH_PORT/health
   docs   https://github.com/leandromaiam-code/zettapay/tree/main/packages/listener#readme
   design https://github.com/leandromaiam-code/zettapay/blob/main/docs/architecture/self-hosted-listener-design.md
-  health probe (public, deploy-time):
-         GET https://zettapay.vercel.app/api/test/acceptance/self-hosted-listener
 
 Webhook signing (identical to cloud mode):
   Algorithm    HMAC-SHA256, hex output
@@ -1023,9 +1142,10 @@ ${tool.tweak}
 
 == START ==
 Read the repo first, run the sanity check, install @zettapay/listener, run
-the init wizard with the merchant's xpub, pick the deploy path, then wire
-the webhook handler. If the merchant's runtime (Lambda / Workers / etc)
-cannot host a long-lived process, ASK before defaulting to cloud mode.`
+init with the merchant's PUBLIC keys, pick the deploy path, then wire the
+invoice call and the webhook handler. If the merchant's runtime (Lambda /
+Workers / etc) cannot host a long-lived process, ASK before defaulting to
+cloud mode.`
     ].join('\n');
   }
 
@@ -1048,7 +1168,8 @@ cannot host a long-lived process, ASK before defaulting to cloud mode.`
       return v || fallback;
     };
     return {
-      merchant: get('f-merchant', DEFAULTS.merchant),
+      base:     get('f-base',     DEFAULTS.base),
+      keyenv:   get('f-keyenv',   DEFAULTS.keyenv),
       webhook:  get('f-webhook',  DEFAULTS.webhook),
       chain:    get('f-chain',    DEFAULTS.chain),
       amount:   get('f-amount',   DEFAULTS.amount),
@@ -1081,12 +1202,10 @@ cannot host a long-lived process, ASK before defaulting to cloud mode.`
     if (mode !== 'cloud' && mode !== 'self') return;
     state.mode = mode;
     $$('.mode-tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.mode === mode)));
-    // Merchant ID input only matters in cloud mode — fade it in self-hosted.
-    const merchantField = document.getElementById('f-merchant');
-    if (merchantField) {
-      const wrap = merchantField.closest('.md\\:col-span-2') || merchantField.parentElement;
-      if (wrap) wrap.style.display = mode === 'self' ? 'none' : '';
-    }
+    // Base URL + API-key env name only matter in cloud mode.
+    $$('[data-cloud-only]').forEach((el) => { el.style.display = mode === 'self' ? 'none' : ''; });
+    const hint = document.getElementById('details-hint');
+    if (hint) hint.style.display = mode === 'self' ? 'none' : '';
     render();
   }
 
@@ -1113,7 +1232,7 @@ cannot host a long-lived process, ASK before defaulting to cloud mode.`
   });
 
   // form wiring (live update)
-  ['f-merchant', 'f-webhook', 'f-chain', 'f-amount', 'f-currency', 'f-label'].forEach((id) => {
+  ['f-base', 'f-keyenv', 'f-webhook', 'f-chain', 'f-amount', 'f-currency', 'f-label'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     el.addEventListener('input', render);

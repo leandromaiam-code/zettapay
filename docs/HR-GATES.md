@@ -7,7 +7,10 @@ Live invariants enforced on every spec, every PR, and every merged commit.
 > See `fabric/README.md` for architecture and `fabric/server-patch.md` for
 > deployment.
 
-## The 4 ZettaPay Hard Rules
+## The ZettaPay Hard Rules
+
+Seven rules live in `fabric/seed/zettapay_hrs.json`. The first four are product
+invariants; the last three protect the self-hosted listener.
 
 ### HR-CUSTODY — Non-custodial invariant (severity: **hard**)
 
@@ -52,6 +55,24 @@ low-entropy / all-repeating placeholders.
 Detection: `sk_live_*`, `zk_live_*`, `whsec_*`, `ghp_*`, raw 64-hex (`0x…`)
 followed by EOL or comment.
 
+### HR-PHONE-HOME — The self-hosted listener never phones home (severity: **hard**)
+
+`@zettapay/listener` makes no outbound request to a ZettaPay-controlled domain.
+Allowed traffic: the chain data sources, the merchant's own webhook URL, and the
+merchant's own database when a Supabase/Postgres adapter is chosen. In practice
+the scanner flags any hard-coded ZettaPay URL in shipped code or public pages —
+use configuration or relative links.
+
+### HR-OPTIONAL-DEPS — Storage adapters are optional peer dependencies (severity: **hard**)
+
+The listener installs and runs with zero database drivers. A storage backend's
+driver is an optional peer dependency, loaded only when that adapter is selected.
+
+### HR-STORAGE-ADAPTER — All listener persistence goes through `StorageAdapter` (severity: **hard**)
+
+No direct file or database access for merchant, invoice or webhook state outside
+an adapter implementation.
+
 ## The 4 gates
 
 | # | When | What runs | On violation |
@@ -60,6 +81,15 @@ followed by EOL or comment.
 | 2 | Pre-merge (this repo) | `hr-scan` GitHub Action runs `scripts/hr-scan.mjs diff` | PR check fails with file:line annotations |
 | 3 | Post-merge (Fabric host) | `fabric-hr-postscan.timer` → `bin/postscan.js` (hourly) | auto-revert PR + audit journal + WhatsApp ping |
 | 4 | Learning (Fabric host) | `fabric-hr-learning.timer` → `bin/hr-learning.js` (daily) | proposes new `severity=soft` HRs from recurring violations |
+
+> **Status (2026-10):** gates 1 and 2 are live. Gates 3 and 4 are designed
+> (`fabric/systemd/`, `fabric/bin/`) but their timers are **not installed** on the
+> Fabric host — today nothing reverts a violation after merge, so gate 2 is the
+> last line of defence.
+>
+> `node scripts/hr-scan.mjs tree` is **not** clean on `main`: the pre-pivot code
+> (`packages/api`, plugins, the non-published SDKs) still carries violations that
+> predate the rules. The PR gate only checks added lines.
 
 ## How the PR gate works
 

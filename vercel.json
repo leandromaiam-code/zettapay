@@ -12,80 +12,12 @@
   },
   "rewrites": [
     {
-      "source": "/pay",
-      "destination": "/pay.html"
-    },
-    {
       "source": "/healthz",
       "destination": "/api/healthz"
     },
     {
       "source": "/health",
       "destination": "/api/health"
-    },
-    {
-      "source": "/ready",
-      "destination": "/api/ready"
-    },
-    {
-      "source": "/metrics",
-      "destination": "/api/metrics"
-    },
-    {
-      "source": "/simulate/:merchant",
-      "destination": "/api/simulate/:merchant"
-    },
-    {
-      "source": "/analytics/:merchant",
-      "destination": "/api/analytics/:merchant"
-    },
-    {
-      "source": "/merchants/register",
-      "destination": "/api/merchants/register"
-    },
-    {
-      "source": "/merchants/onboard",
-      "destination": "/api/merchants/onboard"
-    },
-    {
-      "source": "/mcp",
-      "destination": "/api/mcp"
-    },
-    {
-      "source": "/onramp",
-      "destination": "/api/onramp"
-    },
-    {
-      "source": "/onramp/webhook",
-      "destination": "/api/onramp/webhook"
-    },
-    {
-      "source": "/payments",
-      "destination": "/api/payments"
-    },
-    {
-      "source": "/signup",
-      "destination": "/signup.html"
-    },
-    {
-      "source": "/dashboard",
-      "destination": "/dashboard.html"
-    },
-    {
-      "source": "/dashboard/:merchant",
-      "destination": "/dashboard/index.html"
-    },
-    {
-      "source": "/dashboard/:merchant/payouts",
-      "destination": "/dashboard/payouts.html"
-    },
-    {
-      "source": "/launch",
-      "destination": "/launch.html"
-    },
-    {
-      "source": "/mainnet",
-      "destination": "/launch.html"
     },
     {
       "source": "/pricing",
@@ -104,12 +36,8 @@
       "destination": "/docs/embed.html"
     },
     {
-      "source": "/docs/faucet",
-      "destination": "/docs/faucet.html"
-    },
-    {
-      "source": "/faucet",
-      "destination": "/api/faucet"
+      "source": "/docs/webhook",
+      "destination": "/docs/webhook.html"
     },
     {
       "source": "/checkout/:invoice_id",
@@ -150,6 +78,47 @@
     {
       "source": "/install/ai",
       "destination": "/install/ai/index.html"
+    },
+    {
+      "source": "/app",
+      "destination": "/app/index.html"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/signup",
+      "destination": "/app",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/app",
+      "permanent": false
+    },
+    {
+      "source": "/dashboard/:path*",
+      "destination": "/app",
+      "permanent": false
+    },
+    {
+      "source": "/launch",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/mainnet",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/pay",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/docs/faucet",
+      "destination": "/docs",
+      "permanent": false
     }
   ],
   "headers": [
