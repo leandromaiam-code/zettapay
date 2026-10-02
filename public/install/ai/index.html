@@ -350,7 +350,7 @@
         <div role="tablist" aria-label="Install path" class="grid grid-cols-1 md:grid-cols-2 gap-3" id="mode-tabs">
           <button role="tab" type="button" class="mode-tab" data-mode="cloud" aria-selected="true" aria-controls="prompt-area" id="tab-mode-cloud">
             <div class="mode-tab-title">Cloud &middot; managed</div>
-            <div class="mode-tab-sub">We run the listener for you. Early access: request it at <span class="font-mono text-mint">/app</span>, get a base URL + API key. Flat subscription, no per-transaction fee.</div>
+            <div class="mode-tab-sub">We run the listener for you. Create an account at <span class="font-mono text-mint">/app</span> and copy the API key. Flat subscription, no per-transaction fee.</div>
           </button>
           <button role="tab" type="button" class="mode-tab" data-mode="self" aria-selected="false" aria-controls="prompt-area" id="tab-mode-self">
             <div class="mode-tab-title">Self-hosted &middot; npm</div>
@@ -398,13 +398,13 @@
             <span class="step-num">2</span>
             <div class="flex-1">
               <div class="font-semibold text-base mb-0.5">Drop in your details</div>
-              <div class="text-sm text-muted">These get embedded in the prompt &mdash; not sent to ZettaPay. <span id="details-hint">Cloud is in early access: <a href="/app" class="text-royal-bright hover:underline">request it at /app</a> to get your base URL and API key. Plans are on <a href="/pricing" class="text-royal-bright hover:underline">/pricing</a>.</span></div>
+              <div class="text-sm text-muted">These get embedded in the prompt &mdash; not sent to ZettaPay. <span id="details-hint">First <a href="/app" class="text-royal-bright hover:underline">create an account at /app</a> and copy the API key (shown once). Plans are on <a href="/pricing" class="text-royal-bright hover:underline">/pricing</a>.</span></div>
             </div>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="md:col-span-2" data-cloud-only>
-              <label for="f-base" class="field-label">Cloud base URL <span class="opt">from your early-access welcome &middot; <a href="/app" class="text-royal-bright hover:underline">request access</a></span></label>
+              <label for="f-base" class="field-label">Cloud base URL <span class="opt">the address of the ZettaPay site &middot; <a href="/app" class="text-royal-bright hover:underline">create an account</a></span></label>
               <input id="f-base" type="text" class="field-input" placeholder="https://&lt;your-cloud-base-url&gt;" spellcheck="false" autocomplete="off" />
             </div>
 
@@ -640,7 +640,7 @@ USDC on Base, USDT on Base — nothing else.
     their own wallet by scanning the QR or copying the receive address.
 (b) HR-CUSTODY — Never store, derive, log, or transmit a private extended
     key, seed, mnemonic, or any signing material. ZettaPay only ever
-    received the merchant's PUBLIC xpub / receive address at provisioning.
+    received the merchant's PUBLIC xpub / receive address at signup.
     Do not write address derivation from any merchant seed.
 (c) HR-SECRETS-IN-GIT — The API key and the webhook secret live ONLY in
     server-side env vars. Add placeholder lines to .env.example — never
@@ -650,15 +650,17 @@ USDC on Base, USDT on Base — nothing else.
     identity-verification fields, or any other PII to the checkout.
 
 == MERCHANT SETUP — context only, already done ==
-ZettaPay Cloud is in early access. Access was requested on the ZettaPay
-site (/app) and the operator provisioned this merchant by hand from public
-material only: email, shop name, a BIP-84 zpub for Bitcoin and/or — for
-Base — an xpub or a fixed 0x receive address, plus the webhook URL. The
-merchant received:
-  - a Cloud base URL
-  - an API key (zp_live_..., shown once)
-There is no self-serve signup, no merchant-register endpoint and no
-dashboard — do not look for them and do not invent them.
+ZettaPay Cloud is self-serve (early access). I created my account on the
+ZettaPay site (/app) with public material only: email, shop name, a BIP-84
+zpub for Bitcoin and/or — for Base — an xpub or a fixed 0x receive
+address. From that I have:
+  - the Cloud base URL (the address of the ZettaPay site itself)
+  - an API key (zp_live_..., shown once at signup)
+  - a webhook signing secret (whsec_..., shown once when the webhook URL
+    is saved — at signup or in the dashboard at /app)
+Account, plan and webhook URL are managed by me in that dashboard. Do NOT
+create accounts, change the webhook URL or start plan payments from code —
+saving the webhook URL again replaces the signing secret.
 NEVER ask the merchant for a private extended key or mnemonic.
 
 == MY SETUP (SERVER-SIDE env vars of the new integration) ==
@@ -667,8 +669,8 @@ ${keyEnv}  -> holds the API key. It is ALREADY set in my environment /
               secret manager. Read it at runtime (process.env.${keyEnv} or
               the platform equivalent). Do NOT ask me to paste the key, do
               NOT echo it, do NOT write it to any file.
-ZETTAPAY_WEBHOOK_SECRET -> the signing secret registered with the webhook
-              at provisioning. Server-only. Same rules as the API key.
+ZETTAPAY_WEBHOOK_SECRET -> the signing secret shown when the webhook URL
+              was saved. Server-only. Same rules as the API key.
 WEBHOOK_PATH            = "${hook.path}"
 PRIMARY_RAIL            = "${rail.label}"   # chain "${rail.chain}"${rail.chain === 'base' ? ', asset "' + rail.asset + '"' : ''}
 DISPLAY_AMOUNT          = ${amount} ${currency}     # display label only
@@ -738,7 +740,7 @@ LABEL                   = "${label}"
         429 rate_limited        honour the Retry-After header
         400 chain_disabled / invalid_amount / unsupported_chain
 
-   B) POST  ${hook.path}   (must be the path registered at provisioning)
+   B) POST  ${hook.path}   (must match the webhook URL saved in the dashboard)
       Verify HMAC-SHA256 in exactly this order:
         1. Read the RAW request body BEFORE any JSON.parse / express.json /
            bodyParser. Use raw Buffer / await req.text() / context.request.text().

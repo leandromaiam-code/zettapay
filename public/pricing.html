@@ -427,12 +427,12 @@
         <ul class="space-y-3 text-sm text-muted leading-relaxed">
           <li><span class="text-white font-semibold">The price does not depend on how much you sell.</span> A plan counts invoices created in the calendar month, not their value. There is no percentage on any plan.</li>
           <li><span class="text-white font-semibold">When you reach the monthly cap,</span> creating <em>new</em> invoices is paused until the next month or until you upgrade. Invoices you already created keep being watched, confirmed and delivered to your webhook.</li>
-          <li><span class="text-white font-semibold">Paying for a plan:</span> the subscription can be paid by card or in crypto, through ZettaPay itself.</li>
-          <li><span class="text-white font-semibold">During early access, plans are assigned manually.</span> Onboarding happens through <a href="/app" class="text-mint hover:underline">/app</a>; there is no self-serve checkout yet.</li>
+          <li><span class="text-white font-semibold">Paying for a plan:</span> upgrade from your dashboard at <a href="/app" class="text-mint hover:underline">/app</a>. Pay in crypto &mdash; a normal ZettaPay invoice that activates the plan for 30 days once it confirms; renew by paying again &mdash; or by card, as a subscription that renews monthly on a page hosted by Stripe.</li>
+          <li><span class="text-white font-semibold">Every account starts on Free.</span> Create one at <a href="/app" class="text-mint hover:underline">/app</a> in a minute. A paid plan that is not renewed falls back to Free.</li>
         </ul>
         <div class="flex flex-wrap items-center gap-3 mt-6">
-          <a href="/app" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm">Start free on Cloud</a>
-          <span class="text-muted/70 text-xs font-mono">early access &middot; manual onboarding</span>
+          <a href="/app" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm">Create account</a>
+          <span class="text-muted/70 text-xs font-mono">early access &middot; self-serve signup</span>
         </div>
       </div>
 
@@ -627,7 +627,7 @@
             Pick one of two routes:
             <ol class="list-decimal pl-5 mt-3 space-y-1.5">
               <li><span class="text-white">Self-hosted.</span> Run <code>npm install -g @zettapay/listener</code>, point it at your public key and start it on your own infrastructure. The walkthrough is in <a href="/docs/quickstart" class="text-royal-bright hover:underline">/docs/quickstart</a>.</li>
-              <li><span class="text-white">Cloud.</span> Go to <a href="/app" class="text-royal-bright hover:underline">/app</a> with an e-mail, a shop name, your public key (a BIP-84 xpub for Bitcoin; an xpub or a fixed receive address for Base) and a webhook URL. Cloud is in early access and onboarding is manual.</li>
+              <li><span class="text-white">Cloud.</span> Create an account at <a href="/app" class="text-royal-bright hover:underline">/app</a> with an e-mail, a shop name and your public key (a BIP-84 xpub for Bitcoin; an xpub or a fixed receive address for Base); a webhook URL is optional. Your API key is shown once &mdash; paste it to sign in to the dashboard. Cloud is in early access, so features may change.</li>
             </ol>
             <p class="mt-4 text-muted/80">Either way you only ever hand over <span class="text-white">public</span> material. No wallet connection, no private key.</p>
           </div>
@@ -671,9 +671,12 @@
             </span>
           </summary>
           <div class="faq-body">
-            The subscription can be paid by card or in crypto, through ZettaPay itself.
-            <p class="mt-3">During early access, plans are assigned manually &mdash; there is no self-serve checkout yet. Start at
-            <a href="/app" class="text-royal-bright hover:underline">/app</a> and tell us which plan you need.
+            Sign in to your dashboard at <a href="/app" class="text-royal-bright hover:underline">/app</a> and pick a plan. There are two ways to pay:
+            <ul class="list-disc pl-5 mt-3 space-y-1.5">
+              <li><span class="text-white">In crypto.</span> You get a normal ZettaPay invoice. Once it confirms, the plan is active for 30 days; to renew, pay again.</li>
+              <li><span class="text-white">By card.</span> A subscription that renews monthly. The card page is hosted by Stripe &mdash; ZettaPay never sees card data.</li>
+            </ul>
+            <p class="mt-3">A paid plan that is not renewed falls back to Free. There is still no per-transaction fee.
             These are early-access prices and may change.</p>
           </div>
         </details>

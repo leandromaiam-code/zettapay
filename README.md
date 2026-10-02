@@ -26,7 +26,7 @@ your keys and never touches your funds.
 | What | [`@zettapay/listener`](./packages/listener#readme) on your own machine | The same listener core, run by us as a multi-tenant service ([`@zettapay/cloud`](./packages/cloud#readme)) |
 | Cost | Free, open source (MIT), no limits | Flat monthly subscription by invoice volume, with a free tier |
 | Who sees what | Nothing leaves your box | We see invoice metadata and public addresses — never keys or funds |
-| Status | Published on npm | Early access — request it at `/app` on the site |
+| Status | Published on npm | Early access — self-serve: create an account at `/app` on the site |
 
 Both speak the same HTTP API and emit the same webhook, so you can move between
 them by changing one base URL.

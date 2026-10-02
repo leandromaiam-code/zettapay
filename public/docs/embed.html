@@ -439,7 +439,7 @@ app.<span class="tk-f">post</span>(<span class="tk-s">'/api/checkout'</span>, <s
     expires_at: inv.expires_at,
   });
 });</pre>
-<pre data-pane="cloud" class="hidden"><span class="tk-c">// Same request, Cloud base URL. ZETTAPAY_URL is given to you at onboarding.</span>
+<pre data-pane="cloud" class="hidden"><span class="tk-c">// Same request, Cloud base URL. ZETTAPAY_URL is the origin of the ZettaPay site.</span>
 <span class="tk-k">const</span> r = <span class="tk-k">await</span> <span class="tk-f">fetch</span>(<span class="tk-s">`${process.env.ZETTAPAY_URL}/api/v1/invoice`</span>, {
   method: <span class="tk-s">'POST'</span>,
   headers: {
@@ -673,7 +673,7 @@ app.<span class="tk-f">get</span>(<span class="tk-s">'/api/checkout/:id'</span>,
             <a href="/app" class="glass rounded-xl p-5 hover:border-royal/40 transition">
               <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Managed</div>
               <div class="font-semibold mb-1">ZettaPay Cloud</div>
-              <div class="text-sm text-muted">Early access — the same listener core, run for you.</div>
+              <div class="text-sm text-muted">The same listener core, run for you. Create an account and start on the free plan (early access).</div>
             </a>
           </div>
         </section>
