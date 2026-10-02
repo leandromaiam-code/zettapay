@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay pricing — free, peer-to-peer protocol. Zero protocol fee, zero custody. You pay only network gas, exactly like any wallet transaction. Multi-chain: Bitcoin, Ethereum, USDC on Solana." />
-  <meta property="og:title" content="ZettaPay pricing — free protocol, network gas only" />
-  <meta property="og:description" content="No subscription. No per-transaction take. ZettaPay is non-custodial P2P infrastructure that watches the chain for you. You pay the same network gas any wallet transaction would cost." />
+  <meta name="description" content="ZettaPay pricing — no per-transaction fee, ever. Self-hosted is free and open source. Cloud is a flat monthly subscription by invoice volume, starting at $0. Bitcoin and USDC/USDT on Base, non-custodial." />
+  <meta property="og:title" content="ZettaPay pricing — flat plans, no transaction fee" />
+  <meta property="og:description" content="ZettaPay is never in the flow of funds, so it never takes a cut. Self-host the open-source listener for free, or use Cloud on a flat monthly plan by invoice volume." />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <title>Pricing — ZettaPay</title>
@@ -31,7 +31,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'grape': '#9945FF',
             'muted': '#94A3B8',
           },
           animation: {
@@ -269,13 +269,14 @@
       </a>
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="/#how" class="text-muted hover:text-white transition">How it works</a>
+        <a href="/#paths" class="text-muted hover:text-white transition">Self-host or cloud</a>
+        <a href="/#security" class="text-muted hover:text-white transition">Security</a>
         <a href="/pricing" class="text-white transition">Pricing</a>
-        <a href="/#agents" class="text-muted hover:text-white transition">For AI Agents</a>
         <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
       </div>
       <div class="flex items-center gap-3">
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
-        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get your pubkey</a>
+        <a href="/app" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Start free</a>
       </div>
     </div>
   </nav>
@@ -287,19 +288,19 @@
       <div class="text-center max-w-4xl mx-auto">
         <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full glass mb-10 animate-fade-up">
           <span class="live-dot"></span>
-          <span class="text-xs font-mono text-mint uppercase tracking-[0.18em]">Free protocol &middot; Non-custodial &middot; Network gas only</span>
+          <span class="text-xs font-mono text-mint uppercase tracking-[0.18em]">No transaction fee &middot; Non-custodial &middot; Flat plans</span>
         </div>
 
         <h1 class="text-5xl md:text-7xl lg:text-[5.25rem] leading-[1.04] font-bold mb-8 animate-fade-up tracking-tight" style="animation-delay: 0.1s; animation-fill-mode: both;">
-          A protocol, not a<br/>
-          <span class="gradient-text">middleman</span>
+          A flat price, never a<br/>
+          <span class="gradient-text">cut of your sales</span>
         </h1>
 
         <p class="text-lg md:text-xl text-muted max-w-3xl mx-auto mb-10 leading-relaxed font-normal animate-fade-up" style="animation-delay: 0.2s; animation-fill-mode: both;">
-          ZettaPay is <span class="text-white font-semibold">peer-to-peer infrastructure</span> &mdash; non-custodial, open-source, and free.
-          We don&rsquo;t take a cut of your transactions because we never touch them. The on-chain transfer
-          <span class="text-white font-semibold">is</span> the settlement; ZettaPay just listens to the network and confirms it for you.
-          You pay only the network gas your wallet would already cost.
+          ZettaPay is <span class="text-white font-semibold">never in the flow of funds</span> &mdash; payments go straight from the
+          payer to your wallet &mdash; so it cannot and does not take a percentage. Self-hosting the open-source listener is
+          <span class="text-white font-semibold">free forever</span>. Cloud is a <span class="text-white font-semibold">flat monthly plan</span>
+          sized by how many invoices you create. Your customer pays only the normal network fee of the chain.
         </p>
 
         <!-- Trust signals -->
@@ -309,8 +310,8 @@
               <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div class="text-left">
-              <div class="text-sm font-semibold text-white">Free protocol</div>
-              <div class="text-xs text-muted font-mono">No subscription, no take rate</div>
+              <div class="text-sm font-semibold text-white">No transaction fee</div>
+              <div class="text-xs text-muted font-mono">Never a percentage</div>
             </div>
           </div>
           <div class="trust-pill rounded-2xl px-5 py-4 flex items-center gap-3">
@@ -319,7 +320,7 @@
             </div>
             <div class="text-left">
               <div class="text-sm font-semibold text-white">Non-custodial</div>
-              <div class="text-xs text-muted font-mono">P2P, payer&rarr;merchant direct</div>
+              <div class="text-xs text-muted font-mono">Payer&rarr;your wallet, direct</div>
             </div>
           </div>
           <div class="trust-pill rounded-2xl px-5 py-4 flex items-center gap-3">
@@ -327,75 +328,130 @@
               <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
             <div class="text-left">
-              <div class="text-sm font-semibold text-white">Listener confirms</div>
-              <div class="text-xs text-muted font-mono">Webhook the moment it lands</div>
+              <div class="text-sm font-semibold text-white">Free to self-host</div>
+              <div class="text-xs text-muted font-mono">Open source, MIT</div>
             </div>
           </div>
         </div>
 
         <div class="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-up" style="animation-delay: 0.4s; animation-fill-mode: both;">
-          <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-            Get your merchant pubkey free
+          <a href="/app" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
+            Start free
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
           </a>
-          <a href="#compare" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>
+          <a href="#plans" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">See the Cloud plans</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- PRICING HEADLINE -->
+  <!-- PRICING HEADLINE: SELF-HOSTED -->
   <section class="relative py-20 px-4 lg:px-12">
     <div class="max-w-6xl mx-auto">
       <div class="gradient-border p-10 md:p-14 reveal">
         <div class="grid md:grid-cols-2 gap-10 items-center">
           <div>
-            <span class="text-xs font-mono text-mint uppercase tracking-widest">The whole price list</span>
+            <span class="text-xs font-mono text-mint uppercase tracking-widest">Self-hosted &middot; open source</span>
             <h2 class="text-5xl md:text-6xl font-bold gradient-text price-card-headline mt-4 mb-4">$0</h2>
-            <div class="text-2xl font-semibold text-white mb-4">Free protocol. Forever.</div>
+            <div class="text-2xl font-semibold text-white mb-4">Free forever. No limits.</div>
             <p class="text-muted leading-relaxed">
-              No subscription. No per-transaction take. No monthly minimums. No surprise card-network surcharges.
-              You pay only the network gas your customer&rsquo;s wallet would already pay &mdash;
-              the same fee any standard on-chain transfer costs.
+              Install <code class="font-mono text-mint text-sm">@zettapay/listener</code> from npm and run it on your own infrastructure.
+              MIT-licensed, no invoice caps, no account with us, nothing to pay. You operate it; the funds land directly in your wallet.
             </p>
+            <div class="flex flex-wrap items-center gap-3 mt-6">
+              <a href="/docs/quickstart" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">Self-host quickstart</a>
+              <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white text-sm font-medium px-3 py-2.5 transition">View on GitHub &rarr;</a>
+            </div>
           </div>
           <div>
-            <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Typical gas (paid by payer, not you)</div>
+            <div class="text-xs font-mono text-mint uppercase tracking-widest mb-4">Network fee (paid by the payer, not to us)</div>
             <ul class="space-y-3 text-sm">
               <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-mint/5 border border-mint/15">
-                <span class="text-white font-semibold">Solana (USDC)</span>
-                <span class="font-mono text-mint">~0.000005 SOL &middot; confirms in &lt;2s</span>
+                <span class="text-white font-semibold">Bitcoin</span>
+                <span class="font-mono text-mint">Bitcoin network fee</span>
               </li>
               <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-royal/5 border border-royal/15">
-                <span class="text-white font-semibold">Ethereum (Base / Polygon)</span>
-                <span class="font-mono text-royal-bright">L2 gas &middot; finality in seconds</span>
+                <span class="text-white font-semibold">USDC on Base</span>
+                <span class="font-mono text-royal-bright">Base gas</span>
               </li>
-              <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-solana/5 border border-solana/15">
-                <span class="text-white font-semibold">Bitcoin</span>
-                <span class="font-mono text-solana">Network fee &middot; ~10 min</span>
+              <li class="flex justify-between items-center gap-4 px-4 py-3 rounded-xl bg-grape/5 border border-grape/15">
+                <span class="text-white font-semibold">USDT on Base</span>
+                <span class="font-mono text-grape">Base gas</span>
               </li>
             </ul>
-            <p class="text-xs text-muted/70 font-mono mt-4">Gas goes to validators / miners, never to ZettaPay.</p>
+            <p class="text-xs text-muted/70 font-mono mt-4">The network fee is whatever the chain charges for a normal transfer. It goes to the network, never to ZettaPay &mdash; on any plan.</p>
           </div>
         </div>
       </div>
+    </div>
+  </section>
 
-      <!-- What you get for $0 -->
+  <!-- CLOUD PLANS -->
+  <section id="plans" class="py-24 px-4 lg:px-12 border-t border-royal/10">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center max-w-3xl mx-auto mb-12 reveal">
+        <span class="text-xs font-mono text-mint uppercase tracking-widest">Cloud &middot; managed</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">We run the listener. <span class="gradient-text">You keep the keys.</span></h2>
+        <p class="text-muted text-lg leading-relaxed">
+          The same listener core, hosted for you, with an API and hosted checkout links. A flat monthly subscription
+          by invoice volume &mdash; invoices created per calendar month. Still non-custodial, still no transaction fee.
+        </p>
+      </div>
+
+      <div class="text-center mb-6 reveal">
+        <span class="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs font-mono text-muted uppercase tracking-widest">Early-access pricing &mdash; subject to change</span>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <div class="glass rounded-2xl p-8 reveal">
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Free</div>
+          <div class="text-4xl font-bold text-white price-card-headline mb-1">$0</div>
+          <div class="text-sm text-white font-semibold mb-3">Up to 50 invoices / month</div>
+          <p class="text-muted text-sm">Enough to launch and take your first payments. No card needed.</p>
+        </div>
+        <div class="gradient-border p-8 reveal" style="transition-delay: 0.05s;">
+          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-3">Starter</div>
+          <div class="text-4xl font-bold text-white price-card-headline mb-1">$19 <span class="text-base font-medium text-muted">/ month</span></div>
+          <div class="text-sm text-white font-semibold mb-3">Up to 500 invoices / month</div>
+          <p class="text-muted text-sm">For a shop with steady orders. Same features, a higher monthly cap.</p>
+        </div>
+        <div class="glass rounded-2xl p-8 reveal" style="transition-delay: 0.1s;">
+          <div class="text-xs font-mono text-grape uppercase tracking-widest mb-3">Pro</div>
+          <div class="text-4xl font-bold text-white price-card-headline mb-1">$49 <span class="text-base font-medium text-muted">/ month</span></div>
+          <div class="text-sm text-white font-semibold mb-3">Up to 5,000 invoices / month</div>
+          <p class="text-muted text-sm">For higher volume. Above 5,000 invoices a month, <a href="/contact" class="text-mint hover:underline">contact us</a>.</p>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-6 md:p-8 mt-4 reveal">
+        <ul class="space-y-3 text-sm text-muted leading-relaxed">
+          <li><span class="text-white font-semibold">The price does not depend on how much you sell.</span> A plan counts invoices created in the calendar month, not their value. There is no percentage on any plan.</li>
+          <li><span class="text-white font-semibold">When you reach the monthly cap,</span> creating <em>new</em> invoices is paused until the next month or until you upgrade. Invoices you already created keep being watched, confirmed and delivered to your webhook.</li>
+          <li><span class="text-white font-semibold">Paying for a plan:</span> the subscription can be paid by card or in crypto, through ZettaPay itself.</li>
+          <li><span class="text-white font-semibold">During early access, plans are assigned manually.</span> Onboarding happens through <a href="/app" class="text-mint hover:underline">/app</a>; there is no self-serve checkout yet.</li>
+        </ul>
+        <div class="flex flex-wrap items-center gap-3 mt-6">
+          <a href="/app" class="btn-primary px-6 py-3 rounded-full font-semibold text-sm">Start free on Cloud</a>
+          <span class="text-muted/70 text-xs font-mono">early access &middot; manual onboarding</span>
+        </div>
+      </div>
+
+      <!-- What every Cloud plan includes -->
       <div class="grid md:grid-cols-3 gap-4 mt-6">
         <div class="glass rounded-2xl p-6 reveal">
           <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Confirmation listener</div>
-          <div class="text-lg font-semibold text-white mb-1">Chain tracking, 24/7</div>
-          <p class="text-muted text-sm">We watch every relevant block and confirm payments to your pubkey so your backend doesn&rsquo;t have to.</p>
+          <div class="text-lg font-semibold text-white mb-1">We watch the chain for you</div>
+          <p class="text-muted text-sm">Bitcoin and Base are watched for the addresses derived from your public key, so your backend doesn&rsquo;t have to.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.05s;">
-          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-3">Stripe-grade webhooks</div>
-          <div class="text-lg font-semibold text-white mb-1">HMAC-signed, 3&times; retry</div>
-          <p class="text-muted text-sm">Idempotency keys, signed payloads with verified amount and tx hash &mdash; the API you already know.</p>
+          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-3">Signed webhooks</div>
+          <div class="text-lg font-semibold text-white mb-1">HMAC-signed confirmations</div>
+          <p class="text-muted text-sm">When a payment confirms on-chain, your endpoint receives a signed webhook with the amount, asset, chain and transaction hash.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.1s;">
-          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-3">x402 + MCP native</div>
-          <div class="text-lg font-semibold text-white mb-1">AI agents pay autonomously</div>
-          <p class="text-muted text-sm">A first-class MCP server and x402 header spec out of the box &mdash; ready for Claude, GPT, and friends.</p>
+          <div class="text-xs font-mono text-grape uppercase tracking-widest mb-3">API + checkout links</div>
+          <div class="text-lg font-semibold text-white mb-1">Create invoices, share a link</div>
+          <p class="text-muted text-sm">Create invoices through the API under <code class="font-mono text-mint text-xs">/api/v1</code>, or send your customer a hosted checkout link.</p>
         </div>
       </div>
     </div>
@@ -405,11 +461,11 @@
   <section id="compare" class="py-24 px-4 lg:px-12 border-t border-royal/10">
     <div class="max-w-6xl mx-auto">
       <div class="text-center max-w-3xl mx-auto mb-12 reveal">
-        <span class="text-xs font-mono text-solana uppercase tracking-widest">Comparison</span>
-        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">ZettaPay <span class="text-muted font-light">vs</span> <span class="gradient-text">card rails</span></h2>
+        <span class="text-xs font-mono text-grape uppercase tracking-widest">Comparison</span>
+        <h2 class="text-4xl md:text-6xl font-bold mt-4 mb-6">ZettaPay <span class="text-muted font-light">vs</span> <span class="gradient-text">card processors</span></h2>
         <p class="text-muted text-lg leading-relaxed">
-          ZettaPay is not a card processor &mdash; it&rsquo;s peer-to-peer settlement infrastructure with a confirmation listener attached.
-          Different model, different properties.
+          ZettaPay is not a card processor. It watches the chain and tells your backend when an on-chain payment
+          to your own wallet has confirmed. Different model, different properties.
         </p>
       </div>
 
@@ -420,109 +476,105 @@
           <div class="compare-head compare-zp-header">
             <span class="inline-flex items-center gap-2">
               <img src="/Logo_symbol.png" class="w-5 h-5" alt="" />
-              <span class="text-white">ZettaPay</span>
+              <span class="text-white">Self-hosted</span>
             </span>
-            <span class="text-[11px] font-mono text-mint uppercase tracking-[0.18em]">P2P &middot; Non-custodial</span>
+            <span class="text-[11px] font-mono text-mint uppercase tracking-[0.18em]">ZettaPay &middot; open source</span>
+          </div>
+          <div class="compare-head compare-zp-header">
+            <span class="inline-flex items-center gap-2">
+              <img src="/Logo_symbol.png" class="w-5 h-5" alt="" />
+              <span class="text-white">Cloud</span>
+            </span>
+            <span class="text-[11px] font-mono text-mint uppercase tracking-[0.18em]">ZettaPay &middot; managed</span>
           </div>
           <div class="compare-head text-muted/90">
-            <span class="text-white">Stripe</span>
-            <span class="text-[11px] font-mono text-muted uppercase tracking-[0.18em]">Card rails</span>
-          </div>
-          <div class="compare-head text-muted/90">
-            <span class="text-white">PayPal</span>
-            <span class="text-[11px] font-mono text-muted uppercase tracking-[0.18em]">Wallet rails</span>
+            <span class="text-white">Card processors</span>
+            <span class="text-[11px] font-mono text-muted uppercase tracking-[0.18em]">In general</span>
           </div>
 
-          <!-- Protocol fee -->
-          <div class="compare-cell cell-row-label">Protocol take rate</div>
-          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">$0 &mdash; free</span></div>
-          <div class="compare-cell">2.9% + $0.30</div>
-          <div class="compare-cell">3.49% + $0.49</div>
+          <!-- Transaction fee -->
+          <div class="compare-cell cell-row-label">Fee per transaction</div>
+          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">None</span></div>
+          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">None</span></div>
+          <div class="compare-cell">A percentage of each sale</div>
 
-          <!-- Who pays gas -->
-          <div class="compare-cell cell-row-label">Who pays the network fee</div>
-          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">Payer&rsquo;s wallet (gas)</span></div>
-          <div class="compare-cell">Merchant absorbs</div>
-          <div class="compare-cell">Merchant absorbs</div>
+          <!-- What you pay -->
+          <div class="compare-cell cell-row-label">What you pay ZettaPay</div>
+          <div class="compare-cell compare-zp">$0 &mdash; you run it</div>
+          <div class="compare-cell compare-zp">Flat monthly plan, from $0</div>
+          <div class="compare-cell">&mdash;</div>
+
+          <!-- Limits -->
+          <div class="compare-cell cell-row-label">Invoice limit</div>
+          <div class="compare-cell compare-zp">None</div>
+          <div class="compare-cell compare-zp">Per plan, per calendar month</div>
+          <div class="compare-cell">&mdash;</div>
+
+          <!-- Network fee -->
+          <div class="compare-cell cell-row-label">Network fee</div>
+          <div class="compare-cell compare-zp">Paid by the payer, to the chain</div>
+          <div class="compare-cell compare-zp">Paid by the payer, to the chain</div>
+          <div class="compare-cell">Not applicable</div>
 
           <!-- Custody -->
           <div class="compare-cell cell-row-label">Custody of funds</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Non-custodial &mdash; payer&rarr;merchant direct</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Held until payout</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Held until payout</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;Non-custodial</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;Non-custodial</div>
+          <div class="compare-cell"><span class="cross">&#10007;</span>&nbsp;Processor holds funds until payout</div>
+
+          <!-- Where money lands -->
+          <div class="compare-cell cell-row-label">Where the money lands</div>
+          <div class="compare-cell compare-zp">Your own wallet, on-chain</div>
+          <div class="compare-cell compare-zp">Your own wallet, on-chain</div>
+          <div class="compare-cell">Your bank account, after payout</div>
 
           <!-- Settlement -->
-          <div class="compare-cell cell-row-label">Confirmation time</div>
-          <div class="compare-cell compare-zp"><span class="text-mint font-semibold">&lt;2s</span> on Solana &middot; ~10m on Bitcoin</div>
-          <div class="compare-cell">2&ndash;7 days</div>
-          <div class="compare-cell">1&ndash;3 days</div>
+          <div class="compare-cell cell-row-label">Settlement time</div>
+          <div class="compare-cell compare-zp">Depends on the chain</div>
+          <div class="compare-cell compare-zp">Depends on the chain</div>
+          <div class="compare-cell">Depends on the payout schedule</div>
 
           <!-- Chargebacks -->
-          <div class="compare-cell cell-row-label">Chargebacks &amp; disputes</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> None &mdash; cryptographic finality</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> $15 per dispute, 120-day window</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> $20 per dispute, 180-day window</div>
+          <div class="compare-cell cell-row-label">Chargebacks</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;None &mdash; on-chain payments are final</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;None &mdash; on-chain payments are final</div>
+          <div class="compare-cell"><span class="cross">&#10007;</span>&nbsp;Part of the card system</div>
 
-          <!-- AI agents (x402) -->
-          <div class="compare-cell cell-row-label">AI agent payments (x402)</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Native &mdash; signed tx in HTTP header</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Not supported</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Not supported</div>
-
-          <!-- MCP -->
-          <div class="compare-cell cell-row-label">MCP tool integration</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> First-class MCP server</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Not in scope</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Not in scope</div>
+          <!-- Who runs it -->
+          <div class="compare-cell cell-row-label">Who runs the listener</div>
+          <div class="compare-cell compare-zp">You</div>
+          <div class="compare-cell compare-zp">We do</div>
+          <div class="compare-cell">&mdash;</div>
 
           <!-- Webhooks -->
           <div class="compare-cell cell-row-label">Confirmation webhooks</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Listener-driven, HMAC + 3&times; retry</div>
-          <div class="compare-cell"><span class="check">&#10003;</span> Yes</div>
-          <div class="compare-cell"><span class="partial">&sim;</span> Limited retry policy</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;HMAC-signed</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;HMAC-signed</div>
+          <div class="compare-cell"><span class="check">&#10003;</span>&nbsp;Yes</div>
 
-          <!-- Idempotency -->
-          <div class="compare-cell cell-row-label">Idempotency keys</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Required on /pay and /merchants/register</div>
-          <div class="compare-cell"><span class="check">&#10003;</span> Optional</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Not standard</div>
-
-          <!-- KYC -->
-          <div class="compare-cell cell-row-label">KYC for the merchant</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> None &mdash; just paste a pubkey</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Required (SSN, EIN, bank)</div>
-          <div class="compare-cell"><span class="cross">&#10007;</span> Required (SSN, EIN, bank)</div>
-
-          <!-- Currency -->
-          <div class="compare-cell cell-row-label">Currency</div>
-          <div class="compare-cell compare-zp">Bitcoin &middot; ETH (Base/Polygon) &middot; USDC Solana</div>
-          <div class="compare-cell">135+ fiat currencies</div>
-          <div class="compare-cell">25 fiat currencies</div>
+          <!-- Identity -->
+          <div class="compare-cell cell-row-label">Identity checks for the merchant</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;None &mdash; no account at all</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;None &mdash; e-mail and a public key</div>
+          <div class="compare-cell">Business verification required</div>
 
           <!-- Wallet connect -->
-          <div class="compare-cell cell-row-label">Wallet connect required</div>
-          <div class="compare-cell compare-zp"><span class="check">&#10003;</span> Never &mdash; merchant pastes pubkey</div>
-          <div class="compare-cell">N/A &mdash; card data</div>
-          <div class="compare-cell">N/A &mdash; account login</div>
+          <div class="compare-cell cell-row-label">Wallet connection or private key</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;Never asked</div>
+          <div class="compare-cell compare-zp"><span class="check">&#10003;</span>&nbsp;Never asked</div>
+          <div class="compare-cell">Not applicable</div>
 
-          <!-- SDK -->
-          <div class="compare-cell cell-row-label">SDK &amp; embed</div>
-          <div class="compare-cell compare-zp"><span class="text-mint font-mono text-xs">@zettapay/sdk</span> &middot; widget &middot; open spec</div>
-          <div class="compare-cell">Stripe.js / Elements</div>
-          <div class="compare-cell">JS Buttons / Smart Buttons</div>
-
-          <!-- Payout -->
-          <div class="compare-cell cell-row-label border-b-0">Where money lands</div>
-          <div class="compare-cell compare-zp border-b-0 font-medium">Your own wallet, on-chain &mdash; immediate</div>
-          <div class="compare-cell border-b-0">Your bank account, on a delay</div>
-          <div class="compare-cell border-b-0">PayPal balance, then bank</div>
+          <!-- Assets -->
+          <div class="compare-cell cell-row-label border-b-0">What you can accept</div>
+          <div class="compare-cell compare-zp border-b-0">BTC &middot; USDC and USDT on Base</div>
+          <div class="compare-cell compare-zp border-b-0">BTC &middot; USDC and USDT on Base</div>
+          <div class="compare-cell border-b-0">Cards, in fiat currencies</div>
         </div>
       </div>
 
       <p class="text-center text-xs text-muted/70 mt-6 max-w-3xl mx-auto">
-        ZettaPay sits one layer up from the underlying chains, the way Stripe sits above ACH.
-        We don&rsquo;t replace card rails for cross-border fiat retail; we replace them for AI agents, SaaS, and crypto-native merchants
-        who want non-custodial peer-to-peer settlement with a confirmation receipt.
+        The trade-offs run both ways. ZettaPay does not convert or settle in fiat, and it has no refund button:
+        an on-chain payment is final, so if you want to refund a customer you send it yourself from your own wallet.
       </p>
     </div>
   </section>
@@ -536,19 +588,19 @@
       </div>
       <div class="grid md:grid-cols-3 gap-4">
         <div class="glass rounded-2xl p-6 reveal">
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Always free</div>
-          <div class="text-lg font-semibold text-white mb-1">Zero protocol fee, forever</div>
-          <p class="text-muted text-sm">No tiers, no usage caps, no &ldquo;after X transactions we start charging.&rdquo; The protocol is infrastructure; infrastructure is free.</p>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">No take rate</div>
+          <div class="text-lg font-semibold text-white mb-1">We can&rsquo;t skim what we never touch</div>
+          <p class="text-muted text-sm">ZettaPay only ever holds public key material. The payment moves from the payer to your wallet without passing through us, so there is nothing to take a percentage of.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.1s;">
           <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-3">No lock-in</div>
-          <div class="text-lg font-semibold text-white mb-1">Open SDK, open spec</div>
-          <p class="text-muted text-sm">SDK and protocol spec are MIT-licensed. Your pubkey is yours; you can leave on any block and your funds never lived here.</p>
+          <div class="text-lg font-semibold text-white mb-1">Open source, MIT</div>
+          <p class="text-muted text-sm">Cloud runs the same listener core you can run yourself. Move from Cloud to self-hosted whenever you like &mdash; your keys and your funds never lived here.</p>
         </div>
         <div class="glass rounded-2xl p-6 reveal" style="transition-delay: 0.2s;">
-          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-3">Public status</div>
-          <div class="text-lg font-semibold text-white mb-1">Listener health is public</div>
-          <p class="text-muted text-sm">Live chain-listener metrics and confirmation latencies are exposed on the <a href="/status" class="text-mint font-mono hover:underline">/status</a> page.</p>
+          <div class="text-xs font-mono text-grape uppercase tracking-widest mb-3">At the cap</div>
+          <div class="text-lg font-semibold text-white mb-1">Nothing in flight is dropped</div>
+          <p class="text-muted text-sm">Hitting a plan&rsquo;s monthly cap only pauses the creation of new invoices. Every invoice already created is still watched, confirmed and sent to your webhook.</p>
         </div>
       </div>
     </div>
@@ -560,7 +612,7 @@
       <div class="text-center mb-12 reveal">
         <span class="text-xs font-mono text-mint uppercase tracking-widest">FAQ</span>
         <h2 class="text-4xl md:text-5xl font-bold mt-3 mb-4">Quick answers</h2>
-        <p class="text-muted">The three questions every merchant asks before integrating.</p>
+        <p class="text-muted">The questions merchants ask before integrating.</p>
       </div>
 
       <div class="space-y-4 reveal">
@@ -572,46 +624,72 @@
             </span>
           </summary>
           <div class="faq-body">
-            Three steps, ~5 minutes:
+            Pick one of two routes:
             <ol class="list-decimal pl-5 mt-3 space-y-1.5">
-              <li>Hit <a href="/signup" class="text-royal-bright hover:underline">Get your pubkey</a> and paste your <span class="text-white">merchant address</span> (Bitcoin, Ethereum, or Solana) &mdash; no wallet connect, no email, no card.</li>
-              <li>Copy your API key and the <code>&lt;script&gt;</code> tag from the install page, or install <code>@zettapay/sdk</code> on your backend.</li>
-              <li>Drop the embed onto your checkout. The listener confirms your first on-chain payment in seconds and fires a signed webhook to your endpoint.</li>
+              <li><span class="text-white">Self-hosted.</span> Run <code>npm install -g @zettapay/listener</code>, point it at your public key and start it on your own infrastructure. The walkthrough is in <a href="/docs/quickstart" class="text-royal-bright hover:underline">/docs/quickstart</a>.</li>
+              <li><span class="text-white">Cloud.</span> Go to <a href="/app" class="text-royal-bright hover:underline">/app</a> with an e-mail, a shop name, your public key (a BIP-84 xpub for Bitcoin; an xpub or a fixed receive address for Base) and a webhook URL. Cloud is in early access and onboarding is manual.</li>
             </ol>
-            <p class="mt-4 text-muted/80">Full walkthrough lives in <a href="/docs/quickstart" class="text-royal-bright hover:underline">/docs/quickstart</a> and the embed install in <a href="/docs/embed" class="text-royal-bright hover:underline">/docs/embed</a>.</p>
+            <p class="mt-4 text-muted/80">Either way you only ever hand over <span class="text-white">public</span> material. No wallet connection, no private key.</p>
           </div>
         </details>
 
         <details class="faq">
           <summary>
-            <span>Why is it free? What&rsquo;s the catch?</span>
+            <span>If there&rsquo;s no transaction fee, how does ZettaPay make money?</span>
             <span class="faq-icon" aria-hidden="true">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             </span>
           </summary>
           <div class="faq-body">
-            There&rsquo;s no catch &mdash; just a different model. ZettaPay never holds your funds, so we don&rsquo;t have a custody float to monetize.
-            We don&rsquo;t sit in the payment path, so we don&rsquo;t skim a percentage. The on-chain transaction <span class="text-white">is</span> the settlement;
-            our job is just listening to the network and giving you a confirmation receipt &mdash; same primitive as a Stripe webhook,
-            but peer-to-peer and verifiable on-chain.
-            <p class="mt-3">The protocol stays free because that&rsquo;s the moat &mdash; open infrastructure that AI agents can rely on without asking for permission.
-            Optional managed plans for high-volume merchants (priority listener lanes, SLA support) may come later, but the core protocol is and stays $0.</p>
+            From the Cloud subscription. ZettaPay is never in the flow of funds &mdash; the payment goes straight from the payer to your wallet &mdash;
+            so there is no way for us to take a cut, and we don&rsquo;t want one. What costs us money is running the listener for you,
+            so that is what the flat monthly plan pays for.
+            <p class="mt-3">If you would rather not pay anything, self-host: the listener is open source under MIT, free forever and has no limits.</p>
           </div>
         </details>
 
         <details class="faq">
           <summary>
-            <span>What about KYC &amp; compliance?</span>
+            <span>What counts as an invoice, and what happens at the cap?</span>
             <span class="faq-icon" aria-hidden="true">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
             </span>
           </summary>
           <div class="faq-body">
-            ZettaPay is non-custodial. Funds move directly from payer to merchant on-chain &mdash; we never hold them, so we are
-            <span class="text-white">not a money-services business</span> in the regulatory sense. You can register a merchant with just a pubkey.
-            <p class="mt-3">If your customers need to convert fiat to crypto, they can use any onramp you choose (independent of ZettaPay).
-            Crypto-native customers paying directly from their wallet skip that entirely.</p>
-            <p class="mt-3">Mainnet support and the listener&rsquo;s health metrics are tracked at <a href="/status" class="text-royal-bright hover:underline">/status</a> and <a href="/launch" class="text-royal-bright hover:underline">/launch</a>.</p>
+            Plans count the invoices you <span class="text-white">create</span> in a calendar month: 50 on Free, 500 on Starter, 5,000 on Pro.
+            <p class="mt-3">When you reach the cap, creating new invoices is paused until the next month begins or until you upgrade.
+            Invoices already created are not affected &mdash; they keep being watched, confirmed and delivered to your webhook.</p>
+            <p class="mt-3">Need more than 5,000 a month? <a href="/contact" class="text-royal-bright hover:underline">Contact us</a>.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>How do I pay for a plan or upgrade?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            The subscription can be paid by card or in crypto, through ZettaPay itself.
+            <p class="mt-3">During early access, plans are assigned manually &mdash; there is no self-serve checkout yet. Start at
+            <a href="/app" class="text-royal-bright hover:underline">/app</a> and tell us which plan you need.
+            These are early-access prices and may change.</p>
+          </div>
+        </details>
+
+        <details class="faq">
+          <summary>
+            <span>Do you run identity checks?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            </span>
+          </summary>
+          <div class="faq-body">
+            No. ZettaPay is identity-free. Self-hosting needs no account at all. Cloud asks for an e-mail, a shop name,
+            your public key or receive address and a webhook URL &mdash; no identity documents and no wallet connection.
+            <p class="mt-3">ZettaPay is non-custodial: funds move directly from the payer to you on-chain and we never hold them.
+            You remain responsible for your own legal and tax obligations where you operate.</p>
           </div>
         </details>
       </div>
@@ -622,19 +700,19 @@
   <section class="py-28 px-4 lg:px-12">
     <div class="max-w-4xl mx-auto text-center reveal">
       <h2 class="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-        Paste your pubkey.<br/>
+        Bring a public key.<br/>
         <span class="gradient-text">We&rsquo;ll watch the chain.</span>
       </h2>
       <p class="text-muted text-lg mb-10 max-w-2xl mx-auto">
-        No credit card. No call with a sales rep. No protocol fee, ever. Paste your address, copy the embed, ship.
-        The listener confirms your first on-chain payment in seconds.
+        No transaction fee on any plan. Start free on Cloud, or self-host the open-source listener and pay nothing at all.
+        Either way, the funds go straight to your wallet.
       </p>
       <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="/signup" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
-          Get your merchant pubkey free
+        <a href="/app" class="btn-primary px-8 py-4 rounded-full font-semibold text-base flex items-center gap-2">
+          Start free
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </a>
-        <a href="/docs" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Read the protocol spec</a>
+        <a href="/docs/quickstart" class="btn-ghost px-8 py-4 rounded-full font-semibold text-base">Self-host it</a>
       </div>
     </div>
   </section>
@@ -647,7 +725,7 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Peer-to-peer crypto payment protocol for AI agents and humans. Non-custodial by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Non-custodial crypto payments. Self-hosted open source or managed Cloud. Bitcoin &middot; USDC on Base &middot; USDT on Base.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
@@ -655,6 +733,7 @@
           <li><a href="/pricing" class="text-white transition">Pricing</a></li>
           <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
           <li><a href="/status" class="text-muted hover:text-white transition">Status &amp; logs</a></li>
+          <li><a href="/app" class="text-muted hover:text-white transition">Cloud (early access)</a></li>
         </ul>
       </div>
       <div>
@@ -675,7 +754,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Bitcoin &middot; Ethereum &middot; USDC on Solana</span>
+      <span>Non-custodial &middot; Bitcoin &middot; USDC &middot; USDT</span>
     </div>
   </footer>
 

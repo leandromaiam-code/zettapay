@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="Contact ZettaPay — support, security, legal, partnerships, press. We respond fast and write back personally." />
+  <meta name="description" content="Contact ZettaPay — questions, bug reports and security reports go through the public GitHub repository. Cloud early access starts at /app." />
   <meta property="og:title" content="Contact — ZettaPay" />
-  <meta property="og:description" content="Reach support, security, legal, or partnerships. Email and GitHub are the fastest routes." />
+  <meta property="og:description" content="Reach ZettaPay through GitHub issues. Cloud early access starts at /app." />
   <meta property="og:type" content="website" />
   <title>Contact — ZettaPay</title>
   <link rel="icon" type="image/png" href="/Logo_symbol.png" />
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'grape': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -123,8 +123,8 @@
         <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
-        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Sign up</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/app" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Start free</a>
       </div>
     </div>
   </nav>
@@ -138,115 +138,58 @@
           Get in <span class="gradient-text">touch</span>
         </h1>
         <p class="text-muted text-lg leading-relaxed">
-          Real humans, fast replies. Pick the channel that fits your question.
-          For incidents, the public status page is the fastest signal.
+          ZettaPay is an open-source project, and the public GitHub repository is the one channel we answer.
+          We do not publish e-mail addresses yet.
         </p>
       </div>
 
       <div class="grid md:grid-cols-3 gap-5">
-        <a href="mailto:support@zettapay.dev" class="glass rounded-2xl p-6 block">
-          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l9 6 9-6M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          </div>
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Support</div>
-          <div class="font-semibold mb-1">support@zettapay.dev</div>
-          <div class="text-xs text-muted leading-relaxed">Integration help, billing, account questions. We reply within one business day.</div>
-        </a>
-        <a href="mailto:security@zettapay.dev" class="glass rounded-2xl p-6 block">
-          <div class="w-10 h-10 rounded-lg bg-royal/10 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-          </div>
-          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-1">Security</div>
-          <div class="font-semibold mb-1">security@zettapay.dev</div>
-          <div class="text-xs text-muted leading-relaxed">Vulnerability reports. PGP key on request. Bug bounty active &mdash; see <a href="/docs" class="underline">docs</a>.</div>
-        </a>
-        <a href="mailto:legal@zettapay.dev" class="glass rounded-2xl p-6 block">
-          <div class="w-10 h-10 rounded-lg bg-solana/10 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-solana" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          </div>
-          <div class="text-xs font-mono text-solana uppercase tracking-widest mb-1">Legal &amp; privacy</div>
-          <div class="font-semibold mb-1">legal@zettapay.dev</div>
-          <div class="text-xs text-muted leading-relaxed">DPA requests, compliance, GDPR/CCPA, takedown notices.</div>
-        </a>
         <a href="https://github.com/leandromaiam-code/zettapay/issues" class="glass rounded-2xl p-6 block">
           <div class="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-4">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
           </div>
-          <div class="text-xs font-mono text-muted uppercase tracking-widest mb-1">GitHub issues</div>
-          <div class="font-semibold mb-1">leandromaiam-code/zettapay</div>
-          <div class="text-xs text-muted leading-relaxed">Bug reports, feature requests, protocol RFCs. Public, fastest route for technical questions.</div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Questions &amp; bugs</div>
+          <div class="font-semibold mb-1">GitHub issues</div>
+          <div class="text-xs text-muted leading-relaxed">Integration help, bug reports, feature requests, and questions about plans or volumes above 5,000 invoices a month.</div>
         </a>
-        <a href="mailto:partnerships@zettapay.dev" class="glass rounded-2xl p-6 block">
-          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-          </div>
-          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Partnerships</div>
-          <div class="font-semibold mb-1">partnerships@zettapay.dev</div>
-          <div class="text-xs text-muted leading-relaxed">Integrations, agent frameworks, ecosystem grants, co-marketing.</div>
-        </a>
-        <a href="mailto:press@zettapay.dev" class="glass rounded-2xl p-6 block">
+        <a href="https://github.com/leandromaiam-code/zettapay/issues" class="glass rounded-2xl p-6 block">
           <div class="w-10 h-10 rounded-lg bg-royal/10 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+            <svg class="w-5 h-5 text-royal-bright" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           </div>
-          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-1">Press</div>
-          <div class="font-semibold mb-1">press@zettapay.dev</div>
-          <div class="text-xs text-muted leading-relaxed">Media inquiries, brand assets, founder availability for interviews.</div>
+          <div class="text-xs font-mono text-royal-bright uppercase tracking-widest mb-1">Security</div>
+          <div class="font-semibold mb-1">Ask for a private channel</div>
+          <div class="text-xs text-muted leading-relaxed">Found a vulnerability? Open an issue saying you have a security report, without the details, and we will arrange a private way to receive it.</div>
+        </a>
+        <a href="/app" class="glass rounded-2xl p-6 block">
+          <div class="w-10 h-10 rounded-lg bg-mint/10 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-mint" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Cloud</div>
+          <div class="font-semibold mb-1">Early access at /app</div>
+          <div class="text-xs text-muted leading-relaxed">Cloud onboarding is manual during early access. Start there with your e-mail, shop name, public key and webhook URL.</div>
         </a>
       </div>
+
+      <p class="text-center text-xs text-muted mt-8 max-w-2xl mx-auto leading-relaxed">
+        Privacy or legal request? Use GitHub issues as well, and keep personal details out of the public thread &mdash;
+        say what you need and we will follow up from there.
+      </p>
     </div>
   </section>
 
-  <!-- MESSAGE FORM (mailto) -->
+  <!-- QUICK LINKS -->
   <section class="px-4 lg:px-12 pb-24">
     <div class="max-w-3xl mx-auto">
-      <div class="glass rounded-2xl p-8 md:p-10">
-        <div class="text-xs font-mono text-mint uppercase tracking-widest mb-3">Or send a message</div>
-        <h2 class="text-3xl font-bold mb-2">Drop us a note</h2>
-        <p class="text-muted text-sm mb-8">The form opens your email client with the details prefilled. No accounts, no tracking.</p>
-
-        <form id="contact-form" class="space-y-5">
-          <div class="grid sm:grid-cols-2 gap-5">
-            <div>
-              <label class="fld" for="name">Name</label>
-              <input class="input-field" id="name" name="name" type="text" placeholder="Ada Lovelace" required />
-            </div>
-            <div>
-              <label class="fld" for="email">Email</label>
-              <input class="input-field" id="email" name="email" type="email" placeholder="ada@example.com" required />
-            </div>
-          </div>
-          <div>
-            <label class="fld" for="topic">Topic</label>
-            <select class="input-field" id="topic" name="topic">
-              <option value="support">Support</option>
-              <option value="security">Security disclosure</option>
-              <option value="legal">Legal &amp; privacy</option>
-              <option value="partnerships">Partnerships</option>
-              <option value="press">Press</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div>
-            <label class="fld" for="message">Message</label>
-            <textarea class="input-field" id="message" name="message" rows="6" placeholder="What can we help with?" required></textarea>
-          </div>
-          <div class="flex flex-col sm:flex-row items-center gap-3 pt-2">
-            <button type="submit" class="btn-primary px-7 py-3 rounded-full font-semibold text-sm w-full sm:w-auto">Open in mail client</button>
-            <span class="text-xs text-muted font-mono">No data leaves your device until you hit send.</span>
-          </div>
-        </form>
-      </div>
-
-      <div class="grid sm:grid-cols-2 gap-4 mt-8 text-sm">
+      <div class="grid sm:grid-cols-2 gap-4 text-sm">
         <a href="/status" class="glass rounded-xl p-5 block">
           <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Incident?</div>
           <div class="font-semibold">Check live status &rarr;</div>
-          <div class="text-xs text-muted mt-1">Real-time component health and incident history.</div>
+          <div class="text-xs text-muted mt-1">Component health and incident history.</div>
         </a>
         <a href="/docs" class="glass rounded-xl p-5 block">
           <div class="text-xs font-mono text-mint uppercase tracking-widest mb-1">Integration question?</div>
           <div class="font-semibold">Browse the docs &rarr;</div>
-          <div class="text-xs text-muted mt-1">Quickstart, embed, SDK reference, recipes.</div>
+          <div class="text-xs text-muted mt-1">Quickstart, webhooks, embed, API reference.</div>
         </a>
       </div>
     </div>
@@ -260,14 +203,14 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Non-custodial crypto payments. Self-hosted open source or managed Cloud. Bitcoin &middot; USDC on Base &middot; USDT on Base.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
         <ul class="space-y-2 text-sm">
           <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
           <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
-          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/app" class="text-muted hover:text-white transition">Cloud (early access)</a></li>
           <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
         </ul>
       </div>
@@ -289,41 +232,9 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Non-custodial &middot; Bitcoin &middot; USDC &middot; USDT</span>
     </div>
   </footer>
 
-  <script>
-    const TOPIC_TO_INBOX = {
-      support: 'support@zettapay.dev',
-      security: 'security@zettapay.dev',
-      legal: 'legal@zettapay.dev',
-      partnerships: 'partnerships@zettapay.dev',
-      press: 'press@zettapay.dev',
-      other: 'support@zettapay.dev',
-    };
-    const TOPIC_LABEL = {
-      support: 'Support',
-      security: 'Security',
-      legal: 'Legal',
-      partnerships: 'Partnerships',
-      press: 'Press',
-      other: 'Inquiry',
-    };
-    const form = document.getElementById('contact-form');
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const data = new FormData(form);
-      const name = (data.get('name') || '').toString().trim();
-      const email = (data.get('email') || '').toString().trim();
-      const topic = (data.get('topic') || 'support').toString();
-      const message = (data.get('message') || '').toString().trim();
-      const to = TOPIC_TO_INBOX[topic] || TOPIC_TO_INBOX.support;
-      const subject = `[${TOPIC_LABEL[topic] || 'Inquiry'}] ${name || 'New message'}`;
-      const body = `From: ${name} <${email}>\n\n${message}`;
-      const href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      window.location.href = href;
-    });
-  </script>
 </body>
 </html>

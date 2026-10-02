@@ -68,63 +68,20 @@ export interface StatusSummary {
 
 /**
  * Default component roster the public page falls back to when no upstream
- * Express service is configured. Mirrors the Z18.4 monitored systems so the
- * page renders something meaningful from day one.
+ * status service is configured. Only what this deployment can vouch for by the
+ * mere fact of answering is listed; the Cloud API and the watcher fleet are not
+ * publicly monitored yet, so they are deliberately absent rather than shown as
+ * a hard-coded "operational".
  */
 const DEFAULT_COMPONENTS: ReadonlyArray<StatusComponent> = [
   {
-    id: 'cmp_api',
-    name: 'Payments API',
-    description: 'POST /pay, /payments — core payment processing.',
+    id: 'cmp_website',
+    name: 'Website and docs',
+    description: 'This site, the documentation and the Cloud early-access form.',
     position: 0,
     status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
-  },
-  {
-    id: 'cmp_solana_rpc',
-    name: 'Solana RPC',
-    description: 'Upstream Solana mainnet RPC used to settle USDC transfers.',
-    position: 1,
-    status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
-  },
-  {
-    id: 'cmp_indexer',
-    name: 'On-chain indexer',
-    description: 'Helius/Geyser webhook + backfill mirroring on-chain receipts.',
-    position: 2,
-    status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
-  },
-  {
-    id: 'cmp_webhooks',
-    name: 'Outbound webhooks',
-    description: 'Merchant webhook delivery + retry queue.',
-    position: 3,
-    status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
-  },
-  {
-    id: 'cmp_onramp',
-    name: 'Onramp (MoonPay)',
-    description: 'Fiat onramp + MoonPay webhook delivery.',
-    position: 4,
-    status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
-  },
-  {
-    id: 'cmp_dashboard',
-    name: 'Merchant dashboard',
-    description: 'Merchant onboarding, payouts, analytics UI.',
-    position: 5,
-    status: 'operational',
-    createdAt: '2026-05-10T00:00:00.000Z',
-    updatedAt: '2026-05-10T00:00:00.000Z',
+    createdAt: '2026-10-02T00:00:00.000Z',
+    updatedAt: '2026-10-02T00:00:00.000Z',
   },
 ];
 

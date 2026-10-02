@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay embed quickstart — install a Pay USDC button on your site in five minutes. Copy a single script tag, paste it in your <head>, get paid in USDC on Solana." />
+  <meta name="description" content="ZettaPay checkout guide — create an invoice on your server, then send the payer to the hosted checkout link or render the QR and receive address yourself and poll the status." />
   <meta name="theme-color" content="#0A0A0A" />
-  <meta property="og:title" content="ZettaPay · Embed quickstart (5 min)" />
-  <meta property="og:description" content="Install a Pay USDC button on your site in five minutes. One <script> tag, no backend." />
-  <title>ZettaPay · Embed quickstart (5 min)</title>
+  <meta property="og:title" content="ZettaPay · Checkout on your site" />
+  <meta property="og:description" content="Put a crypto checkout on your site: hosted checkout link, or your own screen with qr_uri and status polling." />
+  <title>ZettaPay · Checkout on your site</title>
   <link rel="icon" href="/Logo_symbol.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'violet': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -310,11 +310,11 @@
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
         <a href="/" class="text-muted hover:text-white transition">Home</a>
         <a href="/docs" class="text-white transition">Docs</a>
-        <a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a>
+        <a href="/pricing" class="text-muted hover:text-white transition">Pricing</a>
         <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition">GitHub</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="/signup" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Get started →</a>
+        <a href="/docs/quickstart" class="btn-primary px-4 py-2 rounded-full font-semibold text-sm">Quickstart →</a>
       </div>
     </div>
   </nav>
@@ -329,19 +329,18 @@
           <div class="text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3 px-3">On this page</div>
           <nav class="flex flex-col gap-1" id="toc">
             <a href="#overview" class="toc-link active">Overview</a>
-            <a href="#step-1" class="toc-link">1 · Get your API key</a>
-            <a href="#step-2" class="toc-link">2 · Set your pubkey env var</a>
-            <a href="#step-3" class="toc-link">3 · Copy embed code</a>
-            <a href="#step-4" class="toc-link">4 · Paste in &lt;head&gt;</a>
-            <a href="#step-5" class="toc-link">5 · Receive USDC</a>
-            <a href="#live-preview" class="toc-link">Live preview</a>
-            <a href="#frameworks" class="toc-link">Framework recipes</a>
-            <a href="#options" class="toc-link">Options reference</a>
+            <a href="#step-1" class="toc-link">1 · Create the invoice</a>
+            <a href="#option-a" class="toc-link">2a · Hosted checkout link</a>
+            <a href="#option-b" class="toc-link">2b · Render it yourself</a>
+            <a href="#step-3" class="toc-link">3 · Poll the status</a>
+            <a href="#step-4" class="toc-link">4 · Fulfil on the webhook</a>
+            <a href="#fixed-address" class="toc-link">Exact amounts</a>
+            <a href="#options" class="toc-link">Field reference</a>
             <a href="#whats-next" class="toc-link">What's next</a>
           </nav>
           <div class="mt-8 px-3 text-[10px] font-mono uppercase tracking-[0.18em] text-muted mb-3">Other guides</div>
           <nav class="flex flex-col gap-1">
-            <a href="/docs/quickstart" class="toc-link">SDK quickstart</a>
+            <a href="/docs/quickstart" class="toc-link">Quickstart</a>
             <a href="/docs" class="toc-link">All docs</a>
           </nav>
         </div>
@@ -350,50 +349,47 @@
       <!-- CONTENT -->
       <article class="max-w-3xl">
         <header class="mb-10">
-          <span class="badge mb-5"><span class="badge-dot"></span>Embed quickstart · 5 min · zero backend</span>
+          <span class="badge mb-5"><span class="badge-dot"></span>Guide · checkout on your site</span>
           <h1 class="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
-            Install a <span class="gradient-text">Pay USDC</span> button in five minutes.
+            Put a <span class="gradient-text">crypto checkout</span> on your site.
           </h1>
           <p class="text-lg text-muted leading-relaxed">
-            Get your API key, configure your pubkey in your own env var
-            (<code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code>, etc.), copy one
-            <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag, paste it in your site's
-            <code class="text-mint font-mono text-sm">&lt;head&gt;</code>. That is the entire integration.
-            ZettaPay watches the chain for the deposit and posts a webhook the moment it confirms. The
-            protocol never custodies — the on-chain transfer lands directly in your wallet. No protocol fee
-            on top of network gas. No servers required.
+            A ZettaPay checkout is an invoice plus a screen that shows it. Your backend creates the invoice; the
+            payer sees a receive address and a QR code and pays from any wallet. Either send the payer to the
+            hosted checkout link that Cloud returns, or render the address and QR yourself and poll the invoice
+            status. Either way the payment goes straight to your wallet and your backend is told by a signed
+            webhook.
           </p>
           <div class="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted">
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Plain HTML</span>
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Vanilla JS</span>
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">React</span>
-            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Next.js</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Hosted link · Cloud</span>
+            <span class="px-2 py-1 rounded border border-royal/30 bg-royal/5">Own UI · self-hosted or Cloud</span>
           </div>
         </header>
 
         <!-- OVERVIEW -->
         <section id="overview" class="scroll-mt-32 mb-16">
           <h2 class="text-2xl font-bold mb-3">Overview</h2>
-          <p class="text-muted leading-relaxed mb-4">
-            The <code class="text-mint font-mono text-sm">@zettapay/widget</code> bundle is a self-mounting
-            <code class="text-mint font-mono text-sm">&lt;script&gt;</code> that renders a Pay button anywhere
-            you drop the tag. Click → modal opens → payer scans a Solana Pay QR or copies the merchant
-            address into their own wallet → USDC lands in your wallet. The widget never asks to connect a
-            wallet; it just renders the QR and watches the chain. You handle <em>nothing</em>.
-          </p>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
-            <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Bundle</div>
-              <div class="text-sm font-semibold">~30 kb gzipped</div>
-            </div>
-            <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Settlement</div>
-              <div class="text-sm font-semibold">&lt;2 s SOL · ~12 s ETH · ~10 min BTC</div>
-            </div>
-            <div class="glass rounded-xl p-4">
-              <div class="text-[10px] font-mono uppercase tracking-wider text-mint mb-1">Protocol fee</div>
-              <div class="text-sm font-semibold">0% — only the network's own gas</div>
-            </div>
+          <div class="code-card overflow-hidden mb-5">
+            <table class="api-table">
+              <thead>
+                <tr><th>Path</th><th>Works with</th><th>You build</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><strong class="text-white">Hosted checkout link</strong></td><td class="text-muted">Cloud, when the invoice response includes <code>checkout_url</code></td><td class="text-muted">A redirect or a link. Nothing else.</td></tr>
+                <tr><td><strong class="text-white">Render it yourself</strong></td><td class="text-muted">Self-hosted listener and Cloud</td><td class="text-muted">A payment screen: address, amount, QR, status.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout">
+            <strong>The invoice is always created on your server.</strong> Creating an invoice needs your API key,
+            so it must never happen in the browser. The browser only receives public information: the receive
+            address, the amount and the payment URI.
+          </div>
+          <div class="callout mt-3">
+            <strong>About the script-tag packages.</strong> The <code class="text-mint font-mono text-xs">@zettapay/widget</code>
+            and <code class="text-mint font-mono text-xs">@zettapay/embed</code> packages currently on npm were
+            built for an earlier version of the protocol and do not talk to the listener or to Cloud. Do not use
+            them for a new integration — follow this guide instead.
           </div>
         </section>
 
@@ -401,99 +397,138 @@
         <section id="step-1" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">1</div>
-            <h2 class="text-2xl font-bold">Get your API key</h2>
+            <h2 class="text-2xl font-bold">Create the invoice on your server</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Open <a class="text-royal-bright underline" href="/signup">zettapay.io/signup</a> in any modern
-            browser. The form takes a merchant handle and an email — that is the whole intake. No
-            credit-card form, no KYC, and <strong class="text-white">we do not ask for your pubkey here</strong>.
-            You'll receive an <code class="text-mint font-mono text-sm">api_key</code> plus a
-            <code class="text-mint font-mono text-sm">webhook_secret</code>.
+            When the customer clicks "Pay with crypto", your backend asks ZettaPay for an invoice and stores the
+            returned <code class="text-mint font-mono text-sm">invoice_id</code> on the order. The request is the
+            same for the self-hosted listener (<code class="text-mint font-mono text-sm">POST /invoice</code>) and
+            for Cloud (<code class="text-mint font-mono text-sm">POST /api/v1/invoice</code>).
           </p>
 
-          <figure class="screenshot mb-4">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">zettapay.io · onboarding</span>
+          <div class="code-card relative" data-tabs="create">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="self">Self-hosted</button>
+              <button class="tab-btn" data-tab="cloud">Cloud</button>
             </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="ZettaPay onboarding form">
-              <defs>
-                <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0a0a0a"/>
-                  <stop offset="1" stop-color="#131826"/>
-                </linearGradient>
-                <linearGradient id="cta1" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stop-color="#4F6BFF"/>
-                  <stop offset="1" stop-color="#6B82FF"/>
-                </linearGradient>
-              </defs>
-              <rect width="760" height="360" fill="url(#bg1)"/>
-              <g opacity="0.5">
-                <circle cx="640" cy="60" r="100" fill="#4F6BFF" opacity="0.08"/>
-                <circle cx="120" cy="320" r="120" fill="#9945FF" opacity="0.06"/>
-              </g>
-              <text x="60" y="78" font-family="Inter, sans-serif" font-size="13" fill="#14F195" letter-spacing="2">CREATE A MERCHANT</text>
-              <text x="60" y="118" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="#fff">Get your API key</text>
-              <text x="60" y="146" font-family="Inter, sans-serif" font-size="13" fill="#94A3B8">No credit card. No KYC. Pubkey lives in your code — you'll set it as an env var next.</text>
-              <rect x="60" y="180" width="640" height="44" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.3"/>
-              <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">Merchant handle</text>
-              <text x="76" y="207" font-family="JetBrains Mono, monospace" font-size="12" fill="#fff" opacity="0">@yourshop</text>
-              <rect x="60" y="240" width="640" height="44" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.3"/>
-              <text x="76" y="267" font-family="JetBrains Mono, monospace" font-size="12" fill="#64748b">you@yourshop.com</text>
-              <rect x="60" y="304" width="200" height="38" rx="999" fill="url(#cta1)"/>
-              <text x="160" y="328" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">Continue →</text>
-              <text x="280" y="328" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">Free tier · 100 txs / month</text>
-            </svg>
-          </figure>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="self" class="block"><span class="tk-c">// Your backend (Express, Node 18+). The listener runs next to it.</span>
+app.<span class="tk-f">post</span>(<span class="tk-s">'/api/checkout'</span>, <span class="tk-k">async</span> (req, res) =&gt; {
+  <span class="tk-k">const</span> order = <span class="tk-k">await</span> <span class="tk-f">loadOrder</span>(req.body.orderId);        <span class="tk-c">// your own code</span>
 
-          <div class="callout">
-            <strong>Free, no protocol fee.</strong> ZettaPay is a non-custodial protocol — we never touch the
-            funds. The customer pays the network's own gas (a fraction of a cent on Solana, a few cents on
-            Ethereum L2s, a few sats on Bitcoin). ZettaPay charges nothing on top.
+  <span class="tk-k">const</span> r = <span class="tk-k">await</span> <span class="tk-f">fetch</span>(<span class="tk-s">'http://localhost:8787/invoice'</span>, {
+    method: <span class="tk-s">'POST'</span>,
+    headers: {
+      <span class="tk-s">'content-type'</span>: <span class="tk-s">'application/json'</span>,
+      <span class="tk-s">'x-zettapay-api-key'</span>: process.env.<span class="tk-t">ZETTAPAY_API_KEY</span>,
+    },
+    body: JSON.<span class="tk-f">stringify</span>({ chain: <span class="tk-s">'base'</span>, amount_usd: order.totalUsd }),
+  });
+  <span class="tk-k">if</span> (!r.ok) <span class="tk-k">return</span> res.<span class="tk-f">status</span>(<span class="tk-n">502</span>).<span class="tk-f">json</span>({ error: <span class="tk-s">'could not create invoice'</span> });
+  <span class="tk-k">const</span> inv = <span class="tk-k">await</span> r.<span class="tk-f">json</span>();
+
+  <span class="tk-k">await</span> <span class="tk-f">saveInvoiceId</span>(order.id, inv.invoice_id);              <span class="tk-c">// your own code</span>
+
+  <span class="tk-c">// Hand the browser only what it needs to show.</span>
+  res.<span class="tk-f">json</span>({
+    invoice_id: inv.invoice_id,
+    asset: inv.asset,
+    receive_address: inv.receive_address,
+    amount: inv.amount_usdc ?? inv.amount_btc,
+    qr_uri: inv.qr_uri,
+    expires_at: inv.expires_at,
+  });
+});</pre>
+<pre data-pane="cloud" class="hidden"><span class="tk-c">// Same request, Cloud base URL. ZETTAPAY_URL is given to you at onboarding.</span>
+<span class="tk-k">const</span> r = <span class="tk-k">await</span> <span class="tk-f">fetch</span>(<span class="tk-s">`${process.env.ZETTAPAY_URL}/api/v1/invoice`</span>, {
+  method: <span class="tk-s">'POST'</span>,
+  headers: {
+    <span class="tk-s">'content-type'</span>: <span class="tk-s">'application/json'</span>,
+    <span class="tk-s">'x-zettapay-api-key'</span>: process.env.<span class="tk-t">ZETTAPAY_API_KEY</span>,
+  },
+  body: JSON.<span class="tk-f">stringify</span>({ chain: <span class="tk-s">'base'</span>, amount_usd: order.totalUsd }),
+});
+<span class="tk-k">const</span> inv = <span class="tk-k">await</span> r.<span class="tk-f">json</span>();
+
+<span class="tk-c">// inv.checkout_url is present when hosted checkout is enabled.</span></pre>
+          </div>
+          <p class="text-sm text-muted mt-4">
+            For Bitcoin send <code class="text-mint font-mono text-xs">{ "amount_sats": 50000 }</code> instead. All
+            fields are in the <a class="text-royal-bright underline" href="/docs/api">API reference</a>.
+          </p>
+        </section>
+
+        <!-- OPTION A -->
+        <section id="option-a" class="scroll-mt-32 mb-16">
+          <div class="flex items-center gap-4 mb-4">
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2a</div>
+            <h2 class="text-2xl font-bold">Hosted checkout link · Cloud</h2>
+          </div>
+          <p class="text-muted leading-relaxed mb-5">
+            On Cloud, the invoice response can carry a
+            <code class="text-mint font-mono text-sm">checkout_url</code>: a hosted page for that one invoice,
+            showing your shop name, the amount, the receive address, a QR code, a countdown and the live status.
+            Redirect the payer to it, or put it behind a button. The page needs no login and exposes no secret.
+          </p>
+
+          <div class="code-card relative" data-tabs="hosted">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="redirect">Redirect</button>
+              <button class="tab-btn" data-tab="link">Link</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="redirect" class="block"><span class="tk-c">// in the server route from step 1</span>
+<span class="tk-k">if</span> (inv.checkout_url) <span class="tk-k">return</span> res.<span class="tk-f">redirect</span>(<span class="tk-n">303</span>, inv.checkout_url);</pre>
+<pre data-pane="link" class="hidden">&lt;<span class="tk-k">a</span> <span class="tk-a">href</span>=<span class="tk-s">"{{ checkout_url }}"</span> <span class="tk-a">rel</span>=<span class="tk-s">"noopener"</span>&gt;Pay with crypto&lt;/<span class="tk-k">a</span>&gt;</pre>
+          </div>
+          <div class="callout mt-5">
+            <strong>If <code>checkout_url</code> is absent,</strong> hosted checkout is not enabled for that
+            deployment — use option 2b. The self-hosted listener does not return this field.
           </div>
         </section>
 
-        <!-- STEP 2 -->
-        <section id="step-2" class="scroll-mt-32 mb-16">
+        <!-- OPTION B -->
+        <section id="option-b" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
-            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2</div>
-            <h2 class="text-2xl font-bold">Set your pubkey in an env var</h2>
+            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">2b</div>
+            <h2 class="text-2xl font-bold">Render it yourself</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            Drop the public address of <em>any</em> wallet you control — Bitcoin, Ethereum (mainnet or any
-            L2), Solana for USDC — into the matching env var in your own
-            <code class="text-mint font-mono text-sm">.env</code>. Hardware wallets, exchange withdrawal
-            addresses, mobile wallets all work. <strong class="text-white">ZettaPay never asks to connect, and
-            your pubkey never touches our database.</strong> Add more chains later by adding more env vars and
-            redeploying — no re-onboarding.
+            Show three things: the <strong class="text-white">exact amount</strong>, the
+            <strong class="text-white">receive address</strong> with a copy button, and a QR code of
+            <code class="text-mint font-mono text-sm">qr_uri</code>. The URI is a standard BIP-21
+            (<code class="text-mint font-mono text-sm">bitcoin:…</code>) or EIP-681
+            (<code class="text-mint font-mono text-sm">ethereum:…</code>) payment link, so any QR library can
+            encode it and any wallet can read it. No wallet is ever connected to the page.
           </p>
 
-          <div class="code-card relative">
-            <button class="copy-btn" data-copy-target="embed-env-snippet">Copy</button>
-<pre id="embed-env-snippet"><span class="tk-c"># .env — your servers, your secrets, your pubkeys</span>
-<span class="tk-t">ZETTAPAY_API_KEY</span>=<span class="tk-s">sk_live_...</span>
-<span class="tk-t">ZETTAPAY_WEBHOOK_SECRET</span>=<span class="tk-s">whsec_...</span>
+          <div class="code-card relative" data-tabs="render">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="html">HTML</button>
+              <button class="tab-btn" data-tab="js">JavaScript</button>
+            </div>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="html" class="block">&lt;<span class="tk-k">div</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-checkout"</span>&gt;
+  &lt;<span class="tk-k">p</span>&gt;Send exactly &lt;<span class="tk-k">strong</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-amount"</span>&gt;&lt;/<span class="tk-k">strong</span>&gt; &lt;<span class="tk-k">span</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-asset"</span>&gt;&lt;/<span class="tk-k">span</span>&gt; to:&lt;/<span class="tk-k">p</span>&gt;
+  &lt;<span class="tk-k">code</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-address"</span>&gt;&lt;/<span class="tk-k">code</span>&gt;
+  &lt;<span class="tk-k">div</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-qr"</span>&gt;&lt;/<span class="tk-k">div</span>&gt;
+  &lt;<span class="tk-k">a</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-open"</span>&gt;Open in wallet&lt;/<span class="tk-k">a</span>&gt;
+  &lt;<span class="tk-k">p</span> <span class="tk-a">id</span>=<span class="tk-s">"zp-status"</span>&gt;Waiting for payment…&lt;/<span class="tk-k">p</span>&gt;
+&lt;/<span class="tk-k">div</span>&gt;</pre>
+<pre data-pane="js" class="hidden"><span class="tk-k">const</span> inv = <span class="tk-k">await</span> (<span class="tk-k">await</span> <span class="tk-f">fetch</span>(<span class="tk-s">'/api/checkout'</span>, {
+  method: <span class="tk-s">'POST'</span>,
+  headers: { <span class="tk-s">'content-type'</span>: <span class="tk-s">'application/json'</span> },
+  body: JSON.<span class="tk-f">stringify</span>({ orderId }),
+})).<span class="tk-f">json</span>();
 
-<span class="tk-c"># Wallet addresses you control — set any subset</span>
-<span class="tk-t">MERCHANT_BTC_PUBKEY</span>=<span class="tk-s">bc1qx5...e92</span>
-<span class="tk-t">MERCHANT_ETH_PUBKEY</span>=<span class="tk-s">0x7a3...4F2</span>
-<span class="tk-t">MERCHANT_SOL_PUBKEY</span>=<span class="tk-s">7Np41oeY...YVhT</span></pre>
-          </div>
+document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-amount'</span>).textContent  = inv.amount;
+document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-asset'</span>).textContent   = inv.asset;
+document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-address'</span>).textContent = inv.receive_address;
+document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-open'</span>).href           = inv.qr_uri;
 
-          <p class="text-muted leading-relaxed mt-5">
-            The widget reads <code class="text-mint font-mono text-sm">MERCHANT_SOL_PUBKEY</code> (or its
-            BTC / ETH siblings) at boot from a tiny server endpoint on your side — see step 4 for the
-            <code class="text-mint font-mono text-sm">data-pubkey</code> wiring if you'd rather inline it. You
-            can rotate any of these keys by editing the env file and redeploying; the listener picks up the
-            new address on the next <code class="text-mint font-mono text-sm">zp.register()</code> call.
-          </p>
-
-          <div class="callout">
-            <strong>No on-chain bind required.</strong> The protocol simply watches the addresses you list.
-            You keep full control of the wallet, can sweep funds whenever you want, and can swap addresses
-            mid-flight without touching the ZettaPay dashboard.
+<span class="tk-c">// Encode inv.qr_uri with the QR library you already use,</span>
+<span class="tk-c">// and draw the result into #zp-qr.</span>
+<span class="tk-f">renderQr</span>(document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-qr'</span>), inv.qr_uri);</pre>
           </div>
         </section>
 
@@ -501,74 +536,57 @@
         <section id="step-3" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">3</div>
-            <h2 class="text-2xl font-bold">Copy the embed code</h2>
+            <h2 class="text-2xl font-bold">Poll the status to update the screen</h2>
           </div>
           <p class="text-muted leading-relaxed mb-5">
-            You land on your <a class="text-royal-bright underline" href="/dashboard">dashboard</a>. The
-            <strong class="text-white">Install</strong> tab shows a snippet pre-filled with your handle.
-            Set the amount you want to charge, hit <span class="kbd">Copy</span>.
+            Poll every few seconds until the status leaves
+            <code class="text-mint font-mono text-sm">pending</code>, and stop at
+            <code class="text-mint font-mono text-sm">expires_at</code>. Where the browser reads the status from
+            depends on what you run:
           </p>
+          <ul class="space-y-2 text-muted leading-relaxed mb-5">
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Self-hosted.</strong> Keep the listener private and add a small route on your backend that forwards to <code class="text-mint font-mono text-sm">GET /invoice/:id</code>. (If you do expose the listener, list your site in <code class="text-mint font-mono text-sm">MERCHANT_ORIGIN</code> so the browser is allowed to call it.)</span></li>
+            <li class="flex gap-3"><span class="text-mint">›</span> <span><strong class="text-white">Cloud.</strong> The browser can call the public <code class="text-mint font-mono text-sm">GET /api/v1/checkout/:id</code> directly — it needs no API key and returns display fields only.</span></li>
+          </ul>
 
-          <figure class="screenshot mb-4">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">zettapay.io/dashboard · Install</span>
+          <div class="code-card relative" data-tabs="poll">
+            <div class="tabs">
+              <button class="tab-btn active" data-tab="server">Server route</button>
+              <button class="tab-btn" data-tab="browser">Browser</button>
             </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dashboard install snippet">
-              <defs>
-                <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0a0a0a"/>
-                  <stop offset="1" stop-color="#11141f"/>
-                </linearGradient>
-              </defs>
-              <rect width="760" height="360" fill="url(#bg3)"/>
-              <rect x="40" y="36" width="680" height="46" rx="10" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.15"/>
-              <text x="56" y="64" font-family="JetBrains Mono, monospace" font-size="11" fill="#94A3B8">DASHBOARD ›</text>
-              <text x="124" y="64" font-family="Inter, sans-serif" font-size="13" font-weight="600" fill="#fff">@yourshop</text>
-              <rect x="588" y="46" width="120" height="26" rx="999" fill="rgba(20,241,149,0.08)" stroke="#14F195" stroke-opacity="0.4"/>
-              <circle cx="604" cy="59" r="3" fill="#14F195"/>
-              <text x="616" y="63" font-family="JetBrains Mono, monospace" font-size="10" fill="#14F195">LIVE · DEVNET</text>
+            <button class="copy-btn" data-copy>Copy</button>
+<pre data-pane="server" class="block"><span class="tk-c">// Self-hosted: forward status lookups to the listener.</span>
+app.<span class="tk-f">get</span>(<span class="tk-s">'/api/checkout/:id'</span>, <span class="tk-k">async</span> (req, res) =&gt; {
+  <span class="tk-k">const</span> r = <span class="tk-k">await</span> <span class="tk-f">fetch</span>(
+    <span class="tk-s">`http://localhost:8787/invoice/${encodeURIComponent(req.params.id)}`</span>,
+  );
+  <span class="tk-k">if</span> (!r.ok) <span class="tk-k">return</span> res.<span class="tk-f">status</span>(r.status).<span class="tk-f">end</span>();
+  <span class="tk-k">const</span> inv = <span class="tk-k">await</span> r.<span class="tk-f">json</span>();
+  res.<span class="tk-f">json</span>({ status: inv.status, tx_hash: inv.tx_hash });
+});</pre>
+<pre data-pane="browser" class="hidden"><span class="tk-c">// Self-hosted: your own route.  Cloud: `${ZETTAPAY_URL}/api/v1/checkout/${id}`</span>
+<span class="tk-k">const</span> statusUrl = <span class="tk-s">`/api/checkout/${inv.invoice_id}`</span>;
+<span class="tk-k">const</span> el = document.<span class="tk-f">getElementById</span>(<span class="tk-s">'zp-status'</span>);
 
-              <text x="40" y="118" font-family="JetBrains Mono, monospace" font-size="10" fill="#14F195" letter-spacing="1.5">EMBED CODE</text>
-              <text x="40" y="142" font-family="Inter, sans-serif" font-size="18" font-weight="700" fill="#fff">Drop this into your &lt;head&gt;</text>
-
-              <rect x="40" y="160" width="180" height="38" rx="8" fill="#0d0d0d" stroke="#4F6BFF" stroke-opacity="0.25"/>
-              <text x="56" y="184" font-family="Inter, sans-serif" font-size="11" fill="#94A3B8">Amount (USDC)</text>
-              <text x="208" y="184" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="13" fill="#fff" font-weight="600">10</text>
-
-              <rect x="40" y="210" width="680" height="110" rx="10" fill="#080808" stroke="#4F6BFF" stroke-opacity="0.18"/>
-              <text x="56" y="232" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">&lt;script</text>
-              <text x="74" y="250" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  src=</text>
-              <text x="118" y="250" font-family="JetBrains Mono, monospace" font-size="11" fill="#4F6BFF">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</text>
-              <text x="74" y="268" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  data-merchant=</text>
-              <text x="194" y="268" font-family="JetBrains Mono, monospace" font-size="11" fill="#14F195">"@yourshop"</text>
-              <text x="74" y="286" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  data-amount=</text>
-              <text x="178" y="286" font-family="JetBrains Mono, monospace" font-size="11" fill="#f97316">"10"</text>
-              <text x="74" y="304" font-family="JetBrains Mono, monospace" font-size="11" fill="#c084fc">  async</text>
-              <text x="56" y="304" font-family="JetBrains Mono, monospace" font-size="11" fill="#64748b">&gt;&lt;/script&gt;</text>
-
-              <rect x="620" y="222" width="86" height="28" rx="6" fill="rgba(20,241,149,0.1)" stroke="#14F195" stroke-opacity="0.5"/>
-              <text x="663" y="240" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" fill="#14F195">COPIED ✓</text>
-            </svg>
-          </figure>
-
-          <p class="text-muted leading-relaxed mb-3">
-            The exact snippet you'll see (replace <code class="text-mint font-mono text-sm">@yourshop</code>
-            with your real handle):
-          </p>
-
-          <div class="code-card relative">
-            <button class="copy-btn" data-copy-target="embed-snippet">Copy</button>
-            <pre id="embed-snippet"><span class="tk-c">&lt;!-- ZettaPay · drop into your &lt;head&gt; --&gt;</span>
-<span class="tk-k">&lt;script</span>
-  <span class="tk-a">src</span>=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
-  <span class="tk-a">data-merchant</span>=<span class="tk-f">"@yourshop"</span>
-  <span class="tk-a">data-amount</span>=<span class="tk-n">"10"</span>
-  <span class="tk-a">data-currency</span>=<span class="tk-s">"USDC"</span>
-  <span class="tk-a">async</span>
-<span class="tk-k">&gt;&lt;/script&gt;</span></pre>
+<span class="tk-k">const</span> timer = <span class="tk-f">setInterval</span>(<span class="tk-k">async</span> () =&gt; {
+  <span class="tk-k">if</span> (Date.<span class="tk-f">now</span>() &gt; Date.<span class="tk-f">parse</span>(inv.expires_at)) {
+    <span class="tk-f">clearInterval</span>(timer);
+    el.textContent = <span class="tk-s">'This invoice expired. Start again.'</span>;
+    <span class="tk-k">return</span>;
+  }
+  <span class="tk-k">const</span> s = <span class="tk-k">await</span> (<span class="tk-k">await</span> <span class="tk-f">fetch</span>(statusUrl)).<span class="tk-f">json</span>();
+  <span class="tk-k">if</span> (s.status === <span class="tk-s">'confirmed'</span>) {
+    <span class="tk-f">clearInterval</span>(timer);
+    el.textContent = <span class="tk-s">'Payment confirmed. Thank you!'</span>;
+  } <span class="tk-k">else if</span> (s.status === <span class="tk-s">'expired'</span> || s.status === <span class="tk-s">'failed'</span>) {
+    <span class="tk-f">clearInterval</span>(timer);
+    el.textContent = <span class="tk-s">'This invoice is no longer payable.'</span>;
+  }
+}, <span class="tk-n">5000</span>);</pre>
+          </div>
+          <div class="callout mt-5">
+            <strong>Hide the QR when the invoice expires.</strong> A payment sent after expiry cannot be matched
+            to the order automatically. Invoices live for one hour by default.
           </div>
         </section>
 
@@ -576,368 +594,86 @@
         <section id="step-4" class="scroll-mt-32 mb-16">
           <div class="flex items-center gap-4 mb-4">
             <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">4</div>
-            <h2 class="text-2xl font-bold">Paste in your <code class="text-mint font-mono text-base">&lt;head&gt;</code></h2>
+            <h2 class="text-2xl font-bold">Fulfil the order on the webhook</h2>
           </div>
-          <p class="text-muted leading-relaxed mb-5">
-            Open your site's <code class="text-mint font-mono text-sm">index.html</code> (or layout file —
-            see <a class="text-royal-bright underline" href="#frameworks">framework recipes</a> below).
-            Paste the snippet anywhere inside <code class="text-mint font-mono text-sm">&lt;head&gt;</code>.
-            That's the whole integration.
+          <p class="text-muted leading-relaxed mb-4">
+            The status poll is only for the payer's screen. The thing that should release the order is the signed
+            <code class="text-mint font-mono text-sm">invoice.confirmed</code> webhook your backend receives — it
+            arrives even if the payer closed the tab. Verify the signature, look the order up by
+            <code class="text-mint font-mono text-sm">invoice_id</code>, mark it paid.
           </p>
+          <p class="text-muted leading-relaxed">
+            Handler code and the full payload are in the
+            <a class="text-royal-bright underline" href="/docs/webhook">webhook reference</a>.
+          </p>
+        </section>
 
-          <figure class="screenshot mb-4">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">~/yourshop/public/index.html — VS Code</span>
-            </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Snippet pasted into head tag in editor">
-              <rect width="760" height="360" fill="#0d0d0d"/>
-              <rect width="44" height="360" fill="#11151f"/>
-              <g font-family="JetBrains Mono, monospace" font-size="11" fill="#475569">
-                <text x="32" y="40" text-anchor="end">1</text>
-                <text x="32" y="62" text-anchor="end">2</text>
-                <text x="32" y="84" text-anchor="end">3</text>
-                <text x="32" y="106" text-anchor="end">4</text>
-                <text x="32" y="128" text-anchor="end">5</text>
-                <text x="32" y="150" text-anchor="end">6</text>
-                <text x="32" y="172" text-anchor="end">7</text>
-                <text x="32" y="194" text-anchor="end">8</text>
-                <text x="32" y="216" text-anchor="end">9</text>
-                <text x="28" y="238" text-anchor="end">10</text>
-                <text x="28" y="260" text-anchor="end">11</text>
-                <text x="28" y="282" text-anchor="end">12</text>
-                <text x="28" y="304" text-anchor="end">13</text>
-                <text x="28" y="326" text-anchor="end">14</text>
-              </g>
-              <g font-family="JetBrains Mono, monospace" font-size="11.5">
-                <text x="60" y="40" fill="#64748b">&lt;!doctype html&gt;</text>
-                <text x="60" y="62" fill="#9945FF">&lt;html</text>
-                <text x="106" y="62" fill="#c084fc"> lang</text>
-                <text x="138" y="62" fill="#fff">=</text>
-                <text x="142" y="62" fill="#4F6BFF">"en"</text>
-                <text x="172" y="62" fill="#9945FF">&gt;</text>
-                <text x="60" y="84" fill="#9945FF">&lt;head&gt;</text>
-                <text x="78" y="106" fill="#9945FF">&lt;meta</text>
-                <text x="118" y="106" fill="#c084fc"> charset</text>
-                <text x="170" y="106" fill="#fff">=</text>
-                <text x="174" y="106" fill="#4F6BFF">"utf-8"</text>
-                <text x="222" y="106" fill="#9945FF"> /&gt;</text>
-                <text x="78" y="128" fill="#9945FF">&lt;title&gt;</text>
-                <text x="128" y="128" fill="#fff">Yourshop</text>
-                <text x="190" y="128" fill="#9945FF">&lt;/title&gt;</text>
-                <text x="78" y="150" fill="#14F195">&lt;!-- ZettaPay --&gt;</text>
-                <text x="78" y="172" fill="#9945FF">&lt;script</text>
-                <text x="96" y="194" fill="#c084fc">  src</text>
-                <text x="120" y="194" fill="#fff">=</text>
-                <text x="124" y="194" fill="#4F6BFF">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</text>
-                <text x="96" y="216" fill="#c084fc">  data-merchant</text>
-                <text x="190" y="216" fill="#fff">=</text>
-                <text x="194" y="216" fill="#14F195">"@yourshop"</text>
-                <text x="96" y="238" fill="#c084fc">  data-amount</text>
-                <text x="172" y="238" fill="#fff">=</text>
-                <text x="176" y="238" fill="#f97316">"10"</text>
-                <text x="96" y="260" fill="#c084fc">  async</text>
-                <text x="78" y="260" fill="#9945FF">&gt;&lt;/script&gt;</text>
-                <text x="60" y="282" fill="#9945FF">&lt;/head&gt;</text>
-                <text x="60" y="304" fill="#9945FF">&lt;body&gt;</text>
-                <text x="78" y="326" fill="#94A3B8">  &lt;!-- your site --&gt;</text>
-              </g>
-              <rect x="60" y="156" width="660" height="116" rx="6" fill="rgba(20,241,149,0.04)" stroke="#14F195" stroke-opacity="0.4" stroke-dasharray="4 4"/>
-              <rect x="660" y="148" width="80" height="20" rx="4" fill="#14F195"/>
-              <text x="700" y="162" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="700" fill="#0a0a0a">PASTED</text>
-            </svg>
-          </figure>
-
+        <!-- FIXED ADDRESS -->
+        <section id="fixed-address" class="scroll-mt-32 mb-16">
+          <h2 class="text-2xl font-bold mb-3">Exact amounts in fixed-address mode</h2>
+          <p class="text-muted leading-relaxed mb-4">
+            If your Base setup uses one fixed receive address (no xpub), every invoice shares that address and is
+            told apart by a small nonce in the low decimals of the amount — for example
+            <code class="text-mint font-mono text-sm">29.000042</code> for a 29-dollar order. The response then
+            carries <code class="text-mint font-mono text-sm">"mode": "fixed-address"</code>.
+          </p>
           <div class="callout callout-mint">
-            <strong>That is the integration.</strong> No npm install, no build step, no backend, no API key.
-            The CDN bundle is ~30 kb gzipped, served from jsDelivr's global edge. Reload your site —
-            a Pay button is there.
+            <strong>Display <code>amount_usdc</code> digit for digit, and say "send exactly".</strong> A rounded
+            amount (29.00) matches no invoice: the funds still arrive in your wallet, but the order is not marked
+            paid and you receive a <code>payment.orphan</code> webhook instead. The
+            <code>qr_uri</code> already encodes the exact amount and the right token contract.
           </div>
         </section>
 
-        <!-- STEP 5 -->
-        <section id="step-5" class="scroll-mt-32 mb-16">
-          <div class="flex items-center gap-4 mb-4">
-            <div class="step-num w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm">5</div>
-            <h2 class="text-2xl font-bold">Receive USDC</h2>
-          </div>
-          <p class="text-muted leading-relaxed mb-5">
-            A customer clicks the button. The widget opens a modal with a QR code and the merchant address
-            for the chain they pick. They pay from whatever wallet they already use (Phantom, Solflare,
-            MetaMask, Rainbow, a Bitcoin hardware wallet, an exchange withdrawal — anything). ZettaPay
-            watches the chain for the deposit; Solana confirms in &lt;2 seconds, Ethereum in ~12 seconds,
-            Bitcoin in ~10 minutes (1 confirmation). Funds land directly in your wallet — no escrow, no
-            holding period, no manual settlement.
-          </p>
-
-          <figure class="screenshot mb-4">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">yourshop.com · checkout success</span>
-            </div>
-            <svg viewBox="0 0 760 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Payment success modal">
-              <defs>
-                <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#0a0a0a"/>
-                  <stop offset="1" stop-color="#0a1a14"/>
-                </linearGradient>
-                <radialGradient id="successGlow" cx="0.5" cy="0.4" r="0.6">
-                  <stop offset="0" stop-color="#14F195" stop-opacity="0.25"/>
-                  <stop offset="1" stop-color="#14F195" stop-opacity="0"/>
-                </radialGradient>
-              </defs>
-              <rect width="760" height="360" fill="url(#bg5)"/>
-              <rect width="760" height="360" fill="url(#successGlow)"/>
-              <rect x="220" y="50" width="320" height="260" rx="20" fill="#0d130f" stroke="#14F195" stroke-opacity="0.4"/>
-              <circle cx="380" cy="120" r="42" fill="rgba(20,241,149,0.12)"/>
-              <circle cx="380" cy="120" r="32" fill="#14F195"/>
-              <path d="M365 120 L376 132 L398 108" stroke="#0a0a0a" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-              <text x="380" y="190" text-anchor="middle" font-family="Inter, sans-serif" font-size="20" font-weight="700" fill="#fff">Payment received</text>
-              <text x="380" y="216" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="13" fill="#14F195">+ 10.00 USDC</text>
-              <rect x="252" y="232" width="256" height="34" rx="8" fill="#080808" stroke="#14F195" stroke-opacity="0.18"/>
-              <text x="266" y="252" font-family="Inter, sans-serif" font-size="10" fill="#94A3B8">Tx</text>
-              <text x="494" y="252" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="10" fill="#fff">5h2k…fJ8z</text>
-              <rect x="252" y="276" width="256" height="22" rx="999" fill="rgba(20,241,149,0.08)"/>
-              <circle cx="266" cy="287" r="3" fill="#14F195"/>
-              <text x="278" y="290" font-family="JetBrains Mono, monospace" font-size="9" fill="#14F195">CONFIRMED · 1.8 SEC · SOLANA</text>
-            </svg>
-          </figure>
-
-          <p class="text-muted leading-relaxed mb-5">
-            On the merchant side, the dashboard updates in real time — the new payment streams in via the
-            merchant socket. Your <code class="text-mint font-mono text-sm">USDC</code> balance reflects
-            immediately, no batch reconciliation. If you registered a webhook, it fires
-            <code class="text-mint font-mono text-sm">payment.confirmed</code> with the on-chain tx
-            signature attached.
-          </p>
-
-          <div class="callout">
-            <strong>Compare:</strong> Stripe takes 2-3 days to settle to your bank and disputes ride your
-            account for weeks. ZettaPay settles directly on-chain in seconds, charges no protocol fee on top
-            of network gas, and the transaction is final — there is no party in the middle to dispute with.
-          </div>
-        </section>
-
-        <!-- LIVE PREVIEW -->
-        <section id="live-preview" class="scroll-mt-32 mb-16">
-          <h2 class="text-2xl font-bold mb-3">Live preview</h2>
-          <p class="text-muted leading-relaxed mb-5">
-            Below is the actual widget, embedded with the same script tag from step 3. Click the button —
-            the real ZettaPay modal opens (devnet mode, no funds move).
-          </p>
-          <div class="screenshot">
-            <div class="screenshot-bar">
-              <span class="dot" style="background:#ff5f56"></span>
-              <span class="dot" style="background:#ffbd2e"></span>
-              <span class="dot" style="background:#27c93f"></span>
-              <span class="screenshot-url">preview · iframe sandbox</span>
-            </div>
-            <iframe
-              class="preview-iframe"
-              title="ZettaPay widget live preview"
-              sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-              srcdoc='&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset="utf-8"&gt;&lt;style&gt;body{margin:0;font-family:system-ui;background:#0d0d0d;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:360px;gap:16px;padding:24px;text-align:center}h3{margin:0;font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#94A3B8;font-weight:500}p{margin:0;font-size:13px;color:#64748b;max-width:320px;line-height:1.6}.fallback{display:none;padding:14px 20px;font-family:Inter,system-ui;font-size:14px;font-weight:600;color:#fff;background:linear-gradient(135deg,#4F6BFF,#6B82FF);border:0;border-radius:999px;cursor:pointer;box-shadow:0 0 30px rgba(79,107,255,.4)}.fallback.show{display:inline-flex;align-items:center;gap:8px}&lt;/style&gt;&lt;/head&gt;&lt;body&gt;&lt;h3&gt;Demo widget · @zettapay/demo · 10 USDC&lt;/h3&gt;&lt;script src="https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js" data-merchant="@zettapay-demo" data-amount="10" data-currency="USDC" async onerror="document.querySelector(\".fallback\").classList.add(\"show\")"&gt;&lt;/script&gt;&lt;button class="fallback" type="button" onclick="alert(\"This preview requires the published @zettapay/widget bundle on jsDelivr. The exact script tag from step 3 renders this button on your live site.\")"&gt;Pay 10 USDC&lt;/button&gt;&lt;p&gt;Above is the real widget bundle from jsDelivr. On your site, the same script tag renders the same button — no extra setup.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;'
-            ></iframe>
-          </div>
-          <p class="text-xs text-muted mt-3">
-            Sandboxed iframe · the preview hits the public CDN. If your network blocks
-            <code class="text-mint font-mono">cdn.jsdelivr.net</code>, the fallback button appears instead.
-          </p>
-        </section>
-
-        <!-- FRAMEWORK RECIPES -->
-        <section id="frameworks" class="scroll-mt-32 mb-16">
-          <h2 class="text-2xl font-bold mb-3">Framework recipes</h2>
-          <p class="text-muted leading-relaxed mb-5">
-            The widget runs anywhere a <code class="text-mint font-mono text-sm">&lt;script&gt;</code> tag
-            runs. Pick your stack — every recipe produces the same Pay button.
-          </p>
-
-          <div class="code-card relative" data-tabs="frameworks">
-            <div class="tabs">
-              <button class="tab-btn active" data-tab="html">Plain HTML</button>
-              <button class="tab-btn" data-tab="vanilla">Vanilla JS</button>
-              <button class="tab-btn" data-tab="react">React</button>
-              <button class="tab-btn" data-tab="next">Next.js</button>
-            </div>
-            <button class="copy-btn" data-copy>Copy</button>
-
-<pre data-pane="html" class="block"><span class="tk-c">&lt;!-- public/index.html · paste anywhere inside &lt;head&gt; --&gt;</span>
-<span class="tk-k">&lt;script</span>
-  <span class="tk-a">src</span>=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
-  <span class="tk-a">data-merchant</span>=<span class="tk-f">"@yourshop"</span>
-  <span class="tk-a">data-amount</span>=<span class="tk-n">"24.99"</span>
-  <span class="tk-a">data-label</span>=<span class="tk-s">"Buy Pro plan"</span>
-  <span class="tk-a">async</span>
-<span class="tk-k">&gt;&lt;/script&gt;</span></pre>
-
-<pre data-pane="vanilla" class="hidden"><span class="tk-c">// vanilla JS — programmatic mount, full control</span>
-<span class="tk-k">import</span> { mount, open } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/widget'</span>;
-
-<span class="tk-c">// Render a Pay button into a specific element</span>
-mount(document.querySelector(<span class="tk-s">'#checkout'</span>), {
-  merchantId: <span class="tk-s">'@yourshop'</span>,
-  amount: <span class="tk-n">24.99</span>,
-  currency: <span class="tk-s">'USDC'</span>,
-  onSuccess: ({ paymentId, txSignature }) =&gt; {
-    console.log(<span class="tk-s">'paid'</span>, paymentId, txSignature);
-    window.location.href = <span class="tk-s">'/thanks'</span>;
-  },
-  onCancel: ({ reason }) =&gt; console.log(<span class="tk-s">'cancelled'</span>, reason),
-});
-
-<span class="tk-c">// or open the modal imperatively (no button at all)</span>
-open({ merchantId: <span class="tk-s">'@yourshop'</span>, amount: <span class="tk-n">5</span> });</pre>
-
-<pre data-pane="react" class="hidden"><span class="tk-c">// React — useEffect mounts on render, cleans up on unmount</span>
-<span class="tk-k">import</span> { useEffect, useRef } <span class="tk-k">from</span> <span class="tk-s">'react'</span>;
-<span class="tk-k">import</span> { mount } <span class="tk-k">from</span> <span class="tk-s">'@zettapay/widget'</span>;
-
-<span class="tk-k">export function</span> <span class="tk-f">PayButton</span>({ amount }: { amount: <span class="tk-t">number</span> }) {
-  <span class="tk-k">const</span> ref = useRef&lt;<span class="tk-t">HTMLDivElement</span>&gt;(<span class="tk-k">null</span>);
-
-  useEffect(() =&gt; {
-    <span class="tk-k">if</span> (!ref.current) <span class="tk-k">return</span>;
-    <span class="tk-k">const</span> handle = mount(ref.current, {
-      merchantId: <span class="tk-s">'@yourshop'</span>,
-      amount,
-      onSuccess: ({ txSignature }) =&gt; analytics.track(<span class="tk-s">'paid'</span>, { txSignature }),
-    });
-    <span class="tk-k">return</span> () =&gt; handle.destroy();
-  }, [amount]);
-
-  <span class="tk-k">return</span> &lt;<span class="tk-t">div</span> ref={ref} /&gt;;
-}</pre>
-
-<pre data-pane="next" class="hidden"><span class="tk-c">// app/layout.tsx · App Router</span>
-<span class="tk-k">import</span> Script <span class="tk-k">from</span> <span class="tk-s">'next/script'</span>;
-
-<span class="tk-k">export default function</span> <span class="tk-f">RootLayout</span>({ children }: { children: <span class="tk-t">React.ReactNode</span> }) {
-  <span class="tk-k">return</span> (
-    &lt;<span class="tk-t">html</span> lang=<span class="tk-s">"en"</span>&gt;
-      &lt;<span class="tk-t">head</span>&gt;
-        &lt;<span class="tk-t">Script</span>
-          src=<span class="tk-s">"https://cdn.jsdelivr.net/npm/@zettapay/widget@latest/dist/widget.js"</span>
-          strategy=<span class="tk-s">"afterInteractive"</span>
-          data-merchant=<span class="tk-s">"@yourshop"</span>
-          data-amount=<span class="tk-s">"24.99"</span>
-        /&gt;
-      &lt;/<span class="tk-t">head</span>&gt;
-      &lt;<span class="tk-t">body</span>&gt;{children}&lt;/<span class="tk-t">body</span>&gt;
-    &lt;/<span class="tk-t">html</span>&gt;
-  );
-}
-
-<span class="tk-c">// or inside a Client Component for per-page amounts:</span>
-<span class="tk-c">// 'use client'; import { mount } from '@zettapay/widget';</span></pre>
-          </div>
-
-          <div class="callout mt-5">
-            <strong>SSR safe.</strong> The bundle no-ops during server render and mounts on hydration.
-            Next.js, Remix, SvelteKit, Astro, Nuxt — all work without flags.
-          </div>
-        </section>
-
-        <!-- OPTIONS REF -->
+        <!-- OPTIONS -->
         <section id="options" class="scroll-mt-32 mb-16">
-          <h2 class="text-2xl font-bold mb-4">Options reference</h2>
+          <h2 class="text-2xl font-bold mb-4">Field reference</h2>
+          <p class="text-muted leading-relaxed mb-4">The invoice fields a payment screen uses.</p>
           <div class="code-card overflow-hidden">
             <table class="api-table">
               <thead>
-                <tr>
-                  <th>Attribute</th>
-                  <th>Required</th>
-                  <th>Default</th>
-                  <th>Description</th>
-                </tr>
+                <tr><th>Field</th><th>Use it for</th></tr>
               </thead>
               <tbody>
-                <tr>
-                  <td><code>data-merchant</code></td>
-                  <td class="text-mint">yes</td>
-                  <td>—</td>
-                  <td class="text-muted">Merchant handle, e.g. <code>@yourshop</code></td>
-                </tr>
-                <tr>
-                  <td><code>data-amount</code></td>
-                  <td class="text-mint">yes</td>
-                  <td>—</td>
-                  <td class="text-muted">Amount in <code>data-currency</code> units</td>
-                </tr>
-                <tr>
-                  <td><code>data-currency</code></td>
-                  <td class="text-muted">no</td>
-                  <td><code>USDC</code></td>
-                  <td class="text-muted">ISO currency code</td>
-                </tr>
-                <tr>
-                  <td><code>data-label</code></td>
-                  <td class="text-muted">no</td>
-                  <td><code>Pay {amount} {currency}</code></td>
-                  <td class="text-muted">Button label override</td>
-                </tr>
-                <tr>
-                  <td><code>data-theme</code></td>
-                  <td class="text-muted">no</td>
-                  <td><code>dark</code></td>
-                  <td class="text-muted"><code>dark</code> or <code>light</code></td>
-                </tr>
-                <tr>
-                  <td><code>data-api-base</code></td>
-                  <td class="text-muted">no</td>
-                  <td><code>https://api.zettapay.io</code></td>
-                  <td class="text-muted">Override for staging or self-host</td>
-                </tr>
-                <tr>
-                  <td><code>data-checkout-base</code></td>
-                  <td class="text-muted">no</td>
-                  <td><code>https://pay.zettapay.io</code></td>
-                  <td class="text-muted">Hosted checkout origin used in the QR</td>
-                </tr>
-                <tr>
-                  <td><code>data-metadata</code></td>
-                  <td class="text-muted">no</td>
-                  <td>—</td>
-                  <td class="text-muted">JSON object persisted on the payment</td>
-                </tr>
+                <tr><td><code>invoice_id</code></td><td class="text-muted">Your key to the order; the id to poll.</td></tr>
+                <tr><td><code>receive_address</code></td><td class="text-muted">The address the payer sends to. Show it with a copy button.</td></tr>
+                <tr><td><code>asset</code></td><td class="text-muted"><code>BTC</code>, <code>USDC</code> or <code>USDT</code>.</td></tr>
+                <tr><td><code>amount_btc</code> / <code>amount_sats</code></td><td class="text-muted">Bitcoin amount, as a decimal string and in satoshis.</td></tr>
+                <tr><td><code>amount_usdc</code></td><td class="text-muted">Exact stablecoin amount to send (USDC or USDT), as a decimal string.</td></tr>
+                <tr><td><code>qr_uri</code></td><td class="text-muted">BIP-21 or EIP-681 payment URI — encode it as a QR, or use it as a link target.</td></tr>
+                <tr><td><code>expires_at</code></td><td class="text-muted">ISO timestamp for the countdown.</td></tr>
+                <tr><td><code>status</code></td><td class="text-muted"><code>pending</code>, <code>partial</code>, <code>confirmed</code>, <code>expired</code>, <code>failed</code>.</td></tr>
+                <tr><td><code>tx_hash</code></td><td class="text-muted">Set once paid — link it to a block explorer.</td></tr>
+                <tr><td><code>verify_url</code></td><td class="text-muted">Block-explorer page of the receive address (xpub-derived invoices).</td></tr>
+                <tr><td><code>checkout_url</code></td><td class="text-muted">Cloud only, when hosted checkout is enabled: the hosted payment page.</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="text-sm text-muted mt-4">
-            For programmatic control (callbacks, dynamic amounts, post-mount destroy), import
-            <code class="text-mint font-mono text-xs">{ mount, open }</code> from
-            <code class="text-mint font-mono text-xs">@zettapay/widget</code> instead — see the React and
-            Vanilla recipes above.
-          </p>
         </section>
 
-        <!-- WHATS NEXT -->
+        <!-- WHAT'S NEXT -->
         <section id="whats-next" class="scroll-mt-32 mb-16">
           <h2 class="text-2xl font-bold mb-4">What's next</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <a href="/dashboard" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Dashboard</div>
-              <div class="font-semibold mb-1">Watch payments live</div>
-              <div class="text-sm text-muted">Real-time stream, USDC balance, top spenders, 30d trend.</div>
-            </a>
             <a href="/docs/quickstart" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">SDK</div>
-              <div class="font-semibold mb-1">Server-side quickstart</div>
-              <div class="text-sm text-muted">Same flow, but with the TypeScript SDK and webhooks.</div>
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Start here</div>
+              <div class="font-semibold mb-1">Quickstart</div>
+              <div class="text-sm text-muted">Install and configure the self-hosted listener.</div>
             </a>
-            <a href="https://github.com/leandromaiam-code/zettapay/tree/main/packages/widget" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Source</div>
-              <div class="font-semibold mb-1">@zettapay/widget on GitHub</div>
-              <div class="text-sm text-muted">MIT — the full widget source, tests, build pipeline.</div>
+            <a href="/docs/webhook" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Reference</div>
+              <div class="font-semibold mb-1">Webhook spec</div>
+              <div class="text-sm text-muted">Verify the signature and fulfil the order.</div>
             </a>
-            <a href="https://github.com/coinbase/x402" target="_blank" rel="noopener" class="glass rounded-xl p-5 hover:border-royal/40 transition">
-              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Spec</div>
-              <div class="font-semibold mb-1">x402 protocol</div>
-              <div class="text-sm text-muted">The open header spec ZettaPay implements end-to-end.</div>
+            <a href="/docs/api" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Reference</div>
+              <div class="font-semibold mb-1">HTTP API</div>
+              <div class="text-sm text-muted">Every endpoint, field and error code.</div>
+            </a>
+            <a href="/app" class="glass rounded-xl p-5 hover:border-royal/40 transition">
+              <div class="text-xs font-mono uppercase tracking-wider text-mint mb-1">Managed</div>
+              <div class="font-semibold mb-1">ZettaPay Cloud</div>
+              <div class="text-sm text-muted">Early access — the same listener core, run for you.</div>
             </a>
           </div>
         </section>
@@ -945,7 +681,7 @@ open({ merchantId: <span class="tk-s">'@yourshop'</span>, amount: <span class="t
         <!-- FOOTER NAV -->
         <div class="flex items-center justify-between border-t border-royal/10 pt-8 mt-12">
           <a href="/docs" class="btn-ghost px-5 py-2.5 rounded-full font-semibold text-sm">← All docs</a>
-          <a href="/signup" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Start now →</a>
+          <a href="/docs/quickstart" class="btn-primary px-5 py-2.5 rounded-full font-semibold text-sm">Quickstart →</a>
         </div>
       </article>
     </div>
@@ -955,7 +691,7 @@ open({ merchantId: <span class="tk-s">'@yourshop'</span>, amount: <span class="t
     <div class="max-w-7xl mx-auto px-4 lg:px-12 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted">
       <div class="flex items-center gap-3">
         <img src="/Logo_symbol.png" alt="" class="w-6 h-6" />
-        <span>© 2026 ZettaPay · open multi-chain payment protocol</span>
+        <span>© 2026 ZettaPay · non-custodial crypto payments</span>
       </div>
       <div class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm justify-center">
         <a class="hover:text-white transition" href="/">Home</a>

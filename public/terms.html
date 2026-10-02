@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script>(function(){try{var t=localStorage.getItem('zp-theme');if(t==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
   <link rel="stylesheet" href="/theme.css" />
-  <meta name="description" content="ZettaPay terms of service — payment protocol terms, merchant obligations, fee schedule, and dispute handling." />
+  <meta name="description" content="ZettaPay terms of service — what the service is, merchant obligations, pricing, and dispute handling." />
   <meta property="og:title" content="Terms of Service — ZettaPay" />
-  <meta property="og:description" content="The agreement between merchants integrating ZettaPay and the protocol operator." />
+  <meta property="og:description" content="The agreement between merchants using ZettaPay and its operator." />
   <meta property="og:type" content="website" />
   <title>Terms of Service — ZettaPay</title>
   <link rel="icon" type="image/png" href="/Logo_symbol.png" />
@@ -30,7 +30,7 @@
             'deep': '#0A0A0A',
             'deep-card': '#111111',
             'mint': '#14F195',
-            'solana': '#9945FF',
+            'grape': '#9945FF',
             'muted': '#94A3B8',
           },
         },
@@ -101,8 +101,8 @@
         <a href="/docs" class="text-muted hover:text-white transition">Docs</a>
       </div>
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">Dashboard</a>
-        <a href="/signup" class="px-4 py-2 rounded-full font-semibold text-sm" style="background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%); color: #fff;">Sign up</a>
+        <a href="https://github.com/leandromaiam-code/zettapay" class="text-muted hover:text-white transition text-sm font-medium hidden sm:inline">GitHub</a>
+        <a href="/app" class="px-4 py-2 rounded-full font-semibold text-sm" style="background: linear-gradient(135deg, #4F6BFF 0%, #6B82FF 100%); color: #fff;">Start free</a>
       </div>
     </div>
   </nav>
@@ -124,7 +124,7 @@
   <section class="px-4 lg:px-12 pb-24">
     <div class="max-w-4xl mx-auto glass rounded-2xl p-8 md:p-12 prose-zp">
 
-      <p>These Terms govern your access to ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;service&rdquo;, &ldquo;we&rdquo;), including the merchant dashboard, embed widget, SDKs, and HTTP APIs. By registering as a merchant or integrating any ZettaPay artifact, you (&ldquo;you&rdquo;, &ldquo;merchant&rdquo;) agree to these Terms.</p>
+      <p>These Terms govern your access to ZettaPay (the &ldquo;protocol&rdquo;, &ldquo;service&rdquo;, &ldquo;we&rdquo;), including this website, ZettaPay Cloud and its HTTP API, hosted checkout links, the embed widget and the SDKs. By opening a Cloud account or integrating any ZettaPay artifact, you (&ldquo;you&rdquo;, &ldquo;merchant&rdquo;) agree to these Terms.</p>
 
       <h2>1. Eligibility</h2>
       <ul>
@@ -133,17 +133,19 @@
         <li>You are responsible for ensuring the activities you transact are lawful in your jurisdiction.</li>
       </ul>
 
-      <h2>2. The protocol &mdash; what it is and is not</h2>
+      <h2>2. The service &mdash; what it is and is not</h2>
       <ul>
-        <li>ZettaPay is non-custodial. Every USDC payment settles directly from payer to merchant on Solana. We never take possession of funds.</li>
+        <li>ZettaPay is non-custodial. Every payment &mdash; in Bitcoin, or in USDC / USDT on Base &mdash; settles directly from payer to merchant on-chain. We never take possession of funds, never hold keys and never sign transactions.</li>
         <li>ZettaPay is not a money services business, bank, money transmitter, or licensed payment institution.</li>
-        <li>Fiat onramp/offramp services, where surfaced, are operated by third parties (e.g. MoonPay) under their own terms.</li>
+        <li>ZettaPay does not convert, hold or settle fiat currency.</li>
+        <li>ZettaPay can be used in two ways: <strong>self-hosted</strong>, by running the open-source listener on your own infrastructure, or <strong>Cloud</strong>, where we run it for you. The self-hosted software is licensed under MIT and that license governs your use of it.</li>
+        <li>Cloud is in <strong>early access</strong>. Onboarding is manual and features may change.</li>
       </ul>
 
       <h2>3. Merchant account</h2>
       <ul>
-        <li>You provide a Solana <strong>public address</strong> at signup. ZettaPay never requests a wallet connection or private key.</li>
-        <li>You are solely responsible for the security of your wallet, seed phrase, and signing devices.</li>
+        <li>You provide <strong>public key material only</strong>: a BIP-84 xpub for Bitcoin, and an xpub or a fixed receive address for Base. ZettaPay never requests a wallet connection or private key.</li>
+        <li>You are solely responsible for the security of your wallet, seed phrase, and signing devices, and for supplying key material that belongs to a wallet you control.</li>
         <li>You will keep your contact email and webhook URL current and reachable.</li>
         <li>API keys are confidential. Treat them like passwords. Rotate immediately on suspected compromise.</li>
       </ul>
@@ -155,56 +157,58 @@
         <li>Sale of regulated goods (firearms, controlled substances, restricted financial products) without applicable licenses.</li>
         <li>Adult content involving minors, non-consensual content, or any content depicting violence against people or animals.</li>
         <li>Phishing, malware distribution, or impersonation of other parties.</li>
-        <li>Stress-testing or reverse-engineering the protocol without authorization (see our bug bounty program for sanctioned channels).</li>
+        <li>Stress-testing or attacking the hosted service without authorization.</li>
       </ul>
-      <p>We may suspend or terminate accounts that violate this section, with or without notice. On-chain settlements that have already confirmed cannot be reversed.</p>
+      <p>We may suspend or terminate accounts that violate this section, with or without notice. On-chain payments that have already confirmed cannot be reversed.</p>
 
       <h2>5. Fees</h2>
       <ul>
-        <li>Protocol fee: <strong>0.30%</strong> of each settled invoice, deducted at the point of settlement.</li>
-        <li>Solana network fees apply per transaction (typically &lt; $0.01).</li>
-        <li>Fiat onramp partners charge their own fees, disclosed at the point of purchase.</li>
-        <li>Free tier: the first 100 transactions per merchant per calendar month are not charged a protocol fee, subject to abuse review.</li>
+        <li><strong>No per-transaction fee.</strong> ZettaPay is never in the flow of funds and takes no percentage of any payment.</li>
+        <li><strong>Self-hosted:</strong> free, with no limits.</li>
+        <li><strong>Cloud:</strong> a flat monthly subscription by invoice volume, counted as invoices created per calendar month. Early-access pricing, subject to change: Free &mdash; up to 50 invoices / month, $0; Starter &mdash; up to 500 invoices / month, $19 / month; Pro &mdash; up to 5,000 invoices / month, $49 / month. Above that, contact us.</li>
+        <li>When a plan&apos;s monthly cap is reached, creating new invoices is paused until the next calendar month or an upgrade. Invoices already created keep being watched, confirmed and delivered to your webhook.</li>
+        <li>The subscription can be paid by card or in crypto through ZettaPay itself. During early access, plans are assigned manually.</li>
+        <li>Network fees are charged by the Bitcoin and Base networks, are paid by the payer, and do not go to ZettaPay.</li>
       </ul>
-      <p>We may change fees with at least 30 days&apos; notice via the merchant dashboard and email. Continued integration after the notice period constitutes acceptance.</p>
+      <p>The current plans are published at <a href="/pricing">/pricing</a>. We may change fees with at least 30 days&apos; notice by email. Continued use after the notice period constitutes acceptance.</p>
 
       <h2>6. Refunds, chargebacks, and disputes</h2>
       <ul>
-        <li>Solana transactions are <strong>final</strong>. There is no chargeback mechanism at the protocol layer.</li>
-        <li>Refund policy between merchant and payer is set by the merchant. We do not mediate refunds.</li>
-        <li>If you intend to issue a refund, send USDC directly back to the payer&apos;s originating address.</li>
+        <li>On-chain transactions are <strong>final</strong>. There is no chargeback mechanism.</li>
+        <li>ZettaPay has no refund function and cannot return a payment: it never holds the funds.</li>
+        <li>Refund policy between merchant and payer is set by the merchant. If you intend to issue a refund, you send it yourself, from your own wallet, to the payer.</li>
         <li>Disputes between payer and merchant are resolved between those parties. We are not a party to commercial disputes.</li>
       </ul>
 
       <h2>7. Service availability</h2>
-      <p>We target high availability and publish real-time component health at <a href="/status">/status</a>. We do not guarantee uninterrupted service. The protocol depends on the Solana network and third-party RPC providers; outages on those networks may affect settlement timing.</p>
+      <p>We publish component health at <a href="/status">/status</a>. We do not guarantee uninterrupted service. ZettaPay depends on the Bitcoin and Base networks and on third-party RPC providers; outages or congestion on those networks may delay confirmations and webhooks.</p>
 
       <h2>8. Webhooks and integration</h2>
       <ul>
         <li>Webhook URLs must be served over HTTPS with a valid certificate.</li>
-        <li>Webhooks are signed with HMAC-SHA256 and include idempotency keys. You must verify the signature and dedupe by idempotency key before acting on a webhook.</li>
-        <li>We retry failed webhook deliveries with exponential backoff for up to three attempts. After exhaustion, deliveries can be replayed from the dashboard.</li>
+        <li>Webhooks are signed with HMAC-SHA256. You must verify the signature before acting on a webhook, and handle a repeated delivery of the same event safely.</li>
+        <li>Failed deliveries may be retried. You should not treat an order as paid until you have verified a signed confirmation or checked the transaction on-chain yourself.</li>
       </ul>
 
       <h2>9. Intellectual property &amp; open source</h2>
       <ul>
-        <li>The protocol specification and official SDKs are released under MIT.</li>
-        <li>The merchant dashboard, hosted infrastructure, and brand assets remain proprietary.</li>
+        <li>The listener and official SDKs are released under MIT.</li>
+        <li>The hosted Cloud infrastructure and brand assets remain proprietary.</li>
         <li>You may not use the ZettaPay name or logos in a way that suggests endorsement without our written permission.</li>
       </ul>
 
       <h2>10. Disclaimers</h2>
-      <p>The protocol is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. To the maximum extent permitted by law, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. Cryptocurrency carries inherent volatility and operational risk. You acknowledge that you have the technical competence to manage your own wallet.</p>
+      <p>The service is provided on an &ldquo;as is&rdquo; and &ldquo;as available&rdquo; basis. To the maximum extent permitted by law, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, and non-infringement. Cryptocurrency carries inherent volatility and operational risk. You acknowledge that you have the technical competence to manage your own wallet.</p>
 
       <h2>11. Limitation of liability</h2>
-      <p>To the maximum extent permitted by law, our aggregate liability arising out of or relating to these Terms or the protocol is limited to the greater of (a) the total fees you paid to us in the 12 months preceding the claim, or (b) USD $100. We are not liable for indirect, incidental, consequential, or punitive damages, including lost profits or business interruption, even if advised of the possibility.</p>
+      <p>To the maximum extent permitted by law, our aggregate liability arising out of or relating to these Terms or the service is limited to the greater of (a) the total fees you paid to us in the 12 months preceding the claim, or (b) USD $100. We are not liable for indirect, incidental, consequential, or punitive damages, including lost profits or business interruption, even if advised of the possibility.</p>
 
       <h2>12. Indemnification</h2>
-      <p>You will defend and indemnify us against third-party claims arising from your use of the protocol, your content, your customer interactions, or your breach of these Terms.</p>
+      <p>You will defend and indemnify us against third-party claims arising from your use of the service, your content, your customer interactions, or your breach of these Terms.</p>
 
       <h2>13. Suspension &amp; termination</h2>
       <ul>
-        <li>You may close your merchant account at any time from the dashboard.</li>
+        <li>You may close your merchant account at any time by contacting us.</li>
         <li>We may suspend or terminate accounts for violation of these Terms, suspected abuse, or to comply with law.</li>
         <li>Sections 5 (Fees), 6 (Refunds), 9&ndash;14 survive termination.</li>
       </ul>
@@ -213,10 +217,10 @@
       <p>These Terms are governed by the laws of the State of Delaware, USA, without regard to conflict-of-law principles. Disputes shall be resolved in the state or federal courts located in Wilmington, Delaware, except where local consumer-protection law grants you rights that cannot be waived.</p>
 
       <h2>15. Changes</h2>
-      <p>We may update these Terms. Material changes will be announced via the dashboard and email at least 14 days before they take effect, except for changes required for legal or security reasons, which may be effective immediately.</p>
+      <p>We may update these Terms. Material changes will be announced on this page and by email at least 14 days before they take effect, except for changes required for legal or security reasons, which may be effective immediately.</p>
 
       <h2>16. Contact</h2>
-      <p>Legal: <a href="mailto:legal@zettapay.dev">legal@zettapay.dev</a><br/>Support: <a href="/contact">/contact</a></p>
+      <p>Legal: open an issue at <a href="https://github.com/leandromaiam-code/zettapay/issues">github.com/leandromaiam-code/zettapay</a> &mdash; please keep personal details out of the public thread.<br/>Support: <a href="/contact">/contact</a></p>
 
     </div>
   </section>
@@ -229,14 +233,14 @@
           <img src="/Logo_symbol.png" alt="ZettaPay" class="w-7 h-7" />
           <span class="text-base font-bold">ZettaPay</span>
         </div>
-        <p class="text-xs text-muted leading-relaxed">Solana USDC payment protocol for AI agents and humans. Wallet-less by design.</p>
+        <p class="text-xs text-muted leading-relaxed">Non-custodial crypto payments. Self-hosted open source or managed Cloud. Bitcoin &middot; USDC on Base &middot; USDT on Base.</p>
       </div>
       <div>
         <div class="text-xs font-mono text-muted uppercase tracking-widest mb-3">Product</div>
         <ul class="space-y-2 text-sm">
           <li><a href="/pricing" class="text-muted hover:text-white transition">Pricing</a></li>
           <li><a href="/docs" class="text-muted hover:text-white transition">Docs</a></li>
-          <li><a href="/dashboard" class="text-muted hover:text-white transition">Dashboard</a></li>
+          <li><a href="/app" class="text-muted hover:text-white transition">Cloud (early access)</a></li>
           <li><a href="/status" class="text-muted hover:text-white transition">Status</a></li>
         </ul>
       </div>
@@ -258,7 +262,7 @@
     </div>
     <div class="max-w-7xl mx-auto pt-6 border-t border-royal/10 flex flex-col md:flex-row items-center justify-between gap-3 text-xs font-mono text-muted/60">
       <span>© 2026 ZettaPay &middot; MIT-licensed protocol</span>
-      <span>Built with Solana &middot; USDC &middot; x402</span>
+      <span>Non-custodial &middot; Bitcoin &middot; USDC &middot; USDT</span>
     </div>
   </footer>
 </body>

@@ -4,25 +4,15 @@ import { withSentry } from './_lib/sentry.js';
 function handler(_req: VercelRequest, res: VercelResponse): void {
   res.status(200).json({
     name: 'zettapay',
-    version: '0.1.0',
-    description: 'Universal Solana payment protocol for humans and AI agents',
+    description:
+      'Non-custodial crypto payments (BTC, USDC/USDT on Base). This deployment serves the website; payments run on the self-hosted listener or on ZettaPay Cloud.',
     endpoints: {
       health: '/health',
       healthz: '/healthz',
-      ready: '/ready',
-      metrics: '/metrics',
-      simulate: '/simulate/:merchant',
-      analytics: '/analytics/:merchant',
-      merchantsRegister: '/merchants/register',
-      merchantsOnboard: '/merchants/onboard',
-      pay: '/pay',
-      mcp: '/mcp',
-      onramp: '/onramp',
-      onrampWebhook: '/onramp/webhook',
-      payments: '/payments',
-      faucet: '/api/faucet',
+      status: '/api/status',
+      openapi: '/openapi.json',
+      llms: '/llms.txt',
     },
-    network: 'solana-devnet',
     runtime: 'vercel-serverless',
   });
 }
