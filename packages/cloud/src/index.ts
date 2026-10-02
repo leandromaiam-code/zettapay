@@ -18,6 +18,15 @@ export type {
 export { MemoryCloudDb } from './cloud-db.js';
 
 export { SupabaseRestDb } from './supabase-db.js';
+
+export {
+  DEFAULT_PLAN,
+  DEFAULT_PLAN_LIMITS,
+  limitForPlan,
+  monthStartIso,
+  parsePlanLimits,
+} from './plans.js';
+export type { PlanLimits } from './plans.js';
 export type { SupabaseRestDbOptions } from './supabase-db.js';
 
 export { SupabaseStorageAdapter } from './storage.js';

@@ -11,6 +11,7 @@
 //   SEED_EMAIL=you@shop.com SEED_SHOP="My Shop" \
 //   SEED_BTC_XPUB=zpub... [SEED_BASE_XPUB=xpub...] [SEED_BASE_ADDRESS=0x...] \
 //   [SEED_WEBHOOK_URL=https://...] [SEED_WEBHOOK_SECRET=whsec_...] \
+//   [SEED_PLAN=free|starter|pro] \
 //   npm run seed --workspace @zettapay/cloud
 
 import { randomUUID } from 'node:crypto';
@@ -32,6 +33,8 @@ export interface SeedMerchantInput {
   webhookUrl?: string | null;
   webhookSecret?: string | null;
   keyLabel?: string | null;
+  /** Subscription plan; omitted = the database default ('free'). */
+  plan?: string | null;
 }
 
 export interface SeedMerchantResult {
@@ -55,6 +58,7 @@ export async function seedMerchant(db: CloudDb, input: SeedMerchantInput): Promi
     auth_uid: null,
     email: input.email,
     name: input.shopName,
+    ...(input.plan ? { plan: input.plan } : {}),
     created_at: now,
   });
 
@@ -122,6 +126,7 @@ async function main(): Promise<void> {
     webhookUrl: env.SEED_WEBHOOK_URL ?? null,
     webhookSecret: env.SEED_WEBHOOK_SECRET ?? null,
     keyLabel: env.SEED_KEY_LABEL ?? null,
+    plan: env.SEED_PLAN ?? null,
   });
 
   process.stdout.write(

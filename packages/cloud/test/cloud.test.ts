@@ -433,3 +433,79 @@ describe('public checkout endpoint', () => {
     expect(raw).not.toContain('whsec_bbb_secret');
   });
 });
+
+describe('plan limits', () => {
+  let server: CloudApiServer | null = null;
+
+  afterEach(async () => {
+    if (server) await server.stop();
+    server = null;
+  });
+
+  async function start(db: MemoryCloudDb, planLimits: Record<string, number | null> | null) {
+    server = new CloudApiServer({
+      storage: new SupabaseStorageAdapter(db),
+      db,
+      port: 0,
+      host: '127.0.0.1',
+      rateLimit: null,
+      planLimits,
+    });
+    await server.start();
+    return `http://127.0.0.1:${server.boundPort}/api/v1`;
+  }
+
+  function createInvoice(base: string, apiKey: string) {
+    return fetch(`${base}/invoice`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-zettapay-api-key': apiKey },
+      body: JSON.stringify({ chain: 'btc', amount_sats: 10_000 }),
+    });
+  }
+
+  it('returns 402 once the monthly cap of the plan is reached', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedBtc(db);
+    const base = await start(db, { free: 2, pro: 5 });
+
+    expect((await createInvoice(base, apiKey)).status).toBe(201);
+    expect((await createInvoice(base, apiKey)).status).toBe(201);
+    const blocked = await createInvoice(base, apiKey);
+    expect(blocked.status).toBe(402);
+    const body = await blocked.json();
+    expect(body.error).toMatchObject({ code: 'plan_limit_reached', plan: 'free', limit: 2, used: 2 });
+  });
+
+  it('applies the cap of the merchant plan and isolates usage per tenant', async () => {
+    const db = new MemoryCloudDb();
+    const pro = await seedMerchant(db, {
+      email: 'pro@shop.com',
+      shopName: 'Pro Shop',
+      chains: [{ chain: 'btc', xpub: BTC_XPUB }],
+      plan: 'pro',
+    });
+    const free = await seedBtc(db, 'free@shop.com');
+    const base = await start(db, { free: 1, pro: 3 });
+
+    for (let i = 0; i < 3; i++) expect((await createInvoice(base, pro.apiKey)).status).toBe(201);
+    expect((await createInvoice(base, pro.apiKey)).status).toBe(402);
+    // Usage is metered per tenant: the free merchant still has its own quota.
+    expect((await createInvoice(base, free.apiKey)).status).toBe(201);
+    expect((await createInvoice(base, free.apiKey)).status).toBe(402);
+  });
+
+  it('does not meter when plan enforcement is off', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedBtc(db);
+    const base = await start(db, null);
+    for (let i = 0; i < 4; i++) expect((await createInvoice(base, apiKey)).status).toBe(201);
+  });
+
+  it('omits checkout_url when no checkout base URL is configured', async () => {
+    const db = new MemoryCloudDb();
+    const { apiKey } = await seedBtc(db);
+    const base = await start(db, null);
+    const body = await (await createInvoice(base, apiKey)).json();
+    expect(body.checkout_url).toBeUndefined();
+  });
+});

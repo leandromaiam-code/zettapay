@@ -27,10 +27,17 @@ import { SupabaseStorageAdapter } from './storage.js';
 import { SupabaseRestDb } from './supabase-db.js';
 import { startCloudFleet } from './webhook-fleet.js';
 import { authenticate, CloudRateLimiter, type RateLimitConfig } from './auth.js';
+import {
+  DEFAULT_PLAN,
+  DEFAULT_PLAN_LIMITS,
+  limitForPlan,
+  monthStartIso,
+  parsePlanLimits,
+  type PlanLimits,
+} from './plans.js';
 
 const MAX_BODY_BYTES = 16 * 1024;
 const API_PREFIX = '/api/v1';
-const DEFAULT_CHECKOUT_BASE_URL = 'https://zettapay.4profitai.com';
 
 const noopLogger: Logger = {
   info: () => undefined,
@@ -45,8 +52,13 @@ export interface CloudApiServerOptions {
   host?: string;
   rateLimit?: RateLimitConfig | null;
   logger?: Logger;
-  /** Base origin for the hosted checkout link returned by POST /invoice. */
+  /**
+   * Base origin for the hosted checkout link returned by POST /invoice. There is
+   * no built-in default: when unset, responses simply omit `checkout_url`.
+   */
   checkoutBaseUrl?: string;
+  /** Monthly invoice cap per plan. `null` disables plan enforcement entirely. */
+  planLimits?: PlanLimits | null;
 }
 
 export class CloudApiServer {
@@ -56,7 +68,8 @@ export class CloudApiServer {
   private readonly host: string;
   private readonly limiter: CloudRateLimiter | null;
   private readonly log: Logger;
-  private readonly checkoutBaseUrl: string;
+  private readonly checkoutBaseUrl: string | null;
+  private readonly planLimits: PlanLimits | null;
   private server: Server | null = null;
 
   constructor(opts: CloudApiServerOptions) {
@@ -66,11 +79,13 @@ export class CloudApiServer {
     this.host = opts.host ?? '0.0.0.0';
     this.limiter = opts.rateLimit === null ? null : new CloudRateLimiter(opts.rateLimit ?? undefined);
     this.log = opts.logger ?? noopLogger;
-    this.checkoutBaseUrl = (opts.checkoutBaseUrl ?? DEFAULT_CHECKOUT_BASE_URL).replace(/\/$/, '');
+    this.planLimits = opts.planLimits === null ? null : (opts.planLimits ?? DEFAULT_PLAN_LIMITS);
+    this.checkoutBaseUrl = opts.checkoutBaseUrl ? opts.checkoutBaseUrl.replace(/\/$/, '') : null;
   }
 
   /** Hosted checkout link a payer opens to settle this invoice. */
-  private checkoutUrl(invoiceId: string): string {
+  private checkoutUrl(invoiceId: string): string | undefined {
+    if (!this.checkoutBaseUrl) return undefined;
     return `${this.checkoutBaseUrl}/checkout/${invoiceId}`;
   }
 
@@ -175,6 +190,8 @@ export class CloudApiServer {
       }
     }
 
+    if (!(await this.withinPlan(merchantId, res))) return;
+
     let body: Record<string, unknown>;
     try {
       body = await readJsonBody(req);
@@ -197,6 +214,31 @@ export class CloudApiServer {
     } catch (e) {
       this.send(res, 500, { error: { code: 'create_failed', message: (e as Error).message } });
     }
+  }
+
+  /**
+   * Plan gate: a merchant may create at most its plan's monthly invoice cap.
+   * Replies 402 and returns false once the cap is reached. Existing invoices are
+   * never affected — they keep being watched, confirmed and webhooked.
+   */
+  private async withinPlan(merchantId: string, res: ServerResponse): Promise<boolean> {
+    if (!this.planLimits) return true;
+    const merchant = await this.db.getMerchant(merchantId);
+    const plan = merchant?.plan && merchant.plan in this.planLimits ? merchant.plan : DEFAULT_PLAN;
+    const limit = limitForPlan(this.planLimits, plan);
+    if (limit === null) return true;
+    const used = await this.db.countInvoicesSince(merchantId, monthStartIso());
+    if (used < limit) return true;
+    this.send(res, 402, {
+      error: {
+        code: 'plan_limit_reached',
+        message: `plan "${plan}" allows ${limit} invoices per month`,
+        plan,
+        limit,
+        used,
+      },
+    });
+    return false;
   }
 
   private async createBtc(merchantId: string, body: Record<string, unknown>, res: ServerResponse): Promise<void> {
@@ -417,6 +459,7 @@ async function main(): Promise<void> {
     port: process.env.PORT ? Number(process.env.PORT) : undefined,
     host: process.env.HOST,
     checkoutBaseUrl: process.env.CHECKOUT_BASE_URL,
+    planLimits: parsePlanLimits(process.env.PLAN_LIMITS),
     logger: consoleLogger,
   });
   const fleet = await startCloudFleet({

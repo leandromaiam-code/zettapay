@@ -152,6 +152,24 @@ export class SupabaseRestDb implements CloudDb {
     return this.selectOne<InvoiceRow>(T.invoices, `id=eq.${enc(id)}&select=*`);
   }
 
+  async countInvoicesSince(merchantId: string, sinceIso: string): Promise<number> {
+    // HEAD + `count=exact` returns the total in Content-Range ("*/42" or
+    // "0-0/42") without transferring any rows.
+    const query = `${T.invoices}?merchant_id=eq.${enc(merchantId)}&created_at=gte.${enc(sinceIso)}&select=id`;
+    const res = await this.fetchImpl(`${this.base}/${query}`, {
+      method: 'HEAD',
+      headers: { ...this.headers('count=exact'), range: '0-0' },
+    });
+    if (!res.ok && res.status !== 416) {
+      throw new Error(`@zettapay/cloud: supabase HEAD ${T.invoices} -> ${res.status}`);
+    }
+    const total = Number((res.headers.get('content-range') ?? '').split('/')[1]);
+    if (!Number.isFinite(total)) {
+      throw new Error('@zettapay/cloud: supabase did not return an invoice count');
+    }
+    return total;
+  }
+
   async listPendingInvoices(opts: ListPendingOpts): Promise<InvoiceRow[]> {
     let q = `status=eq.pending&expires_at=gt.${enc(opts.nowIso)}&select=*`;
     if (opts.chain) q += `&chain=eq.${enc(opts.chain)}`;
