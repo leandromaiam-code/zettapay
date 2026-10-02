@@ -28,6 +28,7 @@ jobs:
           - '@zettapay/receiver'
           - '@zettapay/widget'
           - '@zettapay/embed'
+          - '@zettapay/cloud'
     steps:
       - uses: actions/checkout@v4
 

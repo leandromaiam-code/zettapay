@@ -25,8 +25,19 @@ export {
   limitForPlan,
   monthStartIso,
   parsePlanLimits,
+  DEFAULT_PLAN_PRICES,
+  effectivePlan,
+  parsePlanPrices,
 } from './plans.js';
-export type { PlanLimits } from './plans.js';
+export type { PlanLimits, PlanPrices } from './plans.js';
+
+export { Billing, BillingError } from './billing.js';
+export type { BillingOptions, CheckoutResult, StripeConfig } from './billing.js';
+
+export { FixedAddressFleet, DEFAULT_BASE_RPC_URLS } from './fixed-fleet.js';
+export { assertPublicHttpsUrl, isNonPublicAddress, UnsafeUrlError } from './net-guard.js';
+export { Accounts, AccountError } from './accounts.js';
+export type { SignupInput, SignupResult } from './accounts.js';
 export type { SupabaseRestDbOptions } from './supabase-db.js';
 
 export { SupabaseStorageAdapter } from './storage.js';

@@ -21,6 +21,9 @@ import {
   nextRetryDate,
   type Logger,
 } from '@zettapay/listener';
+import type { CloudDb } from './cloud-db.js';
+import { FixedAddressFleet } from './fixed-fleet.js';
+import { assertPublicHttpsUrl, type LookupFn } from './net-guard.js';
 import { SupabaseStorageAdapter } from './storage.js';
 
 const FLEET_MERCHANT = '*cloud-fleet*';
@@ -45,6 +48,8 @@ export interface CloudWebhookDispatcherOptions {
   requestTimeoutMs?: number;
   fetchImpl?: typeof fetch;
   logger?: Logger;
+  /** DNS seam for the outbound-URL guard (tests). `null` disables the guard. */
+  lookup?: LookupFn | null;
 }
 
 export class CloudWebhookDispatcher {
@@ -54,6 +59,7 @@ export class CloudWebhookDispatcher {
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
   private readonly log: Logger;
+  private readonly lookup: LookupFn | null | undefined;
   private timer: NodeJS.Timeout | null = null;
   private stopped = true;
   private running = false;
@@ -65,6 +71,7 @@ export class CloudWebhookDispatcher {
     this.timeoutMs = opts.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.fetchImpl = opts.fetchImpl ?? fetch;
     this.log = opts.logger ?? noopLogger;
+    this.lookup = opts.lookup;
   }
 
   start(): void {
@@ -119,6 +126,21 @@ export class CloudWebhookDispatcher {
       return;
     }
 
+    // The URL was vetted when it was saved, but a hostname can be re-pointed at
+    // an internal address afterwards — check again right before sending.
+    if (this.lookup !== null) {
+      try {
+        await assertPublicHttpsUrl(webhook.url, this.lookup ?? undefined);
+      } catch (err) {
+        await this.storage.markWebhookDelivered(evt.id, {
+          ok: false,
+          error: err instanceof Error ? err.message : 'webhook url rejected',
+          nextRetryAt: nextRetryDate(evt.attempts + 1),
+        });
+        return;
+      }
+    }
+
     const attemptNumber = evt.attempts + 1;
     const body = evt.payload_json;
     const signature = createHmac('sha256', webhook.secret).update(body).digest('hex');
@@ -159,6 +181,7 @@ export interface CloudFleet {
   listener: BtcListener;
   baseWatcher: BaseWatcher;
   dispatcher: CloudWebhookDispatcher;
+  fixedFleet: FixedAddressFleet | null;
   stop(): Promise<void>;
 }
 
@@ -167,6 +190,10 @@ export interface CloudFleetOptions {
   btcWsUrl?: string;
   btcRestBase?: string;
   baseRpcUrl?: string;
+  /** When given, fixed-address invoices are watched too (one watcher per address). */
+  db?: CloudDb;
+  /** Base RPC quorum list for fixed-address mode (csv in BASE_RPC_URLS). */
+  baseRpcUrls?: string[];
   logger?: Logger;
 }
 
@@ -192,17 +219,24 @@ export async function startCloudFleet(opts: CloudFleetOptions): Promise<CloudFle
   });
   const dispatcher = new CloudWebhookDispatcher({ storage: opts.storage, logger });
 
+  const fixedFleet = opts.db
+    ? new FixedAddressFleet({ storage: opts.storage, db: opts.db, rpcUrls: opts.baseRpcUrls, logger })
+    : null;
+
   dispatcher.start();
   await listener.start();
   await baseWatcher.start();
+  if (fixedFleet) await fixedFleet.start();
 
   return {
     listener,
     baseWatcher,
     dispatcher,
+    fixedFleet,
     async stop() {
       await listener.stop();
       await baseWatcher.stop();
+      if (fixedFleet) await fixedFleet.stop();
       await dispatcher.stop();
     },
   };

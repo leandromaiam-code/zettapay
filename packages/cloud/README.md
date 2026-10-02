@@ -84,3 +84,41 @@ per-tenant webhook dispatcher). Optional: `PORT`, `HOST`, `BTC_WS_URL`,
 | `PORT` / `HOST` | API bind (default `8080` / `0.0.0.0`) |
 | `BTC_WS_URL` / `BTC_REST_BASE` | mempool.space overrides |
 | `BASE_RPC_URL` | Base RPC endpoint |
+
+## Accounts, plans and billing
+
+Self-serve endpoints used by the dashboard at `/app` (all JSON):
+
+- `POST /api/v1/signup` — public. `{ email, shop_name, btc_xpub?, base_xpub?, base_address?, webhook_url? }`.
+  Returns the API key (and webhook secret) **once**. An extended *private* key is rejected and never stored.
+  Throttled per client address.
+- `GET  /api/v1/me` — account, plan, this month's usage, receive methods. Auth.
+- `GET  /api/v1/invoices?limit=25` — the merchant's most recent invoices. Auth.
+- `POST /api/v1/webhook` — set the webhook URL; issues a fresh signing secret. Auth.
+- `GET  /api/v1/plans` — public plan catalogue (caps, prices, payment methods).
+- `POST /api/v1/billing/checkout` — `{ plan, method: "crypto" | "stripe" }` → `{ checkout_url }`. Auth.
+- `POST /api/v1/billing/stripe/webhook` — Stripe events (signature-verified).
+
+A plan is a flat monthly price that only raises the monthly invoice cap
+(`plans.ts`); there is no transaction fee. Paying in crypto issues an ordinary
+ZettaPay invoice to the platform's own merchant account and activates the plan
+for 30 days once it confirms. Paying by card opens a Stripe subscription.
+A paid plan whose period has ended counts as `free` until it is renewed.
+
+Webhook URLs must be `https` and resolve only to public addresses; this is
+checked when the URL is saved and again before every delivery.
+
+### Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Database (required) |
+| `PORT`, `HOST` | Listen address |
+| `CHECKOUT_BASE_URL` | Site origin for hosted checkout links and the dashboard |
+| `PLAN_LIMITS`, `PLAN_PRICES` | JSON overrides for monthly caps and USD prices |
+| `BILLING_MERCHANT_ID` | Merchant that receives crypto subscription payments (enables crypto billing) |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_STARTER`, `STRIPE_PRICE_PRO` | Card billing (optional) |
+| `BASE_RPC_URLS` | Comma-separated Base RPC endpoints cross-checked by quorum in fixed-address mode |
+| `BTC_WS_URL`, `BTC_REST_BASE`, `BASE_RPC_URL` | Chain data sources for the xpub watchers |
+
+Migrations in `migrations/` are additive and idempotent; apply them in order.

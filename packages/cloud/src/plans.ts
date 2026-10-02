@@ -52,3 +52,44 @@ export function limitForPlan(limits: PlanLimits, plan: string | null | undefined
 export function monthStartIso(now: Date = new Date()): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
+
+/** Monthly subscription price per paid plan, in USD. Free and unlimited are not for sale. */
+export type PlanPrices = Record<string, number>;
+
+export const DEFAULT_PLAN_PRICES: PlanPrices = {
+  starter: 19,
+  pro: 49,
+};
+
+/** Parse an operator override (`PLAN_PRICES` env, JSON object of plan → USD/month). */
+export function parsePlanPrices(raw: string | undefined): PlanPrices {
+  if (!raw) return DEFAULT_PLAN_PRICES;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return DEFAULT_PLAN_PRICES;
+    const out: PlanPrices = {};
+    for (const [plan, price] of Object.entries(parsed)) {
+      if (typeof price === 'number' && Number.isFinite(price) && price > 0) out[plan] = price;
+      else return DEFAULT_PLAN_PRICES;
+    }
+    return Object.keys(out).length > 0 ? out : DEFAULT_PLAN_PRICES;
+  } catch {
+    return DEFAULT_PLAN_PRICES;
+  }
+}
+
+/**
+ * The plan a merchant is actually on right now: a paid plan whose period has
+ * ended counts as the default plan until it is renewed. A plan with no expiry
+ * (assigned by the operator) never lapses.
+ */
+export function effectivePlan(
+  merchant: { plan?: string | null; plan_expires_at?: string | null } | null | undefined,
+  now: number = Date.now(),
+): string {
+  const plan = merchant?.plan || DEFAULT_PLAN;
+  if (plan === DEFAULT_PLAN) return plan;
+  const expires = merchant?.plan_expires_at ? Date.parse(merchant.plan_expires_at) : NaN;
+  if (Number.isFinite(expires) && expires < now) return DEFAULT_PLAN;
+  return plan;
+}

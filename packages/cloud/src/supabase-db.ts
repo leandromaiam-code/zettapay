@@ -18,6 +18,7 @@ import type {
   MerchantChainRow,
   MerchantKeyRow,
   MerchantRow,
+  SubscriptionRow,
   WebhookEventRow,
   WebhookRow,
 } from './cloud-db.js';
@@ -29,6 +30,7 @@ const T = {
   invoices: 'zettapay_invoices',
   webhooks: 'zettapay_webhooks',
   events: 'zettapay_webhook_events',
+  subscriptions: 'zettapay_subscriptions',
 } as const;
 
 export interface SupabaseRestDbOptions {
@@ -98,8 +100,64 @@ export class SupabaseRestDb implements CloudDb {
     return this.selectOne<MerchantRow>(T.merchants, `id=eq.${enc(id)}&select=*`);
   }
 
+  async findMerchantByEmail(email: string): Promise<MerchantRow | null> {
+    return this.selectOne<MerchantRow>(T.merchants, `email=eq.${enc(email)}&select=*`);
+  }
+
   async insertMerchant(row: MerchantRow): Promise<void> {
     await this.request('POST', T.merchants, row, 'return=minimal');
+  }
+
+  async updateMerchant(id: string, patch: Partial<MerchantRow>): Promise<void> {
+    await this.request('PATCH', `${T.merchants}?id=eq.${enc(id)}`, patch, 'return=minimal');
+  }
+
+  async listFixedAddresses(): Promise<string[]> {
+    const rows = await this.request<{ fixed_address: string | null }>(
+      'GET',
+      `${T.chains}?fixed_address=not.is.null&select=fixed_address`,
+    );
+    return [...new Set(rows.map((r) => r.fixed_address).filter((a): a is string => !!a))];
+  }
+
+  async listApiKeys(merchantId: string): Promise<MerchantKeyRow[]> {
+    return this.request<MerchantKeyRow>(
+      'GET',
+      `${T.keys}?merchant_id=eq.${enc(merchantId)}&select=*&order=created_at.asc`,
+    );
+  }
+
+  async listInvoicesForMerchant(merchantId: string, limit: number): Promise<InvoiceRow[]> {
+    return this.request<InvoiceRow>(
+      'GET',
+      `${T.invoices}?merchant_id=eq.${enc(merchantId)}&select=*&order=created_at.desc&limit=${limit}`,
+    );
+  }
+
+  async updateWebhook(id: string, patch: Partial<WebhookRow>): Promise<void> {
+    await this.request('PATCH', `${T.webhooks}?id=eq.${enc(id)}`, patch, 'return=minimal');
+  }
+
+  async insertSubscription(row: SubscriptionRow): Promise<void> {
+    await this.request('POST', T.subscriptions, row, 'return=minimal');
+  }
+
+  async updateSubscription(id: string, patch: Partial<SubscriptionRow>): Promise<void> {
+    await this.request('PATCH', `${T.subscriptions}?id=eq.${enc(id)}`, patch, 'return=minimal');
+  }
+
+  async listPendingCryptoSubscriptions(): Promise<SubscriptionRow[]> {
+    return this.request<SubscriptionRow>(
+      'GET',
+      `${T.subscriptions}?status=eq.pending&method=eq.crypto&select=*&order=created_at.asc&limit=200`,
+    );
+  }
+
+  async findSubscriptionByStripeId(stripeSubscriptionId: string): Promise<SubscriptionRow | null> {
+    return this.selectOne<SubscriptionRow>(
+      T.subscriptions,
+      `stripe_subscription_id=eq.${enc(stripeSubscriptionId)}&select=*`,
+    );
   }
 
   async getChains(merchantId: string): Promise<MerchantChainRow[]> {
