@@ -27,7 +27,7 @@ const DEFAULT_REFRESH_MS = 60_000;
 export const DEFAULT_BASE_RPC_URLS = [
   'https://mainnet.base.org',
   'https://base-rpc.publicnode.com',
-  'https://base.drpc.org',
+  'https://base.gateway.tenderly.co',
 ];
 
 const noopLogger: Logger = {
