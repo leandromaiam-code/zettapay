@@ -8,7 +8,10 @@
 alter table zettapay_merchants
   add column if not exists plan_expires_at timestamptz;
 
-create unique index if not exists zettapay_merchants_email_idx on zettapay_merchants (lower(email));
+-- Signup looks merchants up by email. Not UNIQUE: rows seeded by the operator
+-- before self-serve signup existed may share an address; signup itself refuses
+-- an email that is already present.
+create index if not exists zettapay_merchants_email_idx on zettapay_merchants (email);
 
 create table if not exists zettapay_subscriptions (
   id                      uuid primary key default gen_random_uuid(),
