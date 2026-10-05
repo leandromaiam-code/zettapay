@@ -69,6 +69,7 @@
       "allowlist_paths": [
         "examples/",
         "docs/",
+        "site/",
         "**/README*",
         "**/*.test.ts",
         "packages/sdk/"
