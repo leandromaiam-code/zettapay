@@ -67,6 +67,7 @@
       "severity": "hard",
       "body": "O package @zettapay/listener, quando em modo self-hosted, nao pode fazer outbound HTTP para zettapay.vercel.app, zettapay.dev, zettapay.com ou api.zettapay.* (qualquer subdomain). Trafego permitido: mempool.space, MERCHANT_WEBHOOK_URL configurado pelo merchant, e Supabase/Postgres URL se merchant escolheu adapter=supabase|postgres.",
       "allowlist_paths": [
+        "site/",
         "examples/",
         "docs/",
         "site/",
