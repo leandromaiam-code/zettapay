@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como Aceitar Bitcoin na Loja Online em 2026</title>
+  <meta name="description" content="Guia prático para aceitar Bitcoin na sua loja online sem custódia e sem taxa por transação. Passo a passo com chave pública, API e webhook.">
+  <link rel="canonical" href="https://zettapay.4profitai.com/blog/aceitar-bitcoin-loja-online/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zettapay.4profitai.com/blog/aceitar-bitcoin-loja-online/">
+  <meta property="og:title" content="Como Aceitar Bitcoin na Loja Online em 2026">
+  <meta property="og:description" content="Guia prático para aceitar Bitcoin na sua loja online sem custódia e sem taxa por transação.">
+  <meta property="og:image" content="https://zettapay.4profitai.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="ZettaPay">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Como Aceitar Bitcoin na Loja Online em 2026">
+  <meta name="twitter:description" content="Guia prático para aceitar Bitcoin na sua loja online sem custódia e sem taxa por transação.">
+  <meta name="twitter:image" content="https://zettapay.4profitai.com/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1E3B33">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <style>
+    .article-hero { background: linear-gradient(160deg, #0A1A15 0%, #1E3B33 50%, #1a3830 100%); padding: calc(72px + var(--space-xl)) 0 var(--space-xl); }
+    .article-hero .container { max-width: 780px; }
+    .article-meta { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.875rem; color: rgba(244,249,247,0.55); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+    .article-meta time { color: rgba(244,249,247,0.7); }
+    .article-hero h1 { color: var(--frost); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: var(--space-md); }
+    .article-hero .article-lead { color: rgba(244,249,247,0.75); font-size: 1.125rem; line-height: 1.7; max-width: 640px; }
+    .article-body { max-width: 720px; margin: 0 auto; padding: var(--space-xl) var(--space-md) var(--space-2xl); }
+    .article-body h2 { margin: var(--space-xl) 0 var(--space-sm); font-size: clamp(1.35rem,3vw,1.75rem); }
+    .article-body h3 { margin: var(--space-lg) 0 var(--space-xs); font-size: 1.1875rem; }
+    .article-body p { margin-bottom: var(--space-sm); color: #3a4a44; font-size: 1.0625rem; line-height: 1.8; }
+    .article-body a { color: var(--deep-forest); text-decoration: underline; text-underline-offset: 2px; }
+    .article-body a:hover { color: var(--emerald-glow); }
+    .article-body ul, .article-body ol { margin: 0 0 var(--space-sm) var(--space-md); }
+    .article-body li { margin-bottom: 0.5rem; color: #3a4a44; font-size: 1.0625rem; line-height: 1.7; }
+    .article-body ul li { list-style: disc; }
+    .article-body ol li { list-style: decimal; }
+    .article-body blockquote { border-left: 3px solid var(--emerald-glow); padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--cloud); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .article-body blockquote p { color: #5C6560; font-size: 1rem; margin-bottom: 0; }
+    .article-cta { background: var(--cloud); border-radius: var(--radius-md); padding: var(--space-lg); text-align: center; margin: var(--space-xl) 0; border: 1px solid rgba(30,59,51,0.08); }
+    .article-cta h3 { margin-bottom: var(--space-sm); }
+    .article-cta p { margin-bottom: var(--space-md); color: #5C6560; }
+    .faq-section { margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid rgba(30,59,51,0.08); }
+    .faq-section h2 { margin-top: 0; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: rgba(244,249,247,0.45); margin-bottom: var(--space-md); flex-wrap: wrap; }
+    .breadcrumb a { color: rgba(244,249,247,0.6); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--emerald-glow); }
+    .breadcrumb span { color: rgba(244,249,247,0.3); }
+  </style>
+
+  <!-- JSON-LD: Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Como Aceitar Bitcoin na Loja Online em 2026",
+    "description": "Guia prático para aceitar Bitcoin na sua loja online sem custódia e sem taxa por transação. Passo a passo com chave pública, API e webhook.",
+    "image": "https://zettapay.4profitai.com/og-image.png",
+    "author": {
+      "@type": "Organization",
+      "name": "ZettaPay"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "ZettaPay",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://zettapay.4profitai.com/assets/img/logo-icon.png"
+      }
+    },
+    "datePublished": "2026-10-05",
+    "dateModified": "2026-10-05",
+    "mainEntityOfPage": "https://zettapay.4profitai.com/blog/aceitar-bitcoin-loja-online/"
+  }
+  </script>
+
+  <!-- JSON-LD: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://zettapay.4profitai.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://zettapay.4profitai.com/blog/" },
+      { "@type": "ListItem", "position": 3, "name": "Como Aceitar Bitcoin na Loja Online em 2026", "item": "https://zettapay.4profitai.com/blog/aceitar-bitcoin-loja-online/" }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Precisa de CNPJ para aceitar bitcoin?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não. O ZettaPay pede apenas e-mail e nome da loja para criar uma conta. Você pode começar a aceitar Bitcoin como pessoa física ou jurídica, sem documentos e sem verificação de identidade."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como começar a aceitar bitcoin na minha loja?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Cole sua chave pública (xpub BIP-84) no ZettaPay, crie uma fatura via API informando o valor, e envie o link de pagamento ao cliente. O ZettaPay monitora a blockchain e avisa via webhook quando o pagamento confirma. Os fundos vão direto para a sua carteira."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quais lojas aceitam bitcoin no Brasil?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Qualquer loja online pode aceitar Bitcoin integrando um processador de pagamento cripto. Com o ZettaPay, basta ter uma carteira Bitcoin e colar a chave pública para começar a receber pagamentos direto na sua carteira, sem intermediários."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como receber em bitcoin e converter para real?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Com o ZettaPay, os BTC vão direto para a sua carteira. A partir da sua carteira, você pode enviar os BTC para uma exchange brasileira (como Mercado Bitcoin ou Foxbit) e vender por BRL, ou usar serviços P2P. O ZettaPay não faz conversão automática — você mantém o controle total dos seus fundos."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="/" class="header-logo" aria-label="ZettaPay — página inicial">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="36" height="36" loading="eager">
+        <span>ZettaPay</span>
+      </a>
+      <nav class="header-nav" role="navigation" aria-label="Menu principal">
+        <a href="/#como-funciona">Como funciona</a>
+        <a href="/#para-quem">Para quem</a>
+        <a href="/#preco">Preço</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#interesse" class="btn btn-primary">Quero participar</a>
+        <a href="https://zettapay.4profitai.com/app" class="btn btn-outline">Entrar</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Article Hero -->
+    <section class="article-hero">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="/">Home</a> <span>/</span>
+          <a href="/blog/">Blog</a> <span>/</span>
+          <span>Aceitar Bitcoin na Loja Online</span>
+        </nav>
+        <div class="article-meta">
+          <time datetime="2026-10-05">5 de outubro de 2026</time>
+          <span>|</span>
+          <span>8 min de leitura</span>
+        </div>
+        <h1>Como Aceitar Bitcoin na Loja Online em 2026: Guia Prático Sem Custódia</h1>
+        <p class="article-lead">Para aceitar Bitcoin na sua loja online, você precisa de uma carteira Bitcoin, uma chave pública (xpub) e um processador que direcione os pagamentos direto para a sua carteira. Este guia mostra como fazer isso em quatro passos, sem entregar seus fundos a um intermediário.</p>
+      </div>
+    </section>
+
+    <!-- Article Body -->
+    <article class="article-body">
+
+      <h2>Por que aceitar Bitcoin na loja online em 2026</h2>
+
+      <p>O cenário de pagamentos cripto mudou nos últimos dois anos. O <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">Coinbase Commerce encerrou as operações fora dos EUA e de Singapura em 31 de março de 2026</a>, deixando milhares de lojistas sem processador. A <a href="https://www.trustpilot.com/review/bitpay.com" target="_blank" rel="noopener">BitPay tem nota 1,2/5 no Trustpilot</a>, com relatos de saldo inacessível e verificação de identidade negada sem motivo.</p>
+
+      <p>Para quem vende online e quer aceitar Bitcoin, a pergunta não é mais "devo aceitar cripto?", mas sim "como aceitar sem perder o controle dos meus fundos?".</p>
+
+      <p>A resposta está em processadores não-custodiais: ferramentas que recebem apenas a sua chave pública, geram um endereço único por pagamento e enviam os fundos direto para a sua carteira. Sem conta custodial, sem saldo preso, sem verificação de identidade.</p>
+
+      <h2>O que você precisa para começar</h2>
+
+      <p>Antes de integrar qualquer processador, tenha em mãos:</p>
+
+      <ol>
+        <li><strong>Uma carteira Bitcoin</strong> — qualquer carteira que suporte BIP-84 (SegWit nativo). Exemplos: Electrum, BlueWallet, Sparrow, Ledger, Trezor.</li>
+        <li><strong>Sua chave pública estendida (xpub)</strong> — ela permite que o processador derive endereços de recebimento sem ter acesso aos seus fundos. A chave pública não move dinheiro.</li>
+        <li><strong>Um endpoint para webhooks</strong> — uma URL no seu servidor que recebe a notificação de pagamento confirmado.</li>
+      </ol>
+
+      <p>Se você também quer aceitar stablecoins (USDC e USDT na Base), basta ter o endereço da carteira na rede Base.</p>
+
+      <h2>Passo a passo: aceitar Bitcoin com ZettaPay</h2>
+
+      <h3>1. Crie uma conta e cole sua chave pública</h3>
+
+      <p>O cadastro no <a href="/#interesse">ZettaPay</a> pede apenas e-mail e nome da loja. Nenhum documento, nenhuma verificação de identidade. Cole seu xpub (BTC) ou endereço na Base e pronto: o ZettaPay nunca pede chave privada, nunca pede para conectar a carteira.</p>
+
+      <h3>2. Crie uma fatura via API</h3>
+
+      <p>Uma chamada REST cria uma fatura com valor, moeda e referência. O ZettaPay deriva um endereço único a partir da sua chave pública. Cada fatura tem seu próprio endereço — isso facilita a conciliação e a privacidade.</p>
+
+      <h3>3. Envie o link de pagamento ao cliente</h3>
+
+      <p>O ZettaPay gera um checkout hospedado com QR code e endereço. O cliente escaneia, paga em BTC ou stablecoin e a transação é registrada na blockchain.</p>
+
+      <h3>4. Receba o webhook e libere o produto</h3>
+
+      <p>Quando o pagamento confirma na blockchain, o ZettaPay dispara um webhook assinado (HMAC) para o seu endpoint. Você valida a assinatura, confirma que o valor está correto e libera o produto ou serviço.</p>
+
+      <p>Os fundos já estão na sua carteira. O ZettaPay nunca toca neles.</p>
+
+      <h2>Quanto custa aceitar Bitcoin na loja</h2>
+
+      <p>A maioria dos processadores custodiais cobra uma taxa percentual por transação. Exemplos:</p>
+
+      <ul>
+        <li><strong>BitPay:</strong> <a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">2% + US$ 0,25</a> por fatura (abaixo de US$ 500 mil/mês)</li>
+        <li><strong>Stripe (stablecoin):</strong> <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" target="_blank" rel="noopener">1,5% por transação</a>, disponível apenas para empresas dos EUA</li>
+        <li><strong>NOWPayments:</strong> <a href="https://nowpayments.io/pricing" target="_blank" rel="noopener">1% por transação</a></li>
+      </ul>
+
+      <p>O <a href="/#preco">ZettaPay Cloud</a> cobra assinatura fixa mensal por volume de faturas: Free (50 faturas/mês, grátis), Starter (500 faturas, US$ 19/mês) e Pro (5.000 faturas, US$ 49/mês). Zero taxa por transação. Se você prefere rodar seu próprio servidor, o listener self-hosted é open source MIT e grátis, sem limites.</p>
+
+      <h2>Custodial vs. não-custodial: a diferença que importa</h2>
+
+      <p>Um processador <strong>custodial</strong> (BitPay, Coinbase Business) recebe o pagamento na conta dele e depois repassa para você. Isso significa que ele pode congelar seu saldo, negar sua verificação de identidade ou simplesmente encerrar o serviço — como o Coinbase Commerce fez.</p>
+
+      <p>Um processador <strong>não-custodial</strong> como o ZettaPay nunca fica com os seus fundos. Ele recebe apenas material público (chave pública), gera endereços, monitora a blockchain e avisa quando o pagamento confirma. Os fundos vão direto da carteira do pagador para a sua.</p>
+
+      <p>Para entender melhor as opções disponíveis, veja nosso comparativo de <a href="/blog/alternativa-coinbase-commerce-brasil/">alternativas ao Coinbase Commerce no Brasil</a>.</p>
+
+      <h2>BTCPay Server vs. ZettaPay Cloud</h2>
+
+      <p>O <a href="https://btcpayserver.org/" target="_blank" rel="noopener">BTCPay Server</a> é a referência em processamento não-custodial: gratuito, open source, sem taxa. Mas exige que você mantenha um servidor próprio com VPS, Docker, DNS e, para Bitcoin, um nó completo. <a href="https://keasigmadelta.com/blog/btcpay-server-how-easy-is-it-to-setup/" target="_blank" rel="noopener">Relatos de instalação</a> mostram que o BTC sozinho é tranquilo, mas outras moedas e Lightning trazem obstáculos técnicos.</p>
+
+      <p>O ZettaPay Cloud oferece a mesma liberdade de não custódia sem a necessidade de manter infraestrutura. O listener é hospedado, os webhooks são assinados, e a API é a mesma do self-hosted. Você troca o trabalho de DevOps por uma assinatura fixa.</p>
+
+      <h2>Segurança: como funciona a assinatura do webhook</h2>
+
+      <p>Quando um pagamento confirma na blockchain, o ZettaPay dispara um POST para o seu endpoint com o payload da transação. Esse payload é assinado com HMAC — uma assinatura criptográfica que garante que o webhook veio do ZettaPay e não foi alterado no caminho.</p>
+
+      <p>No seu servidor, você valida a assinatura antes de liberar o produto. Se a assinatura não bater, rejeite a requisição. Isso protege contra fraudes em que alguém tenta simular um webhook de confirmação.</p>
+
+      <p>O endereço de pagamento de cada fatura é único, derivado da sua chave pública. Isso significa que cada transação é rastreável e conciliável individualmente — útil tanto para contabilidade quanto para suporte ao cliente.</p>
+
+      <h2>Stablecoins como complemento ao Bitcoin</h2>
+
+      <p>Aceitar apenas Bitcoin pode ser limitante para alguns clientes. A volatilidade do BTC faz com que muitos compradores prefiram pagar com stablecoins — USDC e USDT mantêm paridade com o dólar e eliminam o risco de variação de preço entre o momento da compra e a confirmação.</p>
+
+      <p>O ZettaPay aceita BTC, USDC e USDT na rede Base. A vantagem de oferecer as duas opções: o cliente escolhe se quer pagar em BTC (para quem já tem Bitcoin) ou em stablecoin (para quem quer previsibilidade). Ambos os pagamentos vão direto para a sua carteira.</p>
+
+      <p>Para quem está construindo agentes de IA que cobram por uso, stablecoins na Base são a escolha mais prática — liquidam em segundos e custam frações de centavo em taxa de rede. Saiba mais no nosso artigo sobre <a href="/blog/pagamento-cripto-agentes-ia-blockchain/">pagamento cripto para agentes de IA</a>.</p>
+
+      <h2>E se eu quiser converter BTC para real?</h2>
+
+      <p>O ZettaPay não faz conversão automática — os fundos vão direto para a sua carteira em BTC. A partir dela, você pode:</p>
+
+      <ul>
+        <li>Enviar para uma exchange brasileira e vender por BRL</li>
+        <li>Usar mercados P2P para vender diretamente para compradores</li>
+        <li>Manter os BTC como reserva de valor</li>
+      </ul>
+
+      <p>A vantagem de manter o controle: você escolhe quando e como converter, sem depender do cronograma de liquidação de um processador custodial.</p>
+
+      <div class="article-cta">
+        <h3>Comece a aceitar Bitcoin hoje</h3>
+        <p>Cole sua chave pública e crie sua primeira fatura em minutos. Sem documentos, sem taxa por transação.</p>
+        <a href="/#interesse" class="btn btn-primary btn-lg">Quero participar</a>
+      </div>
+
+      <div class="faq-section">
+        <h2>Perguntas frequentes</h2>
+
+        <h3>Precisa de CNPJ para aceitar bitcoin?</h3>
+        <p>Não. O ZettaPay pede apenas e-mail e nome da loja para criar uma conta. Você pode começar a aceitar Bitcoin como pessoa física ou jurídica, sem documentos e sem verificação de identidade.</p>
+
+        <h3>Como começar a aceitar bitcoin na minha loja?</h3>
+        <p>Cole sua chave pública (xpub BIP-84) no ZettaPay, crie uma fatura via API informando o valor, e envie o link de pagamento ao cliente. O ZettaPay monitora a blockchain e avisa via webhook quando o pagamento confirma. Saiba mais em <a href="/#como-funciona">como funciona</a>.</p>
+
+        <h3>Quais lojas aceitam bitcoin no Brasil?</h3>
+        <p>Qualquer loja online pode aceitar Bitcoin integrando um processador de pagamento cripto. Com o ZettaPay, basta ter uma carteira Bitcoin e colar a chave pública para começar a receber pagamentos direto na sua carteira, sem intermediários.</p>
+
+        <h3>Como receber em bitcoin e converter para real?</h3>
+        <p>Com o ZettaPay, os BTC vão direto para a sua carteira. A partir dela, você pode enviar para uma exchange brasileira e vender por BRL, ou usar serviços P2P. O ZettaPay não faz conversão automática — você mantém o controle total dos seus fundos.</p>
+      </div>
+
+    </article>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="28" height="28" loading="lazy">
+        <span>ZettaPay</span>
+      </div>
+      <p class="footer-text">Um produto <a href="https://4profitai.com" target="_blank" rel="noopener">4Profit AI</a>. &copy; 2026 ZettaPay. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="../../assets/js/site.js" defer></script>
+
+  <script><!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      var body = JSON.stringify({ event: "page_view", company: "zettapay", page_path: location.pathname,
+        referrer: document.referrer || undefined, utm_source: q.get("utm_source") || undefined,
+        utm_medium: q.get("utm_medium") || undefined, utm_campaign: q.get("utm_campaign") || undefined });
+      fetch("https://vortex.4profitai.com/api/capture/page-event", { method: "POST", body: body, keepalive: true,
+        headers: { "Content-Type": "text/plain" } }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
+
+</body>
+</html>
