@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZettaPay — Pagamento cripto direto na sua carteira</title>
+  <meta name="description" content="Receba Bitcoin, USDC e USDT direto na sua carteira. Sem custódia, sem taxa por transação. Cloud ou self-hosted. Para lojistas, SaaS e agentes de IA.">
+  <link rel="canonical" href="https://zettapay.4profitai.com/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://zettapay.4profitai.com/">
+  <meta property="og:title" content="ZettaPay — Pagamento cripto direto na sua carteira">
+  <meta property="og:description" content="Receba Bitcoin, USDC e USDT direto na sua carteira. Sem custódia, sem taxa por transação. Para lojistas, SaaS e agentes de IA.">
+  <meta property="og:image" content="https://zettapay.4profitai.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="ZettaPay">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ZettaPay — Pagamento cripto direto na sua carteira">
+  <meta name="twitter:description" content="Receba Bitcoin, USDC e USDT direto na sua carteira. Sem custódia, sem taxa por transação.">
+  <meta name="twitter:image" content="https://zettapay.4profitai.com/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1E3B33">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="assets/css/site.css">
+
+  <!-- JSON-LD: Organization -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ZettaPay",
+    "url": "https://zettapay.4profitai.com",
+    "logo": "https://zettapay.4profitai.com/assets/img/logo-icon.png",
+    "description": "Pagamentos cripto não-custodiais para pessoas e agentes de IA.",
+    "parentOrganization": {
+      "@type": "Organization",
+      "name": "4Profit AI LLC"
+    }
+  }
+  </script>
+
+  <!-- JSON-LD: WebSite -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "ZettaPay",
+    "url": "https://zettapay.4profitai.com"
+  }
+  </script>
+
+  <!-- JSON-LD: SoftwareApplication -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "ZettaPay",
+    "applicationCategory": "FinanceApplication",
+    "operatingSystem": "Web",
+    "description": "Pagamentos cripto não-custodiais. Receba Bitcoin, USDC e USDT direto na sua carteira, sem intermediários.",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Free",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "50 faturas por mês, gratuito para sempre"
+      },
+      {
+        "@type": "Offer",
+        "name": "Starter",
+        "price": "19",
+        "priceCurrency": "USD",
+        "description": "500 faturas por mês"
+      },
+      {
+        "@type": "Offer",
+        "name": "Pro",
+        "price": "49",
+        "priceCurrency": "USD",
+        "description": "5.000 faturas por mês"
+      }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Qual o melhor gateway de pagamento cripto?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Depende da sua prioridade. Se você quer receber direto na carteira, sem custódia e sem taxa por transação, o ZettaPay é a opção mais direta: cole sua chave pública, crie uma fatura via API e os fundos vão para a sua carteira. Processadores custodiais como BitPay ou Coinbase Business ficam com os fundos e cobram de 1% a 2% por transação."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Gateway de pagamento cripto, como funciona?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O ZettaPay recebe apenas a sua chave pública (xpub para Bitcoin ou endereço na Base). A cada fatura, deriva um endereço único, monitora a blockchain e dispara um webhook assinado (HMAC) quando o pagamento confirma. Os fundos vão direto para a sua carteira — o ZettaPay nunca toca nos seus fundos."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quanto custa um gateway de pagamento cripto?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O ZettaPay Cloud cobra uma assinatura fixa mensal por volume de faturas: Free (50 faturas/mês, grátis), Starter (500 faturas, US$ 19/mês) e Pro (5.000 faturas, US$ 49/mês). Não há taxa por transação. Compare: BitPay cobra 2% + US$ 0,25 por fatura, e Stripe cobra 1,5% em stablecoin."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "O que é uma carteira não custodial?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Uma carteira não custodial é aquela em que só você tem a chave privada. O ZettaPay trabalha exclusivamente com carteiras não custodiais: ele só precisa da sua chave pública para gerar endereços de recebimento. Nunca pede sua chave privada, nunca pede para conectar a carteira."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Coinbase Commerce funciona no Brasil?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não. O Coinbase Commerce encerrou as operações fora dos EUA e de Singapura em 31 de março de 2026, sem prorrogação. O produto foi substituído pelo Coinbase Business, que é custodial. Lojistas que usavam o Commerce precisaram migrar para outro provedor."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como agentes de IA fazem pagamentos?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Agentes de IA podem usar o ZettaPay via API REST, MCP server ou OpenAPI para criar faturas e confirmar pagamentos de forma autônoma, sem intervenção humana. Stablecoins na Base liquidam em segundos por menos de US$ 0,01, tornando viáveis tickets muito pequenos que o cartão de crédito inviabiliza."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "BTCPay Server é gratuito?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim, o BTCPay Server não cobra taxa, mas você precisa manter um servidor próprio (VPS, Docker, DNS e, para Bitcoin, um nó completo). O ZettaPay Cloud oferece a mesma liberdade de não custódia, sem a necessidade de manter infraestrutura."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "O ZettaPay é seguro? Ele guarda minhas chaves?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O ZettaPay nunca gera, armazena ou assina com chaves privadas. Ele só recebe material público (xpub ou endereço). Os fundos vão direto para a sua carteira. Não há conta custodial, não há saldo que possa ser congelado."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- ═══ Header ═══ -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="/" class="header-logo" aria-label="ZettaPay — página inicial">
+        <img src="assets/img/logo-icon.png" alt="ZettaPay" width="36" height="36" loading="eager">
+        <span>ZettaPay</span>
+      </a>
+      <nav class="header-nav" role="navigation" aria-label="Menu principal">
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#para-quem">Para quem</a>
+        <a href="#preco">Preço</a>
+        <a href="#perguntas">Perguntas</a>
+        <a href="/blog/">Blog</a>
+        <a href="#interesse" class="btn btn-primary">Quero participar</a>
+        <a href="https://zettapay.4profitai.com/app" class="btn btn-outline">Entrar</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ═══ Hero ═══ -->
+    <section class="hero" id="hero">
+      <div class="container">
+        <div class="hero-grid">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1l2.09 4.26L15 6.27l-3.5 3.42.83 4.81L8 12.27l-4.33 2.23.83-4.81L1 6.27l4.91-1.01z"/></svg>
+              Não-custodial
+            </div>
+            <h1>Receba cripto <em>direto na sua carteira</em>. Sem custódia. Sem taxa por transação.</h1>
+            <p class="hero-sub">Cole sua chave pública, crie uma fatura via API e os fundos vão para a sua carteira. BTC, USDC e USDT na Base. Cloud ou self-hosted.</p>
+            <div class="hero-ctas">
+              <a href="#interesse" class="btn btn-primary btn-lg">Quero participar</a>
+              <a href="#como-funciona" class="btn btn-outline btn-lg">Como funciona</a>
+            </div>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="hero-stat-value">US$ 0</div>
+                <div class="hero-stat-label">Taxa por transação</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value">3</div>
+                <div class="hero-stat-label">Ativos: BTC, USDC, USDT</div>
+              </div>
+              <div class="hero-stat">
+                <div class="hero-stat-value">MIT</div>
+                <div class="hero-stat-label">Self-hosted open source</div>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="hero-visual-graphic">
+              <div class="hero-node hero-node-lg"></div>
+              <div class="hero-node hero-node-sm"></div>
+              <div class="hero-node hero-node-sm"></div>
+              <div class="hero-node hero-node-sm"></div>
+              <div class="hero-node hero-node-sm"></div>
+              <div class="hero-line" style="--angle: 30deg"></div>
+              <div class="hero-orbit"></div>
+              <div class="hero-orbit"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ O problema ═══ -->
+    <section class="section-problem" id="problema">
+      <div class="container">
+        <div class="section-label">O problema</div>
+        <h2 class="section-title">Aceitar cripto não deveria significar perder o controle dos seus fundos</h2>
+        <div class="problem-grid">
+
+          <div class="problem-card">
+            <div class="problem-card-icon red" aria-hidden="true">&#10006;</div>
+            <h3>Coinbase Commerce encerrado fora dos EUA</h3>
+            <p>O Coinbase Commerce fechou para lojistas fora dos EUA e de Singapura em 31/03/2026. O substituto (Coinbase Business) é custodial e não está disponível em todos os países.</p>
+            <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" class="problem-source" target="_blank" rel="noopener">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.75 3.5a.75.75 0 000 1.5h2.94L4.22 10.47a.75.75 0 101.06 1.06L10.75 6.06v2.94a.75.75 0 001.5 0V3.5H6.75z"/></svg>
+              MoonPay, 2026
+            </a>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon orange" aria-hidden="true">&#9888;</div>
+            <h3>BitPay: nota 1,2/5 e saldo travado</h3>
+            <p>A BitPay tem nota 1,2/5 no Trustpilot com relatos de saldo inacessível e verificação de identidade negada. Cobra de 2% + US$ 0,25 a 1% + US$ 0,25 por transação.</p>
+            <a href="https://www.trustpilot.com/review/bitpay.com" class="problem-source" target="_blank" rel="noopener">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.75 3.5a.75.75 0 000 1.5h2.94L4.22 10.47a.75.75 0 101.06 1.06L10.75 6.06v2.94a.75.75 0 001.5 0V3.5H6.75z"/></svg>
+              Trustpilot, 2026
+            </a>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon blue" aria-hidden="true">&#36;</div>
+            <h3>Stripe cobra 1,5% em stablecoin</h3>
+            <p>A Stripe cobra 1,5% para processar USDC, embora a transferência na rede custe menos de US$ 0,01. Só aceita empresas dos EUA. O pagamento cai no saldo Stripe, não na carteira do lojista.</p>
+            <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" class="problem-source" target="_blank" rel="noopener">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.75 3.5a.75.75 0 000 1.5h2.94L4.22 10.47a.75.75 0 101.06 1.06L10.75 6.06v2.94a.75.75 0 001.5 0V3.5H6.75z"/></svg>
+              Yahoo Finance, dez/2025
+            </a>
+          </div>
+
+          <div class="problem-card">
+            <div class="problem-card-icon purple" aria-hidden="true">&#128736;</div>
+            <h3>BTCPay Server exige seu próprio servidor</h3>
+            <p>O BTCPay Server é gratuito e não-custodial, mas instalar e manter um servidor (VPS, Docker, DNS e nó Bitcoin) exige conhecimento técnico e tempo.</p>
+            <a href="https://keasigmadelta.com/blog/btcpay-server-how-easy-is-it-to-setup/" class="problem-source" target="_blank" rel="noopener">
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.75 3.5a.75.75 0 000 1.5h2.94L4.22 10.47a.75.75 0 101.06 1.06L10.75 6.06v2.94a.75.75 0 001.5 0V3.5H6.75z"/></svg>
+              Kea Sigma Delta, 2024
+            </a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Como funciona ═══ -->
+    <section class="section-how" id="como-funciona">
+      <div class="container">
+        <div class="section-label dark">Como funciona</div>
+        <h2 class="section-title">Quatro passos. Sem servidor, sem custódia.</h2>
+        <div class="steps-grid">
+
+          <div class="step-card">
+            <div class="step-number">1</div>
+            <h3>Cole sua chave pública</h3>
+            <p>Informe seu xpub (BTC) ou endereço na Base. O ZettaPay nunca pede chave privada.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">2</div>
+            <h3>Crie uma fatura via API</h3>
+            <p>Uma chamada REST, MCP ou OpenAPI. O ZettaPay deriva um endereço único para cada fatura.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">3</div>
+            <h3>O cliente paga em BTC ou stablecoin</h3>
+            <p>Checkout hospedado ou link de pagamento. O pagador envia cripto para o endereço da fatura.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">4</div>
+            <h3>Fundos direto na sua carteira</h3>
+            <p>O ZettaPay monitora a blockchain e dispara um webhook assinado (HMAC) quando o pagamento confirma. Os fundos vão para a sua carteira.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Para quem ═══ -->
+    <section class="section-for-whom" id="para-quem">
+      <div class="container">
+        <div class="section-label">Para quem</div>
+        <h2 class="section-title">Três perfis que o ZettaPay resolve</h2>
+        <div class="personas-grid">
+
+          <div class="persona-card">
+            <div class="persona-icon" aria-hidden="true">&#128722;</div>
+            <h3>Lojistas que perderam o Coinbase Commerce</h3>
+            <p>Você aceitava cripto e o Coinbase Commerce acabou. Não quer migrar para uma conta custodial nem pagar de 1% a 2% por transação.</p>
+            <div class="persona-pain">Cole sua chave pública e volte a aceitar BTC direto na carteira</div>
+            <div class="persona-pain">Sem verificação de identidade, sem saldo preso</div>
+          </div>
+
+          <div class="persona-card">
+            <div class="persona-icon" aria-hidden="true">&#128187;</div>
+            <h3>Devs de SaaS que querem soberania sem BTCPay</h3>
+            <p>Você quer a liberdade do BTCPay Server (sem custódia, sem taxa) sem o trabalho de manter VPS, Docker, DNS e nó.</p>
+            <div class="persona-pain">API, webhooks assinados e integração em uma tarde</div>
+            <div class="persona-pain">Cloud hospedado: zero infraestrutura para manter</div>
+          </div>
+
+          <div class="persona-card">
+            <div class="persona-icon" aria-hidden="true">&#129302;</div>
+            <h3>Construtores de agentes de IA</h3>
+            <p>A tarifa do cartão (2,9% + US$ 0,30) inviabiliza tickets de US$ 0,31. Stablecoins na Base liquidam por menos de US$ 0,01.</p>
+            <div class="persona-pain">MCP server + OpenAPI: o agente cria cobranças sozinho</div>
+            <div class="persona-pain">USDC na Base direto na carteira, sem conta custodial</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ O que você ganha ═══ -->
+    <section class="section-benefits" id="beneficios">
+      <div class="container">
+        <div class="section-label">O que você ganha</div>
+        <h2 class="section-title">Tudo o que um processador deveria ter. Nada do que não deveria.</h2>
+        <div class="benefits-grid">
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <h3>Não-custodial de verdade</h3>
+            <p>O ZettaPay nunca gera, armazena ou assina com chaves privadas. Só recebe material público. Os fundos vão direto para a sua carteira.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            <h3>Zero taxa por transação</h3>
+            <p>Assinatura fixa mensal pelo número de faturas. Não importa se você processa US$ 100 ou US$ 100.000: a taxa é a mesma.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </div>
+            <h3>BTC + USDC + USDT na Base</h3>
+            <p>Bitcoin nativo (BIP-84) e stablecoins na Base. Endereço único por fatura, derivado da sua chave pública.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            </div>
+            <h3>API + MCP + OpenAPI</h3>
+            <p>REST API para desenvolvedores, MCP server e spec OpenAPI para agentes de IA. Webhooks assinados com HMAC.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <h3>Cloud ou self-hosted</h3>
+            <p>ZettaPay Cloud: zero setup, listener hospedado. Self-hosted: o mesmo listener, open source MIT, grátis e sem limites.</p>
+          </div>
+
+          <div class="benefit-card">
+            <div class="benefit-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            </div>
+            <h3>Sem verificação de identidade</h3>
+            <p>O cadastro pede apenas e-mail e nome da loja. Sem documentos, sem verificação. Comece a aceitar pagamentos em minutos.</p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Preço ═══ -->
+    <section class="section-pricing" id="preco">
+      <div class="container">
+        <div class="section-label dark">Preço</div>
+        <h2 class="section-title" style="color:#fff">Assinatura fixa. Zero taxa por transação.</h2>
+        <p class="section-sub" style="max-width:580px;margin-bottom:var(--space-xl)">Pague pelo número de faturas que cria por mês. Os fundos vão direto para a sua carteira — o ZettaPay nunca fica com nada.</p>
+        <div class="pricing-grid">
+
+          <!-- Free -->
+          <div class="pricing-card">
+            <div class="pricing-plan-name">Free</div>
+            <div class="pricing-price">
+              <span class="pricing-currency">US$</span>
+              <span class="pricing-amount">0</span>
+            </div>
+            <div class="pricing-desc">50 faturas por mês. Grátis para sempre.</div>
+            <div class="pricing-features">
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                50 faturas/mês
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                BTC + USDC + USDT
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                API + webhooks
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Checkout hospedado
+              </div>
+            </div>
+            <a href="#interesse" class="btn btn-outline" style="width:100%;text-align:center">Começar grátis</a>
+          </div>
+
+          <!-- Starter -->
+          <div class="pricing-card">
+            <div class="pricing-plan-name">Starter</div>
+            <div class="pricing-price">
+              <span class="pricing-currency">US$</span>
+              <span class="pricing-amount">19</span>
+              <span class="pricing-period">/mês</span>
+            </div>
+            <div class="pricing-desc">500 faturas por mês.</div>
+            <div class="pricing-features">
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                500 faturas/mês
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Tudo do Free
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Suporte por e-mail
+              </div>
+            </div>
+            <a href="#interesse" class="btn btn-outline" style="width:100%;text-align:center">Começar</a>
+          </div>
+
+          <!-- Pro -->
+          <div class="pricing-card featured">
+            <div class="pricing-plan-name">Pro</div>
+            <div class="pricing-price">
+              <span class="pricing-currency">US$</span>
+              <span class="pricing-amount">49</span>
+              <span class="pricing-period">/mês</span>
+            </div>
+            <div class="pricing-desc">5.000 faturas por mês.</div>
+            <div class="pricing-features">
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                5.000 faturas/mês
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Tudo do Starter
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Suporte prioritário
+              </div>
+            </div>
+            <a href="#interesse" class="btn btn-primary" style="width:100%;text-align:center">Escolher Pro</a>
+          </div>
+
+          <!-- Self-hosted -->
+          <div class="pricing-card">
+            <div class="pricing-plan-name">Self-hosted</div>
+            <div class="pricing-price">
+              <span class="pricing-currency">US$</span>
+              <span class="pricing-amount">0</span>
+            </div>
+            <div class="pricing-desc">Open source MIT. Grátis para sempre, sem limites.</div>
+            <div class="pricing-features">
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Faturas ilimitadas
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Código-fonte completo
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Seu servidor, suas regras
+              </div>
+              <div class="pricing-feature">
+                <svg viewBox="0 0 16 16"><polyline points="3.5 8 6.5 11 12.5 5"/></svg>
+                Licença MIT
+              </div>
+            </div>
+            <a href="#interesse" class="btn btn-outline" style="width:100%;text-align:center">Saber mais</a>
+          </div>
+
+        </div>
+
+        <div class="pricing-note">
+          <p><strong>Sem taxa por transação em nenhum plano.</strong> O ZettaPay nunca fica com uma parte dos seus pagamentos.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Perguntas frequentes ═══ -->
+    <section class="section-faq" id="perguntas">
+      <div class="container">
+        <div class="section-label">Perguntas frequentes</div>
+        <h2 class="section-title centered">Respostas diretas, sem rodeios</h2>
+        <div class="faq-list">
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Qual o melhor gateway de pagamento cripto?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                Depende da sua prioridade. Se você quer receber direto na carteira, sem custódia e sem taxa por transação, o ZettaPay é a opção mais direta: cole sua chave pública, crie uma fatura via API e os fundos vão para a sua carteira. Processadores custodiais como BitPay ou Coinbase Business ficam com os fundos e cobram de 1% a 2% por transação.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Gateway de pagamento cripto, como funciona?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                O ZettaPay recebe apenas a sua chave pública (xpub para Bitcoin ou endereço na Base). A cada fatura, deriva um endereço único, monitora a blockchain e dispara um webhook assinado (HMAC) quando o pagamento confirma. Os fundos vão direto para a sua carteira — o ZettaPay nunca toca nos seus fundos.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Quanto custa um gateway de pagamento cripto?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                O ZettaPay Cloud cobra uma assinatura fixa mensal por volume de faturas: Free (50 faturas/mês, grátis), Starter (500 faturas, US$ 19/mês) e Pro (5.000 faturas, US$ 49/mês). Não há taxa por transação. Compare: <a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">BitPay cobra 2% + US$ 0,25 por fatura</a>, e <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" target="_blank" rel="noopener">Stripe cobra 1,5% em stablecoin</a>.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              O que é uma carteira não custodial?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                Uma carteira não custodial é aquela em que só você tem a chave privada. O ZettaPay trabalha exclusivamente com carteiras não custodiais: ele só precisa da sua chave pública para gerar endereços de recebimento. Nunca pede sua chave privada, nunca pede para conectar a carteira.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Coinbase Commerce funciona no Brasil?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                Não. O Coinbase Commerce <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">encerrou as operações fora dos EUA e de Singapura em 31 de março de 2026</a>, sem prorrogação. O produto foi substituído pelo Coinbase Business, que é custodial. Lojistas que usavam o Commerce precisaram migrar para outro provedor.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              Como agentes de IA fazem pagamentos com cripto?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                Agentes de IA podem usar o ZettaPay via API REST, MCP server ou OpenAPI para criar faturas e confirmar pagamentos de forma autônoma, sem intervenção humana. <a href="https://eco.com/support/en/articles/14846271-why-ai-agents-need-stablecoin-payments" target="_blank" rel="noopener">Stablecoins na Base liquidam em segundos por menos de US$ 0,01</a>, tornando viáveis tickets muito pequenos que o cartão de crédito inviabiliza (2,9% + US$ 0,30).
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              BTCPay Server é gratuito? Qual a diferença para o ZettaPay?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                Sim, o <a href="https://btcpayserver.org/" target="_blank" rel="noopener">BTCPay Server</a> não cobra taxa, mas você precisa manter um servidor próprio (VPS, Docker, DNS e, para Bitcoin, um nó completo). O ZettaPay Cloud oferece a mesma liberdade de não custódia, sem a necessidade de manter infraestrutura. E se você prefere rodar o seu próprio servidor, o listener self-hosted do ZettaPay é open source e MIT.
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              O ZettaPay é seguro? Ele guarda minhas chaves?
+              <svg class="faq-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="faq-answer" role="region">
+              <div class="faq-answer-inner">
+                O ZettaPay nunca gera, armazena ou assina com chaves privadas. Ele só recebe material público (xpub ou endereço). Os fundos vão direto para a sua carteira. Não há conta custodial, não há saldo que possa ser congelado.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ Formulário de interesse ═══ -->
+    <section class="section-form" id="interesse">
+      <div class="container">
+        <div class="form-wrapper">
+          <h2>Quero participar</h2>
+          <p class="form-subtitle">Deixe seus dados e avisaremos quando sua conta estiver pronta.</p>
+          <form id="f" novalidate>
+            <div class="form-group">
+              <label for="name">Nome</label>
+              <input type="text" id="name" name="name" required autocomplete="name" placeholder="Seu nome">
+            </div>
+            <div class="form-group">
+              <label for="email">E-mail</label>
+              <input type="email" id="email" name="email" required autocomplete="email" placeholder="seu@email.com">
+            </div>
+            <div class="form-group">
+              <label for="phone">Telefone <span class="optional">(opcional)</span></label>
+              <input type="tel" id="phone" name="phone" autocomplete="tel" placeholder="+55 11 99999-0000">
+            </div>
+            <div class="form-group">
+              <label for="message">Mensagem <span class="optional">(opcional)</span></label>
+              <textarea id="message" name="message" placeholder="Como pretende usar o ZettaPay?"></textarea>
+            </div>
+            <input type="text" name="website" class="honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+            <button type="submit" id="b" class="btn btn-primary form-submit btn-lg">Enviar</button>
+            <div id="m" class="msg" aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ═══ Footer ═══ -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="assets/img/logo-icon.png" alt="ZettaPay" width="28" height="28" loading="lazy">
+        <span>ZettaPay</span>
+      </div>
+      <p class="footer-text">Um produto <a href="https://4profitai.com" target="_blank" rel="noopener">4Profit AI</a>. &copy; 2026 ZettaPay. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- JS (deferred, non-blocking) -->
+  <script src="assets/js/site.js" defer></script>
+
+  <!-- Form handler -->
+  <script>
+  (function () {
+    var ENDPOINT = "https://vortex.4profitai.com/api/capture/embed";
+    var f = document.getElementById("f"), b = document.getElementById("b"), m = document.getElementById("m");
+    function say(text, ok) { m.textContent = text; m.className = "msg " + (ok ? "ok" : "err"); }
+    f.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (f.website.value) return;
+      var name = f.name.value.trim(), email = f.email.value.trim();
+      if (!name) return say("Conte o seu nome.", false);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return say("Confira o e-mail.", false);
+      var body = {
+        product: "zettapay", name: name, email: email,
+        phone: f.phone.value.trim() || undefined, message: f.message.value.trim() || undefined,
+        source: "website", landing_page: location.href
+      };
+      b.disabled = true; say("Enviando…", true);
+      fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+        .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(function () { f.reset(); say("Pronto! Você está na lista. Avisaremos pelo e-mail.", true); })
+        .catch(function () { b.disabled = false; say("Não consegui enviar agora. Tente de novo em instantes.", false); });
+    });
+  })();
+  </script>
+
+  <!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  <script><!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      var body = JSON.stringify({ event: "page_view", company: "zettapay", page_path: location.pathname,
+        referrer: document.referrer || undefined, utm_source: q.get("utm_source") || undefined,
+        utm_medium: q.get("utm_medium") || undefined, utm_campaign: q.get("utm_campaign") || undefined });
+      fetch("https://vortex.4profitai.com/api/capture/page-event", { method: "POST", body: body, keepalive: true,
+        headers: { "Content-Type": "text/plain" } }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
+
+</body>
+</html>

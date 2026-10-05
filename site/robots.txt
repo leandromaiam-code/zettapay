@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zettapay.4profitai.com/sitemap.xml
