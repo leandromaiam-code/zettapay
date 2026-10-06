@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comparativo Gateway Pagamento Cripto 2026: Taxas</title>
+  <meta name="description" content="Comparativo de 7 gateways de pagamento cripto em 2026: taxas, custódia, KYC, moedas e integração. BTCPay, NOWPayments, Stripe, BitPay, Binance Pay e mais.">
+  <link rel="canonical" href="https://zettapay.4profitai.com/blog/comparativo-gateway-pagamento-cripto-2026/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zettapay.4profitai.com/blog/comparativo-gateway-pagamento-cripto-2026/">
+  <meta property="og:title" content="Comparativo Gateway Pagamento Cripto 2026: Taxas">
+  <meta property="og:description" content="Comparativo de 7 gateways de pagamento cripto em 2026: taxas, custódia, KYC, moedas e integração. BTCPay, NOWPayments, Stripe, BitPay, Binance Pay e mais.">
+  <meta property="og:image" content="https://zettapay.4profitai.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="ZettaPay">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Comparativo Gateway Pagamento Cripto 2026: Taxas">
+  <meta name="twitter:description" content="Comparativo de 7 gateways de pagamento cripto em 2026: taxas, custódia, KYC, moedas e integração. BTCPay, NOWPayments, Stripe, BitPay, Binance Pay e mais.">
+  <meta name="twitter:image" content="https://zettapay.4profitai.com/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1E3B33">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <style>
+    .article-hero { background: linear-gradient(160deg, #0A1A15 0%, #1E3B33 50%, #1a3830 100%); padding: calc(72px + var(--space-xl)) 0 var(--space-xl); }
+    .article-hero .container { max-width: 780px; }
+    .article-meta { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.875rem; color: rgba(244,249,247,0.55); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+    .article-meta time { color: rgba(244,249,247,0.7); }
+    .article-hero h1 { color: var(--frost); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: var(--space-md); }
+    .article-hero .article-lead { color: rgba(244,249,247,0.75); font-size: 1.125rem; line-height: 1.7; max-width: 640px; }
+    .article-body { max-width: 720px; margin: 0 auto; padding: var(--space-xl) var(--space-md) var(--space-2xl); }
+    .article-body h2 { margin: var(--space-xl) 0 var(--space-sm); font-size: clamp(1.35rem,3vw,1.75rem); }
+    .article-body h3 { margin: var(--space-lg) 0 var(--space-xs); font-size: 1.1875rem; }
+    .article-body p { margin-bottom: var(--space-sm); color: #3a4a44; font-size: 1.0625rem; line-height: 1.8; }
+    .article-body a { color: var(--deep-forest); text-decoration: underline; text-underline-offset: 2px; }
+    .article-body a:hover { color: var(--emerald-glow); }
+    .article-body ul, .article-body ol { margin: 0 0 var(--space-sm) var(--space-md); }
+    .article-body li { margin-bottom: 0.5rem; color: #3a4a44; font-size: 1.0625rem; line-height: 1.7; }
+    .article-body ul li { list-style: disc; }
+    .article-body ol li { list-style: decimal; }
+    .article-body blockquote { border-left: 3px solid var(--emerald-glow); padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--cloud); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .article-body blockquote p { color: #5C6560; font-size: 1rem; margin-bottom: 0; }
+    .article-cta { background: var(--cloud); border-radius: var(--radius-md); padding: var(--space-lg); text-align: center; margin: var(--space-xl) 0; border: 1px solid rgba(30,59,51,0.08); }
+    .article-cta h3 { margin-bottom: var(--space-sm); }
+    .article-cta p { margin-bottom: var(--space-md); color: #5C6560; }
+    .faq-section { margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid rgba(30,59,51,0.08); }
+    .faq-section h2 { margin-top: 0; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: rgba(244,249,247,0.45); margin-bottom: var(--space-md); flex-wrap: wrap; }
+    .breadcrumb a { color: rgba(244,249,247,0.6); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--emerald-glow); }
+    .breadcrumb span { color: rgba(244,249,247,0.3); }
+    .comparison-table { width: 100%; border-collapse: collapse; margin: var(--space-md) 0 var(--space-lg); font-size: 0.9375rem; overflow-x: auto; display: block; }
+    .comparison-table thead { background: #0A1A15; color: var(--frost); }
+    .comparison-table th { padding: 0.75rem 0.625rem; text-align: left; font-weight: 600; font-size: 0.8125rem; white-space: nowrap; }
+    .comparison-table td { padding: 0.625rem; border-bottom: 1px solid rgba(30,59,51,0.1); color: #3a4a44; font-size: 0.875rem; vertical-align: top; }
+    .comparison-table tbody tr:hover { background: rgba(30,59,51,0.03); }
+    .comparison-table .highlight-row { background: rgba(30,59,51,0.05); font-weight: 500; }
+    .comparison-table .highlight-row td { color: #1E3B33; }
+    .source-note { font-size: 0.8125rem; color: #8a9a94; margin-top: var(--space-xs); }
+  </style>
+
+  <!-- JSON-LD: Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Comparativo Gateway Pagamento Cripto 2026: Taxas",
+    "description": "Comparativo de 7 gateways de pagamento cripto em 2026: taxas, custódia, KYC, moedas e integração. BTCPay, NOWPayments, Stripe, BitPay, Binance Pay e mais.",
+    "image": "https://zettapay.4profitai.com/og-image.png",
+    "author": {
+      "@type": "Organization",
+      "name": "ZettaPay"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "4Profit AI",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://zettapay.4profitai.com/assets/img/logo-icon.png"
+      }
+    },
+    "datePublished": "2026-10-06",
+    "dateModified": "2026-10-06",
+    "mainEntityOfPage": "https://zettapay.4profitai.com/blog/comparativo-gateway-pagamento-cripto-2026/"
+  }
+  </script>
+
+  <!-- JSON-LD: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://zettapay.4profitai.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://zettapay.4profitai.com/blog/" },
+      { "@type": "ListItem", "position": 3, "name": "Comparativo Gateway Pagamento Cripto 2026", "item": "https://zettapay.4profitai.com/blog/comparativo-gateway-pagamento-cripto-2026/" }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Qual o melhor gateway de pagamento cripto para empresas no Brasil em 2026?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Depende das prioridades da empresa. Para quem quer receber direto na carteira sem custódia e sem taxa percentual alta, o ZettaPay (0,30% por transação, não-custodial) e o BTCPay Server (0%, auto-hospedado) se destacam. Para quem prefere liquidação em moeda fiduciária e aceita custódia, BitPay e Stripe são opções — mas com taxas de 1,5% a 2% e restrições geográficas."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Qual a diferença entre gateway custodial e não custodial?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Um gateway custodial (BitPay, Stripe, Coinbase Business) recebe o pagamento numa conta própria e depois repassa para você. Isso significa que ele pode congelar saldo, exigir verificação de identidade ou encerrar o serviço. Um gateway não-custodial (ZettaPay, BTCPay Server) nunca fica com os seus fundos — os pagamentos vão direto para a sua carteira."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "BTCPay Server vs gateway hospedado: qual escolher?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "O BTCPay Server é gratuito e não-custodial, mas exige manter servidor próprio (VPS, Docker, DNS e nó Bitcoin). Se você tem equipe técnica e quer controle total, é uma opção sólida. Se prefere zero infraestrutura para manter, um gateway hospedado não-custodial como o ZettaPay Cloud oferece a mesma liberdade sem o trabalho de DevOps."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quanto custa usar um gateway de pagamento em criptomoedas?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Os custos variam: BitPay cobra de 1% a 2% + US$ 0,25 por transação, Stripe cobra 1,5% em stablecoin, NOWPayments cobra 1%. O BTCPay Server não cobra taxa, mas tem custo de servidor. O ZettaPay Cloud cobra assinatura mensal (a partir de grátis) mais 0,30% por transação, sem taxa fixa por fatura."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Gateway cripto precisa de KYC no Brasil?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Depende do gateway. Processadores custodiais como BitPay e Coinbase Business exigem verificação de identidade (KYC) completa. Gateways não-custodiais como o ZettaPay e o BTCPay Server não exigem documentos — o cadastro pede apenas e-mail e nome da loja. A obrigação de KYC recai sobre o gateway custodial, não sobre o lojista que usa um processador não-custodial."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="/" class="header-logo" aria-label="ZettaPay — página inicial">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="36" height="36" loading="eager">
+        <span>ZettaPay</span>
+      </a>
+      <nav class="header-nav" role="navigation" aria-label="Menu principal">
+        <a href="/#como-funciona">Como funciona</a>
+        <a href="/#para-quem">Para quem</a>
+        <a href="/#preco">Preço</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#interesse" class="btn btn-primary">Quero participar</a>
+        <a href="https://zettapay.4profitai.com/app" class="btn btn-outline">Entrar</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Article Hero -->
+    <section class="article-hero">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="/">Home</a> <span>/</span>
+          <a href="/blog/">Blog</a> <span>/</span>
+          <span>Comparativo Gateway Cripto 2026</span>
+        </nav>
+        <div class="article-meta">
+          <time datetime="2026-10-06">6 de outubro de 2026</time>
+          <span>|</span>
+          <span>11 min de leitura</span>
+        </div>
+        <h1>Comparativo de Gateways de Pagamento Cripto em 2026: Taxas, Custódia e Integração</h1>
+        <p class="article-lead">Qual gateway de pagamento cripto escolher para a sua empresa? Comparamos 7 opções disponíveis em 2026 por taxa, custódia, KYC, moedas suportadas, chains, integração e liquidação. Dados de fontes públicas, com links.</p>
+      </div>
+    </section>
+
+    <!-- Article Body -->
+    <article class="article-body">
+
+      <h2>Por que comparar gateways de pagamento cripto em 2026</h2>
+
+      <p>O mercado de gateways de pagamento cripto mudou nos últimos dois anos. O <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">Coinbase Commerce encerrou fora dos EUA e de Singapura em 31/03/2026</a>, forçando milhares de lojistas a migrar. A <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" target="_blank" rel="noopener">Stripe entrou no mercado de stablecoins cobrando 1,5%</a>, mas somente para empresas americanas. E a <a href="https://www.trustpilot.com/review/bitpay.com" target="_blank" rel="noopener">BitPay continua com nota 1,2/5 no Trustpilot</a>.</p>
+
+      <p>Se você está escolhendo um gateway, precisa comparar por critérios que afetam o dia a dia: quanto custa, quem fica com os fundos, se exige documentos, quais moedas aceita, como integra e em quanto tempo liquida. Esta tabela responde essas perguntas.</p>
+
+      <p>Para quem procura especificamente uma alternativa ao Coinbase Commerce, temos um artigo dedicado: <a href="../alternativa-coinbase-commerce-brasil/">alternativa ao Coinbase Commerce no Brasil</a>.</p>
+
+      <h2>Tabela comparativa: 7 gateways de pagamento cripto</h2>
+
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Gateway</th>
+            <th>Taxa</th>
+            <th>Custódia</th>
+            <th>KYC</th>
+            <th>Moedas</th>
+            <th>Chains</th>
+            <th>Integração</th>
+            <th>Liquidação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong><a href="https://btcpayserver.org/" target="_blank" rel="noopener">BTCPay Server</a></strong></td>
+            <td>0% (custo do servidor)</td>
+            <td>Não-custodial</td>
+            <td>Não</td>
+            <td>BTC, Lightning, stablecoins (limitado)</td>
+            <td>Bitcoin, Lightning, algumas EVM</td>
+            <td>API, plugins WooCommerce/Shopify, checkout, PDV</td>
+            <td>Direto na carteira (na confirmação)</td>
+          </tr>
+          <tr>
+            <td><strong><a href="https://nowpayments.io/pricing" target="_blank" rel="noopener">NOWPayments</a></strong></td>
+            <td>1% por transação</td>
+            <td>Custodial</td>
+            <td>Sim (negócios)</td>
+            <td>300+ criptomoedas</td>
+            <td>Múltiplas</td>
+            <td>API, plugins, links de pagamento, doações</td>
+            <td>Cripto na conta NOWPayments (saque manual)</td>
+          </tr>
+          <tr>
+            <td><strong><a href="https://docs.stripe.com/payments/stablecoin-payments" target="_blank" rel="noopener">Stripe Crypto</a></strong></td>
+            <td>1,5% por transação</td>
+            <td>Custodial</td>
+            <td>Sim (completo)</td>
+            <td>USDC, USDP, USDG</td>
+            <td>Base, Ethereum, Solana, Polygon</td>
+            <td>Stripe Checkout, Payment Links, API</td>
+            <td>Saldo Stripe em moeda local (somente EUA)</td>
+          </tr>
+          <tr>
+            <td><strong><a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">BitPay</a></strong></td>
+            <td>2% + US$ 0,25 (&lt; US$ 500k/mês); 1% + US$ 0,25 (&gt; US$ 1M)</td>
+            <td>Custodial</td>
+            <td>Sim (completo)</td>
+            <td>BTC, ETH, USDC, DOGE, LTC e outras</td>
+            <td>Bitcoin, Ethereum e outras</td>
+            <td>API, plugins, checkout, faturamento</td>
+            <td>BRL, USD ou cripto (liquidação diária)</td>
+          </tr>
+          <tr>
+            <td><strong>Binance Pay</strong></td>
+            <td>0% (transferência entre usuários Binance)</td>
+            <td>Custodial</td>
+            <td>Sim (completo)</td>
+            <td>300+ criptomoedas</td>
+            <td>Rede Binance (interna)</td>
+            <td>API, QR code, links de pagamento</td>
+            <td>Saldo Binance (saque para carteira ou fiat)</td>
+          </tr>
+          <tr>
+            <td><strong><a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">Coinbase Business</a></strong></td>
+            <td>1% por transação (Commerce, encerrado)</td>
+            <td>Custodial</td>
+            <td>Sim (completo)</td>
+            <td>USDC, ETH e outras EVM</td>
+            <td>Base, Ethereum</td>
+            <td>Dashboard, API</td>
+            <td>Saldo Coinbase (EUA e Singapura)</td>
+          </tr>
+          <tr class="highlight-row">
+            <td><strong><a href="/#interesse">ZettaPay</a></strong></td>
+            <td>0,30% + plano mensal (grátis a US$ 49)</td>
+            <td>Não-custodial</td>
+            <td>Não</td>
+            <td>BTC, USDC, USDT</td>
+            <td>Bitcoin (BIP-84), Base</td>
+            <td>API REST, MCP, OpenAPI, webhooks HMAC, checkout</td>
+            <td>Direto na carteira (na confirmação)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="source-note">Fontes: <a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">BitPay Pricing</a>, <a href="https://nowpayments.io/pricing" target="_blank" rel="noopener">NOWPayments Pricing</a>, <a href="https://docs.stripe.com/payments/stablecoin-payments" target="_blank" rel="noopener">Stripe Docs</a>, <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" target="_blank" rel="noopener">Yahoo Finance</a>, <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">MoonPay</a>, <a href="https://wootoshi.com/blog/btcpay-vs-coinbase-commerce.html" target="_blank" rel="noopener">Wootoshi</a>, <a href="https://btcpayserver.org/" target="_blank" rel="noopener">BTCPay Server</a>. Dados coletados em outubro de 2026.</p>
+
+      <h2>Custodial vs. não-custodial: a distinção mais importante</h2>
+
+      <p>Antes de comparar taxas, entenda a diferença fundamental entre os dois modelos:</p>
+
+      <h3>Gateway custodial</h3>
+
+      <p>O pagamento do cliente vai para uma conta controlada pelo gateway. Depois, o gateway repassa para você, segundo as regras dele. Isso cria três riscos concretos:</p>
+
+      <ul>
+        <li><strong>Saldo congelado:</strong> o gateway pode bloquear seus fundos a qualquer momento. A <a href="https://www.trustpilot.com/review/bitpay.com" target="_blank" rel="noopener">BitPay tem 89% de avaliações de uma estrela no Trustpilot</a>, com relatos recorrentes de saldo inacessível.</li>
+        <li><strong>Encerramento do serviço:</strong> o Coinbase Commerce fechou fora dos EUA e de Singapura em 31/03/2026, <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">sem prorrogação</a>. Lojistas tiveram que sacar os fundos e migrar às pressas.</li>
+        <li><strong>KYC e compliance:</strong> gateways custodiais são obrigados a exigir verificação de identidade. Se a verificação for negada, você pode perder acesso ao saldo.</li>
+      </ul>
+
+      <h3>Gateway não-custodial</h3>
+
+      <p>O pagamento vai direto do cliente para a sua carteira. O gateway só recebe sua chave pública, gera endereços e monitora a blockchain. Não há conta intermediária, não há saldo preso, não há KYC obrigatório.</p>
+
+      <p>Na tabela, os gateways não-custodiais são o BTCPay Server e o ZettaPay. Todos os demais são custodiais.</p>
+
+      <h2>Análise por gateway</h2>
+
+      <h3>BTCPay Server: máximo controle, máximo trabalho</h3>
+
+      <p>O <a href="https://btcpayserver.org/" target="_blank" rel="noopener">BTCPay Server</a> é a referência em processamento não-custodial: open source, sem taxa, sem terceiros. Os fundos vão direto para a sua carteira. Mas <a href="https://keasigmadelta.com/blog/btcpay-server-how-easy-is-it-to-setup/" target="_blank" rel="noopener">instalar e manter exige VPS, Docker, DNS e nó Bitcoin</a>. Relatos indicam que BTC sozinho funciona bem, mas suporte a outras moedas e Lightning traz obstáculos técnicos.</p>
+
+      <p><strong>Melhor para:</strong> devs com experiência em infraestrutura que querem controle total e não se importam em manter servidor.</p>
+
+      <h3>NOWPayments: muitas moedas, custódia obrigatória</h3>
+
+      <p>O <a href="https://nowpayments.io/pricing" target="_blank" rel="noopener">NOWPayments</a> aceita mais de 300 criptomoedas e cobra 1% por transação. É custodial: os fundos ficam na conta NOWPayments até você sacar. Exige KYC para contas de negócio.</p>
+
+      <p><strong>Melhor para:</strong> quem precisa aceitar dezenas de altcoins diferentes e aceita custódia em troca da variedade.</p>
+
+      <h3>Stripe Crypto: integração familiar, restrições geográficas</h3>
+
+      <p>A <a href="https://docs.stripe.com/payments/stablecoin-payments" target="_blank" rel="noopener">Stripe</a> passou a aceitar pagamentos em stablecoin (USDC, USDP, USDG), mas cobra <a href="https://finance.yahoo.com/news/stripe-charges-1-5-stablecoin-145737023.html" target="_blank" rel="noopener">1,5% por transação</a>. O pagamento cai no saldo Stripe em moeda local, não na carteira do lojista. Disponível somente para empresas dos EUA; UE, Hong Kong, México e Suíça estão em prévia privada.</p>
+
+      <p><strong>Melhor para:</strong> empresas americanas que já usam Stripe e querem adicionar stablecoin ao checkout existente.</p>
+
+      <h3>BitPay: liquidação em fiat, mas custódia e taxas altas</h3>
+
+      <p>A <a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">BitPay</a> cobra de 2% + US$ 0,25 (abaixo de US$ 500 mil/mês) a 1% + US$ 0,25 (acima de US$ 1 milhão/mês). Oferece liquidação diária em BRL, USD ou cripto. É custodial e exige KYC completo. A <a href="https://www.trustpilot.com/review/bitpay.com" target="_blank" rel="noopener">nota no Trustpilot (1,2/5)</a> reflete problemas recorrentes com saldo e verificação.</p>
+
+      <p><strong>Melhor para:</strong> empresas que precisam de liquidação automática em moeda fiduciária e aceitam os riscos da custódia.</p>
+
+      <h3>Binance Pay: zero taxa entre usuários, ecossistema fechado</h3>
+
+      <p>O Binance Pay não cobra taxa para transferências entre usuários Binance. Mas tanto o pagador quanto o recebedor precisam de conta Binance verificada (KYC completo). Os fundos ficam no saldo Binance. Fora do ecossistema Binance, a utilidade é limitada.</p>
+
+      <p><strong>Melhor para:</strong> negócios cujos clientes já têm conta Binance e aceitam pagar dentro do ecossistema.</p>
+
+      <h3>Coinbase Business: substituto custodial do Commerce</h3>
+
+      <p>O Coinbase Commerce <a href="https://news.bitcoin.com/coinbase-commerce-ditches-support-for-bitcoin-payments-using-self-custody-wallets/" target="_blank" rel="noopener">deixou de aceitar BTC de carteiras próprias em 2024</a> e foi <a href="https://www.moonpay.com/newsroom/coinbase-commerce-shutdown-guide-for-merchants" target="_blank" rel="noopener">encerrado fora dos EUA/Singapura em 31/03/2026</a>. O substituto, Coinbase Business, é custodial e restrito geograficamente. Quem dependia do Commerce precisou migrar.</p>
+
+      <p><strong>Melhor para:</strong> empresas nos EUA ou Singapura que já usam Coinbase e aceitam custódia.</p>
+
+      <h3>ZettaPay: não-custodial hospedado, sem infra para manter</h3>
+
+      <p>O <a href="/#interesse">ZettaPay</a> ocupa o espaço entre o BTCPay Server (não-custodial, mas exige servidor) e os gateways hospedados custodiais. Aceita BTC (BIP-84), USDC e USDT na Base. Os fundos vão direto para a sua carteira. Cobra 0,30% por transação mais assinatura mensal: Free (50 faturas/mês, grátis), Starter (500/mês, US$ 19) e Pro (5.000/mês, US$ 49). Também oferece listener self-hosted open source MIT.</p>
+
+      <p><strong>Melhor para:</strong> lojistas e devs que querem a soberania do BTCPay sem o trabalho de manter servidor, e construtores de agentes de IA que precisam de API, MCP e webhooks HMAC.</p>
+
+      <div class="article-cta">
+        <h3>Compare na prática</h3>
+        <p>Crie sua conta ZettaPay grátis e teste com 50 faturas por mês. Sem documentos, sem custódia, 0,30% por transação.</p>
+        <a href="/#interesse" class="btn btn-primary btn-lg">Quero participar</a>
+      </div>
+
+      <h2>Como escolher o gateway certo para a sua empresa</h2>
+
+      <p>A decisão depende de três fatores principais:</p>
+
+      <h3>1. Você quer custódia ou soberania?</h3>
+
+      <p>Se você não quer que ninguém fique com os seus fundos, as opções são BTCPay Server (auto-hospedado) ou ZettaPay (hospedado). Se aceita custódia em troca de liquidação em fiat, BitPay e Stripe são as opções mais conhecidas.</p>
+
+      <h3>2. Quanto volume você processa?</h3>
+
+      <p>Para volumes baixos (até 50 faturas/mês), o plano Free do ZettaPay ou uma instalação BTCPay Server são suficientes. Para volumes altos, compare: a BitPay cobra 2% + US$ 0,25 por fatura. Em 1.000 faturas de US$ 100, isso equivale a US$ 2.250/mês em taxas. No ZettaPay Pro (US$ 49/mês + 0,30%), o mesmo volume custa US$ 349.</p>
+
+      <h3>3. Qual é o seu perfil técnico?</h3>
+
+      <p>Se tem equipe DevOps e quer controle máximo, o BTCPay Server é a escolha natural. Se quer integrar em uma tarde com API e webhooks, sem provisionar servidor, o ZettaPay Cloud ou NOWPayments resolvem. Se já usa Stripe e está nos EUA, o módulo crypto da Stripe é o caminho de menor atrito.</p>
+
+      <h2>Custos reais: cenários de uso</h2>
+
+      <p>Para tornar a comparação concreta, veja três cenários com custos mensais estimados:</p>
+
+      <ul>
+        <li><strong>Lojista pequeno (100 faturas/mês, ticket médio US$ 50):</strong> BitPay = US$ 225 (2% + US$ 0,25). NOWPayments = US$ 50 (1%). ZettaPay Starter = US$ 34 (US$ 19 + 0,30% de US$ 5.000). BTCPay = US$ 0 em taxa (+ ~US$ 10-20/mês de VPS).</li>
+        <li><strong>SaaS médio (2.000 faturas/mês, ticket médio US$ 30):</strong> BitPay = US$ 1.700. Stripe = US$ 900 (1,5%). ZettaPay Pro = US$ 229 (US$ 49 + 0,30% de US$ 60.000). BTCPay = US$ 0 (+ VPS robusto).</li>
+        <li><strong>Agente de IA (5.000 micropagamentos/mês, ticket médio US$ 0,50):</strong> Cartão de crédito = inviável (2,9% + US$ 0,30 > ticket). ZettaPay Pro = US$ 56,50 (US$ 49 + 0,30% de US$ 2.500). BTCPay = US$ 0 (+ servidor).</li>
+      </ul>
+
+      <p>Para entender por que micropagamentos de agentes de IA precisam de stablecoins, leia nosso artigo sobre <a href="../pagamento-cripto-agentes-ia-blockchain/">pagamento cripto para agentes de IA e blockchain</a>. E para um guia prático de como aceitar BTC especificamente, veja <a href="../aceitar-bitcoin-loja-online/">como aceitar Bitcoin na loja online</a>.</p>
+
+      <h2>Regulamentação: KYC e compliance no Brasil</h2>
+
+      <p>Gateways custodiais são prestadores de serviços de ativos virtuais (VASPs) e, segundo o Marco Legal dos Criptoativos (Lei 14.478/2022), devem seguir regras do Banco Central, incluindo KYC/AML. Na prática, isso significa que BitPay, NOWPayments, Stripe e Coinbase Business exigem verificação completa.</p>
+
+      <p>Gateways não-custodiais como o ZettaPay e o BTCPay Server não ficam com os fundos do cliente, o que muda o enquadramento regulatório. O ZettaPay não exige documentos nem verificação de identidade: o cadastro pede apenas e-mail e nome da loja.</p>
+
+      <blockquote>
+        <p>A obrigação de KYC recai sobre quem custodia os fundos. Se o gateway não custódia, a exigência não se aplica ao processador.</p>
+      </blockquote>
+
+      <div class="faq-section">
+        <h2>Perguntas frequentes</h2>
+
+        <h3>Qual o melhor gateway de pagamento cripto para empresas no Brasil em 2026?</h3>
+        <p>Depende das prioridades. Para receber direto na carteira sem custódia, o <a href="/#interesse">ZettaPay</a> (0,30%, hospedado) e o BTCPay Server (0%, auto-hospedado) se destacam. Para liquidação em moeda fiduciária com custódia, BitPay e Stripe são opções, mas com taxas de 1,5% a 2% e restrições geográficas.</p>
+
+        <h3>Qual a diferença entre gateway custodial e não custodial?</h3>
+        <p>Um gateway custodial recebe o pagamento numa conta própria e depois repassa. Pode congelar saldo, exigir KYC ou encerrar o serviço. Um gateway não-custodial nunca fica com os fundos: os pagamentos vão direto para a sua carteira.</p>
+
+        <h3>BTCPay Server vs gateway hospedado: qual escolher?</h3>
+        <p>O BTCPay Server é gratuito e não-custodial, mas exige manter servidor próprio (VPS, Docker, DNS e nó Bitcoin). Se prefere zero infraestrutura, um gateway hospedado não-custodial como o ZettaPay Cloud oferece a mesma liberdade sem o trabalho de DevOps.</p>
+
+        <h3>Quanto custa usar um gateway de pagamento em criptomoedas?</h3>
+        <p>Varia: BitPay cobra de 1% a 2% + US$ 0,25 por transação. Stripe cobra 1,5% em stablecoin. NOWPayments cobra 1%. BTCPay Server não cobra taxa, mas tem custo de servidor. ZettaPay Cloud cobra assinatura mensal (a partir de grátis) mais 0,30% por transação.</p>
+
+        <h3>Gateway cripto precisa de KYC no Brasil?</h3>
+        <p>Gateways custodiais (BitPay, Stripe, Coinbase Business) exigem verificação completa. Gateways não-custodiais (ZettaPay, BTCPay Server) não exigem documentos: o cadastro pede apenas e-mail e nome da loja.</p>
+      </div>
+
+    </article>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="28" height="28" loading="lazy">
+        <span>ZettaPay</span>
+      </div>
+      <p class="footer-text">Um produto <a href="https://4profitai.com" target="_blank" rel="noopener">4Profit AI</a>. &copy; 2026 ZettaPay. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="../../assets/js/site.js" defer></script>
+
+  <script><!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      var body = JSON.stringify({ event: "page_view", company: "zettapay", page_path: location.pathname,
+        referrer: document.referrer || undefined, utm_source: q.get("utm_source") || undefined,
+        utm_medium: q.get("utm_medium") || undefined, utm_campaign: q.get("utm_campaign") || undefined });
+      fetch("https://vortex.4profitai.com/api/capture/page-event", { method: "POST", body: body, keepalive: true,
+        headers: { "Content-Type": "text/plain" } }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
+
+</body>
+</html>

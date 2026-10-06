@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Como Receber Pagamento em Stablecoin USDC e USDT</title>
+  <meta name="description" content="Guia prático para receber pagamentos em USDC e USDT na sua empresa. Diferenças entre stablecoins, regulamentação no Brasil e custos vs cartão e PIX.">
+  <link rel="canonical" href="https://zettapay.4profitai.com/blog/stablecoin-usdc-usdt-pagamento-como-receber/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zettapay.4profitai.com/blog/stablecoin-usdc-usdt-pagamento-como-receber/">
+  <meta property="og:title" content="Como Receber Pagamento em Stablecoin USDC e USDT">
+  <meta property="og:description" content="Guia prático para receber pagamentos em USDC e USDT na sua empresa. Diferenças entre stablecoins, regulamentação no Brasil e custos vs cartão e PIX.">
+  <meta property="og:image" content="https://zettapay.4profitai.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="ZettaPay">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Como Receber Pagamento em Stablecoin USDC e USDT">
+  <meta name="twitter:description" content="Guia prático para receber pagamentos em USDC e USDT na sua empresa. Diferenças entre stablecoins, regulamentação no Brasil e custos vs cartão e PIX.">
+  <meta name="twitter:image" content="https://zettapay.4profitai.com/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1E3B33">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <style>
+    .article-hero { background: linear-gradient(160deg, #0A1A15 0%, #1E3B33 50%, #1a3830 100%); padding: calc(72px + var(--space-xl)) 0 var(--space-xl); }
+    .article-hero .container { max-width: 780px; }
+    .article-meta { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.875rem; color: rgba(244,249,247,0.55); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+    .article-meta time { color: rgba(244,249,247,0.7); }
+    .article-hero h1 { color: var(--frost); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: var(--space-md); }
+    .article-hero .article-lead { color: rgba(244,249,247,0.75); font-size: 1.125rem; line-height: 1.7; max-width: 640px; }
+    .article-body { max-width: 720px; margin: 0 auto; padding: var(--space-xl) var(--space-md) var(--space-2xl); }
+    .article-body h2 { margin: var(--space-xl) 0 var(--space-sm); font-size: clamp(1.35rem,3vw,1.75rem); }
+    .article-body h3 { margin: var(--space-lg) 0 var(--space-xs); font-size: 1.1875rem; }
+    .article-body p { margin-bottom: var(--space-sm); color: #3a4a44; font-size: 1.0625rem; line-height: 1.8; }
+    .article-body a { color: var(--deep-forest); text-decoration: underline; text-underline-offset: 2px; }
+    .article-body a:hover { color: var(--emerald-glow); }
+    .article-body ul, .article-body ol { margin: 0 0 var(--space-sm) var(--space-md); }
+    .article-body li { margin-bottom: 0.5rem; color: #3a4a44; font-size: 1.0625rem; line-height: 1.7; }
+    .article-body ul li { list-style: disc; }
+    .article-body ol li { list-style: decimal; }
+    .article-body blockquote { border-left: 3px solid var(--emerald-glow); padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--cloud); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .article-body blockquote p { color: #5C6560; font-size: 1rem; margin-bottom: 0; }
+    .article-cta { background: var(--cloud); border-radius: var(--radius-md); padding: var(--space-lg); text-align: center; margin: var(--space-xl) 0; border: 1px solid rgba(30,59,51,0.08); }
+    .article-cta h3 { margin-bottom: var(--space-sm); }
+    .article-cta p { margin-bottom: var(--space-md); color: #5C6560; }
+    .faq-section { margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid rgba(30,59,51,0.08); }
+    .faq-section h2 { margin-top: 0; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: rgba(244,249,247,0.45); margin-bottom: var(--space-md); flex-wrap: wrap; }
+    .breadcrumb a { color: rgba(244,249,247,0.6); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--emerald-glow); }
+    .breadcrumb span { color: rgba(244,249,247,0.3); }
+  </style>
+
+  <!-- JSON-LD: Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Como Receber Pagamento em Stablecoin USDC e USDT",
+    "description": "Guia prático para receber pagamentos em USDC e USDT na sua empresa. Diferenças entre stablecoins, regulamentação no Brasil e custos vs cartão e PIX.",
+    "image": "https://zettapay.4profitai.com/og-image.png",
+    "author": {
+      "@type": "Organization",
+      "name": "ZettaPay"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "4Profit AI",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://zettapay.4profitai.com/assets/img/logo-icon.png"
+      }
+    },
+    "datePublished": "2026-10-06",
+    "dateModified": "2026-10-06",
+    "mainEntityOfPage": "https://zettapay.4profitai.com/blog/stablecoin-usdc-usdt-pagamento-como-receber/"
+  }
+  </script>
+
+  <!-- JSON-LD: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://zettapay.4profitai.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://zettapay.4profitai.com/blog/" },
+      { "@type": "ListItem", "position": 3, "name": "Como Receber Pagamento em Stablecoin USDC e USDT", "item": "https://zettapay.4profitai.com/blog/stablecoin-usdc-usdt-pagamento-como-receber/" }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "O que é USDC e como funciona essa stablecoin?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "USDC (USD Coin) é uma stablecoin emitida pela Circle, pareada 1:1 com o dólar americano. Cada USDC em circulação tem um dólar (ou ativo equivalente) em reserva, auditado mensalmente. Funciona como dinheiro digital programável: você envia e recebe pela blockchain, com liquidação em segundos e custo de rede de frações de centavo em redes como a Base."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "USDT ou USDC: qual a diferença entre as stablecoins para pagamento?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ambas mantêm paridade com o dólar, mas diferem na emissora e na transparência. O USDC (Circle) publica auditorias mensais de reserva e é regulado nos EUA. O USDT (Tether) tem maior liquidez global, mas suas reservas são divulgadas trimestralmente com menos detalhes. Para receber pagamentos, ambas funcionam na prática — o ZettaPay aceita as duas na rede Base."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Como aceitar criptomoeda como forma de pagamento na empresa?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Você precisa de uma carteira cripto (para BTC, um xpub; para stablecoins, um endereço na rede Base) e de um gateway de pagamento que gere faturas e monitore a blockchain. Com o ZettaPay, basta colar sua chave pública, criar uma fatura via API e os fundos vão direto para a sua carteira, sem custódia e sem taxa por transação."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Stablecoins são legais no Brasil para receber pagamentos?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Sim. O Marco Legal dos Criptoativos (Lei 14.478/2022) reconhece ativos virtuais no Brasil e atribui ao Banco Central a regulamentação das prestadoras de serviços de ativos virtuais. Receber pagamentos em stablecoins é legal, desde que a empresa cumpra as obrigações fiscais sobre a receita (como faria com qualquer moeda estrangeira)."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Qual a vantagem de receber em stablecoin vs real?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Stablecoins eliminam intermediários bancários: a liquidação é direta (segundos, não dias úteis), a taxa de rede é de frações de centavo e não há estorno (chargeback). Para vendas internacionais, receber em USDC ou USDT evita câmbio bancário, SWIFT e IOF, permitindo que o valor chegue integralmente à sua carteira."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="/" class="header-logo" aria-label="ZettaPay — página inicial">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="36" height="36" loading="eager">
+        <span>ZettaPay</span>
+      </a>
+      <nav class="header-nav" role="navigation" aria-label="Menu principal">
+        <a href="/#como-funciona">Como funciona</a>
+        <a href="/#para-quem">Para quem</a>
+        <a href="/#preco">Preço</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#interesse" class="btn btn-primary">Quero participar</a>
+        <a href="https://zettapay.4profitai.com/app" class="btn btn-outline">Entrar</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Article Hero -->
+    <section class="article-hero">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="/">Home</a> <span>/</span>
+          <a href="/blog/">Blog</a> <span>/</span>
+          <span>Stablecoin USDC e USDT para Pagamento</span>
+        </nav>
+        <div class="article-meta">
+          <time datetime="2026-10-06">6 de outubro de 2026</time>
+          <span>|</span>
+          <span>9 min de leitura</span>
+        </div>
+        <h1>Como Receber Pagamento em Stablecoin USDC e USDT: Guia Prático para Empresas</h1>
+        <p class="article-lead">Stablecoins como USDC e USDT permitem receber pagamentos em dólar digital, com liquidação em segundos e custo de rede de frações de centavo. Este guia explica o que são, como diferem, como montar o fluxo de recebimento e o que diz a legislação brasileira.</p>
+      </div>
+    </section>
+
+    <!-- Article Body -->
+    <article class="article-body">
+
+      <h2>O que são stablecoins e por que importam para pagamentos</h2>
+
+      <p>Stablecoins são criptomoedas com valor atrelado a um ativo estável, geralmente o dólar americano. Diferente do Bitcoin, que pode variar 5% em um dia, USDC e USDT mantêm paridade de 1:1 com o dólar. Cada token em circulação tem reserva correspondente na emissora.</p>
+
+      <p>Para quem recebe pagamentos, a estabilidade muda tudo: o valor que o cliente pagou é o valor que chega na sua carteira, sem risco de variação entre o momento da compra e a confirmação na blockchain.</p>
+
+      <p>Se você já aceita ou quer aceitar Bitcoin na sua loja, as stablecoins são um complemento natural. Elas atraem clientes que querem pagar com cripto, mas preferem a previsibilidade do dólar. Veja nosso <a href="../aceitar-bitcoin-loja-online/">guia para aceitar Bitcoin na loja online</a> para configurar as duas opções juntas.</p>
+
+      <h2>USDC vs. USDT: diferenças que importam para o lojista</h2>
+
+      <h3>USDC (USD Coin)</h3>
+
+      <p>Emitida pela <a href="https://www.circle.com/" target="_blank" rel="noopener">Circle</a>, a USDC publica relatórios mensais de reserva auditados por firma independente. As reservas são compostas por títulos do Tesouro americano e depósitos bancários. A Circle é regulada nos EUA e opera sob licenças estaduais de transmissor de dinheiro.</p>
+
+      <ul>
+        <li><strong>Transparência:</strong> auditorias mensais publicadas</li>
+        <li><strong>Regulamentação:</strong> regulada nos EUA (FinCEN, licenças estaduais)</li>
+        <li><strong>Chains:</strong> disponível em mais de 15 redes, incluindo Base, Ethereum e Solana</li>
+      </ul>
+
+      <h3>USDT (Tether)</h3>
+
+      <p>Emitida pela <a href="https://tether.to/" target="_blank" rel="noopener">Tether</a>, a USDT tem a maior liquidez global entre stablecoins. Seus relatórios de reserva são trimestrais e menos detalhados que os da USDC. A Tether opera a partir de jurisdições como Ilhas Virgens Britânicas.</p>
+
+      <ul>
+        <li><strong>Liquidez:</strong> maior volume de negociação entre stablecoins</li>
+        <li><strong>Transparência:</strong> relatórios trimestrais, menos detalhados</li>
+        <li><strong>Chains:</strong> disponível em dezenas de redes, incluindo Base, Ethereum e Tron</li>
+      </ul>
+
+      <h3>Qual escolher para receber pagamentos?</h3>
+
+      <p>Na prática, ambas funcionam para recebimento. O USDC tende a ser preferido por empresas que valorizam conformidade regulatória. O USDT tem maior adoção em mercados asiáticos e latino-americanos. A abordagem mais pragmática é aceitar as duas e deixar o pagador escolher.</p>
+
+      <h2>Como montar o fluxo de recebimento em stablecoin</h2>
+
+      <p>O processo de receber stablecoins segue quatro etapas:</p>
+
+      <ol>
+        <li><strong>Crie uma carteira na rede Base</strong> — qualquer carteira compatível com EVM funciona (MetaMask, Rabby, Ledger, Trezor). Anote o endereço público da carteira.</li>
+        <li><strong>Configure um gateway de pagamento</strong> — informe o endereço público ao gateway. No <a href="/#interesse">ZettaPay</a>, basta colar o endereço; ele nunca pede chave privada nem pede para conectar a carteira.</li>
+        <li><strong>Crie faturas via API</strong> — cada fatura gera um endereço de recebimento único, derivado a partir do seu endereço público. O pagador envia USDC ou USDT para esse endereço.</li>
+        <li><strong>Receba a confirmação via webhook</strong> — quando o pagamento confirma na blockchain (segundos na Base), o gateway dispara um webhook assinado (HMAC) para o seu servidor. Você valida a assinatura e libera o produto.</li>
+      </ol>
+
+      <p>Os fundos vão direto para a sua carteira. Em um gateway não-custodial como o ZettaPay, nenhum intermediário fica com o seu dinheiro.</p>
+
+      <h2>Regulamentação no Brasil: o que diz a lei</h2>
+
+      <p>O Marco Legal dos Criptoativos (Lei 14.478, de dezembro de 2022) reconhece ativos virtuais no Brasil e atribui ao Banco Central a regulamentação das prestadoras de serviços de ativos virtuais (VASPs). A lei não proíbe empresas de receber pagamentos em stablecoins.</p>
+
+      <p>Na prática, receber USDC ou USDT funciona como receber em moeda estrangeira: a empresa deve registrar a receita e cumprir as obrigações fiscais aplicáveis (IR, PIS/COFINS, CSLL). A base de cálculo é o valor em reais no momento do recebimento, conforme a cotação do dólar.</p>
+
+      <blockquote>
+        <p>A legislação brasileira não impede que empresas recebam pagamentos em criptoativos. O que ela exige é que a receita seja declarada e tributada normalmente, como qualquer receita em moeda estrangeira.</p>
+      </blockquote>
+
+      <p>Para operações internacionais, receber em stablecoin evita SWIFT, câmbio bancário e as taxas associadas. O valor chega integralmente à sua carteira, e a conversão para real (se desejada) pode ser feita em exchange brasileira no momento mais conveniente.</p>
+
+      <h2>Custos: stablecoin vs. cartão vs. PIX vs. boleto</h2>
+
+      <p>A comparação de custos mostra por que stablecoins são competitivas para pagamentos, especialmente internacionais:</p>
+
+      <ul>
+        <li><strong>Cartão de crédito:</strong> 2,5% a 4,5% + taxa fixa por transação. Risco de chargeback. Liquidação em 30 dias (D+30).</li>
+        <li><strong>PIX:</strong> gratuito ou com taxa de 0,01% a 1% dependendo do PSP. Liquidação instantânea, mas restrito ao Brasil.</li>
+        <li><strong>Boleto:</strong> R$ 2 a R$ 5 por emissão. Liquidação em D+1 a D+3. Restrito ao Brasil.</li>
+        <li><strong>Stablecoin (via ZettaPay):</strong> 0,30% por transação + assinatura mensal (a partir de grátis). Liquidação em segundos. Funciona globalmente.</li>
+      </ul>
+
+      <p>Para vendas internacionais, a diferença é mais significativa. Transferências SWIFT custam US$ 15 a US$ 50 por operação, levam de 1 a 5 dias úteis e passam por bancos correspondentes que podem reter valores. Com stablecoins na Base, a transferência custa frações de centavo e liquida em segundos.</p>
+
+      <div class="article-cta">
+        <h3>Comece a receber em USDC e USDT</h3>
+        <p>Cole seu endereço na Base e crie sua primeira fatura em minutos. Sem documentos, sem custódia, 0,30% por transação.</p>
+        <a href="/#interesse" class="btn btn-primary btn-lg">Quero participar</a>
+      </div>
+
+      <h2>Stablecoins para SaaS e APIs: tickets pequenos sem atrito</h2>
+
+      <p>Para empresas SaaS e APIs que cobram por uso, stablecoins resolvem um problema real: a tarifa do cartão de crédito (2,9% + US$ 0,30) pode ser maior que o valor da transação. <a href="https://eco.com/support/en/articles/14846271-why-ai-agents-need-stablecoin-payments" target="_blank" rel="noopener">Um pagamento médio de agente de IA custa US$ 0,31</a> — no cartão, a taxa fixa sozinha consome quase todo o valor.</p>
+
+      <p>Stablecoins na Base liquidam por menos de US$ 0,01, independentemente do valor. Isso torna viáveis micropagamentos que o sistema bancário tradicional inviabiliza. Saiba mais sobre esse cenário no nosso artigo sobre <a href="../pagamento-cripto-agentes-ia-blockchain/">pagamento cripto para agentes de IA</a>.</p>
+
+      <h2>Por que usar um gateway não-custodial</h2>
+
+      <p>Gateways custodiais como <a href="https://www.bitpay.com/pricing" target="_blank" rel="noopener">BitPay</a> (2% + US$ 0,25 por transação) e <a href="https://docs.stripe.com/payments/stablecoin-payments" target="_blank" rel="noopener">Stripe</a> (1,5% em stablecoin, somente empresas dos EUA) recebem os fundos na conta deles e depois repassam para você. Isso cria riscos: saldo congelado, verificação de identidade negada, encerramento do serviço.</p>
+
+      <p>O ZettaPay é não-custodial: ele nunca gera, armazena ou assina com chaves privadas. Recebe apenas o seu endereço público, gera endereços de fatura, monitora a blockchain e dispara webhooks. Os fundos vão direto do pagador para a sua carteira.</p>
+
+      <p>O ZettaPay Cloud cobra assinatura fixa mensal por volume de faturas: Free (50/mês, grátis), Starter (500/mês, US$ 19) e Pro (5.000/mês, US$ 49). Além da taxa de 0,30% por transação. Se preferir infraestrutura própria, o listener self-hosted é open source MIT.</p>
+
+      <div class="faq-section">
+        <h2>Perguntas frequentes</h2>
+
+        <h3>O que é USDC e como funciona essa stablecoin?</h3>
+        <p>USDC (USD Coin) é uma stablecoin emitida pela Circle, pareada 1:1 com o dólar americano. Cada USDC em circulação tem um dólar (ou ativo equivalente) em reserva, auditado mensalmente. Funciona como dinheiro digital programável: você envia e recebe pela blockchain, com liquidação em segundos e custo de rede de frações de centavo em redes como a Base.</p>
+
+        <h3>USDT ou USDC: qual a diferença entre as stablecoins para pagamento?</h3>
+        <p>Ambas mantêm paridade com o dólar, mas diferem na emissora e transparência. O USDC (Circle) publica auditorias mensais e é regulado nos EUA. O USDT (Tether) tem maior liquidez global, mas reservas divulgadas trimestralmente com menos detalhes. Para receber pagamentos, ambas funcionam — o ZettaPay aceita as duas na rede Base.</p>
+
+        <h3>Como aceitar criptomoeda como forma de pagamento na empresa?</h3>
+        <p>Você precisa de uma carteira cripto e de um gateway de pagamento que gere faturas e monitore a blockchain. Com o <a href="/#interesse">ZettaPay</a>, basta colar sua chave pública, criar uma fatura via API e os fundos vão direto para a sua carteira, sem custódia e sem taxa por transação fixa.</p>
+
+        <h3>Stablecoins são legais no Brasil para receber pagamentos?</h3>
+        <p>Sim. O Marco Legal dos Criptoativos (Lei 14.478/2022) reconhece ativos virtuais no Brasil. Receber pagamentos em stablecoins é legal, desde que a empresa cumpra as obrigações fiscais sobre a receita, como faria com qualquer moeda estrangeira.</p>
+
+        <h3>Qual a vantagem de receber em stablecoin vs real?</h3>
+        <p>Stablecoins eliminam intermediários bancários: liquidação direta em segundos (não dias úteis), taxa de rede de frações de centavo e sem estorno (chargeback). Para vendas internacionais, receber em USDC ou USDT evita câmbio bancário, SWIFT e IOF.</p>
+      </div>
+
+    </article>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="28" height="28" loading="lazy">
+        <span>ZettaPay</span>
+      </div>
+      <p class="footer-text">Um produto <a href="https://4profitai.com" target="_blank" rel="noopener">4Profit AI</a>. &copy; 2026 ZettaPay. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="../../assets/js/site.js" defer></script>
+
+  <script><!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      var body = JSON.stringify({ event: "page_view", company: "zettapay", page_path: location.pathname,
+        referrer: document.referrer || undefined, utm_source: q.get("utm_source") || undefined,
+        utm_medium: q.get("utm_medium") || undefined, utm_campaign: q.get("utm_campaign") || undefined });
+      fetch("https://vortex.4profitai.com/api/capture/page-event", { method: "POST", body: body, keepalive: true,
+        headers: { "Content-Type": "text/plain" } }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
+
+</body>
+</html>
