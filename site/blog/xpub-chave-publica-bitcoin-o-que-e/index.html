@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xpub Bitcoin: o que é a chave pública estendida</title>
+  <meta name="description" content="Xpub é a chave pública estendida do Bitcoin: gera endereços de recebimento sem permitir gastar. Veja como funciona, o que ela revela e como usar.">
+  <link rel="canonical" href="https://zettapay.4profitai.com/blog/xpub-chave-publica-bitcoin-o-que-e/">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://zettapay.4profitai.com/blog/xpub-chave-publica-bitcoin-o-que-e/">
+  <meta property="og:title" content="Xpub Bitcoin: o que é a chave pública estendida">
+  <meta property="og:description" content="Xpub é a chave pública estendida do Bitcoin: gera endereços de recebimento sem permitir gastar. Veja como funciona, o que ela revela e como usar.">
+  <meta property="og:image" content="https://zettapay.4profitai.com/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="ZettaPay">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Xpub Bitcoin: o que é a chave pública estendida">
+  <meta name="twitter:description" content="Xpub é a chave pública estendida do Bitcoin: gera endereços de recebimento sem permitir gastar. Veja como funciona, o que ela revela e como usar.">
+  <meta name="twitter:image" content="https://zettapay.4profitai.com/og-image.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="../../favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1E3B33">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles -->
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <style>
+    .article-hero { background: linear-gradient(160deg, #0A1A15 0%, #1E3B33 50%, #1a3830 100%); padding: calc(72px + var(--space-xl)) 0 var(--space-xl); }
+    .article-hero .container { max-width: 780px; }
+    .article-meta { display: flex; align-items: center; gap: var(--space-sm); font-size: 0.875rem; color: rgba(244,249,247,0.55); margin-bottom: var(--space-sm); flex-wrap: wrap; }
+    .article-meta time { color: rgba(244,249,247,0.7); }
+    .article-hero h1 { color: var(--frost); font-size: clamp(1.75rem,4vw,2.75rem); margin-bottom: var(--space-md); }
+    .article-hero .article-lead { color: rgba(244,249,247,0.75); font-size: 1.125rem; line-height: 1.7; max-width: 640px; }
+    .article-body { max-width: 720px; margin: 0 auto; padding: var(--space-xl) var(--space-md) var(--space-2xl); }
+    .article-body h2 { margin: var(--space-xl) 0 var(--space-sm); font-size: clamp(1.35rem,3vw,1.75rem); }
+    .article-body h3 { margin: var(--space-lg) 0 var(--space-xs); font-size: 1.1875rem; }
+    .article-body p { margin-bottom: var(--space-sm); color: #3a4a44; font-size: 1.0625rem; line-height: 1.8; }
+    .article-body a { color: var(--deep-forest); text-decoration: underline; text-underline-offset: 2px; }
+    .article-body a:hover { color: var(--emerald-glow); }
+    .article-body ul, .article-body ol { margin: 0 0 var(--space-sm) var(--space-md); }
+    .article-body li { margin-bottom: 0.5rem; color: #3a4a44; font-size: 1.0625rem; line-height: 1.7; }
+    .article-body ul li { list-style: disc; }
+    .article-body ol li { list-style: decimal; }
+    .article-body blockquote { border-left: 3px solid var(--emerald-glow); padding: var(--space-sm) var(--space-md); margin: var(--space-md) 0; background: var(--cloud); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .article-body blockquote p { color: #5C6560; font-size: 1rem; margin-bottom: 0; }
+    .article-body code { font-size: 0.95em; background: var(--cloud); padding: 0.1em 0.35em; border-radius: 4px; }
+    .article-cta { background: var(--cloud); border-radius: var(--radius-md); padding: var(--space-lg); text-align: center; margin: var(--space-xl) 0; border: 1px solid rgba(30,59,51,0.08); }
+    .article-cta h3 { margin-bottom: var(--space-sm); }
+    .article-cta p { margin-bottom: var(--space-md); color: #5C6560; }
+    .faq-section { margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid rgba(30,59,51,0.08); }
+    .faq-section h2 { margin-top: 0; }
+    .breadcrumb { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: rgba(244,249,247,0.45); margin-bottom: var(--space-md); flex-wrap: wrap; }
+    .breadcrumb a { color: rgba(244,249,247,0.6); text-decoration: none; }
+    .breadcrumb a:hover { color: var(--emerald-glow); }
+    .breadcrumb span { color: rgba(244,249,247,0.3); }
+  </style>
+
+  <!-- JSON-LD: Article -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Xpub: o que é a chave pública estendida do Bitcoin e por que ela não dá acesso aos seus fundos",
+    "description": "Xpub é a chave pública estendida do Bitcoin: gera endereços de recebimento sem permitir gastar. Veja como funciona, o que ela revela e como usar.",
+    "image": "https://zettapay.4profitai.com/og-image.png",
+    "author": {
+      "@type": "Organization",
+      "name": "ZettaPay"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "4Profit AI",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://zettapay.4profitai.com/assets/img/logo-icon.png"
+      }
+    },
+    "datePublished": "2026-10-12",
+    "dateModified": "2026-10-12",
+    "mainEntityOfPage": "https://zettapay.4profitai.com/blog/xpub-chave-publica-bitcoin-o-que-e/"
+  }
+  </script>
+
+  <!-- JSON-LD: BreadcrumbList -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://zettapay.4profitai.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": "https://zettapay.4profitai.com/blog/" },
+      { "@type": "ListItem", "position": 3, "name": "Xpub: o que é a chave pública estendida do Bitcoin", "item": "https://zettapay.4profitai.com/blog/xpub-chave-publica-bitcoin-o-que-e/" }
+    ]
+  }
+  </script>
+
+  <!-- JSON-LD: FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "O que é xpub no Bitcoin?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Xpub (extended public key, ou chave pública estendida) é a chave pública de uma conta de carteira HD, definida no padrão BIP-32. A partir dela é possível gerar todos os endereços de recebimento dessa conta, mas não é possível gastar nenhum bitcoin."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "É seguro compartilhar o meu xpub?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Compartilhar o xpub não permite que ninguém mova seus fundos, porque ele não contém chaves privadas. O custo é de privacidade: quem tem o xpub consegue ver todos os endereços derivados dele, com saldo e histórico. Por isso, compartilhe só com serviços em que confia e, de preferência, use uma conta separada para receber pagamentos."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Qual a diferença entre xpub e chave privada?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "A chave privada (ou a seed, as 12 ou 24 palavras) autoriza gastar. O xpub só permite calcular endereços e acompanhar o que chega neles. Nenhum serviço de recebimento precisa da sua chave privada ou da sua seed."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Xpub e endereço Bitcoin são a mesma coisa?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Não. Um endereço recebe pagamentos e é um só. O xpub é a origem de uma sequência inteira de endereços: dele saem o primeiro, o segundo, o terceiro endereço da conta e assim por diante, sempre na mesma ordem."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Onde encontro o xpub da minha carteira?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Carteiras HD costumam mostrar a chave pública estendida nos detalhes ou nas configurações da conta, às vezes com o nome de chave pública da conta, xpub ou zpub. Em carteiras de hardware ela aparece no aplicativo que acompanha o dispositivo. Exporte apenas a chave pública, nunca a seed."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="site-header" role="banner">
+    <div class="header-inner">
+      <a href="/" class="header-logo" aria-label="ZettaPay — página inicial">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="36" height="36" loading="eager">
+        <span>ZettaPay</span>
+      </a>
+      <nav class="header-nav" role="navigation" aria-label="Menu principal">
+        <a href="/#como-funciona">Como funciona</a>
+        <a href="/#para-quem">Para quem</a>
+        <a href="/#preco">Preço</a>
+        <a href="/blog/">Blog</a>
+        <a href="/#interesse" class="btn btn-primary">Quero participar</a>
+        <a href="https://zettapay.4profitai.com/app" class="btn btn-outline">Entrar</a>
+      </nav>
+      <button class="menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- Article Hero -->
+    <section class="article-hero">
+      <div class="container">
+        <nav class="breadcrumb" aria-label="Breadcrumb">
+          <a href="/">Home</a> <span>/</span>
+          <a href="/blog/">Blog</a> <span>/</span>
+          <span>Xpub: chave pública do Bitcoin</span>
+        </nav>
+        <div class="article-meta">
+          <time datetime="2026-10-12">12 de outubro de 2026</time>
+          <span>|</span>
+          <span>8 min de leitura</span>
+        </div>
+        <h1>Xpub: o que é a chave pública estendida do Bitcoin e por que ela não dá acesso aos seus fundos</h1>
+        <p class="article-lead">Xpub é a chave pública estendida de uma conta Bitcoin. Com ela, qualquer software consegue gerar os endereços de recebimento da conta, um atrás do outro, sem conseguir gastar um único satoshi. É isso que permite a um serviço de pagamentos criar um endereço novo para cada cobrança sem nunca ter a sua chave privada.</p>
+      </div>
+    </section>
+
+    <!-- Article Body -->
+    <article class="article-body">
+
+      <h2>O que é um xpub, em poucas palavras</h2>
+
+      <p>O nome vem de <em>extended public key</em>, chave pública estendida. Ela existe nas carteiras HD (hierárquicas determinísticas), o padrão usado hoje pela grande maioria das carteiras Bitcoin. Nessas carteiras, uma única seed (as 12 ou 24 palavras de recuperação) dá origem a uma árvore inteira de chaves, organizada em contas.</p>
+
+      <p>Cada conta tem duas versões da sua chave estendida:</p>
+
+      <ul>
+        <li><strong>Chave privada estendida (xprv):</strong> gera as chaves privadas da conta. Quem tem a xprv pode gastar tudo o que está nela.</li>
+        <li><strong>Chave pública estendida (xpub):</strong> gera apenas as chaves públicas, e portanto os endereços. Quem tem o xpub vê e calcula, mas não move nada.</li>
+      </ul>
+
+      <p>Em resumo: a seed e a xprv são a chave do cofre; o xpub é a lista de números das caixas onde o dinheiro pode ser depositado.</p>
+
+      <h2>Como a carteira gera endereços a partir do xpub</h2>
+
+      <p>O mecanismo foi definido no <a href="https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki" target="_blank" rel="noopener">BIP-32</a>, a especificação das carteiras HD. A matemática de curvas elípticas permite calcular chaves públicas filhas a partir de uma chave pública mãe, sem conhecer nenhuma chave privada. O próprio BIP-32 dá o exemplo de uma loja virtual que deixa o servidor gerar um endereço novo para cada pedido ou cliente, sem dar ao servidor acesso às chaves privadas correspondentes.</p>
+
+      <p>A derivação é determinística: o mesmo xpub sempre produz os mesmos endereços, na mesma ordem (índice 0, 1, 2, 3...). Por isso a sua carteira, que tem a seed, reconhece como seus os endereços que um serviço externo gerou a partir do xpub. Os dois estão calculando a mesma sequência.</p>
+
+      <h3>Xpub, ypub, zpub: por que tantos nomes</h3>
+
+      <p>O prefixo indica o tipo de endereço que a conta usa. O <a href="https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki" target="_blank" rel="noopener">BIP-84</a> define as contas de endereços SegWit nativos, aqueles que começam com <code>bc1q</code>, e prevê para elas o prefixo <code>zpub</code>. Algumas carteiras mostram essa mesma chave com o prefixo genérico <code>xpub</code>. O conteúdo é a mesma chave pública; muda a forma de exibir.</p>
+
+      <p>O ZettaPay trabalha com contas BIP-84 para Bitcoin. Se a sua carteira usa outro tipo de endereço, vale criar uma conta SegWit nativa só para receber pagamentos.</p>
+
+      <h2>Por que compartilhar o xpub não permite gastar</h2>
+
+      <p>Gastar bitcoin exige uma assinatura feita com a chave privada do endereço. O xpub não contém nenhuma chave privada, e não é possível calcular uma chave privada a partir dele. Um serviço que conhece só o seu xpub consegue:</p>
+
+      <ul>
+        <li>gerar endereços de recebimento da sua conta;</li>
+        <li>observar a blockchain e ver quando um pagamento chega em um desses endereços;</li>
+        <li>avisar o seu sistema de que o pagamento foi confirmado.</li>
+      </ul>
+
+      <p>E não consegue assinar transações, mover saldo nem trocar o destino dos fundos. É exatamente o que um serviço de recebimento precisa, e nada além disso.</p>
+
+      <h2>O que o xpub revela: os cuidados de privacidade</h2>
+
+      <p>Não dar acesso aos fundos não quer dizer que o xpub seja um dado neutro. Quem o tem consegue derivar todos os endereços da conta e, com eles, consultar na blockchain pública:</p>
+
+      <ul>
+        <li>o saldo total da conta;</li>
+        <li>o histórico completo de entradas e saídas;</li>
+        <li>os pagamentos futuros que chegarem a qualquer endereço dessa conta.</li>
+      </ul>
+
+      <p>É por isso que o BIP-32 cita o xpub como ferramenta de auditoria: ele dá acesso de leitura a uma conta inteira. Na prática, a boa conduta é simples: compartilhe o xpub só com o serviço que vai gerar as suas cobranças e use uma conta dedicada a recebimentos, separada da conta onde você guarda reservas.</p>
+
+      <h3>Um cuidado técnico que pouca gente conhece</h3>
+
+      <p>O BIP-32 traz um alerta explícito: conhecer o xpub de uma conta <em>e</em> qualquer chave privada não endurecida (non-hardened) derivada dele equivale a conhecer a chave privada estendida da conta inteira. Em outras palavras, o xpub sozinho não abre o cofre, mas o xpub somado a uma única chave privada filha vazada abre. Nunca exporte chaves privadas individuais de uma conta cujo xpub você compartilhou.</p>
+
+      <blockquote>
+        <p>Resumo de segurança: xpub dá visibilidade, não acesso. A seed e as chaves privadas ficam só com você, sempre.</p>
+      </blockquote>
+
+      <h2>Para que serve o xpub na prática: receber pagamentos</h2>
+
+      <p>Usar um endereço novo para cada pagamento é uma recomendação antiga no Bitcoin: melhora a privacidade e torna trivial saber quem pagou o quê. Fazer isso à mão é inviável quando você emite muitas cobranças. Com o xpub, um software gera o endereço da fatura automaticamente, e o valor cai direto na sua carteira.</p>
+
+      <p>É o modelo que diferencia um gateway não custodial de um processador custodial. No custodial, o cliente paga em um endereço do processador, que depois repassa o valor (ou não, como mostram os relatos de saldo travado reunidos no nosso <a href="/blog/alternativa-coinbase-commerce-brasil/">artigo sobre alternativas ao Coinbase Commerce</a>). No não custodial, o pagamento nunca passa por ninguém além de você.</p>
+
+      <h2>Como o ZettaPay Cloud usa apenas a sua chave pública</h2>
+
+      <p>No <a href="/#como-funciona">ZettaPay Cloud</a>, o cadastro pede um e-mail, o nome da loja e uma chave pública. Nada de seed, de chave privada ou de conexão de carteira. O fluxo é este:</p>
+
+      <ol>
+        <li><strong>Você cola o xpub da sua conta BIP-84</strong> (para BTC). Para USDC e USDT na Base, você informa um xpub ou um endereço fixo de recebimento.</li>
+        <li><strong>Você cria uma fatura pela API</strong> (ou um agente de IA cria, pelo servidor MCP). O ZettaPay deriva um endereço exclusivo para aquela fatura a partir do seu xpub.</li>
+        <li><strong>O cliente paga</strong> pelo checkout hospedado ou pelo QR code da fatura.</li>
+        <li><strong>O ZettaPay observa a blockchain</strong> e, quando o pagamento confirma, envia ao seu sistema um webhook assinado com HMAC.</li>
+      </ol>
+
+      <p>O dinheiro vai do cliente direto para a sua carteira. Como o ZettaPay não está no caminho dos fundos, não existe taxa por transação: o Cloud cobra uma assinatura pelo número de faturas, com plano gratuito de até 50 faturas por mês (veja os <a href="/#preco">planos</a>). Quem prefere não compartilhar o xpub com ninguém pode rodar o listener self-hosted, open source sob licença MIT, na própria máquina.</p>
+
+      <p>Na Base, se você optar por um endereço fixo em vez de xpub, o ZettaPay diferencia as faturas por um pequeno ajuste no valor de cada uma, já que todas chegam no mesmo endereço.</p>
+
+      <div class="article-cta">
+        <h3>Receba em Bitcoin com uma chave pública</h3>
+        <p>Cole seu xpub, crie a primeira fatura e receba direto na sua carteira. Sem custódia e sem taxa por transação.</p>
+        <a href="/#interesse" class="btn btn-primary btn-lg">Quero participar</a>
+      </div>
+
+      <h2>Passo a passo: como encontrar o xpub na sua carteira</h2>
+
+      <ol>
+        <li><strong>Abra a conta que vai receber.</strong> Se possível, crie uma conta nova só para recebimentos.</li>
+        <li><strong>Confirme o tipo de endereço.</strong> Os endereços de recebimento devem começar com <code>bc1q</code> (SegWit nativo, BIP-84).</li>
+        <li><strong>Procure os detalhes ou as configurações da conta.</strong> A chave aparece com nomes como "chave pública da conta", "xpub", "zpub" ou "chave pública estendida". Em carteiras de hardware, ela fica no aplicativo que acompanha o dispositivo.</li>
+        <li><strong>Copie apenas a chave pública.</strong> Se a carteira pedir as palavras de recuperação para isso, pare: nenhuma exportação de xpub exige a seed.</li>
+        <li><strong>Confira o primeiro endereço.</strong> Depois de colar o xpub no serviço, compare o primeiro endereço gerado com o primeiro endereço de recebimento da sua carteira. Se forem iguais, a derivação está certa.</li>
+      </ol>
+
+      <h2>Checklist antes de colar o seu xpub em um serviço</h2>
+
+      <ul>
+        <li>O serviço pede só a chave pública? Se pedir seed, chave privada ou conexão de carteira, não é um fluxo não custodial.</li>
+        <li>A conta é dedicada a recebimentos, separada das suas reservas?</li>
+        <li>O primeiro endereço gerado pelo serviço bate com o da sua carteira?</li>
+        <li>Sua carteira encontra pagamentos em endereços distantes? O <a href="https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki" target="_blank" rel="noopener">BIP-44</a> fixa o "gap limit" em 20: a carteira para de procurar depois de 20 endereços seguidos sem uso. Se muitas faturas ficarem sem pagamento, pode ser preciso aumentar esse limite na carteira para enxergar os pagamentos seguintes.</li>
+        <li>Você tem o backup da seed guardado offline? O serviço não tem como recuperar seus fundos, porque nunca teve acesso a eles.</li>
+      </ul>
+
+      <p>Para ver como esse fluxo entra em uma loja virtual, do checkout ao webhook, leia o <a href="/blog/aceitar-bitcoin-loja-online/">guia para aceitar Bitcoin na loja online</a>. Se a cobrança vai ser feita por software autônomo, o artigo sobre <a href="/blog/pagamento-cripto-agentes-ia-blockchain/">pagamento cripto para agentes de IA</a> mostra como a mesma lógica funciona via API e MCP.</p>
+
+      <div class="faq-section">
+        <h2>Perguntas frequentes</h2>
+
+        <h3>O que é xpub no Bitcoin?</h3>
+        <p>Xpub (extended public key, ou chave pública estendida) é a chave pública de uma conta de carteira HD, definida no padrão BIP-32. A partir dela é possível gerar todos os endereços de recebimento dessa conta, mas não é possível gastar nenhum bitcoin.</p>
+
+        <h3>É seguro compartilhar o meu xpub?</h3>
+        <p>Compartilhar o xpub não permite que ninguém mova seus fundos, porque ele não contém chaves privadas. O custo é de privacidade: quem tem o xpub consegue ver todos os endereços derivados dele, com saldo e histórico. Por isso, compartilhe só com serviços em que confia e, de preferência, use uma conta separada para receber pagamentos.</p>
+
+        <h3>Qual a diferença entre xpub e chave privada?</h3>
+        <p>A chave privada (ou a seed, as 12 ou 24 palavras) autoriza gastar. O xpub só permite calcular endereços e acompanhar o que chega neles. Nenhum serviço de recebimento precisa da sua chave privada ou da sua seed.</p>
+
+        <h3>Xpub e endereço Bitcoin são a mesma coisa?</h3>
+        <p>Não. Um endereço recebe pagamentos e é um só. O xpub é a origem de uma sequência inteira de endereços: dele saem o primeiro, o segundo, o terceiro endereço da conta e assim por diante, sempre na mesma ordem.</p>
+
+        <h3>Onde encontro o xpub da minha carteira?</h3>
+        <p>Carteiras HD costumam mostrar a chave pública estendida nos detalhes ou nas configurações da conta, às vezes com o nome de chave pública da conta, xpub ou zpub. Em carteiras de hardware ela aparece no aplicativo que acompanha o dispositivo. Exporte apenas a chave pública, nunca a seed.</p>
+      </div>
+
+    </article>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer" role="contentinfo">
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <img src="../../assets/img/logo-icon.png" alt="ZettaPay" width="28" height="28" loading="lazy">
+        <span>ZettaPay</span>
+      </div>
+      <p class="footer-text">Um produto <a href="https://4profitai.com" target="_blank" rel="noopener">4Profit AI</a>. &copy; 2026 ZettaPay. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="../../assets/js/site.js" defer></script>
+
+  <script><!-- vortex-visitas: conta a visita (página e origem), sem dado pessoal -->
+  (function () {
+    try {
+      var q = new URLSearchParams(location.search);
+      var body = JSON.stringify({ event: "page_view", company: "zettapay", page_path: location.pathname,
+        referrer: document.referrer || undefined, utm_source: q.get("utm_source") || undefined,
+        utm_medium: q.get("utm_medium") || undefined, utm_campaign: q.get("utm_campaign") || undefined });
+      fetch("https://vortex.4profitai.com/api/capture/page-event", { method: "POST", body: body, keepalive: true,
+        headers: { "Content-Type": "text/plain" } }).catch(function () {});
+    } catch (e) {}
+  })();
+  </script>
+
+</body>
+</html>
